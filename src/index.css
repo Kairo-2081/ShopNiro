@@ -1,0 +1,172 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-blue-50: #f4f3ec;
+  --color-blue-100: #e7e5d6;
+  --color-blue-200: #d4d1bd;
+  --color-blue-300: #c0b99c;
+  --color-blue-400: #a89d78;
+  --color-blue-500: #8a805e;
+  --color-blue-600: #6e684b;
+  --color-blue-700: #57523b;
+  --color-blue-800: #403d2e;
+  --color-blue-900: #29271f;
+  --color-blue-950: #171612;
+  --color-sky-50: #f4f3ec;
+  --color-sky-100: #e7e5d6;
+  --color-sky-200: #d4d1bd;
+  --color-sky-300: #c0b99c;
+  --color-sky-400: #a89d78;
+  --color-sky-500: #8a805e;
+  --color-sky-600: #6e684b;
+  --color-sky-700: #57523b;
+  --color-sky-800: #403d2e;
+  --color-sky-900: #29271f;
+  --color-sky-950: #171612;
+  --color-emerald-50: #f1f1e9;
+  --color-emerald-100: #e2e2d2;
+  --color-emerald-200: #cacaad;
+  --color-emerald-300: #b0b18d;
+  --color-emerald-400: #969875;
+  --color-emerald-500: #7d7e5e;
+  --color-emerald-600: #66674b;
+  --color-emerald-700: #51523c;
+  --color-emerald-800: #3c3d2e;
+  --color-emerald-900: #27281e;
+  --color-emerald-950: #151610;
+  --color-purple-50: #f4f1e9;
+  --color-purple-100: #e7dfd0;
+  --color-purple-200: #d5c7ae;
+  --color-purple-300: #beaa88;
+  --color-purple-400: #a58b66;
+  --color-purple-500: #89714f;
+  --color-purple-600: #6e5b40;
+  --color-purple-700: #574834;
+  --color-purple-800: #403729;
+  --color-purple-900: #29241c;
+  --color-purple-950: #17140f;
+  --color-slate-50: #f6f5ef;
+  --color-slate-100: #edece3;
+  --color-slate-200: #dddbce;
+  --color-slate-300: #c8c6b6;
+  --color-slate-400: #aaa896;
+  --color-slate-500: #8a8876;
+  --color-slate-600: #6d6b5a;
+  --color-slate-700: #555347;
+  --color-slate-800: #3e3d34;
+  --color-slate-900: #292821;
+  --color-slate-950: #151510;
+  --color-zinc-50: #f6f5ef;
+  --color-zinc-100: #edece3;
+  --color-zinc-200: #dddbce;
+  --color-zinc-300: #c8c6b6;
+  --color-zinc-400: #aaa896;
+  --color-zinc-500: #8a8876;
+  --color-zinc-600: #6d6b5a;
+  --color-zinc-700: #555347;
+  --color-zinc-800: #3e3d34;
+  --color-zinc-900: #292821;
+  --color-zinc-950: #151510;
+}
+
+:root {
+  --shopniro-amber: #d0c8a5;
+  --shopniro-orange: #a99b72;
+  --shopniro-orange-deep: #80734f;
+  --shopniro-teal: #77775a;
+  --shopniro-teal-deep: #555541;
+  --shopniro-forest: #101010;
+  --shopniro-surface: rgba(20, 20, 17, 0.84);
+  --shopniro-card: rgba(24, 24, 20, 0.82);
+  --shopniro-card-soft: rgba(231, 229, 214, 0.06);
+  --shopniro-border: rgba(231, 229, 214, 0.14);
+  --shopniro-glow: rgba(169, 155, 114, 0.25);
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    min-height: 100vh;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    background:
+      radial-gradient(ellipse at 8% 0%, rgba(169, 155, 114, 0.2), transparent 32%),
+      radial-gradient(ellipse at 92% 14%, rgba(119, 119, 90, 0.19), transparent 34%),
+      linear-gradient(135deg, #10100f 0%, #1b1b17 48%, #111210 100%);
+    color: #f8fafc;
+  }
+
+  html.dark body {
+    background:
+      radial-gradient(ellipse at 8% 0%, rgba(169, 155, 114, 0.2), transparent 32%),
+      radial-gradient(ellipse at 92% 14%, rgba(119, 119, 90, 0.19), transparent 34%),
+      linear-gradient(135deg, #10100f 0%, #1b1b17 48%, #111210 100%);
+    color: #f8fafc;
+  }
+
+  html:not(.dark) body {
+    background:
+      radial-gradient(ellipse at 8% 0%, rgba(169, 155, 114, 0.22), transparent 32%),
+      radial-gradient(ellipse at 92% 14%, rgba(119, 119, 90, 0.16), transparent 34%),
+      linear-gradient(135deg, #eeede4 0%, #e4e2d5 48%, #f2f1ea 100%);
+    color: #191914;
+  }
+
+  #root {
+    min-height: 100vh;
+  }
+}
+
+@layer utilities {
+  .premium-surface {
+    background: linear-gradient(155deg, rgba(37, 37, 30, 0.94), rgba(17, 17, 15, 0.9));
+    border: 1px solid rgba(231, 229, 214, 0.12);
+    box-shadow: 0 28px 60px rgba(3, 3, 2, 0.3);
+  }
+
+  .premium-card {
+    background: linear-gradient(155deg, rgba(43, 43, 34, 0.9), rgba(23, 23, 19, 0.88));
+    border: 1px solid rgba(231, 229, 214, 0.11);
+    box-shadow: 0 18px 40px rgba(3, 3, 2, 0.24);
+  }
+
+  .premium-button {
+    background: linear-gradient(135deg, #827b5b 0%, #625d44 52%, #454332 100%);
+    box-shadow: 0 12px 28px rgba(86, 80, 57, 0.34);
+  }
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+html.dark ::-webkit-scrollbar-track {
+  background: rgba(11, 24, 24, 0.9);
+}
+html.dark ::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
+}
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(208, 200, 165, 0.55);
+}
+
+html:not(.dark) ::-webkit-scrollbar-track {
+  background: rgba(228, 226, 213, 0.8);
+}
+html:not(.dark) ::-webkit-scrollbar-thumb {
+  background: rgba(119, 119, 90, 0.45);
+  border-radius: 9999px;
+}
+html:not(.dark) ::-webkit-scrollbar-thumb:hover {
+  background: rgba(137, 113, 79, 0.58);
+}

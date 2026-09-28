@@ -1,0 +1,534 @@
+import {
+  Admin,
+  Category,
+  Seller,
+  Customer,
+  Product,
+  Review,
+  Order,
+  CartItem,
+  Address,
+  SellerStatus,
+  ProductStatus,
+  OrderStatus,
+  UserRole,
+} from '../types';
+
+const TOKEN_KEY = 'marketpulse_jwt_token';
+
+export function getAuthToken(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+export function setAuthToken(token: string): void {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(TOKEN_KEY, token);
+  }
+}
+
+export function removeAuthToken(): void {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(TOKEN_KEY);
+  }
+}
+
+/**
+ * Validates whether an endpoint is public/auth-related or requires authentication.
+ */
+function isPublicEndpoint(url: string, method: string = 'GET'): boolean {
+  const cleanUrl = url.split('?')[0];
+  const upperMethod = method.toUpperCase();
+
+  // Auth login, token verification, role selection, db status, and analytics are public
+  if (
+    cleanUrl === '/api/auth/login' ||
+    cleanUrl === '/api/auth/role' ||
+    cleanUrl === '/api/auth/me' ||
+    cleanUrl === '/api/db/status' ||
+    cleanUrl.startsWith('/api/gemini') ||
+    cleanUrl.startsWith('/api/payment') ||
+    cleanUrl.startsWith('/api/analytics') ||
+    cleanUrl.startsWith('/api/stats')
+  ) {
+    return true;
+  }
+  // User registration is public
+  if (
+    upperMethod === 'POST' &&
+    (cleanUrl === '/api/customers' || cleanUrl === '/api/sellers' || cleanUrl === '/api/admins')
+  ) {
+    return true;
+  }
+  // Storefront read catalog endpoints (categories, active products, reviews, sellers)
+  if (upperMethod === 'GET') {
+    if (
+      cleanUrl.startsWith('/api/categories') ||
+      cleanUrl.startsWith('/api/products') ||
+      cleanUrl.startsWith('/api/reviews') ||
+      cleanUrl.startsWith('/api/sellers')
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
+  const method = (options?.method || 'GET').toUpperCase();
+  const token = getAuthToken();
+  const isPublic = isPublicEndpoint(url, method);
+
+  // Validate authentication before processing HTTP requests that require authentication
+  if (!isPublic && !token) {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('auth:required', {
+          detail: {
+            url,
+            message: 'Authentication required. Please sign in before processing this request.',
+          },
+        })
+      );
+    }
+    throw new Error('Authentication Required: You must be logged in before processing this request.');
+  }
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options?.headers as Record<string, string> || {}),
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(url, {
+    ...options,
+    headers,
+  });
+
+  if (!res.ok) {
+    // If server responds with 401 Unauthorized, automatically invalidate session and alert application
+    if (res.status === 401) {
+      removeAuthToken();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('auth:unauthorized', {
+            detail: {
+              url,
+              status: 401,
+              message: 'Your session has expired or is invalid. Please sign in again.',
+            },
+          })
+        );
+      }
+    }
+
+    let errorMsg = `HTTP Error ${res.status}`;
+    try {
+      const errorData = await res.json();
+      if (errorData?.error) errorMsg = errorData.error;
+      else if (errorData?.message) errorMsg = errorData.message;
+    } catch {
+      // ignore json parse error
+    }
+    throw new Error(errorMsg);
+  }
+  return res.json();
+}
+
+// Full-stack API Client connected directly to Cloud SQL (PostgreSQL) with JWT Auth
+export const api = {
+  // Token methods
+  getAuthToken,
+  setAuthToken,
+  removeAuthToken,
+
+  // Database Status
+  getDbStatus: async () => fetchJson<{ connected: boolean; provider: string; database: string }>('/api/db/status'),
+
+  // Categories
+  getCategories: async (): Promise<Category[]> => fetchJson<Category[]>('/api/categories'),
+  createCategory: async (nameOrData: string | { Name: string }): Promise<Category> => {
+    const data = typeof nameOrData === 'string' ? { Name: nameOrData } : nameOrData;
+    return fetchJson<Category>('/api/categories', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+  updateCategory: async (id: string, Name: string): Promise<Category> =>
+    fetchJson<Category>(`/api/categories/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ Name }),
+    }),
+  deleteCategory: async (id: string): Promise<{ success: boolean }> =>
+    fetchJson<{ success: boolean }>(`/api/categories/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    }),
+
+  // Products
+  getProducts: async (params?: {
+    sellerId?: string;
+    categoryId?: string;
+    search?: string;
+    status?: ProductStatus;
+  }): Promise<Product[]> => {
+    const searchParams = new URLSearchParams();
+    if (params?.sellerId) searchParams.set('sellerId', params.sellerId);
+    if (params?.categoryId) searchParams.set('categoryId', params.categoryId);
+    if (params?.search) searchParams.set('search', params.search);
+    if (params?.status) searchParams.set('status', params.status);
+    const queryString = searchParams.toString();
+    return fetchJson<Product[]>(`/api/products${queryString ? `?${queryString}` : ''}`);
+  },
+
+  getProductById: async (id: string): Promise<Product> =>
+    fetchJson<Product>(`/api/products/${encodeURIComponent(id)}`),
+
+  createProduct: async (productData: Partial<Product> & {
+    Name?: string;
+    Price?: number;
+    Stock?: number;
+    Category_ID?: string;
+    Seller_ID?: string;
+  }): Promise<Product> =>
+    fetchJson<Product>('/api/products', {
+      method: 'POST',
+      body: JSON.stringify(productData),
+    }),
+
+  updateProduct: async (id: string, updates: Partial<Product>): Promise<Product> =>
+    fetchJson<Product>(`/api/products/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    }),
+
+  updateProductStatus: async (id: string, status: ProductStatus): Promise<void> => {
+    await fetchJson(`/api/products/${encodeURIComponent(id)}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ Product_Status: status }),
+    });
+  },
+
+  deleteProduct: async (id: string): Promise<{ success: boolean }> =>
+    fetchJson<{ success: boolean }>(`/api/products/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    }),
+
+  // Customers
+  getCustomers: async (): Promise<Customer[]> => fetchJson<Customer[]>('/api/customers'),
+  createCustomer: async (customerData: Partial<Customer> & { Password?: string }): Promise<Customer> =>
+    fetchJson<Customer>('/api/customers', {
+      method: 'POST',
+      body: JSON.stringify(customerData),
+    }),
+  updateCustomer: async (id: string, updates: Partial<Customer>): Promise<Customer> =>
+    fetchJson<Customer>(`/api/customers/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    }),
+
+  // Sellers
+  getSellers: async (): Promise<Seller[]> => fetchJson<Seller[]>('/api/sellers'),
+  createSeller: async (sellerData: Partial<Seller> & { Password?: string }): Promise<Seller> =>
+    fetchJson<Seller>('/api/sellers', {
+      method: 'POST',
+      body: JSON.stringify(sellerData),
+    }),
+  updateSellerStatus: async (id: string, Status: SellerStatus): Promise<Seller> =>
+    fetchJson<Seller>(`/api/sellers/${encodeURIComponent(id)}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ Status }),
+    }),
+
+  // Admins
+  getAdmins: async (): Promise<Admin[]> => fetchJson<Admin[]>('/api/admins'),
+  createAdmin: async (data: Partial<Admin> & { Username?: string }): Promise<Admin> =>
+    fetchJson<Admin>('/api/admins', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  // Auth Login: Issues JWT session token
+  login: async (
+    usernameOrEmail: string,
+    password: string,
+    role?: UserRole
+  ): Promise<{ success: boolean; token?: string; role: UserRole; entity: any; message?: string }> => {
+    const res = await fetchJson<{ success: boolean; token?: string; role: UserRole; entity: any; message?: string }>('/api/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email: usernameOrEmail, password, role }),
+    });
+
+    if (res.token) {
+      setAuthToken(res.token);
+    }
+    return res;
+  },
+
+  // Auth Current User from JWT Session
+  getMe: async (): Promise<{ authenticated: boolean; user?: any; role?: UserRole; entity?: any }> => {
+    return fetchJson<{ authenticated: boolean; user?: any; role?: UserRole; entity?: any }>('/api/auth/me');
+  },
+
+  // Validate Authentication for Page Navigation & HTTP Gatekeeping
+  validateAuth: async (): Promise<{ authenticated: boolean; user?: any; role?: UserRole; entity?: any }> => {
+    const token = getAuthToken();
+    if (!token) {
+      return { authenticated: false };
+    }
+    try {
+      const res = await fetchJson<{ authenticated: boolean; user?: any; role?: UserRole; entity?: any }>('/api/auth/me');
+      return res;
+    } catch {
+      removeAuthToken();
+      return { authenticated: false };
+    }
+  },
+
+  // Check if currently holding token
+  isAuthenticated: (): boolean => {
+    return Boolean(getAuthToken());
+  },
+
+  // Logout
+  logout: (): void => {
+    removeAuthToken();
+  },
+
+  // Cart
+  getCart: async (customerId: string): Promise<CartItem[]> =>
+    fetchJson<CartItem[]>(`/api/cart?customerId=${encodeURIComponent(customerId)}`),
+  addToCart: async (Customer_ID: string, Product_ID: string, Quantity: number = 1): Promise<CartItem> =>
+    fetchJson<CartItem>('/api/cart', {
+      method: 'POST',
+      body: JSON.stringify({ Customer_ID, Product_ID, Quantity }),
+    }),
+  updateCartQuantity: async (cartId: string, Quantity: number): Promise<void> => {
+    await fetchJson(`/api/cart/${encodeURIComponent(cartId)}`, {
+      method: 'PUT',
+      body: JSON.stringify({ Quantity }),
+    });
+  },
+  removeFromCart: async (cartId: string): Promise<{ success: boolean }> =>
+    fetchJson<{ success: boolean }>(`/api/cart/${encodeURIComponent(cartId)}`, {
+      method: 'DELETE',
+    }),
+
+  // Orders
+  getOrders: async (params?: { customerId?: string; sellerId?: string }): Promise<Order[]> => {
+    const searchParams = new URLSearchParams();
+    if (params?.customerId) searchParams.set('customerId', params.customerId);
+    if (params?.sellerId) searchParams.set('sellerId', params.sellerId);
+    const queryString = searchParams.toString();
+    return fetchJson<Order[]>(`/api/orders${queryString ? `?${queryString}` : ''}`);
+  },
+  createOrder: async (orderData: {
+    Customer_ID: string;
+    Items: any[];
+    Shipping_Address: Address;
+    Billing_Address: Address;
+    Subtotal: number;
+    Shipping_Fee: number;
+    Additional_Info?: string;
+    Payment_Status?: string;
+    Payment_Method?: string;
+    Transaction_ID?: string;
+    Payment_ID?: string;
+    Currency?: string;
+  }): Promise<Order> =>
+    fetchJson<Order>('/api/orders', {
+      method: 'POST',
+      body: JSON.stringify(orderData),
+    }),
+  updateOrderStatus: async (orderId: string, Status: OrderStatus | string): Promise<Order> =>
+    fetchJson<Order>(`/api/orders/${encodeURIComponent(orderId)}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ Status }),
+    }),
+
+  // Reviews
+  getReviews: async (productId?: string): Promise<Review[]> => {
+    const url = productId ? `/api/reviews?productId=${encodeURIComponent(productId)}` : '/api/reviews';
+    return fetchJson<Review[]>(url);
+  },
+  createReview: async (data: {
+    Product_ID: string;
+    Customer_ID: string;
+    Customer_Name: string;
+    Review_text: string;
+    Rating: number;
+  }): Promise<Review> =>
+    fetchJson<Review>('/api/reviews', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  // Stats
+  getStats: async (): Promise<any> => fetchJson<any>('/api/stats'),
+
+  // Gemini AI Chat
+  sendGeminiChatMessage: async (params: {
+    message: string;
+    history?: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }>;
+    role?: 'shopping-assistant' | 'seller-advisor' | 'order-specialist' | 'complex-analyst';
+    requestedModel?: 'gemini-3.5-flash' | 'gemini-3.1-flash-lite' | 'gemini-3.1-pro-preview';
+    taskComplexity?: 'fast' | 'general' | 'complex';
+  }): Promise<{ reply: string; modelUsed: string; roleUsed: string }> =>
+    fetchJson<{ reply: string; modelUsed: string; roleUsed: string }>('/api/gemini/chat', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    }),
+
+  // Reset Seed
+  resetSeed: async (): Promise<{ success: boolean; message: string }> =>
+    fetchJson<{ success: boolean; message: string }>('/api/reset-seed', {
+      method: 'POST',
+    }),
+
+  // Payment & SSLCommerz Gateway
+  getPaymentMethods: async (): Promise<any> => fetchJson<any>('/api/payment/methods'),
+
+  initPayment: async (data: {
+    orderId?: string;
+    customerId?: string;
+    amount: number;
+    currency?: string;
+    customerName?: string;
+    customerEmail?: string;
+    customerPhone?: string;
+    address?: any;
+    paymentMethod?: string;
+    productName?: string;
+  }): Promise<{
+    success: boolean;
+    tran_id: string;
+    paymentId: string;
+    amountBDT: number;
+    currency: string;
+    session: any;
+    gateway: string;
+    paymentMethod: string;
+  }> =>
+    fetchJson('/api/payment/init', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  validatePayment: async (data: {
+    tran_id: string;
+    val_id?: string;
+    order_id?: string;
+    payment_method?: string;
+    customer_phone?: string;
+    card_brand?: string;
+  }): Promise<any> =>
+    fetchJson('/api/payment/sslcommerz/validate', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  getPaymentTransactions: async (params?: { customerId?: string; orderId?: string }): Promise<any[]> => {
+    const query = new URLSearchParams();
+    if (params?.customerId) query.set('customerId', params.customerId);
+    if (params?.orderId) query.set('orderId', params.orderId);
+    const qs = query.toString() ? `?${query.toString()}` : '';
+    return fetchJson<any[]>(`/api/payment/transactions${qs}`);
+  },
+};
+
+export const db = api;
+
+export function formatCurrency(amount: number): string {
+  return formatBDT(amount);
+}
+
+export function formatBDT(amount: number): string {
+  return `৳ ${new Intl.NumberFormat('en-BD', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(amount)}`;
+}
+
+export function formatDate(dateString?: string): string {
+  if (!dateString) return 'N/A';
+  return new Date(dateString).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+// ==========================================
+// Schema-derived Analytics & Market Intelligence
+// ==========================================
+
+export interface TrendingProduct {
+  product_id: string;
+  product_name: string;
+  image?: string;
+  category_name: string;
+  price: number;
+  available_stock: number;
+  distinct_customers_wanting_this: number;
+  total_units_in_carts: number;
+}
+
+export interface TopRatedProduct {
+  product_id: string;
+  product_name: string;
+  image?: string;
+  category_name: string;
+  seller_name: string;
+  price: number;
+  average_rating: number;
+  total_reviews: number;
+}
+
+export interface TopSeller {
+  seller_id: string;
+  seller_name: string;
+  total_active_products: number;
+  total_lifetime_reviews: number;
+  overall_average_rating: number;
+}
+
+export interface CategoryPerformance {
+  category_id: string;
+  category_name: string;
+  total_unique_products: number;
+  total_units_in_stock: number;
+  average_product_price: number;
+  total_inventory_value: number;
+}
+
+export interface TopCustomer {
+  customer_id: string;
+  customer_name: string;
+  email?: string;
+  total_orders: number;
+  total_lifetime_spent: number;
+}
+
+export async function fetchTopSellers(limit: number = 10): Promise<TopSeller[]> {
+  return fetchJson<TopSeller[]>(`/api/analytics/top-sellers?limit=${limit}`);
+}
+
+export async function fetchTrendingProducts(limit: number = 12): Promise<TrendingProduct[]> {
+  return fetchJson<TrendingProduct[]>(`/api/analytics/trending-products?limit=${limit}`);
+}
+
+export async function fetchTopRatedProducts(limit: number = 12): Promise<TopRatedProduct[]> {
+  return fetchJson<TopRatedProduct[]>(`/api/analytics/top-rated-products?limit=${limit}`);
+}
+
+export async function fetchCategoryPerformance(): Promise<CategoryPerformance[]> {
+  return fetchJson<CategoryPerformance[]>(`/api/analytics/category-performance`);
+}
+
+export async function fetchTopCustomers(limit: number = 10): Promise<TopCustomer[]> {
+  return fetchJson<TopCustomer[]>(`/api/analytics/top-customers?limit=${limit}`);
+}

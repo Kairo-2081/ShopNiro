@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ShopNiro</title>
+    <meta name="description" content="ShopNiro: a scalable, multi-vendor e-commerce marketplace supporting Customer, Seller, and Admin roles with product catalog, SSLCOMMERZ &amp; bKash payment gateway, seller approval workflow, shopping cart, checkout, order tracking, and reviews." />
+    <meta property="og:title" content="ShopNiro" />
+    <meta property="og:description" content="ShopNiro: a scalable, multi-vendor e-commerce marketplace supporting Customer, Seller, and Admin roles with product catalog, SSLCOMMERZ &amp; bKash payment gateway, seller approval workflow, shopping cart, checkout, order tracking, and reviews." />
+    <script>
+      (function() {
+        // Suppress Vite HMR WebSocket connection logs and errors
+        var origConsoleError = console.error;
+        console.error = function() {
+          var msg = arguments[0] ? String(arguments[0]) : '';
+          if (msg.indexOf('[vite] failed to connect to websocket') !== -1 ||
+              msg.indexOf('vite-hmr') !== -1 ||
+              msg.indexOf('vite-ping') !== -1 ||
+              msg.indexOf('WebSocket closed without opened') !== -1) {
+            return;
+          }
+          return origConsoleError.apply(console, arguments);
+        };
+
+        // If native WebSocket exists, safely handle Vite HMR connections without errors
+        if (typeof window !== 'undefined' && window.WebSocket) {
+          var OrigWebSocket = window.WebSocket;
+          function ViteSafeWebSocket(url, protocols) {
+            var urlStr = String(url || '');
+            var protoStr = Array.isArray(protocols) ? protocols.join(',') : String(protocols || '');
+            var isViteHmr = protoStr.indexOf('vite-hmr') !== -1 ||
+                            protoStr.indexOf('vite-ping') !== -1 ||
+                            urlStr.indexOf('token=') !== -1 ||
+                            urlStr.indexOf('vite') !== -1 ||
+                            urlStr.indexOf(':24678') !== -1 ||
+                            urlStr.indexOf('localhost:5173') !== -1;
+
+            if (isViteHmr) {
+              var target = new EventTarget();
+              target.readyState = 1; // OPEN
+              target.OPEN = 1;
+              target.CONNECTING = 0;
+              target.CLOSING = 2;
+              target.CLOSED = 3;
+              target.binaryType = 'blob';
+              target.extensions = '';
+              target.protocol = typeof protocols === 'string' ? protocols : (protocols && protocols[0]) || 'vite-hmr';
+              target.url = urlStr;
+              target.bufferedAmount = 0;
+              target.onopen = null;
+              target.onclose = null;
+              target.onerror = null;
+              target.onmessage = null;
+              target.send = function() {};
+              target.close = function(code, reason) {
+                target.readyState = 3;
+                var ev = new Event('close');
+                ev.code = code || 1000;
+                ev.reason = reason || '';
+                ev.wasClean = true;
+                if (typeof target.onclose === 'function') target.onclose(ev);
+                target.dispatchEvent(ev);
+              };
+              setTimeout(function() {
+                var ev = new Event('open');
+                if (typeof target.onopen === 'function') target.onopen(ev);
+                target.dispatchEvent(ev);
+              }, 0);
+              return target;
+            }
+
+            return new OrigWebSocket(url, protocols);
+          }
+          ViteSafeWebSocket.prototype = OrigWebSocket.prototype;
+          ViteSafeWebSocket.CONNECTING = 0;
+          ViteSafeWebSocket.OPEN = 1;
+          ViteSafeWebSocket.CLOSING = 2;
+          ViteSafeWebSocket.CLOSED = 3;
+          window.WebSocket = ViteSafeWebSocket;
+        }
+
+        function isViteWsError(err) {
+          if (!err) return false;
+          var msg = String(err.message || err.reason || err || '');
+          return msg.indexOf('WebSocket') !== -1 || msg.indexOf('vite') !== -1 || msg.indexOf('ws://') !== -1 || msg.indexOf('wss://') !== -1;
+        }
+        window.addEventListener('unhandledrejection', function(e) {
+          if (isViteWsError(e.reason) || isViteWsError(e)) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+          }
+        }, true);
+        window.addEventListener('error', function(e) {
+          if (isViteWsError(e.error) || isViteWsError(e.message)) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+          }
+        }, true);
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

@@ -1,0 +1,1 @@
+export const shopNiroLogo = new URL('../../ShopNiro-new-round-final.png', import.meta.url).href;

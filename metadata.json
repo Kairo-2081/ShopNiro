@@ -1,0 +1,6 @@
+{
+  "name": "ShopNiro",
+  "description": "ShopNiro: a scalable, multi-vendor e-commerce marketplace supporting Customer, Seller, and Admin roles with product catalog, SSLCOMMERZ & bKash payment gateway, seller approval workflow, shopping cart, checkout, order tracking, and reviews.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
