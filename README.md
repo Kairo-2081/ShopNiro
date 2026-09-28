@@ -1,3 +1,5 @@
+ShopNiro is a multi-vendor marketplace where customers shop, pay with bKash or SSLCOMMERZ, and track orders, while admin-approved sellers manage their stores and a Gemini AI assistant helps shoppers find what they need. Shop smart. Ship fast.
+
 1. Install dependencies:
    `npm install`
 
