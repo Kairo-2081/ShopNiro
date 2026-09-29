@@ -38,6 +38,15 @@ import { LiveProductTrackingMap } from './components/tracking/LiveProductTrackin
 import { MarketplaceTrendsTopCharts } from './components/storefront/MarketplaceTrendsTopCharts';
 import { RefreshCw, LayoutGrid, Database, Radio } from 'lucide-react';
 
+const scrollViewportToTop = () => {
+  const options: ScrollToOptions = { top: 0, behavior: 'smooth' };
+  if (window.matchMedia('(min-width: 768px)').matches) {
+    document.getElementById('root')?.scrollTo(options);
+  } else {
+    window.scrollTo(options);
+  }
+};
+
 export default function App() {
   // Navigation & View Mode
   const [viewMode, setViewMode] = React.useState<'landing' | 'app'>('landing');
@@ -926,7 +935,7 @@ export default function App() {
             <button
               onClick={() => {
                 setActiveTab('storefront');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+                scrollViewportToTop();
               }}
               className="hover:text-blue-500 dark:hover:text-sky-400 transition-colors cursor-pointer"
             >
@@ -936,7 +945,7 @@ export default function App() {
             <button
               onClick={() => {
                 setActiveTab('orders');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+                scrollViewportToTop();
               }}
               className="hover:text-blue-500 dark:hover:text-sky-400 transition-colors cursor-pointer"
             >
@@ -946,7 +955,7 @@ export default function App() {
             <button
               onClick={() => {
                 setActiveTab('live-tracking');
-                window.scrollTo({ top: 0, behavior: 'smooth' });
+                scrollViewportToTop();
               }}
               className="hover:text-blue-500 dark:hover:text-sky-400 transition-colors cursor-pointer flex items-center gap-1 font-semibold text-blue-600 dark:text-sky-400"
             >

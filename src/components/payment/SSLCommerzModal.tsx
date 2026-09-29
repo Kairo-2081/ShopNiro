@@ -139,7 +139,7 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
           customerPhone: phone,
           address: shippingAddress,
           paymentMethod: selectedChannel === 'cards' ? 'visa_mastercard' : selectedChannel,
-          productName: `GoCart Order (${selectedChannel.toUpperCase()})`,
+          productName: `ShopNiro Order (${selectedChannel.toUpperCase()})`,
         }),
       });
 
@@ -205,7 +205,7 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
                   SANDBOX 256-BIT SECURE
                 </span>
               </div>
-              <p className="text-[10px] text-slate-400">Official Payment Gateway Partner of GoCart</p>
+              <p className="text-[10px] text-slate-400">Official Payment Gateway Partner of ShopNiro</p>
             </div>
           </div>
 
@@ -235,7 +235,7 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
               Merchant
             </span>
             <span className="text-xs font-bold text-slate-800 dark:text-zinc-200">
-              GoCart Marketplace BD
+              ShopNiro Marketplace BD
             </span>
             <span className="text-[10px] text-slate-400 block font-mono">Invoice: ORD-{Date.now().toString().slice(-6)}</span>
           </div>

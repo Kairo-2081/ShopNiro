@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt, { SignOptions } from 'jsonwebtoken';
 import { UserRole } from '../../src/types.ts';
 
-const JWT_SECRET: string = process.env.JWT_SECRET || 'gocart-super-secure-secret-key-2026';
+const JWT_SECRET: string = process.env.JWT_SECRET || 'shopniro-super-secure-secret-key-2026';
 
 export interface TokenPayload {
   userId: string;

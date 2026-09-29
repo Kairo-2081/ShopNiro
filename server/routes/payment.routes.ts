@@ -96,7 +96,7 @@ router.post('/init', async (req, res) => {
       customerPhone,
       address,
       paymentMethod = 'bkash',
-      productName = 'GoCart Marketplace Order',
+      productName = 'ShopNiro Marketplace Order',
     } = req.body;
 
     if (!amount || amount <= 0) {

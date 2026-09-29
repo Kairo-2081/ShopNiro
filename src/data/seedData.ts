@@ -119,7 +119,7 @@ export const initialAdmin: Admin = {
   Admin_ID: 'ADM-1',
   Username: 'admin',
   Name: 'Fahim Shahriar (Admin)',
-  Email: 'admin@gocart.com',
+  Email: 'admin@shopniro.com',
   Password: 'admin123',
   Number: '+88017555-01949',
   Address: {
@@ -127,7 +127,7 @@ export const initialAdmin: Admin = {
     House_Name: 'HQ Tower Floor 15',
     City: 'Dhaka',
     Postal_Code: '9513',
-    Additional_Info: 'GoCart Operations Center'
+    Additional_Info: 'ShopNiro Operations Center'
   }
 };
 

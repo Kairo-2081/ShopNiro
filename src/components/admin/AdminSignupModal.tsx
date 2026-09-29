@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Admin, Address } from '../../types';
+import { AccountLocationPicker } from '../AccountLocationPicker';
 import { X, ShieldPlus, Send, KeyRound, Eye, EyeOff, Lock, User, Mail, Phone, MapPin } from 'lucide-react';
 import { ADMIN_SECURITY_KEY } from './AdminSecurityModal';
 
@@ -22,6 +23,7 @@ export const AdminSignupModal: React.FC<AdminSignupModalProps> = ({
   const [password, setPassword] = useState('');
   const [showPasswordState, setShowPasswordState] = useState(false);
   const [number, setNumber] = useState('');
+  const [hasSelectedLocation, setHasSelectedLocation] = useState(false);
   const [securityKey, setSecurityKey] = useState('');
   const [showKey, setShowKey] = useState(false);
   const [address, setAddress] = useState<Address>({
@@ -42,6 +44,10 @@ export const AdminSignupModal: React.FC<AdminSignupModalProps> = ({
       setError('Please provide name, email, and set password.');
       return;
     }
+    if (!number.trim() || !hasSelectedLocation || !address.Street.trim() || !address.City.trim()) {
+      setError('Enter a phone number and select your office location on the map.');
+      return;
+    }
 
     if (securityKey.trim().toUpperCase() !== ADMIN_SECURITY_KEY) {
       setError(`Invalid Admin Security Key! System key required to register as Admin.`);
@@ -58,7 +64,7 @@ export const AdminSignupModal: React.FC<AdminSignupModalProps> = ({
         Name: name.trim(),
         Email: email.trim(),
         Password: password.trim(),
-        Number: number.trim() || '+1 (800) 555-0000',
+        Number: number.trim(),
         Address: address,
       });
 
@@ -67,6 +73,7 @@ export const AdminSignupModal: React.FC<AdminSignupModalProps> = ({
       setPassword('');
       setUsername('');
       setNumber('');
+      setHasSelectedLocation(false);
       setSecurityKey('');
       setAddress({ House_Name: '', Street: '', City: '', Postal_Code: '', Additional_Info: '' });
 
@@ -181,11 +188,12 @@ export const AdminSignupModal: React.FC<AdminSignupModalProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-slate-700 dark:text-zinc-300 font-semibold mb-1">Phone Number</label>
+              <label className="block text-slate-700 dark:text-zinc-300 font-semibold mb-1">Phone Number *</label>
               <div className="relative">
                 <input
-                  type="text"
-                  placeholder="+1 (800) 000-0000"
+                  type="tel"
+                  required
+                  placeholder="+880 1XXX-XXXXXX"
                   value={number}
                   onChange={(e) => setNumber(e.target.value)}
                   className="w-full p-2.5 pl-8 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
@@ -223,6 +231,17 @@ export const AdminSignupModal: React.FC<AdminSignupModalProps> = ({
             <h4 className="font-semibold text-slate-900 dark:text-white mb-2 flex items-center gap-1.5">
               <MapPin className="w-3.5 h-3.5 text-blue-500" /> Operational / Office Address
             </h4>
+            <div className="mb-3">
+              <label className="block text-slate-600 dark:text-zinc-400 mb-1">Location *</label>
+              <AccountLocationPicker
+                onAddressSelected={(selectedAddress) => {
+                  setHasSelectedLocation(Boolean(selectedAddress));
+                  setAddress((currentAddress) => selectedAddress
+                    ? { ...currentAddress, ...selectedAddress }
+                    : { ...currentAddress, Street: '', City: '', Postal_Code: '' });
+                }}
+              />
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-slate-600 dark:text-zinc-400 mb-1">Building / Floor</label>
@@ -235,9 +254,10 @@ export const AdminSignupModal: React.FC<AdminSignupModalProps> = ({
                 />
               </div>
               <div>
-                <label className="block text-slate-600 dark:text-zinc-400 mb-1">Street Address</label>
+                <label className="block text-slate-600 dark:text-zinc-400 mb-1">Street Address *</label>
                 <input
                   type="text"
+                  required
                   placeholder="e.g. 1 Marketplace Plaza"
                   value={address.Street}
                   onChange={(e) => setAddress({ ...address, Street: e.target.value })}
@@ -245,9 +265,10 @@ export const AdminSignupModal: React.FC<AdminSignupModalProps> = ({
                 />
               </div>
               <div>
-                <label className="block text-slate-600 dark:text-zinc-400 mb-1">City</label>
+                <label className="block text-slate-600 dark:text-zinc-400 mb-1">City *</label>
                 <input
                   type="text"
+                  required
                   placeholder="e.g. San Jose"
                   value={address.City}
                   onChange={(e) => setAddress({ ...address, City: e.target.value })}

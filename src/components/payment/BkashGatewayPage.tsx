@@ -201,7 +201,7 @@ export const BkashGatewayPage: React.FC<BkashGatewayPageProps> = ({
               type="button"
               onClick={onClose}
               className="w-8 h-8 rounded-full bg-pink-700/50 hover:bg-pink-700 text-white flex items-center justify-center transition-colors cursor-pointer"
-              title="Cancel and return to GoCart"
+              title="Cancel and return to ShopNiro"
             >
               <X className="w-4 h-4" />
             </button>
@@ -211,7 +211,7 @@ export const BkashGatewayPage: React.FC<BkashGatewayPageProps> = ({
           <div className="mt-4 pt-3 border-t border-pink-400/40 flex items-center justify-between text-xs">
             <div>
               <span className="text-pink-200 block text-[10px] uppercase font-bold">Merchant Name</span>
-              <span className="font-bold text-white">GoCart Marketplace Ltd</span>
+              <span className="font-bold text-white">ShopNiro Marketplace Ltd</span>
             </div>
             <div className="text-right">
               <span className="text-pink-200 block text-[10px] uppercase font-bold">Total Amount</span>
@@ -409,7 +409,7 @@ export const BkashGatewayPage: React.FC<BkashGatewayPageProps> = ({
             </div>
           )}
 
-          {/* STEP 5: Success & Auto-Redirection back to GoCart */}
+          {/* STEP 5: Success & Auto-Redirection back to ShopNiro */}
           {step === 'success' && verifiedTran && (
             <div className="py-6 text-center space-y-4">
               <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto shadow-md">
@@ -443,7 +443,7 @@ export const BkashGatewayPage: React.FC<BkashGatewayPageProps> = ({
               <div className="p-3 rounded-2xl bg-pink-50 border border-pink-200 text-xs text-pink-800 flex items-center justify-center gap-2">
                 <RefreshCw className="w-4 h-4 animate-spin text-[#E2136E]" />
                 <span>
-                  Redirecting to <strong>GoCart Live Google Maps Tracking</strong> in{' '}
+                  Redirecting to <strong>ShopNiro Live Google Maps Tracking</strong> in{' '}
                   <span className="font-bold font-mono text-[#E2136E]">{countdownToRedirect}s</span>...
                 </span>
               </div>
@@ -453,7 +453,7 @@ export const BkashGatewayPage: React.FC<BkashGatewayPageProps> = ({
                 onClick={() => onSuccess(verifiedTran)}
                 className="w-full py-3 rounded-2xl bg-[#E2136E] hover:bg-[#c20f5e] text-white font-bold text-xs shadow-md transition-all cursor-pointer"
               >
-                RETURN TO GOCART NOW
+                RETURN TO SHOPNIRO NOW
               </button>
             </div>
           )}

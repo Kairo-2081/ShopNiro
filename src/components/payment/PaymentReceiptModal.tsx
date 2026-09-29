@@ -56,7 +56,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
             </span>
           </div>
 
-          <h2 className="text-xl font-black text-white">GoCart Marketplace BD</h2>
+          <h2 className="text-xl font-black text-white">ShopNiro Marketplace BD</h2>
           <p className="text-xs text-slate-400 mt-0.5">
             Verified Electronic Merchant Waybill &amp; Transaction Voucher
           </p>

@@ -70,7 +70,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
             <div className="flex items-center gap-2.5">
               <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
               <div>
-                <strong className="font-bold">Merchant Approved &amp; Live:</strong> Your store is active on GoCart marketplace.
+                <strong className="font-bold">Merchant Approved &amp; Live:</strong> Your store is active on ShopNiro marketplace.
               </div>
             </div>
             <span className="font-mono text-[11px] font-bold uppercase bg-emerald-500 text-white px-2.5 py-1 rounded-full">

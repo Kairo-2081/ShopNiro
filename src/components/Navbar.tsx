@@ -266,7 +266,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 onClick={onOpenChat}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-sky-950/70 hover:bg-sky-900/70 text-sky-300 border border-sky-800/60 transition-all cursor-pointer shadow-xs group"
-                title="Open GoCart Gemini AI Assistant"
+                title="Open ShopNiro AI Assistant"
               >
                 <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-spin" />
                 <span className="hidden sm:inline">Ask AI</span>

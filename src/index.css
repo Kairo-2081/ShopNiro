@@ -124,6 +124,57 @@
   #root {
     min-height: 100vh;
   }
+
+  @media (min-width: 768px) {
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #root {
+      width: min(100vw, 177.7778vh);
+      height: min(100vh, 56.25vw);
+      min-height: 0;
+      aspect-ratio: 16 / 9;
+      overflow-x: hidden;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      scrollbar-gutter: stable;
+      border: 1px solid rgba(208, 200, 165, 0.16);
+    }
+  }
+
+  @media (max-width: 767px) {
+    html,
+    body {
+      height: auto;
+      min-height: 100%;
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+
+    body {
+      display: block;
+    }
+
+    #root {
+      width: 100%;
+      height: auto;
+      min-height: 100vh;
+      aspect-ratio: auto;
+      overflow: visible;
+      border: 0;
+    }
+  }
 }
 
 @layer utilities {

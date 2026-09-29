@@ -98,7 +98,7 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
               <h2 className="font-bold text-slate-900 dark:text-white text-base">
                 {productToEdit ? 'Edit Product Listing' : 'Create New Product Listing'}
               </h2>
-              <p className="text-xs text-slate-500 dark:text-zinc-400">Publish catalog items on GoCart marketplace</p>
+              <p className="text-xs text-slate-500 dark:text-zinc-400">Publish catalog items on ShopNiro marketplace</p>
             </div>
           </div>
           <button

@@ -78,10 +78,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   return (
     <div className="min-h-screen text-zinc-100 font-sans pb-28 transition-colors duration-200 selection:bg-[#80734f] selection:text-white">
       {/* Centered Mobile/Responsive Container matching the reference design */}
-      <div className="max-w-md sm:max-w-xl mx-auto px-4 pt-3 pb-8 space-y-6">
+      <div className="max-w-md sm:max-w-xl md:max-w-7xl mx-auto px-4 sm:px-6 md:px-8 pt-3 md:pt-5 pb-8 md:pb-12 space-y-6 md:space-y-8">
         
         {/* 1. Header / Navbar */}
-        <header className="flex items-center justify-between py-2 rounded-full border border-white/10 bg-white/5 backdrop-blur-xl px-3 shadow-[0_10px_35px_rgba(7,18,18,0.25)]">
+        <header className="flex items-center justify-between gap-3 md:gap-4 py-2.5 rounded-full md:rounded-2xl border border-[#d0c8a5]/15 bg-[#10100f]/75 backdrop-blur-xl px-3 sm:px-4 shadow-[0_12px_32px_rgba(6,6,4,0.24)]">
           {/* Brand Logo & Name */}
           <div className="flex items-center gap-2.5">
             <img
@@ -99,6 +99,23 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
           </div>
 
+          <nav className="hidden md:flex items-center gap-1 lg:gap-2" aria-label="Main navigation">
+            <button
+              type="button"
+              onClick={onEnterAsGuest}
+              className="px-2 lg:px-4 py-2 rounded-full text-xs lg:text-sm font-semibold text-zinc-200 hover:bg-white/8 hover:text-white transition-colors cursor-pointer"
+            >
+              Browse catalog
+            </button>
+            <button
+              type="button"
+              onClick={onOpenSellerSignup}
+              className="px-2 lg:px-4 py-2 rounded-full text-xs lg:text-sm font-semibold text-zinc-200 hover:bg-white/8 hover:text-white transition-colors cursor-pointer"
+            >
+              Sell on ShopNiro
+            </button>
+          </nav>
+
           {/* Right Controls: Filter Catalog & Profile Avatar */}
           <div className="flex items-center gap-2.5">
             {/* Theme Toggle if available */}
@@ -106,7 +123,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <button
                 type="button"
                 onClick={onToggleTheme}
-                className="w-9 h-9 rounded-full bg-[#161C24] border border-zinc-800 text-zinc-300 flex items-center justify-center hover:bg-zinc-800 transition-colors shadow-2xs cursor-pointer"
+                className="w-9 h-9 rounded-full bg-[#161C24] border border-zinc-800 text-zinc-300 flex items-center justify-center hover:bg-zinc-800 transition-colors shadow-2xs cursor-pointer md:hidden"
                 title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
               >
                 {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-blue-400" />}
@@ -136,7 +153,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </header>
 
         {/* 2. Hero Section */}
-        <section className="rounded-[32px] p-6 sm:p-7 shadow-[0_35px_90px_rgba(3,3,2,0.42)] border border-[#d0c8a5]/20 text-center space-y-4 relative overflow-hidden bg-[radial-gradient(circle_at_50%_18%,rgba(208,200,165,0.2),transparent_16%),radial-gradient(circle_at_50%_100%,rgba(119,119,90,0.48),transparent_36%),linear-gradient(135deg,#77775a_0%,#514c38_24%,#292820_52%,#11110f_100%)]">
+        <section className="w-full md:max-w-5xl md:mx-auto rounded-[28px] p-6 sm:p-8 md:px-12 md:py-12 shadow-[0_35px_90px_rgba(3,3,2,0.42)] border border-[#d0c8a5]/20 text-center space-y-4 md:space-y-5 relative overflow-hidden bg-[radial-gradient(circle_at_50%_18%,rgba(208,200,165,0.2),transparent_16%),radial-gradient(circle_at_50%_100%,rgba(119,119,90,0.48),transparent_36%),linear-gradient(135deg,#77775a_0%,#514c38_24%,#292820_52%,#11110f_100%)]">
           {/* Atmospheric background glow */}
           <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-72 h-72 bg-white/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -147,25 +164,25 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           {/* Hero Headline */}
-          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white leading-[1.18]">
+          <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white leading-[1.12] max-w-4xl mx-auto">
             Curated goods. Delivered{' '}
             <span className="italic font-serif font-normal text-sky-400">
               with care.
             </span>
           </h2>
 
-          {/* Subtitle Tailored to GoCart Marketplace */}
-          <p className="text-zinc-400 text-xs sm:text-sm max-w-sm mx-auto leading-relaxed">
+          {/* Subtitle tailored to ShopNiro Marketplace */}
+          <p className="text-zinc-300 text-xs sm:text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
             Discover verified independent merchants, direct checkout, real-time inventory, and guaranteed buyer protection from storefront to your doorstep.
           </p>
 
           {/* 3D Interactive Marketplace Globe */}
-          <div className="py-1">
+          <div className="py-1 md:py-2">
             <OrbitGlobe onGreet={() => setHasWaved(true)} />
           </div>
 
           {/* Hero CTA Buttons */}
-          <div className="flex items-center justify-center gap-3 pt-1">
+          <div className="flex items-center justify-center gap-3 pt-1 max-w-xl mx-auto w-full">
             {/* Say Hello / Browse Button */}
             <button
               type="button"
@@ -217,8 +234,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </p>
           </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Portal Card 1: Customer Hub */}
-          <div className="rounded-3xl p-5 bg-[#0F1E32] border border-blue-900/60 shadow-xl space-y-3">
+          <div className="premium-card rounded-2xl p-5 lg:p-6 space-y-3 flex flex-col lg:min-h-[370px]">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-600/40">
@@ -259,13 +277,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 onClick={onOpenCustomerSignup || onOpenLogin}
                 className="text-xs font-semibold text-zinc-400 hover:text-sky-300 transition-colors cursor-pointer"
               >
-                New to GoCart? <strong className="text-sky-400 ml-1">+ Create Customer Account</strong>
+                New to ShopNiro? <strong className="text-sky-400 ml-1">+ Create Customer Account</strong>
               </button>
             </div>
           </div>
 
           {/* Portal Card 2: Merchant Studio */}
-          <div className="rounded-3xl p-5 bg-[#0E251E] border border-emerald-900/60 shadow-xl space-y-3">
+          <div className="premium-card rounded-2xl p-5 lg:p-6 space-y-3 flex flex-col lg:min-h-[370px]">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-md shadow-emerald-600/40">
@@ -306,13 +324,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 onClick={onOpenSellerSignup}
                 className="text-xs font-semibold text-zinc-400 hover:text-emerald-300 transition-colors cursor-pointer"
               >
-                Sell on GoCart? <strong className="text-emerald-400 ml-1">+ Register as Verified Merchant</strong>
+                Sell on ShopNiro? <strong className="text-emerald-400 ml-1">+ Register as Verified Merchant</strong>
               </button>
             </div>
           </div>
 
           {/* Portal Card 3: Admin Governance */}
-          <div className="rounded-3xl p-5 bg-[#1F172E] border border-purple-900/60 shadow-xl space-y-3">
+          <div className="premium-card rounded-2xl p-5 lg:p-6 space-y-3 flex flex-col lg:min-h-[370px]">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-purple-600 text-white flex items-center justify-center shadow-md shadow-purple-600/40">
@@ -353,6 +371,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
           </div>
 
+          </div>
+
           {/* Universal Unified Sign-In Banner */}
           <div
             onClick={onOpenLogin}
@@ -382,6 +402,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </h3>
           </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {/* Feature 1: Verified Merchant Quality */}
           <div className="p-4 rounded-2xl bg-[#12161D] border border-zinc-800 shadow-xl flex items-start gap-3.5">
             <div className="w-10 h-10 rounded-2xl bg-sky-950 text-sky-400 flex items-center justify-center shrink-0 border border-sky-900/50">
@@ -440,6 +461,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 Secure checkout with funds held safely until contactless delivery is confirmed. Hassle-free dispute resolution and returns.
               </p>
             </div>
+          </div>
           </div>
         </section>
 
@@ -525,19 +547,20 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
         </section>
 
-        {/* 7. EFFORTLESS FLOW: How GoCart glides (Matching User Screenshot 3) */}
+        {/* 7. EFFORTLESS FLOW: How ShopNiro works */}
         <section className="space-y-3 pt-2">
           <div>
             <span className="text-[10px] font-extrabold tracking-widest text-sky-400 uppercase block">
               EFFORTLESS FLOW
             </span>
             <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight mt-0.5">
-              How GoCart glides
+              How ShopNiro works
             </h3>
           </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {/* Step 1 */}
-          <div className="p-4 rounded-2xl bg-[#12161D] border border-zinc-800 shadow-xl flex items-start gap-3.5">
+          <div className="p-4 lg:p-5 rounded-2xl bg-[#12161D] border border-zinc-800 shadow-xl flex items-start gap-3.5 lg:min-h-40">
             <div className="w-8 h-8 rounded-full bg-blue-600 text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-md shadow-blue-600/40">
               1
             </div>
@@ -552,7 +575,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           {/* Step 2 */}
-          <div className="p-4 rounded-2xl bg-[#12161D] border border-zinc-800 shadow-xl flex items-start gap-3.5">
+          <div className="p-4 lg:p-5 rounded-2xl bg-[#12161D] border border-zinc-800 shadow-xl flex items-start gap-3.5 lg:min-h-40">
             <div className="w-8 h-8 rounded-full bg-teal-600 text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-md shadow-teal-600/40">
               2
             </div>
@@ -567,7 +590,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           {/* Step 3 */}
-          <div className="p-4 rounded-2xl bg-[#12161D] border border-zinc-800 shadow-xl flex items-start gap-3.5">
+          <div className="p-4 lg:p-5 rounded-2xl bg-[#12161D] border border-zinc-800 shadow-xl flex items-start gap-3.5 lg:min-h-40">
             <div className="w-8 h-8 rounded-full bg-orange-600 text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-md shadow-orange-600/40">
               3
             </div>
@@ -579,6 +602,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 Receive high-resolution photo proof upon delivery, unbox with peace of mind, and leave verified customer reviews.
               </p>
             </div>
+          </div>
           </div>
         </section>
 
@@ -593,9 +617,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </h3>
           </div>
 
-          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none snap-x">
+          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none snap-x md:grid md:grid-cols-2 md:overflow-visible">
             {/* Review Card 1 */}
-            <div className="min-w-[280px] sm:min-w-[320px] p-4 rounded-3xl bg-[#12161D] border border-zinc-800 shadow-xl flex flex-col justify-between space-y-3 snap-center">
+            <div className="min-w-[280px] sm:min-w-[320px] md:min-w-0 p-4 rounded-2xl bg-[#12161D] border border-zinc-800 shadow-xl flex flex-col justify-between space-y-3 snap-center">
               <div className="space-y-2">
                 <div className="flex text-amber-400 gap-0.5 text-xs">
                   <span>★</span>
@@ -605,7 +629,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   <span>★</span>
                 </div>
                 <p className="text-xs text-zinc-300 font-medium leading-relaxed">
-                  "GoCart transformed our artisan bakery shipments. Zero crushed sourdough loaves, ever."
+                  "ShopNiro transformed our artisan bakery shipments. Zero crushed sourdough loaves, ever."
                 </p>
               </div>
 
@@ -627,7 +651,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
 
             {/* Review Card 2 */}
-            <div className="min-w-[280px] sm:min-w-[320px] p-4 rounded-3xl bg-[#12161D] border border-zinc-800 shadow-xl flex flex-col justify-between space-y-3 snap-center">
+            <div className="min-w-[280px] sm:min-w-[320px] md:min-w-0 p-4 rounded-2xl bg-[#12161D] border border-zinc-800 shadow-xl flex flex-col justify-between space-y-3 snap-center">
               <div className="space-y-2">
                 <div className="flex text-amber-400 gap-0.5 text-xs">
                   <span>★</span>
@@ -693,7 +717,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </div>
 
       {/* 10. Bottom Mobile Navigation Bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#0C1014]/95 backdrop-blur-md border-t border-zinc-800/90 py-2.5 px-6 shadow-2xl">
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#0C1014]/95 backdrop-blur-md border-t border-zinc-800/90 py-2.5 px-6 shadow-2xl md:hidden">
         <div className="max-w-md mx-auto flex items-center justify-between relative">
           {/* Store / Radar */}
           <button

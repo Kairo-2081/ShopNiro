@@ -39,7 +39,14 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const { Name, Email, Password, Number: phoneNum, Address, Username } = req.body;
-    const email = Email || (Username ? `${Username}@gocart.com` : 'admin@gocart.com');
+    const phone = typeof phoneNum === 'string' ? phoneNum.trim() : '';
+    if (!phone) {
+      return res.status(400).json({ error: 'A phone number is required' });
+    }
+    if (!Address?.Street?.trim() || !Address?.City?.trim()) {
+      return res.status(400).json({ error: 'Select a location and provide a street and city' });
+    }
+    const email = Email || (Username ? `${Username}@shopniro.com` : 'admin@shopniro.com');
     const cleanEmail = email.trim().toLowerCase();
 
     // Check if user already exists with this email
@@ -53,14 +60,12 @@ router.post('/', async (req, res) => {
     const hashedPassword = await hashPassword(rawPassword);
     const name = Name || Username || 'Admin User';
     const username = Username || cleanEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
-    const phone = phoneNum || '+88017555-01949';
-
     const addr = Address || {};
-    const houseName = addr.House_Name || 'HQ Tower Floor 15';
-    const street = addr.Street || '1 Marketplace Way';
-    const city = addr.City || 'Dhaka';
-    const postalCode = addr.Postal_Code || '9513';
-    const addInfo = addr.Additional_Info || 'GoCart Operations Center';
+    const houseName = addr.House_Name || '';
+    const street = addr.Street.trim();
+    const city = addr.City.trim();
+    const postalCode = addr.Postal_Code || '';
+    const addInfo = addr.Additional_Info || 'ShopNiro Operations Center';
 
     const result = await query(
       `SELECT * FROM gocart_admin_create($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,

@@ -42,6 +42,13 @@ router.post('/', async (req, res) => {
     if (!Name || !Email) {
       return res.status(400).json({ error: 'Name and Email are required' });
     }
+    const phone = typeof phoneNum === 'string' ? phoneNum.trim() : '';
+    if (!phone) {
+      return res.status(400).json({ error: 'A phone number is required' });
+    }
+    if (!Address?.Street?.trim() || !Address?.City?.trim()) {
+      return res.status(400).json({ error: 'Select a location and provide a street and city' });
+    }
     const cleanEmail = Email.trim().toLowerCase();
 
     // Check if user with this email already exists
@@ -55,13 +62,12 @@ router.post('/', async (req, res) => {
     const hashedPassword = await hashPassword(rawPassword);
     const logoUrl = Logo || 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=200&auto=format&fit=crop&q=80';
     const desc = Description || '';
-    const phone = phoneNum || '';
     const username = Username || cleanEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
 
     const addr = Address || {};
     const houseName = addr.House_Name || '';
-    const street = addr.Street || '';
-    const city = addr.City || '';
+    const street = addr.Street.trim();
+    const city = addr.City.trim();
     const postalCode = addr.Postal_Code || '';
     const addInfo = addr.Additional_Info || '';
 

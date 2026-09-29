@@ -192,7 +192,7 @@ async function startServer() {
   }
 
   httpServer.listen(PORT, '0.0.0.0', () => {
-    console.log(`GoCart E-Commerce Server running on http://localhost:${PORT}`);
+    console.log(`ShopNiro E-Commerce Server running on http://localhost:${PORT}`);
   });
 }
 

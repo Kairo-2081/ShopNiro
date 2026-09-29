@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Seller, Address } from '../../types';
+import { AccountLocationPicker } from '../AccountLocationPicker';
 import { X, Store, Send, MapPin, Lock, Eye, EyeOff, User, Mail, Phone, Image } from 'lucide-react';
 
 interface SellerSignupModalProps {
@@ -21,6 +22,7 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [number, setNumber] = useState('');
+  const [hasSelectedLocation, setHasSelectedLocation] = useState(false);
   const [logo, setLogo] = useState('https://images.unsplash.com/photo-1529374255404-311a2a4f1fd9?w=200');
   const [description, setDescription] = useState('');
   const [address, setAddress] = useState<Address>({
@@ -38,8 +40,8 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !email.trim() || !password.trim() || !address.Street.trim() || !address.City.trim()) {
-      setError('Please fill out all required fields including password.');
+    if (!name.trim() || !email.trim() || !password.trim() || !number.trim() || !hasSelectedLocation || !address.Street.trim() || !address.City.trim()) {
+      setError('Complete the required fields, enter a phone number, and select your location on the map.');
       return;
     }
 
@@ -52,7 +54,7 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
         Name: name.trim(),
         Email: email.trim(),
         Password: password.trim(),
-        Number: number.trim() || '+1 (555) 000-0000',
+        Number: number.trim(),
         Logo: logo.trim(),
         Description: description.trim(),
         Address: address,
@@ -80,7 +82,7 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
               <h2 className="font-bold text-slate-900 dark:text-white text-base">
                 Apply for Merchant Partner
               </h2>
-              <p className="text-xs text-slate-500 dark:text-zinc-400">Join GoCart verified merchant network</p>
+              <p className="text-xs text-slate-500 dark:text-zinc-400">Join the ShopNiro verified merchant network</p>
             </div>
           </div>
           <button
@@ -174,11 +176,12 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-slate-700 dark:text-zinc-300 font-semibold mb-1">Phone Number</label>
+              <label className="block text-slate-700 dark:text-zinc-300 font-semibold mb-1">Phone Number *</label>
               <div className="relative">
                 <input
-                  type="text"
-                  placeholder="+1 (555) 000-0000"
+                  type="tel"
+                  required
+                  placeholder="+880 1XXX-XXXXXX"
                   value={number}
                   onChange={(e) => setNumber(e.target.value)}
                   className="w-full p-2.5 pl-8 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
@@ -217,6 +220,17 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
             <h4 className="font-semibold text-slate-900 dark:text-white mb-2 flex items-center gap-1.5">
               <MapPin className="w-3.5 h-3.5 text-emerald-500" /> Business Headquarters Address
             </h4>
+            <div className="mb-3">
+              <label className="block text-slate-600 dark:text-zinc-400 mb-1">Location *</label>
+              <AccountLocationPicker
+                onAddressSelected={(selectedAddress) => {
+                  setHasSelectedLocation(Boolean(selectedAddress));
+                  setAddress((currentAddress) => selectedAddress
+                    ? { ...currentAddress, ...selectedAddress }
+                    : { ...currentAddress, Street: '', City: '', Postal_Code: '' });
+                }}
+              />
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-slate-600 dark:text-zinc-400 mb-1">House / Suite / Building</label>

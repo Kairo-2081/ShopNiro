@@ -292,7 +292,7 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
                 style={{ width: '100%', height: '100%' }}
               >
                 {/* 1. Origin Marker: Merchant Warehouse */}
-                <AdvancedMarker position={originWarehouse} title="GoCart Merchant Warehouse">
+                <AdvancedMarker position={originWarehouse} title="ShopNiro Merchant Warehouse">
                   <div className="flex flex-col items-center group cursor-pointer">
                     <div className="px-2 py-0.5 rounded-md bg-slate-900 text-white text-[10px] font-bold shadow-md border border-zinc-700 mb-1 whitespace-nowrap">
                       Dispatch Warehouse
@@ -503,7 +503,7 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
           <div className="p-3 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40 text-[11px] text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
             <span>
-              Payment Verified via {activeOrder.Payment_Method?.toUpperCase() || 'SSLCOMMERZ'} • GoCart Transit Protection Guaranteed.
+              Payment Verified via {activeOrder.Payment_Method?.toUpperCase() || 'SSLCOMMERZ'} • ShopNiro Transit Protection Guaranteed.
             </span>
           </div>
         </div>

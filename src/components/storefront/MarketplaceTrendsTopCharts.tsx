@@ -436,7 +436,7 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
         </div>
       )}
 
-      {/* Tab 5: Top Customers VIP Leaderboard (from gocart_top_customers view) */}
+      {/* Tab 5: Top Customers VIP Leaderboard */}
       {activeTab === 'top-customers' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between text-xs text-slate-500 dark:text-zinc-400">

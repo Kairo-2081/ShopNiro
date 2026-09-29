@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Customer, Address } from '../../types';
+import { AccountLocationPicker } from '../AccountLocationPicker';
 import { X, UserPlus, Send, Lock, Eye, EyeOff, User, Mail, Phone, MapPin } from 'lucide-react';
 
 interface CustomerSignupModalProps {
@@ -21,6 +22,7 @@ export const CustomerSignupModal: React.FC<CustomerSignupModalProps> = ({
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [number, setNumber] = useState('');
+  const [hasSelectedLocation, setHasSelectedLocation] = useState(false);
   const [address, setAddress] = useState<Address>({
     House_Name: '',
     Street: '',
@@ -39,6 +41,10 @@ export const CustomerSignupModal: React.FC<CustomerSignupModalProps> = ({
       setError('Please provide name, email, and password.');
       return;
     }
+    if (!number.trim() || !hasSelectedLocation) {
+      setError('Enter a phone number and select your location on the map.');
+      return;
+    }
     setError(null);
     setIsSubmitting(true);
 
@@ -49,7 +55,7 @@ export const CustomerSignupModal: React.FC<CustomerSignupModalProps> = ({
         Name: name.trim(),
         Email: email.trim(),
         Password: password.trim(),
-        Number: number.trim() || '+1 (555) 000-0000',
+        Number: number.trim(),
         Address: address,
       });
 
@@ -73,7 +79,7 @@ export const CustomerSignupModal: React.FC<CustomerSignupModalProps> = ({
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-900 dark:text-white">Customer Registration</h3>
-              <p className="text-xs text-slate-500 dark:text-zinc-400">Join GoCart marketplace &amp; track orders live</p>
+              <p className="text-xs text-slate-500 dark:text-zinc-400">Join ShopNiro marketplace &amp; track orders live</p>
             </div>
           </div>
           <button
@@ -162,11 +168,12 @@ export const CustomerSignupModal: React.FC<CustomerSignupModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-slate-700 dark:text-zinc-300 font-semibold mb-1">Phone Number</label>
+              <label className="block text-slate-700 dark:text-zinc-300 font-semibold mb-1">Phone Number *</label>
             <div className="relative">
               <input
-                type="text"
-                placeholder="+1 (555) 000-0000"
+                type="tel"
+                required
+                placeholder="+880 1XXX-XXXXXX"
                 value={number}
                 onChange={(e) => setNumber(e.target.value)}
                 className="w-full p-2.5 pl-8 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
@@ -179,6 +186,17 @@ export const CustomerSignupModal: React.FC<CustomerSignupModalProps> = ({
             <h4 className="font-semibold text-slate-900 dark:text-white mb-2 flex items-center gap-1.5">
               <MapPin className="w-3.5 h-3.5 text-blue-500" /> Shipping &amp; Delivery Address
             </h4>
+            <div className="mb-3">
+              <label className="block text-slate-600 dark:text-zinc-400 mb-1">Location *</label>
+              <AccountLocationPicker
+                onAddressSelected={(selectedAddress) => {
+                  setHasSelectedLocation(Boolean(selectedAddress));
+                  setAddress((currentAddress) => selectedAddress
+                    ? { ...currentAddress, ...selectedAddress }
+                    : { ...currentAddress, Street: '', City: '', Postal_Code: '' });
+                }}
+              />
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-slate-600 dark:text-zinc-400 mb-1">House / Apt / Suite</label>
@@ -191,9 +209,10 @@ export const CustomerSignupModal: React.FC<CustomerSignupModalProps> = ({
                 />
               </div>
               <div>
-                <label className="block text-slate-600 dark:text-zinc-400 mb-1">Street Address</label>
+                  <label className="block text-slate-600 dark:text-zinc-400 mb-1">Street Address *</label>
                 <input
                   type="text"
+                    required
                   placeholder="e.g. 742 Evergreen Terrace"
                   value={address.Street}
                   onChange={(e) => setAddress({ ...address, Street: e.target.value })}
@@ -201,9 +220,10 @@ export const CustomerSignupModal: React.FC<CustomerSignupModalProps> = ({
                 />
               </div>
               <div>
-                <label className="block text-slate-600 dark:text-zinc-400 mb-1">City</label>
+                  <label className="block text-slate-600 dark:text-zinc-400 mb-1">City *</label>
                 <input
                   type="text"
+                    required
                   placeholder="e.g. Springfield"
                   value={address.City}
                   onChange={(e) => setAddress({ ...address, City: e.target.value })}

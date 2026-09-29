@@ -35,6 +35,13 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
 router.post('/', async (req, res) => {
   try {
     const { Name, Email, Password, Number: phoneNum, Address, Username } = req.body;
+    const phone = typeof phoneNum === 'string' ? phoneNum.trim() : '';
+    if (!phone) {
+      return res.status(400).json({ error: 'A phone number is required' });
+    }
+    if (!Address?.Street?.trim() || !Address?.City?.trim()) {
+      return res.status(400).json({ error: 'Select a location and provide a street and city' });
+    }
     const email = Email || (Username ? `${Username}@gmail.com` : 'customer@gmail.com');
     const cleanEmail = email.trim().toLowerCase();
 
@@ -49,13 +56,11 @@ router.post('/', async (req, res) => {
     const hashedPassword = await hashPassword(rawPassword);
     const name = Name || Username || 'Customer User';
     const username = Username || cleanEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
-    const phone = phoneNum || '+8801700-000000';
-
     const addr = Address || {};
-    const houseName = addr.House_Name || 'Apt 4B';
-    const street = addr.Street || '742 Evergreen Terrace';
-    const city = addr.City || 'Barishal';
-    const postalCode = addr.Postal_Code || '9777';
+    const houseName = addr.House_Name || '';
+    const street = addr.Street.trim();
+    const city = addr.City.trim();
+    const postalCode = addr.Postal_Code || '';
     const addInfo = addr.Additional_Info || '';
 
     const result = await query(

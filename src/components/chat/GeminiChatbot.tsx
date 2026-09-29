@@ -80,7 +80,7 @@ const ROLE_CONFIGS: Record<
     recommendedModel: 'gemini-3.1-flash-lite',
     starters: [
       'Where is order #ORD-1001 right now?',
-      'What are standard shipping fees on GoCart?',
+      'What are standard shipping fees on ShopNiro?',
       'How does package live tracking work?',
     ],
   },
@@ -131,7 +131,7 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
       id: 'welcome',
       role: 'model',
       content:
-        "Hello! I am your **GoCart AI Assistant**. How can I help you discover verified products, assist your merchant storefront, or track orders today?",
+        "Hello! I am your **ShopNiro AI Assistant**. How can I help you discover verified products, assist your merchant storefront, or track orders today?",
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       modelUsed: 'gemini-3.5-flash',
       roleUsed: 'shopping-assistant',
@@ -348,7 +348,7 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-sm font-bold tracking-tight text-white flex items-center gap-1.5">
-                GoCart AI Assistant
+                ShopNiro AI Assistant
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                   Online
                 </span>
@@ -486,7 +486,7 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
                   <div className="flex items-center justify-between gap-2 mb-2 pb-1.5 border-b border-slate-100 dark:border-zinc-800 text-[10px] text-slate-500 dark:text-zinc-400">
                     <span className="font-semibold flex items-center gap-1 text-blue-600 dark:text-sky-400">
                       <Sparkles className="w-3 h-3" />
-                      {m.roleUsed ? ROLE_CONFIGS[m.roleUsed as ChatRole]?.title || 'GoCart AI' : 'GoCart AI'}
+                      {m.roleUsed ? ROLE_CONFIGS[m.roleUsed as ChatRole]?.title || 'ShopNiro AI' : 'ShopNiro AI'}
                     </span>
                     <div className="flex items-center gap-1.5">
                       {m.modelUsed && (
@@ -512,7 +512,7 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
                     <span>{m.timestamp}</span>
                   ) : (
                     <>
-                      <span>GoCart Assistant</span>
+                      <span>ShopNiro Assistant</span>
                       <button
                         onClick={() => handleCopy(m.id, m.content)}
                         className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:text-slate-700 dark:hover:text-zinc-300 rounded cursor-pointer"

@@ -283,7 +283,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                     className="w-full py-2.5 px-4 rounded-full font-semibold text-xs border border-blue-500/30 text-blue-600 dark:text-sky-400 bg-blue-50/50 dark:bg-[#181F2A] hover:bg-blue-100 dark:hover:bg-[#202938] flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs"
                   >
                     <Sparkles className="w-4 h-4 text-amber-400" />
-                    <span>Ask GoCart AI Assistant about this product</span>
+                    <span>Ask ShopNiro AI Assistant about this product</span>
                   </button>
                 )}
               </div>

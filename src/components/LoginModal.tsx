@@ -110,7 +110,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           Password: regPassword.trim(),
           Number: regPhone.trim() || '+1 (555) 018-9921',
           Logo: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=200&auto=format&fit=crop&q=80',
-          Description: `${regName.trim()} storefront on GoCart Marketplace.`,
+          Description: `${regName.trim()} storefront on ShopNiro Marketplace.`,
           Address: {
             House_Name: 'Suite 200',
             Street: 'Market Street',
