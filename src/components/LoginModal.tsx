@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { UserRole, Customer, Seller } from '../types';
+import { UserRole, Customer, Seller, Address } from '../types';
 import { X, LogIn, Lock, User, Eye, EyeOff, ShieldAlert, UserPlus, Store, CheckCircle, Mail, Phone, MapPin } from 'lucide-react';
 import { api } from '../lib/api';
+import { AccountLocationPicker } from './AccountLocationPicker';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -33,7 +34,14 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   const [regPassword, setRegPassword] = useState('');
   const [showRegPassword, setShowRegPassword] = useState(false);
   const [regPhone, setRegPhone] = useState('');
-  const [regCity, setRegCity] = useState('');
+  const [regAddress, setRegAddress] = useState<Address>({
+    House_Name: '',
+    Street: '',
+    City: '',
+    Postal_Code: '',
+    Additional_Info: '',
+  });
+  const [regHasSelectedLocation, setRegHasSelectedLocation] = useState(false);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -77,6 +85,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       setError('Name, Email, and Password are required to create an account.');
       return;
     }
+    if (!regPhone.trim() || !regHasSelectedLocation || !regAddress.Street.trim() || !regAddress.City.trim()) {
+      setError('Phone number and map-selected location are required to create an account.');
+      return;
+    }
 
     setError(null);
     setIsSubmitting(true);
@@ -90,14 +102,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           Name: regName.trim(),
           Email: regEmail.trim(),
           Password: regPassword.trim(),
-          Number: regPhone.trim() || '+1 (555) 019-2834',
-          Address: {
-            House_Name: 'Apt 1',
-            Street: 'Main Street',
-            City: regCity.trim() || 'New York',
-            Postal_Code: '10001',
-            Additional_Info: '',
-          },
+          Number: regPhone.trim(),
+          Address: regAddress,
         });
         
         onLoginSuccess('customer', newCustomer);
@@ -108,16 +114,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           Name: regName.trim(),
           Email: regEmail.trim(),
           Password: regPassword.trim(),
-          Number: regPhone.trim() || '+1 (555) 018-9921',
+          Number: regPhone.trim(),
           Logo: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=200&auto=format&fit=crop&q=80',
           Description: `${regName.trim()} storefront on ShopNiro Marketplace.`,
-          Address: {
-            House_Name: 'Suite 200',
-            Street: 'Market Street',
-            City: regCity.trim() || 'New York',
-            Postal_Code: '10002',
-            Additional_Info: '',
-          },
+          Address: regAddress,
         });
 
         onLoginSuccess('seller', newSeller);
@@ -425,38 +425,66 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                 </p>
               </div>
 
-              {/* Optional Phone and City */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
+              <div>
                   <label className="block text-slate-700 dark:text-zinc-300 font-semibold mb-1">
-                    Phone (Optional)
+                    Phone Number *
                   </label>
                   <div className="relative">
                     <input
-                      type="text"
-                      placeholder="+1 (555) 000-0000"
+                      type="tel"
+                      required
+                      placeholder="+880 1XXX-XXXXXX"
                       value={regPhone}
                       onChange={(e) => setRegPhone(e.target.value)}
                       className="w-full p-2.5 pl-8 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                     />
                     <Phone className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-3" />
                   </div>
-                </div>
+              </div>
 
-                <div>
-                  <label className="block text-slate-700 dark:text-zinc-300 font-semibold mb-1">
-                    City / Location (Optional)
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="e.g. New York"
-                      value={regCity}
-                      onChange={(e) => setRegCity(e.target.value)}
-                      className="w-full p-2.5 pl-8 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                    />
-                    <MapPin className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-3" />
-                  </div>
+              <div className="space-y-2">
+                <label className="block text-slate-700 dark:text-zinc-300 font-semibold">
+                  Select your location on the map *
+                </label>
+                <AccountLocationPicker
+                  onAddressSelected={(selectedAddress) => {
+                    setRegHasSelectedLocation(Boolean(selectedAddress));
+                    setRegAddress((currentAddress) => selectedAddress
+                      ? { ...currentAddress, ...selectedAddress }
+                      : { ...currentAddress, Street: '', City: '', Postal_Code: '' });
+                  }}
+                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <input
+                    type="text"
+                    placeholder="House / apartment (optional)"
+                    value={regAddress.House_Name}
+                    onChange={(event) => setRegAddress({ ...regAddress, House_Name: event.target.value })}
+                    className="w-full p-2.5 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                  <input
+                    type="text"
+                    required
+                    placeholder="Street address *"
+                    value={regAddress.Street}
+                    onChange={(event) => setRegAddress({ ...regAddress, Street: event.target.value })}
+                    className="w-full p-2.5 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                  <input
+                    type="text"
+                    required
+                    placeholder="City *"
+                    value={regAddress.City}
+                    onChange={(event) => setRegAddress({ ...regAddress, City: event.target.value })}
+                    className="w-full p-2.5 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Postal code (optional)"
+                    value={regAddress.Postal_Code}
+                    onChange={(event) => setRegAddress({ ...regAddress, Postal_Code: event.target.value })}
+                    className="w-full p-2.5 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                  />
                 </div>
               </div>
 
