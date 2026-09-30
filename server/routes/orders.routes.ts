@@ -79,55 +79,21 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
     const addInfo = Additional_Info || '';
     const orderPlacedAt = new Date().toISOString();
 
-    // Check if cart has items to use stored procedure process_checkout
+    // Checkout must use the database procedure so stock is validated and decremented atomically.
     const cartRes = await query(`SELECT * FROM gocart_cart_list($1)`, [Customer_ID]);
-    if (cartRes.rows.length > 0) {
-      try {
-        await query(`CALL process_checkout($1, $2, $3, $4, $5, $6, $7)`, [
-          id,
-          Tracking_ID,
-          Customer_ID,
-          shippingFee,
-          shipAddrJson,
-          billAddrJson,
-          addInfo,
-        ]);
-      } catch (procErr: any) {
-        // Fallback to gocart_seed_row
-        await query(`SELECT gocart_seed_row('orders', $1::jsonb)`, [
-          JSON.stringify({
-            id,
-            tracking_id: Tracking_ID,
-            customer_id: Customer_ID,
-            items_json: JSON.stringify(Items),
-            subtotal,
-            shipping_fee: shippingFee,
-            status: 'placed',
-            shipping_address_json: shipAddrJson,
-            billing_address_json: billAddrJson,
-            additional_info: addInfo,
-            order_placed_at: orderPlacedAt,
-          }),
-        ]);
-      }
-    } else {
-      // Direct insertion via schema gocart_seed_row
-      await query(`SELECT gocart_seed_row('orders', $1::jsonb)`, [
-        JSON.stringify({
-          id,
-          tracking_id: Tracking_ID,
-          customer_id: Customer_ID,
-          items_json: JSON.stringify(Items),
-          subtotal,
-          shipping_fee: shippingFee,
-          status: 'placed',
-          shipping_address_json: shipAddrJson,
-          billing_address_json: billAddrJson,
-          additional_info: addInfo,
-          order_placed_at: orderPlacedAt,
-        }),
-      ]);
+    if (cartRes.rows.length === 0) {
+      return res.status(400).json({ error: 'Checkout Failed: The shopping cart is empty.' });
     }
+
+    await query(`CALL process_checkout($1, $2, $3, $4, $5, $6, $7)`, [
+      id,
+      Tracking_ID,
+      Customer_ID,
+      shippingFee,
+      shipAddrJson,
+      billAddrJson,
+      addInfo,
+    ]);
 
     const newOrder: Order = {
       Order_ID: id,
@@ -150,7 +116,8 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
     res.status(201).json(newOrder);
   } catch (error: any) {
     console.error('Error placing order:', error);
-    res.status(500).json({ error: error.message || 'Failed to place order' });
+    const status = error.message?.startsWith('Checkout Failed:') ? 409 : 500;
+    res.status(status).json({ error: error.message || 'Failed to place order' });
   }
 });
 

@@ -58,17 +58,36 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
       return res.status(400).json({ error: 'Customer_ID and Product_ID are required' });
     }
 
+    const qty = Number(Quantity);
+    if (!Number.isInteger(qty) || qty <= 0) {
+      return res.status(400).json({ error: 'Quantity must be a positive whole number' });
+    }
+
+    const productRes = await query(`SELECT stock, product_status FROM products WHERE id = $1`, [Product_ID]);
+    if (productRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+    const product = productRes.rows[0];
+    if (product.product_status !== 'active') {
+      return res.status(409).json({ error: 'This product is no longer available' });
+    }
+    if (Number(product.stock) < qty) {
+      return res.status(409).json({ error: 'Insufficient stock for this product' });
+    }
+
     const existing = await query(`SELECT * FROM gocart_cart_existing($1, $2)`, [custId, Product_ID]);
 
     if (existing.rows.length > 0) {
       const currentItem: any = existing.rows[0];
-      const newQty = Number(currentItem.quantity) + Number(Quantity);
+      const newQty = Number(currentItem.quantity) + qty;
+      if (newQty > Number(product.stock)) {
+        return res.status(409).json({ error: 'Requested quantity exceeds available stock' });
+      }
       await query(`SELECT * FROM gocart_cart_update($1, $2, $3)`, [currentItem.id, newQty, custId]);
       return res.json({ Cart_ID: currentItem.id, Customer_ID: custId, Product_ID, Quantity: newQty });
     }
 
     const cartId = `CART-${Date.now()}`;
-    const qty = Number(Quantity);
     await query(`SELECT * FROM gocart_cart_create($1, $2, $3, $4)`, [cartId, custId, Product_ID, qty]);
 
     res.status(201).json({ Cart_ID: cartId, Customer_ID: custId, Product_ID, Quantity: qty });
@@ -87,7 +106,26 @@ router.put('/:cartId', requireAuth, async (req: AuthRequest, res) => {
     const { cartId } = req.params;
     const { Quantity, Customer_ID } = req.body;
     const custId = Customer_ID || req.user?.id || '';
-    const qty = Math.max(1, Number(Quantity));
+    const qty = Number(Quantity);
+    if (!Number.isInteger(qty) || qty <= 0) {
+      return res.status(400).json({ error: 'Quantity must be a positive whole number' });
+    }
+
+    const cartItemRes = await query(
+      `SELECT p.stock, p.product_status FROM cart c JOIN products p ON p.id = c.product_id WHERE c.id = $1 AND c.customer_id = $2`,
+      [cartId, custId]
+    );
+    if (cartItemRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Cart item not found' });
+    }
+    const cartProduct = cartItemRes.rows[0];
+    if (cartProduct.product_status !== 'active') {
+      return res.status(409).json({ error: 'This product is no longer available' });
+    }
+    if (qty > Number(cartProduct.stock)) {
+      return res.status(409).json({ error: 'Requested quantity exceeds available stock' });
+    }
+
     const result = await query(`SELECT * FROM gocart_cart_update($1, $2, $3)`, [cartId, qty, custId]);
     res.json({ Cart_ID: cartId, Quantity: qty, updated: result.rows[0] });
   } catch (error: any) {

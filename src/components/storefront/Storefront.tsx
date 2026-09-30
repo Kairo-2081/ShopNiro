@@ -22,7 +22,6 @@ export const Storefront: React.FC<StorefrontProps> = ({
   onSelectProduct,
   onAddToCart,
 }) => {
-  const [selectedCategory, setSelectedCategory] = React.useState<string>('all');
   const [searchQuery, setSearchQuery] = React.useState('');
   const [stockFilter, setStockFilter] = React.useState<'all' | 'inStock'>('all');
   const [sortBy, setSortBy] = React.useState<'featured' | 'price-asc' | 'price-desc' | 'rating' | 'newest'>('featured');
@@ -69,7 +68,6 @@ export const Storefront: React.FC<StorefrontProps> = ({
         if (!approvedSellerIds.has(p.Seller_ID)) return false;
       }
       if (p.Product_Status && p.Product_Status.toLowerCase() === 'deactivated') return false;
-      if (selectedCategory !== 'all' && p.Category_ID !== selectedCategory) return false;
       if (stockFilter === 'inStock' && Number(p.Stock) <= 0) return false;
       if (Number(p.Price) > maxPrice) return false;
 
@@ -93,7 +91,7 @@ export const Storefront: React.FC<StorefrontProps> = ({
       if (sortBy === 'newest') return b.Product_ID.localeCompare(a.Product_ID);
       return 0;
     });
-  }, [products, sellers, approvedSellerIds, selectedCategory, stockFilter, maxPrice, searchQuery, categories, sortBy, ratingMap]);
+  }, [products, sellers, approvedSellerIds, stockFilter, maxPrice, searchQuery, categories, sortBy, ratingMap]);
 
   return (
     <div className="space-y-8 pb-16 text-slate-900 dark:text-zinc-100">
@@ -142,40 +140,8 @@ export const Storefront: React.FC<StorefrontProps> = ({
         </div>
       </div>
 
-      {/* Category Pills & Sub-filters */}
+      {/* Product Filters */}
       <div className="space-y-4">
-        {/* Category Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none max-w-full">
-          <button
-            onClick={() => setSelectedCategory('all')}
-            className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-              selectedCategory === 'all'
-                ? 'premium-button text-white shadow-[0_12px_25px_rgba(235,127,45,0.32)]'
-                : 'bg-white/10 text-white/85 hover:bg-white/15 border border-white/10'
-            }`}
-          >
-            All Categories ({products.filter((p) => p.Product_Status !== 'deactivated').length})
-          </button>
-          {categories.map((cat) => {
-            const count = products.filter(
-              (p) => p.Category_ID === cat.Category_ID && p.Product_Status !== 'deactivated'
-            ).length;
-            return (
-              <button
-                key={cat.Category_ID}
-                onClick={() => setSelectedCategory(cat.Category_ID)}
-                className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
-                  selectedCategory === cat.Category_ID
-                    ? 'premium-button text-white shadow-[0_12px_25px_rgba(235,127,45,0.32)]'
-                    : 'bg-white/10 text-white/85 hover:bg-white/15 border border-white/10'
-                }`}
-              >
-                {cat.Name} ({count})
-              </button>
-            );
-          })}
-        </div>
-
         {/* Filter Toolbar: Sort & Price & Stock */}
         <div className="flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-[#12161D] p-3.5 rounded-2xl border border-sky-100 dark:border-zinc-800 shadow-xs">
           <div className="flex flex-wrap items-center gap-3 text-xs">
@@ -234,10 +200,9 @@ export const Storefront: React.FC<StorefrontProps> = ({
             </button>
 
             {/* Reset Filters button if any filter active */}
-            {(selectedCategory !== 'all' || searchQuery !== '' || stockFilter !== 'all' || maxPrice < maxPossiblePrice) && (
+            {(searchQuery !== '' || stockFilter !== 'all' || maxPrice < maxPossiblePrice) && (
               <button
                 onClick={() => {
-                  setSelectedCategory('all');
                   setSearchQuery('');
                   setMaxPrice(maxPossiblePrice);
                   setStockFilter('all');
@@ -264,7 +229,7 @@ export const Storefront: React.FC<StorefrontProps> = ({
       <div className="flex items-center justify-between pt-2">
         <div>
           <h3 className="text-lg font-black text-slate-900 dark:text-white">
-            {selectedCategory === 'all' ? 'All Catalog Products' : `${categories.find((c) => c.Category_ID === selectedCategory)?.Name || 'Category'} Catalog`}
+            All Catalog Products
           </h3>
           <p className="text-xs text-slate-500 dark:text-zinc-400">
             Showing {filteredProducts.length} verified listings
@@ -280,11 +245,10 @@ export const Storefront: React.FC<StorefrontProps> = ({
           </div>
           <h3 className="text-lg font-bold text-slate-900 dark:text-white">No products found</h3>
           <p className="text-xs text-slate-500 dark:text-zinc-400 max-w-sm mx-auto">
-            Try adjusting your search query, price filter, or selecting another category.
+            Try adjusting your search query, price filter, or stock filter.
           </p>
           <button
             onClick={() => {
-              setSelectedCategory('all');
               setSearchQuery('');
               setMaxPrice(maxPossiblePrice);
               setStockFilter('all');

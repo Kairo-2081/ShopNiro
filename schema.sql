@@ -666,26 +666,20 @@ DROP VIEW IF EXISTS category_performance CASCADE;
 DROP VIEW IF EXISTS top_rated_products CASCADE;
 DROP VIEW IF EXISTS top_customers CASCADE;
 DROP VIEW IF EXISTS trending_products CASCADE;
+DROP FUNCTION IF EXISTS gocart_top_sellers(INTEGER);
 DROP VIEW IF EXISTS top_sellers CASCADE;
 
--- Summarize approved sellers with at least five product reviews.
-CREATE OR REPLACE VIEW top_sellers AS
-SELECT
-    s.id AS seller_id,
-    s.name AS seller_name,
-    COUNT(DISTINCT p.id) AS total_active_products,
-    COUNT(r.id) AS total_lifetime_reviews,
-    COALESCE(ROUND(AVG(r.rating), 2), 0.00) AS overall_average_rating
-FROM sellers s
-JOIN products p ON p.seller_id = s.id
-LEFT JOIN reviews r ON r.product_id = p.id
-WHERE s.status = 'approved'
-  AND p.product_status = 'active'
-GROUP BY s.id, s.name
-HAVING COUNT(r.id) >= 1;
-
--- Rank active products by current cart demand.
+-- Rank active products by lifetime units sold across all non-cancelled orders.
 CREATE OR REPLACE VIEW trending_products AS
+WITH lifetime_sales AS (
+    SELECT
+        oi.product_id_snapshot AS product_id,
+        SUM(oi.quantity)::BIGINT AS total_units_sold
+    FROM order_items oi
+    JOIN orders o ON o.id = oi.order_id
+    WHERE o.status <> 'cancelled'
+    GROUP BY oi.product_id_snapshot
+)
 SELECT
     p.id AS product_id,
     p.name AS product_name,
@@ -693,28 +687,14 @@ SELECT
     cat.name AS category_name,
     p.price,
     p.stock AS available_stock,
-    COUNT(DISTINCT c.customer_id) AS distinct_customers_wanting_this,
-    COALESCE(SUM(c.quantity), 0) AS total_units_in_carts
+    sales.total_units_sold
 FROM products p
-LEFT JOIN cart c ON c.product_id = p.id
 JOIN categories cat ON cat.id = p.category_id
+JOIN lifetime_sales sales ON sales.product_id = p.id
 WHERE p.product_status = 'active'
-GROUP BY p.id, p.name, p.image, cat.name, p.price, p.stock;
+;
 
 -- Summarize customer spend and order counts for delivered orders.
-CREATE OR REPLACE VIEW top_customers AS
-SELECT
-    c.id AS customer_id,
-    c.name AS customer_name,
-    u.email,
-    COUNT(o.id) AS total_orders,
-    COALESCE(SUM(o.subtotal + o.shipping_fee), 0.00) AS total_lifetime_spent
-FROM customers c
-JOIN orders o ON o.customer_id = c.id
-JOIN users u ON u.id = c.id AND u.role = 'customer'
-WHERE o.status = 'delivered'
-GROUP BY c.id, c.name, u.email;
-
 -- List active, approved-seller products with reviews.
 CREATE OR REPLACE VIEW top_rated_products AS
 SELECT
@@ -733,21 +713,6 @@ LEFT JOIN reviews r ON r.product_id = p.id
 WHERE p.product_status = 'active'
     AND s.status = 'approved'
 GROUP BY p.id, p.name, p.image, c.name, s.name, p.price;
-
--- Aggregate active inventory and pricing metrics by category.
-CREATE OR REPLACE VIEW category_performance AS
-SELECT
-    c.id AS category_id,
-    c.name AS category_name,
-    COUNT(p.id) AS total_unique_products,
-    COALESCE(SUM(p.stock), 0) AS total_units_in_stock,
-    COALESCE(ROUND(AVG(p.price), 2), 0.00) AS average_product_price,
-    COALESCE(SUM(p.stock * p.price), 0.00) AS total_inventory_value
-FROM categories c
-LEFT JOIN products p
-    ON p.category_id = c.id
- AND p.product_status = 'active'
-GROUP BY c.id, c.name;
 
 -- Provide the aggregate counts and revenue used by the admin dashboard.
 CREATE OR REPLACE VIEW admin_dashboard_stats AS
@@ -1343,13 +1308,6 @@ AS $$
     SELECT * FROM admin_dashboard_stats;
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_top_customers(p_limit INTEGER DEFAULT 10)
-RETURNS SETOF top_customers
-LANGUAGE SQL STABLE
-AS $$
-    SELECT * FROM top_customers ORDER BY total_lifetime_spent DESC LIMIT GREATEST(p_limit, 0);
-$$;
-
 CREATE OR REPLACE FUNCTION gocart_top_rated_products(p_limit INTEGER DEFAULT 12)
 RETURNS SETOF top_rated_products
 LANGUAGE SQL STABLE
@@ -1359,29 +1317,13 @@ AS $$
     LIMIT GREATEST(p_limit, 0);
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_top_sellers(p_limit INTEGER DEFAULT 10)
-RETURNS SETOF top_sellers
-LANGUAGE SQL STABLE
-AS $$
-    SELECT * FROM top_sellers
-    ORDER BY overall_average_rating DESC, total_lifetime_reviews DESC
-    LIMIT GREATEST(p_limit, 0);
-$$;
-
 CREATE OR REPLACE FUNCTION gocart_trending_products(p_limit INTEGER DEFAULT 10)
 RETURNS SETOF trending_products
 LANGUAGE SQL STABLE
 AS $$
     SELECT * FROM trending_products
-    ORDER BY total_units_in_carts DESC, distinct_customers_wanting_this DESC
-    LIMIT GREATEST(p_limit, 0);
-$$;
-
-CREATE OR REPLACE FUNCTION gocart_category_performance()
-RETURNS SETOF category_performance
-LANGUAGE SQL STABLE
-AS $$
-    SELECT * FROM category_performance ORDER BY total_inventory_value DESC;
+    ORDER BY total_units_sold DESC, product_id
+    LIMIT LEAST(GREATEST(COALESCE(p_limit, 3), 0), 3);
 $$;
 
 CREATE OR REPLACE FUNCTION gocart_database_status()

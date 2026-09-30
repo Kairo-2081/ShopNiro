@@ -478,8 +478,7 @@ export interface TrendingProduct {
   category_name: string;
   price: number;
   available_stock: number;
-  distinct_customers_wanting_this: number;
-  total_units_in_carts: number;
+  total_units_sold: number;
 }
 
 export interface TopRatedProduct {
@@ -493,36 +492,7 @@ export interface TopRatedProduct {
   total_reviews: number;
 }
 
-export interface TopSeller {
-  seller_id: string;
-  seller_name: string;
-  total_active_products: number;
-  total_lifetime_reviews: number;
-  overall_average_rating: number;
-}
-
-export interface CategoryPerformance {
-  category_id: string;
-  category_name: string;
-  total_unique_products: number;
-  total_units_in_stock: number;
-  average_product_price: number;
-  total_inventory_value: number;
-}
-
-export interface TopCustomer {
-  customer_id: string;
-  customer_name: string;
-  email?: string;
-  total_orders: number;
-  total_lifetime_spent: number;
-}
-
-export async function fetchTopSellers(limit: number = 10): Promise<TopSeller[]> {
-  return fetchJson<TopSeller[]>(`/api/analytics/top-sellers?limit=${limit}`);
-}
-
-export async function fetchTrendingProducts(limit: number = 12): Promise<TrendingProduct[]> {
+export async function fetchTrendingProducts(limit: number = 3): Promise<TrendingProduct[]> {
   return fetchJson<TrendingProduct[]>(`/api/analytics/trending-products?limit=${limit}`);
 }
 
@@ -530,10 +500,3 @@ export async function fetchTopRatedProducts(limit: number = 12): Promise<TopRate
   return fetchJson<TopRatedProduct[]>(`/api/analytics/top-rated-products?limit=${limit}`);
 }
 
-export async function fetchCategoryPerformance(): Promise<CategoryPerformance[]> {
-  return fetchJson<CategoryPerformance[]>(`/api/analytics/category-performance`);
-}
-
-export async function fetchTopCustomers(limit: number = 10): Promise<TopCustomer[]> {
-  return fetchJson<TopCustomer[]>(`/api/analytics/top-customers?limit=${limit}`);
-}

@@ -89,18 +89,6 @@ app.get('/api/admin/users', async (req, res) => {
   }
 });
 
-// Top Charts, Top Trends, Top Sellers, and Category Performance (from schema.sql routines)
-app.get('/api/analytics/top-sellers', async (req, res) => {
-  try {
-    const limit = Number(req.query.limit) || 10;
-    const result = await query(`SELECT * FROM gocart_top_sellers($1)`, [limit]);
-    res.json(result.rows);
-  } catch (error: any) {
-    console.error('Error fetching top sellers:', error);
-    res.status(500).json({ error: 'Failed to fetch top sellers' });
-  }
-});
-
 app.get('/api/analytics/trending-products', async (req, res) => {
   try {
     const limit = Number(req.query.limit) || 12;
@@ -120,27 +108,6 @@ app.get('/api/analytics/top-rated-products', async (req, res) => {
   } catch (error: any) {
     console.error('Error fetching top rated products:', error);
     res.status(500).json({ error: 'Failed to fetch top rated products' });
-  }
-});
-
-app.get('/api/analytics/category-performance', async (req, res) => {
-  try {
-    const result = await query(`SELECT * FROM gocart_category_performance()`);
-    res.json(result.rows);
-  } catch (error: any) {
-    console.error('Error fetching category performance:', error);
-    res.status(500).json({ error: 'Failed to fetch category performance' });
-  }
-});
-
-app.get('/api/analytics/top-customers', async (req, res) => {
-  try {
-    const limit = Number(req.query.limit) || 10;
-    const result = await query(`SELECT * FROM gocart_top_customers($1)`, [limit]);
-    res.json(result.rows);
-  } catch (error: any) {
-    console.error('Error fetching top customers:', error);
-    res.status(500).json({ error: 'Failed to fetch top customers' });
   }
 });
 
