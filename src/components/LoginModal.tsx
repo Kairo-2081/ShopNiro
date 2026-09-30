@@ -47,6 +47,13 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  React.useEffect(() => {
+    if (isOpen && noticeMessage?.startsWith('Account created successfully.')) {
+      setActiveTab('login');
+      setError(null);
+    }
+  }, [isOpen, noticeMessage]);
+
   if (!isOpen) return null;
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
@@ -97,7 +104,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       const finalUsername = (regUsername.trim() || regEmail.split('@')[0] || regName.replace(/[^a-z0-9]/gi, '')).toLowerCase();
       
       if (registerRole === 'customer') {
-        const newCustomer = await api.createCustomer({
+        await api.createCustomer({
           Username: finalUsername,
           Name: regName.trim(),
           Email: regEmail.trim(),
@@ -106,10 +113,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           Address: regAddress,
         });
         
-        onLoginSuccess('customer', newCustomer);
-        onClose();
       } else {
-        const newSeller = await api.createSeller({
+        await api.createSeller({
           Username: finalUsername,
           Name: regName.trim(),
           Email: regEmail.trim(),
@@ -120,9 +125,12 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           Address: regAddress,
         });
 
-        onLoginSuccess('seller', newSeller);
-        onClose();
       }
+      setLoginUsername(regUsername.trim() || regEmail.trim());
+      setLoginPassword('');
+      setRegPassword('');
+      setSuccessMessage('Account created successfully. Sign in with your new credentials.');
+      setActiveTab('login');
     } catch (err: any) {
       console.error('Registration error:', err);
       setError(err.message || 'Failed to create account. Please try a different email or username.');

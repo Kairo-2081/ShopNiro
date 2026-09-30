@@ -119,6 +119,7 @@ export default function App() {
       if (auth.authenticated && auth.role && auth.entity) {
         setIsLoggedIn(true);
         setCurrentRole(auth.role);
+        setViewMode('app');
         if (auth.role === 'customer') {
           setSelectedCustomer(auth.entity as Customer);
           setSelectedSeller(null);
@@ -220,6 +221,8 @@ export default function App() {
       if (auth.authenticated && auth.role && auth.entity) {
         setIsLoggedIn(true);
         setCurrentRole(auth.role);
+        setViewMode('app');
+        setActiveTab(auth.role === 'admin' ? 'admin-dashboard' : auth.role === 'seller' ? 'seller-dashboard' : 'storefront');
 
         if (auth.role === 'admin') {
           setSelectedAdmin(auth.entity as Admin);
@@ -347,6 +350,7 @@ export default function App() {
   const handleLogout = () => {
     api.logout();
     setIsLoggedIn(false);
+    setViewMode('landing');
     setSelectedCustomer(null);
     setSelectedSeller(null);
     setSelectedAdmin(null);
@@ -503,43 +507,24 @@ export default function App() {
     setCategories((prev) => prev.filter((c) => c.Category_ID !== id));
   };
 
+  const handleAccountCreated = () => {
+    setAuthNotice('Account created successfully. Sign in with your new credentials.');
+    setIsLoginModalOpen(true);
+  };
+
   // New Customer Registration
   const handleRegisterCustomer = async (customerData: Partial<Customer> & { Username?: string }): Promise<Customer> => {
-    const newCustomer = await api.createCustomer(customerData);
-    setCustomers((prev) => [...prev, newCustomer]);
-    setSelectedCustomer(newCustomer);
-    setIsLoggedIn(true);
-    setCurrentRole('customer');
-    setActiveTab('storefront');
-    setViewMode('app');
-    await loadInitialData();
-    return newCustomer;
+    return api.createCustomer(customerData);
   };
 
   // New Seller Registration
   const handleRegisterSeller = async (sellerData: Partial<Seller> & { Username?: string }): Promise<Seller> => {
-    const newSeller = await api.createSeller(sellerData);
-    setSellers((prev) => [...prev, newSeller]);
-    setSelectedSeller(newSeller);
-    setIsLoggedIn(true);
-    setCurrentRole('seller');
-    setActiveTab('seller-dashboard');
-    setViewMode('app');
-    await loadInitialData();
-    return newSeller;
+    return api.createSeller(sellerData);
   };
 
   // New Admin Registration
   const handleRegisterAdmin = async (adminData: Partial<Admin> & { Username?: string }): Promise<Admin> => {
-    const newAdmin = await api.createAdmin(adminData);
-    setAdmins((prev) => [...prev, newAdmin]);
-    setSelectedAdmin(newAdmin);
-    setIsLoggedIn(true);
-    setCurrentRole('admin');
-    setActiveTab('admin-dashboard');
-    setViewMode('app');
-    await loadInitialData();
-    return newAdmin;
+    return api.createAdmin(adminData);
   };
 
   // Get active user entity
@@ -598,39 +583,21 @@ export default function App() {
           isOpen={isCustomerRegistrationOpen}
           onClose={() => setIsCustomerRegistrationOpen(false)}
           onRegisterCustomer={handleRegisterCustomer}
-          onSuccessRegistered={(newCustomer) => {
-            setSelectedCustomer(newCustomer);
-            setIsLoggedIn(true);
-            setCurrentRole('customer');
-            setActiveTab('storefront');
-            setViewMode('app');
-          }}
+          onSuccessRegistered={handleAccountCreated}
         />
 
         <SellerSignupModal
           isOpen={isSellerRegistrationOpen}
           onClose={() => setIsSellerRegistrationOpen(false)}
           onRegisterSeller={handleRegisterSeller}
-          onSuccessRegistered={(newSeller) => {
-            setSelectedSeller(newSeller);
-            setIsLoggedIn(true);
-            setCurrentRole('seller');
-            setActiveTab('seller-dashboard');
-            setViewMode('app');
-          }}
+          onSuccessRegistered={handleAccountCreated}
         />
 
         <AdminSignupModal
           isOpen={isAdminRegistrationOpen}
           onClose={() => setIsAdminRegistrationOpen(false)}
           onRegisterAdmin={handleRegisterAdmin}
-          onSuccessRegistered={(newAdmin) => {
-            setSelectedAdmin(newAdmin);
-            setIsLoggedIn(true);
-            setCurrentRole('admin');
-            setActiveTab('admin-dashboard');
-            setViewMode('app');
-          }}
+          onSuccessRegistered={handleAccountCreated}
         />
 
         <LoginModal
@@ -1013,13 +980,7 @@ export default function App() {
         isOpen={isCustomerRegistrationOpen}
         onClose={() => setIsCustomerRegistrationOpen(false)}
         onRegisterCustomer={handleRegisterCustomer}
-        onSuccessRegistered={(newCustomer) => {
-          setSelectedCustomer(newCustomer);
-          setIsLoggedIn(true);
-          setCurrentRole('customer');
-          setActiveTab('storefront');
-          setViewMode('app');
-        }}
+        onSuccessRegistered={handleAccountCreated}
       />
 
       {/* Seller Signup Modal */}
@@ -1027,13 +988,7 @@ export default function App() {
         isOpen={isSellerRegistrationOpen}
         onClose={() => setIsSellerRegistrationOpen(false)}
         onRegisterSeller={handleRegisterSeller}
-        onSuccessRegistered={(newSeller) => {
-          setSelectedSeller(newSeller);
-          setIsLoggedIn(true);
-          setCurrentRole('seller');
-          setActiveTab('seller-dashboard');
-          setViewMode('app');
-        }}
+        onSuccessRegistered={handleAccountCreated}
       />
 
       {/* Admin Signup Modal */}
@@ -1041,13 +996,7 @@ export default function App() {
         isOpen={isAdminRegistrationOpen}
         onClose={() => setIsAdminRegistrationOpen(false)}
         onRegisterAdmin={handleRegisterAdmin}
-        onSuccessRegistered={(newAdmin) => {
-          setSelectedAdmin(newAdmin);
-          setIsLoggedIn(true);
-          setCurrentRole('admin');
-          setActiveTab('admin-dashboard');
-          setViewMode('app');
-        }}
+        onSuccessRegistered={handleAccountCreated}
       />
 
       {/* Login Modal with Username & Password */}
