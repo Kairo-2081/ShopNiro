@@ -90,7 +90,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               className="w-10 h-10 rounded-full object-cover border border-sky-100 dark:border-zinc-700 shadow-md shadow-blue-600/20"
             />
             <div>
-              <h1 className="text-xl font-black tracking-tight text-white leading-none">
+              <h1 className="font-display text-xl font-normal text-white leading-none">
                 ShopNiro
               </h1>
               <span className="text-[10px] font-bold text-sky-400 tracking-[0.2em] uppercase block">
@@ -153,9 +153,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </header>
 
         {/* 2. Hero Section */}
-        <section className="w-full md:max-w-5xl md:mx-auto rounded-[28px] p-6 sm:p-8 md:px-12 md:py-12 shadow-[0_35px_90px_rgba(3,3,2,0.42)] border border-[#d0c8a5]/20 text-center space-y-4 md:space-y-5 relative overflow-hidden bg-[radial-gradient(circle_at_50%_18%,rgba(208,200,165,0.2),transparent_16%),radial-gradient(circle_at_50%_100%,rgba(119,119,90,0.48),transparent_36%),linear-gradient(135deg,#77775a_0%,#514c38_24%,#292820_52%,#11110f_100%)]">
+        <section className="w-full md:max-w-5xl md:mx-auto rounded-[28px] p-6 sm:p-8 md:px-12 md:py-12 shadow-[0_35px_90px_rgba(3,3,2,0.42)] border border-[#d0c8a5]/20 text-center space-y-4 md:space-y-5 relative overflow-hidden bg-[radial-gradient(circle_at_50%_18%,rgba(208,200,165,0.2),transparent_16%),radial-gradient(circle_at_50%_100%,rgba(119,119,90,0.48),transparent_36%),linear-gradient(135deg,#77775a_0%,#514c38_24%,#292820_52%,#11110f_100%)] hero-parallax">
           {/* Atmospheric background glow */}
-          <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-72 h-72 bg-white/10 rounded-full blur-3xl pointer-events-none" />
+          <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-72 h-72 bg-white/10 rounded-full blur-3xl pointer-events-none hero-glow" />
 
           {/* Pill Badge */}
           <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#24241d]/80 border border-[#d0c8a5]/35 text-[#e7e5d6] text-xs font-semibold tracking-wide shadow-[0_8px_20px_rgba(169,155,114,0.2)]">
@@ -164,11 +164,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           {/* Hero Headline */}
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white leading-[1.12] max-w-4xl mx-auto">
-            Curated goods. Delivered{' '}
-            <span className="italic font-serif font-normal text-sky-400">
-              with care.
-            </span>
+          <h2 className="text-4xl sm:text-5xl md:text-6xl font-normal text-white leading-[1.08] max-w-4xl mx-auto">
+            Shop smart, ship fast.
           </h2>
 
           {/* Subtitle tailored to ShopNiro Marketplace */}
@@ -177,7 +174,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </p>
 
           {/* 3D Interactive Marketplace Globe */}
-          <div className="py-1 md:py-2">
+          <div className="py-1 md:py-2 relative hero-orbit-wrap">
+            <div className="floating-badge floating-badge-left">Live Deals</div>
+            <div className="floating-badge floating-badge-right">Verified</div>
             <OrbitGlobe onGreet={() => setHasWaved(true)} />
           </div>
 
@@ -190,7 +189,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 setHasWaved(true);
                 onEnterAsGuest();
               }}
-              className="flex-1 py-3 px-5 rounded-full premium-button hover:brightness-110 text-white font-semibold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-[0_14px_30px_rgba(235,127,45,0.38)] transition-all cursor-pointer transform hover:-translate-y-0.5"
+              className="luxury-control flex-1 min-h-12 py-3 px-5 rounded-full premium-button text-white text-xs sm:text-sm shadow-[0_14px_30px_rgba(52,40,20,0.3)] cursor-pointer hover:-translate-y-0.5"
             >
               <Sparkles className="w-4 h-4 text-amber-300" />
               <span>Explore Marketplace</span>
@@ -200,16 +199,41 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <button
               type="button"
               onClick={onOpenLogin}
-              className="flex-1 py-3 px-5 rounded-full bg-white/7 hover:bg-white/12 text-zinc-100 border border-[#d0c8a5]/20 font-semibold text-xs sm:text-sm flex items-center justify-center gap-1.5 shadow-[0_12px_25px_rgba(0,0,0,0.18)] transition-all cursor-pointer"
+              className="luxury-control flex-1 min-h-12 py-3 px-5 rounded-full bg-white/7 hover:bg-white/12 text-zinc-100 border border-[#d0c8a5]/25 text-xs sm:text-sm shadow-[0_12px_25px_rgba(0,0,0,0.18)] cursor-pointer"
             >
               <span>Sign In</span>
-              <span className="text-xs">➔</span>
+              <ArrowRight className="w-4 h-4" />
             </button>
+          </div>
+
+          <div className="brand-marquee mt-2 md:mt-3">
+            <div className="brand-track">
+              {[
+                { name: 'ShopNiro', accent: 'bg-[#d0c8a5]/15 text-[#f7f3e6]' },
+                { name: 'Verified Sellers', accent: 'bg-sky-500/10 text-sky-200' },
+                { name: 'Live Tracking', accent: 'bg-emerald-500/10 text-emerald-200' },
+                { name: 'Secure Checkout', accent: 'bg-violet-500/10 text-violet-200' },
+                { name: 'Marketplace', accent: 'bg-amber-500/10 text-amber-200' },
+                { name: 'ShopNiro', accent: 'bg-[#d0c8a5]/15 text-[#f7f3e6]' },
+                { name: 'Verified Sellers', accent: 'bg-sky-500/10 text-sky-200' },
+                { name: 'Live Tracking', accent: 'bg-emerald-500/10 text-emerald-200' },
+                { name: 'Secure Checkout', accent: 'bg-violet-500/10 text-violet-200' },
+              ].map((item, index) => (
+                <div key={`${item.name}-${index}`} className={`brand-chip ${item.accent}`}>
+                  <img
+                    src={shopNiroLogo}
+                    alt="ShopNiro logo"
+                    className="brand-logo logo-float"
+                  />
+                  <span>{item.name}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </section>
 
         {/* 3. Unified Commerce & Delivery Engine: Three Dedicated Portals */}
-        <section className="space-y-4 pt-1">
+        <section className="space-y-4 pt-1 animate-fade-up">
           {/* Header Badges */}
           <div className="flex items-center gap-2 flex-wrap">
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-950/60 border border-emerald-800/60 text-emerald-300 text-[10px] font-bold">
@@ -236,7 +260,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Portal Card 1: Customer Hub */}
-          <div className="premium-card rounded-2xl p-5 lg:p-6 space-y-3 flex flex-col lg:min-h-[370px]">
+          <div className="premium-card product-tilt rounded-2xl p-5 lg:p-6 space-y-3 flex flex-col lg:min-h-[370px]">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-600/40">
@@ -265,9 +289,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <button
               type="button"
               onClick={onOpenLogin}
-              className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-blue-600/40 transition-all cursor-pointer"
+              className="luxury-control w-full py-3 px-4 rounded-xl premium-button text-white text-xs shadow-md cursor-pointer"
             >
-              <span>➔ Launch Customer Portal ➔</span>
+              <ShoppingBag className="w-4 h-4" />
+              <span>Launch Customer Portal</span>
             </button>
 
             {/* Bottom link: Create Personal Account */}
@@ -312,9 +337,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <button
               type="button"
               onClick={onOpenLogin}
-              className="w-full py-3 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-emerald-600/40 transition-all cursor-pointer"
+              className="luxury-control w-full py-3 px-4 rounded-xl premium-button text-white text-xs shadow-md cursor-pointer"
             >
-              <span>🏪 Enter Merchant Studio ➔</span>
+              <Store className="w-4 h-4" />
+              <span>Enter Merchant Studio</span>
             </button>
 
             {/* Bottom link: Register as Brand Partner */}
@@ -359,9 +385,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <button
               type="button"
               onClick={onOpenLogin}
-              className="w-full py-3 px-4 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md shadow-purple-600/40 transition-all cursor-pointer"
+              className="luxury-control w-full py-3 px-4 rounded-xl premium-button text-white text-xs shadow-md cursor-pointer"
             >
-              <span>🛡️ Admin Access &amp; Platform Guard 🔒</span>
+              <ShieldCheck className="w-4 h-4" />
+              <span>Admin Access</span>
             </button>
 
             {/* Biometrics badge */}
@@ -466,7 +493,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </section>
 
         {/* 6. LIVE NETWORK PULSE: Always moving forward */}
-        <section className="bg-[#12161D] rounded-3xl p-5 shadow-xl border border-zinc-800 space-y-4">
+        <section className="bg-[#12161D] rounded-3xl p-5 shadow-xl border border-zinc-800 space-y-4 overflow-hidden animate-fade-up">
           <div className="flex items-center justify-between">
             <div>
               <span className="text-[10px] font-extrabold tracking-widest text-sky-400 uppercase block">
@@ -483,32 +510,24 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
           {/* 3 Metrics */}
           <div className="grid grid-cols-3 gap-2 text-center py-1">
-            <div className="p-2.5 rounded-2xl bg-[#161C24] border border-zinc-800">
-              <div className="text-xl sm:text-2xl font-black text-sky-400">
-                99.4%
+            {[
+              { value: '3', label: 'Active Buyers' },
+              { value: '6', label: 'Live Products' },
+              { value: '2', label: 'Orders Active' },
+            ].map((metric, index) => (
+              <div
+                key={metric.label}
+                className="metric-card p-2.5 rounded-2xl bg-[#161C24] border border-zinc-800"
+                style={{ animationDelay: `${index * 110}ms` }}
+              >
+                <div className="text-xl sm:text-2xl font-black text-sky-400">
+                  {metric.value}
+                </div>
+                <div className="text-[11px] font-medium text-zinc-400 mt-0.5">
+                  {metric.label}
+                </div>
               </div>
-              <div className="text-[11px] font-medium text-zinc-400 mt-0.5">
-                Punctual
-              </div>
-            </div>
-
-            <div className="p-2.5 rounded-2xl bg-[#161C24] border border-zinc-800">
-              <div className="text-xl sm:text-2xl font-black text-sky-400">
-                120k+
-              </div>
-              <div className="text-[11px] font-medium text-zinc-400 mt-0.5">
-                Orders Delivered
-              </div>
-            </div>
-
-            <div className="p-2.5 rounded-2xl bg-[#161C24] border border-zinc-800">
-              <div className="text-xl sm:text-2xl font-black text-sky-400">
-                &lt;18m
-              </div>
-              <div className="text-[11px] font-medium text-zinc-400 mt-0.5">
-                Avg Dispatch
-              </div>
-            </div>
+            ))}
           </div>
 
           {/* Active Merchant Dispatch: Apex Audio Lab */}
@@ -606,86 +625,30 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
         </section>
 
-        {/* 8. STORIES: Kind words from shoppers & merchants (Matching User Screenshot 2) */}
-        <section className="space-y-3 pt-2">
-          <div>
+        {/* Premium brand ribbon below the main landing flow */}
+        <section className="space-y-3 pt-1 animate-fade-up">
+          <div className="flex items-center justify-between gap-2">
             <span className="text-[10px] font-extrabold tracking-widest text-sky-400 uppercase block">
-              STORIES
+              TRUSTED BY MODERN SHOPS
             </span>
-            <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight mt-0.5">
-              Kind words from sender &amp; receiver
-            </h3>
           </div>
 
-          <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none snap-x md:grid md:grid-cols-2 md:overflow-visible">
-            {/* Review Card 1 */}
-            <div className="min-w-[280px] sm:min-w-[320px] md:min-w-0 p-4 rounded-2xl bg-[#12161D] border border-zinc-800 shadow-xl flex flex-col justify-between space-y-3 snap-center">
-              <div className="space-y-2">
-                <div className="flex text-amber-400 gap-0.5 text-xs">
-                  <span>★</span>
-                  <span>★</span>
-                  <span>★</span>
-                  <span>★</span>
-                  <span>★</span>
+          <div className="brand-marquee">
+            <div className="brand-track">
+              {[
+                'NiroCart', 'Urban Atelier', 'Nova Goods', 'Harbor & Co', 'Signal Studio', 'NiroCart', 'Urban Atelier', 'Nova Goods', 'Harbor & Co', 'Signal Studio'
+              ].map((brand, index) => (
+                <div key={`${brand}-${index}`} className="brand-chip bg-white/5 text-zinc-200">
+                  <span className="w-2 h-2 rounded-full bg-gradient-to-r from-sky-400 to-emerald-400 inline-block shadow-[0_0_18px_rgba(96,165,250,0.7)]" />
+                  <span>{brand}</span>
                 </div>
-                <p className="text-xs text-zinc-300 font-medium leading-relaxed">
-                  "ShopNiro transformed our artisan bakery shipments. Zero crushed sourdough loaves, ever."
-                </p>
-              </div>
-
-              <div className="flex items-center gap-3 pt-2 border-t border-zinc-800">
-                <img
-                  src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=100&q=80"
-                  alt="Elena Rostova"
-                  className="w-9 h-9 rounded-full object-cover"
-                />
-                <div>
-                  <div className="font-bold text-xs text-white">
-                    Elena Rostova
-                  </div>
-                  <div className="text-[10px] text-zinc-400">
-                    Founder, Hearth &amp; Crumb
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Review Card 2 */}
-            <div className="min-w-[280px] sm:min-w-[320px] md:min-w-0 p-4 rounded-2xl bg-[#12161D] border border-zinc-800 shadow-xl flex flex-col justify-between space-y-3 snap-center">
-              <div className="space-y-2">
-                <div className="flex text-amber-400 gap-0.5 text-xs">
-                  <span>★</span>
-                  <span>★</span>
-                  <span>★</span>
-                  <span>★</span>
-                  <span>★</span>
-                </div>
-                <p className="text-xs text-zinc-300 font-medium leading-relaxed">
-                  "The real-time sub-meter tracking and gentle handling makes luxury vintage drops effortless. Best courier network."
-                </p>
-              </div>
-
-              <div className="flex items-center gap-3 pt-2 border-t border-zinc-800">
-                <img
-                  src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=100&q=80"
-                  alt="Marcus Vance"
-                  className="w-9 h-9 rounded-full object-cover"
-                />
-                <div>
-                  <div className="font-bold text-xs text-white">
-                    Marcus Vance
-                  </div>
-                  <div className="text-[10px] text-zinc-400">
-                    Creative Director, Atelier Vance
-                  </div>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         </section>
 
         {/* 9. SPECIAL INVITATION Banner Card (Matching User Screenshot 2) */}
-        <section className="rounded-3xl p-6 sm:p-7 bg-blue-600 text-white text-center space-y-3.5 shadow-2xl relative overflow-hidden">
+        <section className="rounded-3xl p-6 sm:p-7 bg-blue-600 text-white text-center space-y-3.5 shadow-2xl relative overflow-hidden animate-fade-up">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 border border-white/25 text-white text-[11px] font-semibold tracking-wide">
             <Tag className="w-3 h-3 text-sky-200" />
             <span>SPECIAL INVITATION • CODE: SAVE20</span>

@@ -550,7 +550,8 @@ export default function App() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col items-center justify-center space-y-4">
+      <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col items-center justify-center space-y-4 app-shell">
+        <div className="floating-orb" />
         <RefreshCw className="w-8 h-8 text-indigo-500 animate-spin" />
         <p className="text-xs font-mono text-zinc-400">Initializing Raw SQL Database...</p>
       </div>
@@ -614,9 +615,9 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-transparent text-slate-900 dark:text-zinc-100 font-sans flex flex-col antialiased transition-colors duration-200">
+    <div className="min-h-screen bg-transparent text-slate-900 dark:text-zinc-100 font-sans flex flex-col antialiased transition-colors duration-200 app-shell">
       {/* Top Bar with Landing option & Raw SQL status */}
-      <div className="bg-[#171713]/80 dark:bg-[#10100f]/75 border-b border-[#d0c8a5]/15 dark:border-white/10 px-4 py-1.5 flex items-center justify-between text-xs text-slate-700 dark:text-zinc-300 backdrop-blur-xl shadow-[0_10px_30px_rgba(7,7,5,0.25)]">
+      <div className="bg-[#171713]/80 dark:bg-[#10100f]/75 border-b border-[#d0c8a5]/15 dark:border-white/10 px-4 py-1.5 flex items-center justify-between text-xs text-slate-700 dark:text-zinc-300 backdrop-blur-xl shadow-[0_10px_30px_rgba(7,7,5,0.25)] animate-fade-up">
         <button
           onClick={() => setViewMode('landing')}
           className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-[#161C24] dark:hover:bg-[#1E2633] text-blue-600 dark:text-sky-400 font-semibold border border-sky-100 dark:border-zinc-800 transition-colors cursor-pointer shadow-2xs"
@@ -671,7 +672,7 @@ export default function App() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-16">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-16 app-panel animate-fade-up">
         {/* Authentication Notice Banner if set */}
         {authNotice && !isLoginModalOpen && (
           <div className="mb-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs flex items-center justify-between gap-3 shadow-xs">

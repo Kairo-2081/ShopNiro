@@ -49,18 +49,22 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       className="group relative bg-[linear-gradient(180deg,rgba(246,245,239,0.98),rgba(228,226,213,0.96))] dark:bg-[linear-gradient(180deg,#292821,#151510)] rounded-[28px] border border-[#d0c8a5]/20 dark:border-[#d0c8a5]/10 shadow-[0_18px_45px_rgba(6,6,4,0.18)] hover:shadow-[0_28px_60px_rgba(7,7,5,0.24)] hover:border-[#a99b72]/50 transition-all duration-200 overflow-hidden flex flex-col cursor-pointer"
     >
       {/* Product Image */}
-      <div className="relative aspect-4/3 w-full bg-slate-100 dark:bg-[#0C1014] overflow-hidden">
+      <div className="relative aspect-[4/5] w-full bg-slate-100 dark:bg-[#0C1014] overflow-hidden">
+        <div className="absolute inset-0 bg-slate-200/70 dark:bg-zinc-800/80 shimmer skeleton-block" />
         <img
           src={imgError || !product.Image ? defaultPlaceholder : product.Image}
           alt={product.Name}
           onError={() => setImgError(true)}
           referrerPolicy="no-referrer"
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+          loading="lazy"
         />
+
+        <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
         {/* Voucher Tag */}
         {product.Voucher && (
-          <div className="absolute top-3 left-3 bg-blue-600 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-md flex items-center gap-1 z-10">
+          <div className="micro-badge absolute top-3 left-3 z-10">
             <Tag className="w-3 h-3" />
             {product.Voucher}
           </div>
@@ -69,15 +73,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         {/* Stock Badge */}
         <div className="absolute top-3 right-3 z-10">
           {isOutOfStock ? (
-            <span className="bg-slate-900/80 dark:bg-zinc-950/90 backdrop-blur text-slate-200 dark:text-zinc-400 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-slate-700 dark:border-zinc-800">
+            <span className="micro-badge bg-slate-900/80 text-slate-200 border-slate-700">
               Out of Stock
             </span>
           ) : isDeactivated ? (
-            <span className="bg-rose-500/90 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
+            <span className="micro-badge bg-rose-500/90 text-white border-rose-400 flex items-center gap-1">
               <Lock className="w-3 h-3" /> Deactivated
             </span>
           ) : (
-            <span className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 text-[10px] font-bold px-2.5 py-0.5 rounded-full backdrop-blur">
+            <span className="micro-badge bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20 backdrop-blur">
               {product.Stock} in stock
             </span>
           )}
@@ -131,12 +135,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             type="button"
             disabled={isOutOfStock || isDeactivated}
             onClick={handleAddClick}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+            className={`luxury-control min-h-9 px-3.5 rounded-full text-xs cursor-pointer ${
               isOutOfStock || isDeactivated
                 ? 'bg-slate-100 dark:bg-[#181F2A] text-slate-400 dark:text-zinc-600 cursor-not-allowed'
                 : justAdded
                 ? 'bg-[#77775a] text-white shadow-[0_12px_24px_rgba(86,80,57,0.3)]'
-                : 'premium-button text-white shadow-[0_12px_24px_rgba(235,127,45,0.28)] active:scale-95'
+                : 'premium-button text-white active:scale-95'
             }`}
           >
             {justAdded ? (

@@ -35,6 +35,20 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex justify-end animate-in fade-in duration-150">
       <div className="bg-white dark:bg-[#12161D] w-full max-w-md h-full shadow-2xl flex flex-col border-l border-slate-200 dark:border-zinc-800">
+        <div className="px-4 pt-4 pb-3 border-b border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-[#161C24]/80">
+          <div className="flex gap-2 mb-3">
+            {['Apple Pay', 'Google Pay'].map((pay) => (
+              <button
+                key={pay}
+                type="button"
+                className="pay-pill flex-1 py-2 px-2 rounded-full border border-slate-200 dark:border-zinc-700 bg-white dark:bg-[#1C2430] text-[10px] font-bold text-slate-700 dark:text-zinc-200 hover:border-slate-300 dark:hover:border-zinc-600 transition-colors cursor-pointer"
+              >
+                {pay}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between bg-slate-50/50 dark:bg-[#161C24]/80">
           <div className="flex items-center gap-2">
@@ -154,9 +168,21 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                 </span>
               </div>
               {subtotal > 0 && subtotal <= 150 && (
-                <p className="text-[11px] text-slate-500 dark:text-zinc-400 italic">
-                  Add {formatCurrency(150 - subtotal)} more for FREE express dispatch!
-                </p>
+                <div className="space-y-2 pt-1">
+                  <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-zinc-400">
+                    <span>Free shipping progress</span>
+                    <span>{Math.min(100, Math.round((subtotal / 150) * 100))}%</span>
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-slate-200 dark:bg-zinc-800 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-sky-500 transition-all duration-500"
+                      style={{ width: `${Math.min(100, (subtotal / 150) * 100)}%` }}
+                    />
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-zinc-400 italic">
+                    Add {formatCurrency(150 - subtotal)} more for FREE express dispatch!
+                  </p>
+                </div>
               )}
               <div className="pt-2 border-t border-slate-200 dark:border-zinc-700 flex justify-between text-sm font-bold text-slate-900 dark:text-white">
                 <span>Total Amount</span>
