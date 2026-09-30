@@ -43,12 +43,18 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   onAskAI,
 }) => {
   const [quantity, setQuantity] = React.useState(1);
-  const [newRating, setNewRating] = React.useState(5);
+  const [newRating, setNewRating] = React.useState(0);
   const [newReviewText, setNewReviewText] = React.useState('');
   const [isSubmittingReview, setIsSubmittingReview] = React.useState(false);
   const [reviewSubmittedMessage, setReviewSubmittedMessage] = React.useState('');
   const [imgError, setImgError] = React.useState(false);
   const [justAdded, setJustAdded] = React.useState(false);
+
+  React.useEffect(() => {
+    setNewRating(0);
+    setNewReviewText('');
+    setReviewSubmittedMessage('');
+  }, [product?.Product_ID]);
 
   if (!product) return null;
 
@@ -63,10 +69,11 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
   const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newReviewText.trim()) return;
+    if (!newReviewText.trim() || newRating < 1) return;
     setIsSubmittingReview(true);
     try {
       await onSubmitReview(product.Product_ID, newRating, newReviewText.trim());
+      setNewRating(0);
       setNewReviewText('');
       setReviewSubmittedMessage('Thank you! Your review has been recorded.');
       setTimeout(() => setReviewSubmittedMessage(''), 4000);
@@ -331,7 +338,9 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                         size="md"
                         onRatingChange={(r) => setNewRating(r)}
                       />
-                      <span className="text-xs font-bold text-amber-500">{newRating} / 5 Stars</span>
+                      <span className="text-xs font-bold text-amber-500">
+                        {newRating > 0 ? `${newRating} / 5 stars` : 'Choose a rating'}
+                      </span>
                     </div>
 
                     <textarea
@@ -345,11 +354,11 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                     <div className="flex justify-end">
                       <button
                         type="submit"
-                        disabled={isSubmittingReview || !newReviewText.trim()}
+                        disabled={isSubmittingReview || !newReviewText.trim() || newRating < 1}
                         className="flex items-center gap-1.5 px-5 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-full text-xs font-semibold shadow-xs transition-colors cursor-pointer"
                       >
                         <Send className="w-3.5 h-3.5" />
-                        <span>Submit Verified Review</span>
+                        <span>Post review</span>
                       </button>
                     </div>
                   </form>

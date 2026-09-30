@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { randomUUID } from 'node:crypto';
 import { query } from '../db/index.ts';
 import { requireAuth, AuthRequest } from '../middleware/auth.ts';
 import { Review } from '../../src/types.ts';
@@ -44,14 +45,14 @@ router.get('/', async (req, res) => {
 router.post('/', requireAuth, async (req: AuthRequest, res) => {
   try {
     const { Product_ID, Customer_ID, Customer_Name, Review_text, Rating } = req.body;
-    if (!Product_ID || !Customer_ID || !Rating) {
-      return res.status(400).json({ error: 'Product_ID, Customer_ID, and Rating are required' });
+    const ratingNum = Number(Rating);
+    if (!Product_ID || !Customer_ID || !Number.isInteger(ratingNum) || ratingNum < 1 || ratingNum > 5) {
+      return res.status(400).json({ error: 'Product_ID, Customer_ID, and a rating from 1 to 5 are required' });
     }
 
-    const id = `REV-${Date.now()}`;
+    const id = `REV-${randomUUID()}`;
     const custName = Customer_Name || 'Verified Customer';
     const revText = Review_text || '';
-    const ratingNum = Math.min(5, Math.max(1, Number(Rating)));
 
     const result = await query(
       `SELECT * FROM gocart_review_create($1, $2, $3, $4, $5, $6)`,

@@ -22,7 +22,7 @@ import paymentRoutes from './routes/payment.routes.ts';
 import mapsRoutes from './routes/maps.routes.ts';
 
 const app = express();
-const PORT = 3000;
+const PORT = Number(process.env.PORT) || 3000;
 
 // Parse incoming JSON payloads
 app.use(express.json());
@@ -160,9 +160,43 @@ async function startServer() {
     });
   }
 
-  httpServer.listen(PORT, '0.0.0.0', () => {
-    console.log(`ShopNiro E-Commerce Server running on http://localhost:${PORT}`);
-  });
+  const listenOnAvailablePort = (port: number): Promise<number> =>
+    new Promise((resolve, reject) => {
+      const onListening = () => {
+        httpServer.off('error', onError);
+        const address = httpServer.address();
+        if (!address || typeof address === 'string') {
+          reject(new Error('Could not determine the server port.'));
+          return;
+        }
+        resolve(address.port);
+      };
+
+      const onError = (error: NodeJS.ErrnoException) => {
+        httpServer.off('listening', onListening);
+        httpServer.off('error', onError);
+        if (error.code !== 'EADDRINUSE') {
+          reject(error);
+          return;
+        }
+
+        const nextPort = port + 1;
+        console.warn(`Port ${port} is already in use; trying port ${nextPort}.`);
+        listenOnAvailablePort(nextPort).then(resolve, reject);
+      };
+
+      httpServer.once('listening', onListening);
+      httpServer.once('error', onError);
+      httpServer.listen(port, '0.0.0.0');
+    });
+
+  try {
+    const actualPort = await listenOnAvailablePort(PORT);
+    console.log(`ShopNiro E-Commerce Server running on http://localhost:${actualPort}`);
+  } catch (error) {
+    console.error('Failed to start ShopNiro server:', error);
+    process.exitCode = 1;
+  }
 }
 
 startServer();

@@ -37,7 +37,7 @@ import { GeminiChatbot } from './components/chat/GeminiChatbot';
 import { ChatFloatingTrigger } from './components/chat/ChatFloatingTrigger';
 import { LiveProductTrackingMap } from './components/tracking/LiveProductTrackingMap';
 import { MarketplaceTrendsTopCharts } from './components/storefront/MarketplaceTrendsTopCharts';
-import { RefreshCw, LayoutGrid, Radio } from 'lucide-react';
+import { LayoutGrid, Radio } from 'lucide-react';
 
 const scrollViewportToTop = () => {
   const options: ScrollToOptions = { top: 0, behavior: 'smooth' };
@@ -108,7 +108,6 @@ export default function App() {
   const [isAdminRegistrationOpen, setIsAdminRegistrationOpen] = React.useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = React.useState(false);
   const [isAdminSecurityModalOpen, setIsAdminSecurityModalOpen] = React.useState(false);
-  const [isLoading, setIsLoading] = React.useState(true);
   const [authNotice, setAuthNotice] = React.useState<string | null>(null);
   const [isValidatingAuth, setIsValidatingAuth] = React.useState<boolean>(false);
 
@@ -190,7 +189,6 @@ export default function App() {
 
   // Load public storefront data and conditionally load role-authenticated resources
   const loadInitialData = React.useCallback(async () => {
-    setIsLoading(true);
     try {
       // Public storefront data (categories, products, reviews, approved sellers)
       const [cats, sels, prods, revs] = await Promise.all([
@@ -269,8 +267,6 @@ export default function App() {
       }
     } catch (err) {
       console.error('Failed to load initial data:', err);
-    } finally {
-      setIsLoading(false);
     }
   }, []);
 
@@ -560,16 +556,6 @@ export default function App() {
       Postal_Code: '95113',
     },
   });
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col items-center justify-center space-y-4 app-shell">
-        <div className="floating-orb" />
-        <RefreshCw className="w-8 h-8 text-indigo-500 animate-spin" />
-        <p className="text-xs font-mono text-zinc-400">Initializing Raw SQL Database...</p>
-      </div>
-    );
-  }
 
   // Render Landing Page
   if (viewMode === 'landing') {

@@ -120,8 +120,7 @@ CREATE TABLE IF NOT EXISTS reviews (
     customer_name VARCHAR(255) NOT NULL,
     review_text TEXT NOT NULL,
     rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT uq_reviews_product_customer UNIQUE (product_id, customer_id)
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- PAYMENTS TABLE (SSLCommerz & bKash Transactions)
@@ -392,18 +391,6 @@ ALTER TABLE reviews
     DROP CONSTRAINT IF EXISTS uq_reviews_product_customer,
     ADD CONSTRAINT chk_reviews_rating CHECK (rating >= 1 AND rating <= 5);
 
--- Remove duplicate reviews
-DELETE FROM reviews
-WHERE id IN (
-    SELECT id
-    FROM (
-        SELECT id, 
-               ROW_NUMBER() OVER (PARTITION BY product_id, customer_id ORDER BY created_at DESC) as rnum
-        FROM reviews
-    ) duplicates
-    WHERE duplicates.rnum > 1
-);
-
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uq_users_email') THEN
@@ -416,9 +403,6 @@ BEGIN
         UPDATE orders SET tracking_id = 'TRK-LEGACY-' || id WHERE tracking_id IS NULL OR tracking_id = '';
         ALTER TABLE orders ALTER COLUMN tracking_id SET NOT NULL;
         ALTER TABLE orders ADD CONSTRAINT orders_tracking_id_key UNIQUE (tracking_id);
-    END IF;
-    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'uq_reviews_product_customer') THEN
-        ALTER TABLE reviews ADD CONSTRAINT uq_reviews_product_customer UNIQUE (product_id, customer_id);
     END IF;
 END;
 $$;

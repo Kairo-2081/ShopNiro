@@ -484,17 +484,6 @@
     border-color: rgba(208, 200, 165, 0.2);
   }
 
-  .floating-orb {
-    position: absolute;
-    width: 220px;
-    height: 220px;
-    border-radius: 9999px;
-    background: radial-gradient(circle, rgba(120, 119, 255, 0.4), rgba(120, 119, 255, 0) 68%);
-    filter: blur(18px);
-    animation: ambientFloat 8s ease-in-out infinite alternate;
-    z-index: -1;
-  }
-
   .brand-marquee {
     position: relative;
     overflow: hidden;
