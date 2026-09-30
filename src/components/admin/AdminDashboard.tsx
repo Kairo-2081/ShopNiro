@@ -90,7 +90,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const approvedSellers = sellers.filter((s) => s.Status === 'approved');
   const suspendedSellers = sellers.filter((s) => s.Status === 'suspended' || s.Status === 'rejected');
 
-  const totalMarketVolume = orders.reduce((sum, o) => sum + o.Subtotal + o.Shipping_Fee, 0);
+  const totalMarketValue = products.reduce(
+    (sum, product) => sum + Math.max(Number(product.Price) || 0, 0) * Math.max(Number(product.Stock) || 0, 0),
+    0
+  );
+  const totalOrderVolume = orders.reduce((sum, order) => sum + order.Subtotal + order.Shipping_Fee, 0);
   const avgSentiment =
     reviews.length > 0 ? reviews.reduce((sum, r) => sum + r.Rating, 0) / reviews.length : 4.9;
 
@@ -178,7 +182,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white dark:bg-[#12161D] border border-sky-100 dark:border-sky-500/20 rounded-3xl p-5 flex flex-col justify-between shadow-xs">
           <p className="text-xs text-slate-500 dark:text-zinc-400 font-medium">Total Market Value</p>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white mt-2">{formatCurrency(totalMarketVolume || 1240000)}</p>
+          <p className="text-2xl font-bold text-slate-900 dark:text-white mt-2">{formatCurrency(totalMarketValue)}</p>
           <div className="text-[11px] text-emerald-500 font-medium mt-2">+12.4% order volume</div>
         </div>
 
@@ -752,14 +756,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <div className="bg-white dark:bg-[#12161D] border border-sky-100 dark:border-sky-500/20 rounded-3xl p-5 shadow-xs flex flex-col justify-between">
               <div>
                 <span className="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider block">
-                  Total SSLCommerz Volume
+                  Total Order Volume
                 </span>
                 <div className="text-2xl font-black text-slate-900 dark:text-white mt-1">
-                  {formatBDT(totalMarketVolume)}
+                  {formatBDT(totalOrderVolume)}
                 </div>
               </div>
               <span className="text-[11px] text-emerald-500 font-semibold mt-2">
-                Processed via SSLCommerz Gateway
+                Order subtotal plus shipping across the marketplace
               </span>
             </div>
 
