@@ -51,9 +51,6 @@ export default function App() {
   // Navigation & View Mode
   const [viewMode, setViewMode] = React.useState<'landing' | 'app'>('landing');
 
-  // Google Maps Quota Handling
-  const [mapsQuotaExceeded, setMapsQuotaExceeded] = React.useState<boolean>(false);
-
   // AI Chatbot State
   const [isChatOpen, setIsChatOpen] = React.useState<boolean>(false);
   const [chatInitialQuery, setChatInitialQuery] = React.useState<string | undefined>(undefined);
@@ -182,13 +179,6 @@ export default function App() {
       window.removeEventListener('auth:required', handleAuthRequired);
       window.removeEventListener('auth:unauthorized', handleAuthUnauthorized);
     };
-  }, []);
-
-  // Listen for Google Maps quota exceeded events (Case A Demo Key Quota Defense)
-  React.useEffect(() => {
-    const handleQuotaExceeded = () => setMapsQuotaExceeded(true);
-    window.addEventListener('gmp-quota-exceeded', handleQuotaExceeded);
-    return () => window.removeEventListener('gmp-quota-exceeded', handleQuotaExceeded);
   }, []);
 
   // Check authentication on every page change before processing HTTP requests
@@ -689,24 +679,6 @@ export default function App() {
         onLogout={handleLogout}
       />
 
-      {/* Google Maps Quota Exceeded Sticky Top Banner */}
-      {mapsQuotaExceeded && (
-        <div className="bg-amber-50 border-b border-amber-200 text-amber-900 px-4 py-2.5 text-xs md:text-sm text-center sticky top-0 z-50 shadow-sm">
-          <span>
-            Google Maps Platform quota reached. If you are the app owner, visit{' '}
-            <a
-              href="https://developers.google.com/maps/ai/ai-studio?utm_campaign=gmp_mcp_codeassist_v1_aistudio#quota_exceeded_errors"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline font-semibold text-amber-950 hover:text-amber-800"
-            >
-              maps developer site
-            </a>{' '}
-            for instructions to update your account.
-          </span>
-        </div>
-      )}
-
       {/* Main Header & Navbar */}
       <Navbar
         isLoggedIn={isLoggedIn}
@@ -781,6 +753,7 @@ export default function App() {
               allProducts={products}
               onSelectProduct={(p) => setSelectedProductForDetail(p)}
               onAddToCart={handleAddToCart}
+              onUpdateOrderStatus={handleUpdateOrderStatus}
             />
           ) : (
             <AuthenticationGuard
@@ -795,7 +768,7 @@ export default function App() {
           )
         )}
 
-        {/* Live Product Tracking on Google Maps Tab */}
+        {/* OpenStreetMap delivery tracking tab */}
         {activeTab === 'live-tracking' && (
           <div className="space-y-6 animate-in fade-in-50 duration-200">
             <div className="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-[#12161D] p-6 rounded-3xl border border-sky-100 dark:border-zinc-800 shadow-xl">
@@ -805,7 +778,7 @@ export default function App() {
                   <span>REAL-TIME SATELLITE &amp; ROADWAY GPS TELEMETRY</span>
                 </div>
                 <h1 className="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-2">
-                  Live Product Tracking on Google Maps
+                  Live Delivery Tracking
                 </h1>
                 <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
                   Interactive telemetry tracking showing dispatch warehouses, in-flight parcel couriers, and product shipment coordinates.
@@ -830,10 +803,18 @@ export default function App() {
               </div>
             </div>
 
-            <LiveProductTrackingMap
-              orders={orders}
-              order={orders.length > 0 ? orders[0] : null}
-            />
+            {orders.some((order) => order.Status === 'shipped' || order.Status === 'delivered') ? (
+              <LiveProductTrackingMap
+                orders={orders.filter((order) => order.Status === 'shipped' || order.Status === 'delivered')}
+                order={orders.find((order) => order.Status === 'shipped' || order.Status === 'delivered') || null}
+                onDeliveryComplete={(orderId) => handleUpdateOrderStatus(orderId, 'delivered')}
+              />
+            ) : (
+              <div className="rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#12161D] p-6 text-center">
+                <p className="font-bold text-slate-900 dark:text-white">No shipments are in transit</p>
+                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">Live tracking appears after a vendor marks an order as shipped.</p>
+              </div>
+            )}
           </div>
         )}
 
@@ -960,7 +941,7 @@ export default function App() {
               className="hover:text-blue-500 dark:hover:text-sky-400 transition-colors cursor-pointer flex items-center gap-1 font-semibold text-blue-600 dark:text-sky-400"
             >
               <Radio className="w-3 h-3 text-sky-400 animate-pulse" />
-              <span>Google Maps Live Tracking</span>
+              <span>Live Delivery Tracking</span>
             </button>
             <span>•</span>
             <button
@@ -1022,7 +1003,7 @@ export default function App() {
           cartItems={cart}
           onPlaceOrder={handlePlaceOrder}
           onOrderSuccess={() => {
-            setActiveTab('live-tracking');
+            setActiveTab('orders');
           }}
         />
       )}

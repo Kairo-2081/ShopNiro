@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { APIProvider, Map, AdvancedMarker, Pin, useMap, useMapsLibrary } from '@vis.gl/react-google-maps';
+import L from 'leaflet';
+import { CircleMarker, MapContainer, Polyline, Popup, TileLayer, Tooltip, useMap } from 'react-leaflet';
 import { Order, Product, Customer } from '../../types';
 import { formatCurrency, formatBDT, formatDate } from '../../lib/api';
 import {
@@ -15,7 +16,6 @@ import {
   Search,
   RefreshCw,
   Phone,
-  Layers,
   Sparkles,
   ArrowRight,
   Maximize2,
@@ -29,68 +29,23 @@ interface TrackingCoordinates {
   lng: number;
 }
 
-// Polyline route renderer for @vis.gl/react-google-maps
-function DeliveryRoutePolyline({
+function FitRouteBounds({
   origin,
-  courier,
   destination,
-  isEco = false,
+  routeId,
 }: {
   origin: TrackingCoordinates;
-  courier: TrackingCoordinates;
   destination: TrackingCoordinates;
-  isEco?: boolean;
+  routeId: string;
 }) {
   const map = useMap();
-  const mapsLib = useMapsLibrary('maps');
-  const polylineCompletedRef = useRef<google.maps.Polyline | null>(null);
-  const polylineRemainingRef = useRef<google.maps.Polyline | null>(null);
 
   useEffect(() => {
-    if (!map || !mapsLib) return;
-
-    // Completed segment (Origin to Courier)
-    const completedPath = [origin, courier];
-    // Remaining segment (Courier to Destination)
-    const remainingPath = [courier, destination];
-
-    const polyCompleted = new mapsLib.Polyline({
-      path: completedPath,
-      geodesic: true,
-      strokeColor: isEco ? '#10B981' : '#3B82F6',
-      strokeOpacity: 0.9,
-      strokeWeight: 5,
-      map,
-    });
-
-    const polyRemaining = new mapsLib.Polyline({
-      path: remainingPath,
-      geodesic: true,
-      strokeColor: '#94A3B8',
-      strokeOpacity: 0.6,
-      strokeWeight: 4,
-      map,
-    });
-
-    polylineCompletedRef.current = polyCompleted;
-    polylineRemainingRef.current = polyRemaining;
-
-    // Fit bounds to show origin, courier, and destination
-    try {
-      const bounds = new google.maps.LatLngBounds();
-      bounds.extend(origin);
-      bounds.extend(courier);
-      bounds.extend(destination);
-      map.fitBounds(bounds, { top: 60, right: 60, bottom: 60, left: 60 });
-    } catch (e) {
-      // Map instance bounds fallback
-    }
-
-    return () => {
-      polyCompleted.setMap(null);
-      polyRemaining.setMap(null);
-    };
-  }, [map, mapsLib, origin, courier, destination, isEco]);
+    map.fitBounds(
+      L.latLngBounds([origin.lat, origin.lng], [destination.lat, destination.lng]),
+      { padding: [60, 60], maxZoom: 13 }
+    );
+  }, [map, origin.lat, origin.lng, destination.lat, destination.lng, routeId]);
 
   return null;
 }
@@ -99,6 +54,7 @@ interface LiveProductTrackingMapProps {
   order?: Order | null;
   orders?: Order[];
   onSelectOrder?: (order: Order) => void;
+  onDeliveryComplete?: (orderId: string) => Promise<void>;
   onClose?: () => void;
   isModal?: boolean;
 }
@@ -107,22 +63,36 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
   order: initialOrder,
   orders = [],
   onSelectOrder,
+  onDeliveryComplete,
   onClose,
   isModal = false,
 }) => {
+  const trackableOrders = Array.from(
+    new globalThis.Map<string, Order>(
+      [...orders, ...(initialOrder ? [initialOrder] : [])]
+        .filter((candidate) => candidate.Status === 'shipped' || candidate.Status === 'delivered')
+        .map((candidate) => [candidate.Order_ID, candidate])
+    ).values()
+  );
+  const hasTrackableOrder = trackableOrders.length > 0;
+  const firstTrackableOrder = initialOrder && (initialOrder.Status === 'shipped' || initialOrder.Status === 'delivered')
+    ? initialOrder
+    : trackableOrders[0];
   const [selectedOrderId, setSelectedOrderId] = useState<string>(
-    initialOrder?.Order_ID || (orders.length > 0 ? orders[0].Order_ID : 'TRK-9021')
+    firstTrackableOrder?.Order_ID || 'TRK-9021'
   );
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
-  const [isSimulatingMovement, setIsSimulatingMovement] = useState(true);
-  const [movementStep, setMovementStep] = useState(0.45); // 0 to 1 progress along route
-  const [mapType, setMapType] = useState<'roadmap' | 'satellite'>('roadmap');
+  const [isSimulatingMovement, setIsSimulatingMovement] = useState(firstTrackableOrder?.Status === 'shipped');
+  const [movementStep, setMovementStep] = useState(firstTrackableOrder?.Status === 'delivered' ? 1 : 0);
+  const [isCompletingDelivery, setIsCompletingDelivery] = useState(false);
+  const [deliveryUpdateError, setDeliveryUpdateError] = useState<string | null>(null);
+  const deliveryUpdateStartedRef = useRef<string | null>(null);
 
   // Derive current order from props or selected ID
   const activeOrder: Order =
-    orders.find((o) => o.Order_ID === selectedOrderId || o.Tracking_ID === selectedOrderId) ||
-    initialOrder || {
+    trackableOrders.find((o) => o.Order_ID === selectedOrderId || o.Tracking_ID === selectedOrderId) ||
+    firstTrackableOrder || {
       Order_ID: 'ORD-9021',
       Customer_ID: 'CUST-DEMO',
       Tracking_ID: 'TRK-9021',
@@ -183,22 +153,64 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
     lng: originWarehouse.lng + (deliveryDestination.lng - originWarehouse.lng) * movementStep + Math.sin(movementStep * Math.PI) * 0.008,
   };
 
-  // Live simulation of delivery van driving towards customer
   useEffect(() => {
-    if (!isSimulatingMovement) return;
+    if (!firstTrackableOrder) return;
+    setSelectedOrderId(firstTrackableOrder.Order_ID);
+  }, [firstTrackableOrder?.Order_ID]);
+
+  useEffect(() => {
+    if (activeOrder.Status === 'delivered') {
+      setMovementStep(1);
+      setIsSimulatingMovement(false);
+    } else if (activeOrder.Status === 'shipped') {
+      setMovementStep(0);
+      setIsSimulatingMovement(true);
+    }
+  }, [activeOrder.Order_ID, activeOrder.Status]);
+
+  // Simulate shipment movement only after the vendor marks the order as shipped.
+  useEffect(() => {
+    if (!hasTrackableOrder || activeOrder.Status !== 'shipped' || !isSimulatingMovement) return;
     const interval = setInterval(() => {
-      setMovementStep((prev) => {
-        if (prev >= 0.95) return 0.2; // Loop back for continuous live radar demonstration
-        return prev + 0.015;
-      });
-    }, 2000);
+      setMovementStep((prev) => Math.min(1, prev + 0.03));
+    }, 1000);
     return () => clearInterval(interval);
-  }, [isSimulatingMovement]);
+  }, [hasTrackableOrder, activeOrder.Order_ID, activeOrder.Status, isSimulatingMovement]);
 
-  const mapsApiKey = (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || '';
+  const completeDelivery = async (orderId: string) => {
+    if (!onDeliveryComplete || deliveryUpdateStartedRef.current === orderId) return;
+    deliveryUpdateStartedRef.current = orderId;
+    setIsSimulatingMovement(false);
+    setIsCompletingDelivery(true);
+    setDeliveryUpdateError(null);
+    try {
+      await onDeliveryComplete(orderId);
+    } catch (error: any) {
+      deliveryUpdateStartedRef.current = null;
+      setDeliveryUpdateError(error.message || 'Could not confirm delivery. Retry the status update.');
+    } finally {
+      setIsCompletingDelivery(false);
+    }
+  };
 
-  const stopsRemaining = Math.max(1, Math.round((1 - movementStep) * 4));
-  const etaMinutes = Math.max(5, Math.round((1 - movementStep) * 28));
+  useEffect(() => {
+    if (activeOrder.Status === 'shipped' && movementStep >= 1) {
+      void completeDelivery(activeOrder.Order_ID);
+    }
+  }, [activeOrder.Order_ID, activeOrder.Status, movementStep]);
+
+  const stopsRemaining = Math.max(0, Math.round((1 - movementStep) * 4));
+  const etaMinutes = Math.max(0, Math.round((1 - movementStep) * 28));
+
+  if (!hasTrackableOrder) {
+    return (
+      <div className="rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#12161D] p-6 text-center space-y-2">
+        <Truck className="w-8 h-8 text-slate-400 mx-auto" />
+        <h3 className="font-bold text-slate-900 dark:text-white">Tracking starts when your order ships</h3>
+        <p className="text-xs text-slate-500 dark:text-zinc-400">Your vendor will mark the order as shipped before its live route appears here.</p>
+      </div>
+    );
+  }
 
   return (
     <div className={`flex flex-col bg-white dark:bg-[#0F141C] text-slate-900 dark:text-zinc-100 rounded-3xl border border-sky-100 dark:border-zinc-800 shadow-2xl overflow-hidden ${isModal ? 'max-h-[90vh]' : ''}`}>
@@ -211,11 +223,11 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-black tracking-tight text-slate-900 dark:text-white">
-                Live Google Maps Product Tracking
+                OpenStreetMap Delivery Tracking
               </h2>
               <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-400 text-[10px] font-bold tracking-wider uppercase border border-emerald-300 dark:border-emerald-800/60 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
-                Live Radar
+                {activeOrder.Status === 'delivered' ? 'Delivered' : 'Live Radar'}
               </span>
             </div>
             <p className="text-xs text-slate-500 dark:text-zinc-400">
@@ -227,19 +239,26 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
         {/* Right Controls & Search */}
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Simulation Toggle */}
-          <button
-            type="button"
-            onClick={() => setIsSimulatingMovement(!isSimulatingMovement)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition-all cursor-pointer ${
-              isSimulatingMovement
-                ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800 text-blue-700 dark:text-sky-300'
-                : 'bg-slate-100 dark:bg-zinc-800 border-slate-300 dark:border-zinc-700 text-slate-600 dark:text-zinc-400'
-            }`}
-            title="Toggle Live GPS Telemetry Simulation"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isSimulatingMovement ? 'animate-spin' : ''}`} />
-            <span>{isSimulatingMovement ? 'GPS Live: Active' : 'GPS Paused'}</span>
-          </button>
+          {activeOrder.Status === 'shipped' ? (
+            <button
+              type="button"
+              onClick={() => setIsSimulatingMovement(!isSimulatingMovement)}
+              disabled={movementStep >= 1 || isCompletingDelivery}
+              className={`px-3 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 border transition-all cursor-pointer disabled:opacity-60 ${
+                isSimulatingMovement
+                  ? 'bg-blue-50 dark:bg-blue-950/40 border-blue-300 dark:border-blue-800 text-blue-700 dark:text-sky-300'
+                  : 'bg-slate-100 dark:bg-zinc-800 border-slate-300 dark:border-zinc-700 text-slate-600 dark:text-zinc-400'
+              }`}
+              title="Pause or resume shipment movement simulation"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isSimulatingMovement ? 'animate-spin' : ''}`} />
+              <span>{isCompletingDelivery ? 'Confirming delivery' : isSimulatingMovement ? 'GPS Live: Active' : 'GPS Paused'}</span>
+            </button>
+          ) : (
+            <span className="px-3 py-1.5 rounded-xl bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 text-xs font-bold">
+              Delivered
+            </span>
+          )}
 
           {/* Close Modal Button if in Modal mode */}
           {onClose && (
@@ -267,77 +286,38 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
               <span className="text-emerald-400 font-bold">ETA ~{etaMinutes} mins</span>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setMapType(mapType === 'roadmap' ? 'satellite' : 'roadmap')}
-              className="bg-slate-900/90 hover:bg-slate-800 backdrop-blur-md px-2.5 py-1.5 rounded-2xl border border-zinc-700 text-white text-xs flex items-center gap-1.5 shadow-lg transition-all cursor-pointer"
-              title="Toggle Satellite Imagery"
-            >
-              <Layers className="w-3.5 h-3.5 text-amber-400" />
-              <span>{mapType === 'roadmap' ? 'Satellite' : 'Roadmap'}</span>
-            </button>
           </div>
 
-          {/* Interactive Google Map Instance */}
+          {/* Interactive OpenStreetMap Instance */}
           <div className="flex-1 w-full h-full min-h-[420px]">
-            <APIProvider apiKey={mapsApiKey}>
-              <Map
-                mapId="DEMO_MAP_ID"
-                internalUsageAttributionIds={['gmp_mcp_codeassist_v1_aistudio']}
-                defaultCenter={courierLocation}
-                defaultZoom={13}
-                mapTypeId={mapType}
-                gestureHandling="greedy"
-                disableDefaultUI={false}
-                style={{ width: '100%', height: '100%' }}
-              >
-                {/* 1. Origin Marker: Merchant Warehouse */}
-                <AdvancedMarker position={originWarehouse} title="ShopNiro Merchant Warehouse">
-                  <div className="flex flex-col items-center group cursor-pointer">
-                    <div className="px-2 py-0.5 rounded-md bg-slate-900 text-white text-[10px] font-bold shadow-md border border-zinc-700 mb-1 whitespace-nowrap">
-                      Dispatch Warehouse
-                    </div>
-                    <Pin background="#475569" glyphColor="#FFFFFF" borderColor="#1E293B" scale={1.1} />
-                  </div>
-                </AdvancedMarker>
+            <MapContainer
+              center={courierLocation}
+              zoom={12}
+              scrollWheelZoom
+              className="relative z-0 h-full w-full min-h-[420px]"
+            >
+              <TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                maxZoom={19}
+              />
+              <FitRouteBounds origin={originWarehouse} destination={deliveryDestination} routeId={activeOrder.Order_ID} />
+              <Polyline positions={[originWarehouse, courierLocation]} pathOptions={{ color: '#77775a', weight: 5, opacity: 0.9 }} />
+              <Polyline positions={[courierLocation, deliveryDestination]} pathOptions={{ color: '#858585', weight: 4, opacity: 0.65, dashArray: '8 8' }} />
 
-                {/* 2. Live Moving Courier / Product Shipment Marker */}
-                <AdvancedMarker position={courierLocation} title="Live Product Location">
-                  <div className="relative flex flex-col items-center cursor-pointer transform -translate-y-2">
-                    {/* Floating Product Badge */}
-                    <div className="px-2.5 py-1 rounded-xl bg-blue-600 text-white text-[11px] font-black shadow-xl border border-sky-300 flex items-center gap-1.5 mb-1.5 animate-bounce">
-                      <Package className="w-3.5 h-3.5 text-amber-300" />
-                      <span>{activeOrder.Items[0]?.Name?.slice(0, 18) || 'Product in Transit'}...</span>
-                    </div>
-
-                    {/* Vehicle Pulsing Circle */}
-                    <div className="relative">
-                      <div className="w-11 h-11 rounded-full bg-blue-500/30 animate-ping absolute inset-0" />
-                      <div className="w-11 h-11 rounded-full bg-blue-600 border-2 border-white shadow-xl flex items-center justify-center text-white relative z-10">
-                        <Truck className="w-5 h-5 text-white" />
-                      </div>
-                    </div>
-                  </div>
-                </AdvancedMarker>
-
-                {/* 3. Destination Marker: Customer Doorstep */}
-                <AdvancedMarker position={deliveryDestination} title="Customer Delivery Address">
-                  <div className="flex flex-col items-center group cursor-pointer">
-                    <div className="px-2 py-0.5 rounded-md bg-emerald-700 text-white text-[10px] font-bold shadow-md border border-emerald-500 mb-1 whitespace-nowrap">
-                      Destination ({activeOrder.Shipping_Address.City})
-                    </div>
-                    <Pin background="#059669" glyphColor="#FFFFFF" borderColor="#064E3B" scale={1.2} />
-                  </div>
-                </AdvancedMarker>
-
-                {/* Dynamic Route Polyline */}
-                <DeliveryRoutePolyline
-                  origin={originWarehouse}
-                  courier={courierLocation}
-                  destination={deliveryDestination}
-                />
-              </Map>
-            </APIProvider>
+              <CircleMarker center={originWarehouse} radius={9} pathOptions={{ color: '#fff', weight: 3, fillColor: '#555347', fillOpacity: 1 }}>
+                <Tooltip permanent direction="top">Dispatch Warehouse</Tooltip>
+                <Popup>ShopNiro dispatch warehouse</Popup>
+              </CircleMarker>
+              <CircleMarker center={courierLocation} radius={12} pathOptions={{ color: '#fff', weight: 3, fillColor: '#8a805e', fillOpacity: 1 }}>
+                <Tooltip direction="top">{activeOrder.Items[0]?.Name || 'Parcel in transit'}</Tooltip>
+                <Popup>Courier in transit</Popup>
+              </CircleMarker>
+              <CircleMarker center={deliveryDestination} radius={9} pathOptions={{ color: '#fff', weight: 3, fillColor: '#7d7e5e', fillOpacity: 1 }}>
+                <Tooltip permanent direction="top">Customer Destination</Tooltip>
+                <Popup>{activeOrder.Shipping_Address.Street}, {activeOrder.Shipping_Address.City}</Popup>
+              </CircleMarker>
+            </MapContainer>
           </div>
 
           {/* Bottom Map Legend */}
@@ -397,6 +377,29 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
               </span>
             </div>
 
+            {isCompletingDelivery && (
+              <p className="text-[11px] text-slate-500 dark:text-zinc-400" role="status">
+                Route complete. Updating order status to delivered...
+              </p>
+            )}
+            {activeOrder.Status === 'delivered' && (
+              <p className="text-[11px] text-emerald-700 dark:text-emerald-300" role="status">
+                Shipment delivered successfully.
+              </p>
+            )}
+            {deliveryUpdateError && (
+              <div className="flex items-center justify-between gap-2 text-[11px] text-rose-700 dark:text-rose-300" role="alert">
+                <span>{deliveryUpdateError}</span>
+                <button
+                  type="button"
+                  onClick={() => void completeDelivery(activeOrder.Order_ID)}
+                  className="font-bold underline underline-offset-2 shrink-0"
+                >
+                  Retry
+                </button>
+              </div>
+            )}
+
             {/* Stepper */}
             <div className="space-y-2.5 pt-1 text-xs">
               <div className="flex items-start gap-2.5">
@@ -414,7 +417,9 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
                   <Truck className="w-3 h-3" />
                 </div>
                 <div>
-                  <span className="font-bold text-blue-600 dark:text-sky-300 block">Out for Delivery (In Transit)</span>
+                  <span className="font-bold text-blue-600 dark:text-sky-300 block">
+                    {activeOrder.Status === 'delivered' ? 'Delivered' : 'Out for Delivery (In Transit)'}
+                  </span>
                   <span className="text-[10px] text-slate-500 dark:text-zinc-400">
                     On Mohakhali / Banani Expressway • Courier en route
                   </span>

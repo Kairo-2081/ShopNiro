@@ -161,14 +161,55 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
 router.patch('/:id/status', requireAuth, async (req: AuthRequest, res) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const status = req.body?.status ?? req.body?.Status;
     if (!status || !['placed', 'processing', 'shipped', 'delivered', 'cancelled'].includes(status)) {
       return res.status(400).json({ error: 'Valid order status is required' });
     }
 
-    const result = await query(`SELECT * FROM gocart_order_status_update($1, $2)`, [id, status]);
-    if (result.rows.length === 0) {
+    const actor = req.user!;
+    const accessResult = await query(
+      `SELECT o.customer_id, o.status,
+        EXISTS (
+          SELECT 1 FROM order_items oi
+          WHERE oi.order_id = o.id AND oi.seller_id_snapshot = $2
+        ) AS seller_owns_order
+      FROM orders o WHERE o.id = $1`,
+      [id, actor.entityId]
+    );
+    if (accessResult.rows.length === 0) {
       return res.status(404).json({ error: 'Order not found' });
+    }
+
+    const existingOrder = accessResult.rows[0];
+    let result;
+    if (actor.role === 'customer') {
+      if (status !== 'delivered') {
+        return res.status(403).json({ error: 'Customers can only confirm delivery of their own shipped orders' });
+      }
+      result = await query(
+        `UPDATE orders SET status = 'delivered'
+        WHERE id = $1 AND customer_id = $2 AND status = 'shipped'
+        RETURNING *`,
+        [id, actor.entityId]
+      );
+      if (result.rows.length === 0) {
+        return res.status(409).json({ error: 'Only your shipped orders can be marked delivered' });
+      }
+    } else if (actor.role === 'seller') {
+      if (!existingOrder.seller_owns_order) {
+        return res.status(403).json({ error: 'You can only update orders containing your products' });
+      }
+      if (!['processing', 'shipped'].includes(status)) {
+        return res.status(403).json({ error: 'Sellers may set orders to processing or shipped' });
+      }
+      if (['shipped', 'delivered', 'cancelled'].includes(existingOrder.status) && status !== existingOrder.status) {
+        return res.status(409).json({ error: 'This order can no longer move back to an earlier status' });
+      }
+      result = await query(`SELECT * FROM gocart_order_status_update($1, $2)`, [id, status]);
+    } else if (actor.role === 'admin') {
+      result = await query(`SELECT * FROM gocart_order_status_update($1, $2)`, [id, status]);
+    } else {
+      return res.status(403).json({ error: 'Your role cannot update order status' });
     }
 
     const o = result.rows[0];

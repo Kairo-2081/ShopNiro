@@ -19,6 +19,7 @@ import ordersRoutes from './routes/orders.routes.ts';
 import reviewsRoutes from './routes/reviews.routes.ts';
 import geminiRoutes from './routes/gemini.routes.ts';
 import paymentRoutes from './routes/payment.routes.ts';
+import mapsRoutes from './routes/maps.routes.ts';
 
 const app = express();
 const PORT = 3000;
@@ -164,6 +165,7 @@ app.use('/api/orders', ordersRoutes);
 app.use('/api/reviews', reviewsRoutes);
 app.use('/api/gemini', geminiRoutes);
 app.use('/api/payment', paymentRoutes);
+app.use('/api/maps', mapsRoutes);
 
 // Global Error Handler for API routes
 app.use(errorHandler);

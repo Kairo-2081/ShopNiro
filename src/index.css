@@ -178,6 +178,22 @@
 }
 
 @layer utilities {
+  .shopniro-location-icon {
+    background: transparent;
+    border: 0;
+  }
+
+  .shopniro-location-pin {
+    display: block;
+    width: 22px;
+    height: 22px;
+    background: #77775a;
+    border: 3px solid #fff;
+    border-radius: 50% 50% 50% 0;
+    box-shadow: 0 3px 9px rgba(16, 16, 16, 0.4);
+    transform: rotate(-45deg);
+  }
+
   .premium-surface {
     background: linear-gradient(155deg, rgba(37, 37, 30, 0.94), rgba(17, 17, 15, 0.9));
     border: 1px solid rgba(231, 229, 214, 0.12);

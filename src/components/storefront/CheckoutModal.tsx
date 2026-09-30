@@ -76,6 +76,16 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [createdOrder, setCreatedOrder] = React.useState<Order | null>(null);
   const [verifiedPayment, setVerifiedPayment] = React.useState<SSLCommerzPaymentSuccessData | BkashPaymentSuccessData | null>(null);
+  const submissionInProgressRef = React.useRef(false);
+
+  React.useEffect(() => {
+    if (!isOpen) {
+      setCreatedOrder(null);
+      setVerifiedPayment(null);
+      setIsSubmitting(false);
+      submissionInProgressRef.current = false;
+    }
+  }, [isOpen]);
 
   React.useEffect(() => {
     if (currentCustomer.Address) {
@@ -164,6 +174,17 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     Transaction_ID: string;
     Payment_ID?: string;
   }) => {
+    if (submissionInProgressRef.current || createdOrder) return;
+    if (!currentCustomer.Customer_ID || cartItems.length === 0) {
+      alert('Your cart is empty or customer session is unavailable. Reopen the cart and try again.');
+      return;
+    }
+    if (!shippingAddress.Street.trim() || !shippingAddress.City.trim()) {
+      alert('Complete the shipping street and city before placing your order.');
+      return;
+    }
+
+    submissionInProgressRef.current = true;
     setIsSubmitting(true);
     try {
       const orderItems = cartItems.map((item) => ({
@@ -194,6 +215,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     } catch (err: any) {
       alert(err.message || 'Failed to place order');
     } finally {
+      submissionInProgressRef.current = false;
       setIsSubmitting(false);
     }
   };
@@ -279,22 +301,23 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   </div>
                 </div>
 
-                {/* Tracking ID Badge matching Radar Card */}
+                {/* Tracking ID is assigned at placement; live tracking starts after shipment. */}
                 <div className="p-5 rounded-3xl bg-[#0F1D2B] border border-blue-900/60 text-center space-y-2 shadow-xl">
                   <span className="text-[10px] uppercase tracking-widest font-extrabold text-sky-400 block">
-                    UNIQUE PACKAGE TRACKING RADAR ID
+                    ORDER TRACKING ID
                   </span>
                   <div className="text-2xl font-black font-mono text-white tracking-widest">
                     {createdOrder.Tracking_ID}
                   </div>
                   <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-600 text-white text-[10px] font-bold">
                     <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
-                    <span>IN FLIGHT • DISPATCHING</span>
+                    <span>AWAITING VENDOR DISPATCH</span>
                   </div>
                 </div>
 
                 <div className="flex flex-col sm:flex-row gap-3 pt-2">
                   <button
+                    type="button"
                     onClick={() => {
                       onOrderSuccess(createdOrder);
                       onClose();
@@ -302,7 +325,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     className="flex-1 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-full text-xs shadow-lg shadow-blue-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <Package className="w-4 h-4 text-amber-300" />
-                    <span>Track Live on Google Maps</span>
+                    <span>View Order Status</span>
                   </button>
                 </div>
               </div>

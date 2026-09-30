@@ -1,63 +1,53 @@
 import React from 'react';
-import { APIProvider, AdvancedMarker, Map, useMapsLibrary } from '@vis.gl/react-google-maps';
+import L from 'leaflet';
+import { MapContainer, Marker, TileLayer, Tooltip, useMapEvents } from 'react-leaflet';
 import { Address } from '../types';
+import { api } from '../lib/api';
 import { MapPin } from 'lucide-react';
+import 'leaflet/dist/leaflet.css';
 
 interface AccountLocationPickerProps {
   onAddressSelected: (address: Address | null) => void;
 }
 
 const defaultCenter = { lat: 23.8103, lng: 90.4125 };
+const selectedLocationIcon = L.divIcon({
+  className: 'shopniro-location-icon',
+  html: '<span class="shopniro-location-pin" aria-hidden="true"></span>',
+  iconSize: [28, 36],
+  iconAnchor: [14, 36],
+});
+
+interface LocationMapEventsProps {
+  onSelectLocation: (coordinates: { lat: number; lng: number }) => void;
+}
+
+function LocationMapEvents({ onSelectLocation }: LocationMapEventsProps) {
+  useMapEvents({
+    click: (event) => onSelectLocation({ lat: event.latlng.lat, lng: event.latlng.lng }),
+  });
+  return null;
+}
 
 function LocationMap({ onAddressSelected }: AccountLocationPickerProps) {
-  const geocodingLibrary = useMapsLibrary('geocoding');
   const [marker, setMarker] = React.useState<{ lat: number; lng: number } | null>(null);
   const [status, setStatus] = React.useState('Select a point on the map.');
   const [isResolving, setIsResolving] = React.useState(false);
 
-  const handleMapClick = async (event: any) => {
-    const clickedPoint = event.detail?.latLng;
-    if (!clickedPoint || !geocodingLibrary) return;
-
-    const coordinates = { lat: clickedPoint.lat, lng: clickedPoint.lng };
+  const handleMapClick = async (coordinates: { lat: number; lng: number }) => {
     setMarker(coordinates);
     setStatus('Finding the address...');
     setIsResolving(true);
     onAddressSelected(null);
 
     try {
-      const geocoder = new geocodingLibrary.Geocoder();
-      const { results } = await geocoder.geocode({ location: coordinates });
-      const result = results[0];
-      if (!result) {
-        setStatus('No address found at this point. Choose another location.');
-        return;
-      }
-
-      const getPart = (type: string) =>
-        result.address_components.find((component) => component.types.includes(type))?.long_name || '';
-      const street = [getPart('street_number'), getPart('route')].filter(Boolean).join(' ') || result.formatted_address;
-      const city =
-        getPart('locality') ||
-        getPart('postal_town') ||
-        getPart('administrative_area_level_2') ||
-        getPart('administrative_area_level_1');
-
-      if (!street || !city) {
-        setStatus('A complete address was not found. Choose another location.');
-        return;
-      }
-
-      onAddressSelected({
-        House_Name: getPart('subpremise') || getPart('premise'),
-        Street: street,
-        City: city,
-        Postal_Code: getPart('postal_code'),
-        Additional_Info: '',
-      });
+      const address = await api.reverseGeocode(coordinates.lat, coordinates.lng);
+      onAddressSelected(address);
       setStatus('Location selected. Review the address below.');
-    } catch {
+    } catch (error: any) {
+      setMarker(null);
       setStatus('Could not find this address. Check the map connection and try again.');
+      console.error('OpenStreetMap reverse geocoding failed:', error.message);
     } finally {
       setIsResolving(false);
     }
@@ -66,16 +56,19 @@ function LocationMap({ onAddressSelected }: AccountLocationPickerProps) {
   return (
     <div className="space-y-2">
       <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-100 dark:bg-[#181F2A]">
-        <Map
-          mapId="DEMO_MAP_ID"
-          defaultCenter={defaultCenter}
-          defaultZoom={11}
-          gestureHandling="greedy"
-          onClick={handleMapClick}
-          style={{ width: '100%', height: '100%' }}
-        >
-          {marker && <AdvancedMarker position={marker} title="Selected account location" />}
-        </Map>
+        <MapContainer center={defaultCenter} zoom={11} scrollWheelZoom className="h-full w-full">
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            maxZoom={19}
+          />
+          <LocationMapEvents onSelectLocation={handleMapClick} />
+          {marker && (
+            <Marker position={marker} icon={selectedLocationIcon}>
+              <Tooltip permanent>Selected location</Tooltip>
+            </Marker>
+          )}
+        </MapContainer>
         {isResolving && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/30 text-white text-xs font-semibold" role="status">
             Finding address...
@@ -95,19 +88,5 @@ function LocationMap({ onAddressSelected }: AccountLocationPickerProps) {
 }
 
 export const AccountLocationPicker: React.FC<AccountLocationPickerProps> = ({ onAddressSelected }) => {
-  const apiKey = (import.meta as any).env?.VITE_GOOGLE_MAPS_API_KEY || '';
-
-  if (!apiKey) {
-    return (
-      <p className="text-xs text-rose-700 dark:text-rose-300" role="alert">
-        Map selection is unavailable because Google Maps is not configured.
-      </p>
-    );
-  }
-
-  return (
-    <APIProvider apiKey={apiKey}>
-      <LocationMap onAddressSelected={onAddressSelected} />
-    </APIProvider>
-  );
+  return <LocationMap onAddressSelected={onAddressSelected} />;
 };

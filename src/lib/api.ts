@@ -46,6 +46,7 @@ function isPublicEndpoint(url: string, method: string = 'GET'): boolean {
     cleanUrl === '/api/auth/role' ||
     cleanUrl === '/api/auth/me' ||
     cleanUrl === '/api/db/status' ||
+    cleanUrl === '/api/maps/reverse' ||
     cleanUrl.startsWith('/api/gemini') ||
     cleanUrl.startsWith('/api/payment') ||
     cleanUrl.startsWith('/api/analytics') ||
@@ -147,6 +148,10 @@ export const api = {
 
   // Database Status
   getDbStatus: async () => fetchJson<{ connected: boolean; provider: string; database: string }>('/api/db/status'),
+  reverseGeocode: async (lat: number, lon: number): Promise<Address> => {
+    const params = new URLSearchParams({ lat: String(lat), lon: String(lon) });
+    return fetchJson<Address>(`/api/maps/reverse?${params.toString()}`);
+  },
 
   // Categories
   getCategories: async (): Promise<Category[]> => fetchJson<Category[]>('/api/categories'),
@@ -344,8 +349,8 @@ export const api = {
     }),
   updateOrderStatus: async (orderId: string, Status: OrderStatus | string): Promise<Order> =>
     fetchJson<Order>(`/api/orders/${encodeURIComponent(orderId)}/status`, {
-      method: 'PUT',
-      body: JSON.stringify({ Status }),
+      method: 'PATCH',
+      body: JSON.stringify({ status: Status }),
     }),
 
   // Reviews

@@ -443,7 +443,7 @@ export const BkashGatewayPage: React.FC<BkashGatewayPageProps> = ({
               <div className="p-3 rounded-2xl bg-pink-50 border border-pink-200 text-xs text-pink-800 flex items-center justify-center gap-2">
                 <RefreshCw className="w-4 h-4 animate-spin text-[#E2136E]" />
                 <span>
-                  Redirecting to <strong>ShopNiro Live Google Maps Tracking</strong> in{' '}
+                  Redirecting to <strong>ShopNiro Live Delivery Tracking</strong> in{' '}
                   <span className="font-bold font-mono text-[#E2136E]">{countdownToRedirect}s</span>...
                 </span>
               </div>

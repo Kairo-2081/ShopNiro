@@ -427,17 +427,23 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
 
                       {/* Fulfillment Status Selector */}
                       <div className="flex items-center gap-2">
-                        <span className="text-slate-500 dark:text-zinc-400 font-medium">Update Status:</span>
+                        <span className="text-slate-500 dark:text-zinc-400 font-medium">Fulfillment:</span>
                         <select
                           value={order.Status}
                           onChange={(e) => onUpdateOrderStatus(order.Order_ID, e.target.value)}
+                          aria-label={`Fulfillment status for order ${order.Order_ID}`}
                           className="bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-full px-3 py-1.5 font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
-                          <option value="placed">Placed (Pending)</option>
-                          <option value="processing">Processing</option>
-                          <option value="shipped">Shipped (In Transit)</option>
-                          <option value="delivered">Delivered</option>
-                          <option value="cancelled">Cancelled</option>
+                          <option value={order.Status}>
+                            {order.Status === 'placed' ? 'Placed (Pending)' :
+                              order.Status === 'processing' ? 'Processing' :
+                              order.Status === 'shipped' ? 'Shipped (Tracking Active)' :
+                              order.Status === 'delivered' ? 'Delivered' : 'Cancelled'}
+                          </option>
+                          {order.Status === 'placed' && <option value="processing">Processing</option>}
+                          {['placed', 'processing'].includes(order.Status) && (
+                            <option value="shipped">Mark as Shipped</option>
+                          )}
                         </select>
                       </div>
                     </div>
