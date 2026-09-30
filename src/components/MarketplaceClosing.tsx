@@ -67,7 +67,7 @@ export const MarketplaceClosing: React.FC<MarketplaceClosingProps> = ({ stats })
           ShopNiro marketplace
         </p>
         <h2 className="mt-1 text-2xl sm:text-3xl text-slate-900 dark:text-white">
-          A marketplace in motion.
+          Shop from independent sellers.
         </h2>
       </div>
 

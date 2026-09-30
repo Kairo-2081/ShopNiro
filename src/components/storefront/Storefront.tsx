@@ -3,7 +3,7 @@ import { Product, Category, Seller, Review } from '../../types';
 import { ProductCard } from './ProductCard';
 import { MarketplaceTrendsTopCharts } from './MarketplaceTrendsTopCharts';
 import { formatCurrency } from '../../lib/api';
-import { Search, Sparkles, SlidersHorizontal, ShoppingBag, ArrowUpDown, X, Check, Radio } from 'lucide-react';
+import { Search, SlidersHorizontal, ShoppingBag, ArrowUpDown, X, Check } from 'lucide-react';
 
 interface StorefrontProps {
   products: Product[];
@@ -101,11 +101,6 @@ export const Storefront: React.FC<StorefrontProps> = ({
         <div className="absolute -top-20 -right-20 w-80 h-80 bg-white/10 rounded-full blur-3xl pointer-events-none" />
 
         <div className="relative z-10 space-y-5 max-w-3xl">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-sky-950/80 border border-sky-800/60 text-sky-300 text-xs font-semibold">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse"></span>
-            <span>VERIFIED MERCHANTS &amp; DIRECT CHECKOUT</span>
-          </div>
-
           <div>
             <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-white leading-tight">
               Shop smart,{' '}

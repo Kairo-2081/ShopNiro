@@ -156,7 +156,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           {/* Pill Badge */}
           <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#24241d]/80 border border-[#d0c8a5]/35 text-[#e7e5d6] text-xs font-semibold tracking-wide shadow-[0_8px_20px_rgba(169,155,114,0.2)]">
             <span className="w-1.5 h-1.5 rounded-full bg-[#d0c8a5] animate-pulse"></span>
-            <span>VERIFIED MERCHANTS &amp; DIRECT CHECKOUT</span>
+            <span>APPROVED SELLERS · ORDER TRACKING</span>
           </div>
 
           {/* Hero Headline */}
@@ -166,13 +166,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
           {/* Subtitle tailored to ShopNiro Marketplace */}
           <p className="text-zinc-300 text-xs sm:text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
-            Discover verified independent merchants, direct checkout, real-time inventory, and guaranteed buyer protection from storefront to your doorstep.
+            Browse products from approved sellers, check current stock, and follow your orders from one place.
           </p>
 
           {/* 3D Interactive Marketplace Globe */}
           <div className="py-1 md:py-2 relative hero-orbit-wrap">
-            <div className="floating-badge floating-badge-left">Live Deals</div>
-            <div className="floating-badge floating-badge-right">Verified</div>
+            <div className="floating-badge floating-badge-left">Shop products</div>
+            <div className="floating-badge floating-badge-right">Seller approved</div>
             <OrbitGlobe />
           </div>
 
@@ -203,14 +203,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <div className="brand-track">
               {[
                 { name: 'ShopNiro', accent: 'bg-[#d0c8a5]/15 text-[#f7f3e6]' },
-                { name: 'Verified Sellers', accent: 'bg-sky-500/10 text-sky-200' },
-                { name: 'Live Tracking', accent: 'bg-emerald-500/10 text-emerald-200' },
+                { name: 'Approved Sellers', accent: 'bg-sky-500/10 text-sky-200' },
+                { name: 'Order Updates', accent: 'bg-emerald-500/10 text-emerald-200' },
                 { name: 'Secure Checkout', accent: 'bg-violet-500/10 text-violet-200' },
-                { name: 'Marketplace', accent: 'bg-amber-500/10 text-amber-200' },
+                { name: 'Customer Reviews', accent: 'bg-amber-500/10 text-amber-200' },
                 { name: 'ShopNiro', accent: 'bg-[#d0c8a5]/15 text-[#f7f3e6]' },
-                { name: 'Verified Sellers', accent: 'bg-sky-500/10 text-sky-200' },
-                { name: 'Live Tracking', accent: 'bg-emerald-500/10 text-emerald-200' },
-                { name: 'Secure Checkout', accent: 'bg-violet-500/10 text-violet-200' },
+                { name: 'Approved Sellers', accent: 'bg-sky-500/10 text-sky-200' },
+                { name: 'Order Updates', accent: 'bg-emerald-500/10 text-emerald-200' },
+                { name: 'Order Tracking', accent: 'bg-violet-500/10 text-violet-200' },
               ].map((item, index) => (
                 <div key={`${item.name}-${index}`} className={`brand-chip ${item.accent}`}>
                   <img
@@ -225,29 +225,25 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
         </section>
 
-        {/* 3. Unified Commerce & Delivery Engine: Three Dedicated Portals */}
+        {/* Shopper, seller, and admin entry points */}
         <section className="space-y-4 pt-1 animate-fade-up">
           {/* Header Badges */}
           <div className="flex items-center gap-2 flex-wrap">
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-950/60 border border-emerald-800/60 text-emerald-300 text-[10px] font-bold">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-              MULTI-VENDOR ARCHITECTURE
-            </span>
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-sky-950/60 border border-sky-800/60 text-sky-300 text-[10px] font-bold">
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-              RAW SQL COMMERCE ENGINE · ACTIVE
+              SHOPPERS · SELLERS · ADMINS
             </span>
           </div>
 
           <div>
             <span className="text-[10px] font-extrabold tracking-widest text-sky-400 uppercase block">
-              UNIFIED COMMERCE &amp; MARKETPLACE ENGINE
+              ShopNiro marketplace
             </span>
             <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight mt-0.5">
-              One Marketplace. Three Dedicated Portals.
+              One place to shop, sell, and manage.
             </h3>
             <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
-              Engineered micro-interfaces designed specifically for everyday shoppers, verified merchants, and platform governance.
+              Browse products, manage a store, or review seller applications from the right account.
             </p>
           </div>
 
@@ -261,21 +257,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </div>
                 <div>
                   <h4 className="font-bold text-base text-white leading-tight">
-                    Customer Hub
+                    Shopping account
                   </h4>
                   <p className="text-[11px] text-zinc-300 mt-0.5">
-                    Direct checkout, cart &amp; live order tracking
+                    Cart, orders, and delivery updates
                   </p>
                 </div>
               </div>
 
               <span className="px-2.5 py-0.5 rounded-full bg-blue-900/80 text-sky-300 text-[10px] font-semibold border border-blue-800/40">
-                Shoppers &amp; Buyers
+                For shoppers
               </span>
             </div>
 
             <p className="text-xs text-zinc-300 leading-relaxed">
-              Browse curated vendor catalogs, manage your shopping cart, apply promotional discount vouchers (<code className="text-sky-300 font-mono">SAVE20</code>, <code className="text-sky-300 font-mono">TECH10</code>), and track your packages with full buyer protection.
+              Browse products from different sellers, add what you like to your cart, and check your order status in your account.
             </p>
 
             {/* Launch Customer Portal Button */}
@@ -285,7 +281,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               className="luxury-control w-full py-3 px-4 rounded-xl premium-button text-white text-xs shadow-md cursor-pointer"
             >
               <ShoppingBag className="w-4 h-4" />
-              <span>Launch Customer Portal</span>
+              <span>Sign in to shop</span>
             </button>
 
             {/* Bottom link: Create Personal Account */}
@@ -295,7 +291,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 onClick={onOpenCustomerSignup || onOpenLogin}
                 className="text-xs font-semibold text-zinc-400 hover:text-sky-300 transition-colors cursor-pointer"
               >
-                New to ShopNiro? <strong className="text-sky-400 ml-1">+ Create Customer Account</strong>
+                New to ShopNiro? <strong className="text-sky-400 ml-1">Create an account</strong>
               </button>
             </div>
           </div>
@@ -309,21 +305,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </div>
                 <div>
                   <h4 className="font-bold text-base text-white leading-tight">
-                    Merchant Studio
+                    Seller dashboard
                   </h4>
                   <p className="text-[11px] text-zinc-300 mt-0.5">
-                    Inventory control, batch pricing &amp; order dispatch
+                    Products, stock, and customer orders
                   </p>
                 </div>
               </div>
 
               <span className="px-2.5 py-0.5 rounded-full bg-emerald-900/80 text-emerald-300 text-[10px] font-semibold border border-emerald-800/40">
-                Seller Operations
+                For sellers
               </span>
             </div>
 
             <p className="text-xs text-zinc-300 leading-relaxed">
-              List products across verified categories, manage real-time inventory thresholds, fulfill customer orders with instant tracking IDs, and monitor store earnings.
+              Add products, update stock, and keep customers up to date as you process their orders.
             </p>
 
             {/* Enter Merchant Studio Button */}
@@ -333,7 +329,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               className="luxury-control w-full py-3 px-4 rounded-xl premium-button text-white text-xs shadow-md cursor-pointer"
             >
               <Store className="w-4 h-4" />
-              <span>Enter Merchant Studio</span>
+              <span>Seller sign in</span>
             </button>
 
             {/* Bottom link: Register as Brand Partner */}
@@ -343,7 +339,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 onClick={onOpenSellerSignup}
                 className="text-xs font-semibold text-zinc-400 hover:text-emerald-300 transition-colors cursor-pointer"
               >
-                Sell on ShopNiro? <strong className="text-emerald-400 ml-1">+ Register as Verified Merchant</strong>
+                Want to sell? <strong className="text-emerald-400 ml-1">Create a seller account</strong>
               </button>
             </div>
           </div>
@@ -357,21 +353,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </div>
                 <div>
                   <h4 className="font-bold text-base text-white leading-tight">
-                    Admin Governance
+                    Admin tools
                   </h4>
                   <p className="text-[11px] text-zinc-300 mt-0.5">
-                    Vendor auditing, catalog taxonomy &amp; dispute guard
+                    Seller approvals and product categories
                   </p>
                 </div>
               </div>
 
               <span className="px-2.5 py-0.5 rounded-full bg-purple-900/80 text-purple-300 text-[10px] font-semibold border border-purple-800/40">
-                Marketplace Ops
+                For admins
               </span>
             </div>
 
             <p className="text-xs text-zinc-300 leading-relaxed">
-              Review and approve new vendor onboarding, moderate catalog taxonomy, oversee platform promotional vouchers, and audit raw SQL database performance.
+              Review seller applications, manage product categories, and update listing status.
             </p>
 
             {/* Admin Access Button */}
@@ -381,13 +377,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               className="luxury-control w-full py-3 px-4 rounded-xl premium-button text-white text-xs shadow-md cursor-pointer"
             >
               <ShieldCheck className="w-4 h-4" />
-              <span>Admin Access</span>
+              <span>Admin sign in</span>
             </button>
 
             {/* Biometrics badge */}
             <div className="flex items-center justify-between text-[10px] pt-1 text-purple-300 font-medium">
-              <span>Secured via Role Permissions</span>
-              <span className="font-bold tracking-wider uppercase text-purple-400">ROLE VERIFICATION REQUIRED</span>
+              <span>For ShopNiro administrators</span>
+              <span className="font-bold tracking-wider uppercase text-purple-400">ADMIN ACCOUNT REQUIRED</span>
             </div>
           </div>
 
@@ -401,29 +397,29 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <div className="flex items-center gap-2.5">
               <Users className="w-4 h-4 text-sky-400" />
               <span className="text-xs font-semibold text-zinc-200">
-                Universal Unified Sign-In
+                Already have an account?
               </span>
             </div>
             <div className="flex items-center gap-1 text-xs font-bold text-sky-400 group-hover:translate-x-0.5 transition-transform">
-              <span>Sign in with credentials</span>
+              <span>Sign in</span>
               <span>➔</span>
             </div>
           </div>
         </section>
 
-        {/* 5. ENGINEERED FOR DELIGHT: Our marketplace powers */}
+        {/* What you can do on ShopNiro */}
         <section className="space-y-3 pt-2">
           <div>
             <span className="text-[10px] font-extrabold tracking-widest text-sky-400 uppercase block">
-              ENGINEERED FOR DELIGHT
+              On ShopNiro
             </span>
             <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight mt-0.5">
-              Our marketplace powers
+              The basics, all in one place
             </h3>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {/* Feature 1: Verified Merchant Quality */}
+          {/* Feature 1: Seller approval */}
           <div className="p-4 rounded-2xl bg-[#12161D] border border-zinc-800 shadow-xl flex items-start gap-3.5">
             <div className="w-10 h-10 rounded-2xl bg-sky-950 text-sky-400 flex items-center justify-center shrink-0 border border-sky-900/50">
               <BadgeCheck className="w-5 h-5" />
@@ -431,19 +427,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <div className="flex-1 space-y-1">
               <div className="flex items-center justify-between">
                 <h4 className="font-bold text-sm text-white">
-                  Verified Merchant Quality
+                  Seller approval
                 </h4>
                 <span className="px-2 py-0.5 rounded-full bg-sky-950 text-sky-300 text-[10px] font-semibold border border-sky-800/40">
-                  Zero Counterfeit
+                  Reviewed before listing
                 </span>
               </div>
               <p className="text-xs text-zinc-400 leading-relaxed">
-                Every independent vendor undergoes strict identity auditing and catalog review by Admin officers prior to listing products.
+                Seller accounts are reviewed before their products appear in the marketplace.
               </p>
             </div>
           </div>
 
-          {/* Feature 2: Live Order Telemetry */}
+          {/* Feature 2: Order tracking */}
           <div className="p-4 rounded-2xl bg-[#12161D] border border-zinc-800 shadow-xl flex items-start gap-3.5">
             <div className="w-10 h-10 rounded-2xl bg-purple-950 text-purple-400 flex items-center justify-center shrink-0 border border-purple-900/50">
               <Compass className="w-5 h-5" />
@@ -451,19 +447,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <div className="flex-1 space-y-1">
               <div className="flex items-center justify-between">
                 <h4 className="font-bold text-sm text-white">
-                  Live Planetary Route
+                  Order tracking
                 </h4>
                 <span className="px-2 py-0.5 rounded-full bg-purple-950 text-purple-300 text-[10px] font-semibold border border-purple-800/40">
-                  Sub-meter GPS
+                  Order updates
                 </span>
               </div>
               <p className="text-xs text-zinc-400 leading-relaxed">
-                Zero guessing games. Watch your courier navigate streets with real-time 3D telemetry, tracking IDs, and doorstep alerts.
+                Check your order status as it moves from processing to shipped and delivered.
               </p>
             </div>
           </div>
 
-          {/* Feature 3: Guaranteed Buyer Protection */}
+          {/* Feature 3: Order details */}
           <div className="p-4 rounded-2xl bg-[#12161D] border border-zinc-800 shadow-xl flex items-start gap-3.5">
             <div className="w-10 h-10 rounded-2xl bg-orange-950 text-orange-400 flex items-center justify-center shrink-0 border border-orange-900/50">
               <Shield className="w-5 h-5" />
@@ -471,14 +467,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <div className="flex-1 space-y-1">
               <div className="flex items-center justify-between">
                 <h4 className="font-bold text-sm text-white">
-                  Guaranteed Buyer Protection
+                  Order details
                 </h4>
                 <span className="px-2 py-0.5 rounded-full bg-orange-950 text-orange-300 text-[10px] font-semibold border border-orange-800/40">
-                  30-Day Money Back
+                  In your account
                 </span>
               </div>
               <p className="text-xs text-zinc-400 leading-relaxed">
-                Secure checkout with funds held safely until contactless delivery is confirmed. Hassle-free dispute resolution and returns.
+                Find your payment and delivery updates together, so it’s easier to keep track of a purchase.
               </p>
             </div>
           </div>
@@ -489,7 +485,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <section className="space-y-3 pt-2">
           <div>
             <span className="text-[10px] font-extrabold tracking-widest text-sky-400 uppercase block">
-              EFFORTLESS FLOW
+              Simple steps
             </span>
             <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight mt-0.5">
               How ShopNiro works
@@ -504,10 +500,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
             <div>
               <h4 className="font-bold text-sm text-white">
-                Discover &amp; Apply Vouchers
+                Browse products
               </h4>
               <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
-                Browse verified products across electronics, fashion, and home goods. Apply discount vouchers (<code className="text-sky-300">SAVE20</code>, <code className="text-sky-300">TECH10</code>) at direct checkout.
+                Compare products, check prices and stock, then add your picks to the cart.
               </p>
             </div>
           </div>
@@ -519,10 +515,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
             <div>
               <h4 className="font-bold text-sm text-white">
-                Merchant Prepares &amp; Ships
+                The seller prepares your order
               </h4>
               <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
-                Independent merchants pack your items with thermal pods and issue instant waybill tracking numbers for verified dispatch.
+                The seller updates your order as it’s processed and shipped. Tracking appears when it’s available.
               </p>
             </div>
           </div>
@@ -534,10 +530,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
             <div>
               <h4 className="font-bold text-sm text-white">
-                Delightful Safe Arrival
+                Follow your delivery
               </h4>
               <p className="text-xs text-zinc-400 mt-1 leading-relaxed">
-                Receive high-resolution photo proof upon delivery, unbox with peace of mind, and leave verified customer reviews.
+                Check delivery updates in your account, then leave a review after your order arrives.
               </p>
             </div>
           </div>
@@ -548,14 +544,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <section className="space-y-3 pt-1 animate-fade-up">
           <div className="flex items-center justify-between gap-2">
             <span className="text-[10px] font-extrabold tracking-widest text-sky-400 uppercase block">
-              TRUSTED BY MODERN SHOPS
+              ShopNiro features
             </span>
           </div>
 
           <div className="brand-marquee">
             <div className="brand-track">
               {[
-                'NiroCart', 'Urban Atelier', 'Nova Goods', 'Harbor & Co', 'Signal Studio', 'NiroCart', 'Urban Atelier', 'Nova Goods', 'Harbor & Co', 'Signal Studio'
+                'Product listings', 'Seller approval', 'Order tracking', 'Customer reviews', 'Product listings', 'Seller approval', 'Order tracking', 'Customer reviews'
               ].map((brand, index) => (
                 <div key={`${brand}-${index}`} className="brand-chip bg-white/5 text-zinc-200">
                   <span className="w-2 h-2 rounded-full bg-gradient-to-r from-sky-400 to-emerald-400 inline-block shadow-[0_0_18px_rgba(96,165,250,0.7)]" />
@@ -566,19 +562,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
         </section>
 
-        {/* 9. SPECIAL INVITATION Banner Card (Matching User Screenshot 2) */}
+        {/* Browse the current catalog */}
         <section className="rounded-3xl p-6 sm:p-7 bg-blue-600 text-white text-center space-y-3.5 shadow-2xl relative overflow-hidden animate-fade-up">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 border border-white/25 text-white text-[11px] font-semibold tracking-wide">
             <Tag className="w-3 h-3 text-sky-200" />
-            <span>SPECIAL INVITATION • CODE: SAVE20</span>
+            <span>ShopNiro marketplace</span>
           </div>
 
           <h3 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-            Send your first parcel today.
+            Find something you’ll love.
           </h3>
 
           <p className="text-sky-100 text-xs sm:text-sm max-w-sm mx-auto leading-relaxed">
-            Get 20% off your first 3 orders across audio, gadgets &amp; apparel. Transparent pricing, zero hidden fees, infinite peace of mind.
+            Browse current listings from independent sellers. Product details, prices, and stock are shown before you order.
           </p>
 
           <div className="pt-2">
@@ -587,13 +583,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               onClick={onEnterAsGuest}
               className="w-full py-3.5 px-6 rounded-full bg-white hover:bg-sky-50 text-blue-700 font-bold text-sm shadow-lg transition-all cursor-pointer transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
             >
-              <span>Explore Catalog &amp; Shop</span>
+              <span>Browse products</span>
               <span>➔</span>
             </button>
           </div>
 
           <p className="text-[11px] text-sky-200/90">
-            No subscription or membership contract required
+            See what’s available today.
           </p>
         </section>
 

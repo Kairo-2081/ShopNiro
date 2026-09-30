@@ -543,7 +543,7 @@ export default function App() {
     },
     { label: 'Categories', value: categories.length },
     {
-      label: 'Verified sellers',
+      label: 'Approved sellers',
       value: sellers.filter((seller) => !seller.Status || seller.Status.toLowerCase() === 'approved').length,
     },
   ];
