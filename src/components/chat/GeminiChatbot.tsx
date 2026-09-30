@@ -20,7 +20,7 @@ import {
 import { api } from '../../lib/api';
 
 export type ChatRole = 'shopping-assistant' | 'seller-advisor' | 'order-specialist' | 'complex-analyst';
-export type GeminiModelChoice = 'gemini-3.5-flash' | 'gemini-3.1-flash-lite' | 'gemini-3.1-pro-preview';
+export type AIModelChoice = 'flash' | 'flash-lite' | 'pro';
 
 interface Message {
   id: string;
@@ -45,7 +45,7 @@ const ROLE_CONFIGS: Record<
     icon: React.ReactNode;
     color: string;
     starters: string[];
-    recommendedModel: GeminiModelChoice;
+    recommendedModel: AIModelChoice;
   }
 > = {
   'shopping-assistant': {
@@ -53,7 +53,7 @@ const ROLE_CONFIGS: Record<
     description: 'Find products, check real-time stock & apply discount vouchers',
     icon: <ShoppingBag className="w-4 h-4 text-blue-400" />,
     color: 'from-blue-500/20 to-sky-500/20 border-blue-500/30 text-sky-300',
-    recommendedModel: 'gemini-3.5-flash',
+    recommendedModel: 'flash',
     starters: [
       'What are the best wireless headphones available?',
       'Are there any active discount vouchers today?',
@@ -65,7 +65,7 @@ const ROLE_CONFIGS: Record<
     description: 'Catalog optimization, pricing strategies & fulfillment guidance',
     icon: <Store className="w-4 h-4 text-emerald-400" />,
     color: 'from-emerald-500/20 to-teal-500/20 border-emerald-500/30 text-emerald-300',
-    recommendedModel: 'gemini-3.5-flash',
+    recommendedModel: 'flash',
     starters: [
       'How should I price high-end audio hardware?',
       'Tips for improving my seller approval status',
@@ -77,7 +77,7 @@ const ROLE_CONFIGS: Record<
     description: 'Order tracking, delivery logistics & dispute resolutions',
     icon: <Zap className="w-4 h-4 text-amber-400" />,
     color: 'from-amber-500/20 to-orange-500/20 border-amber-500/30 text-amber-300',
-    recommendedModel: 'gemini-3.1-flash-lite',
+    recommendedModel: 'flash-lite',
     starters: [
       'Where is order #ORD-1001 right now?',
       'What are standard shipping fees on ShopNiro?',
@@ -89,7 +89,7 @@ const ROLE_CONFIGS: Record<
     description: 'Deep market analysis, multi-item comparisons & business insights',
     icon: <Brain className="w-4 h-4 text-purple-400" />,
     color: 'from-purple-500/20 to-pink-500/20 border-purple-500/30 text-purple-300',
-    recommendedModel: 'gemini-3.1-pro-preview',
+    recommendedModel: 'pro',
     starters: [
       'Compare wireless vs over-ear headphones across battery life and audio fidelity',
       'Analyze customer sentiment trends on premium artisan brands',
@@ -98,24 +98,24 @@ const ROLE_CONFIGS: Record<
   },
 };
 
-const MODEL_OPTIONS: { id: GeminiModelChoice; label: string; tag: string; description: string; icon: React.ReactNode }[] = [
+const MODEL_OPTIONS: { id: AIModelChoice; label: string; tag: string; description: string; icon: React.ReactNode }[] = [
   {
-    id: 'gemini-3.1-flash-lite',
-    label: 'Gemini 3.1 Flash-Lite',
+    id: 'flash-lite',
+    label: 'ShopNiro Flash Lite',
     tag: 'Ultra-Fast',
     description: 'Lowest latency for instant order tracking & quick queries',
     icon: <Zap className="w-3.5 h-3.5 text-amber-400" />,
   },
   {
-    id: 'gemini-3.5-flash',
-    label: 'Gemini 3.5 Flash',
+    id: 'flash',
+    label: 'ShopNiro Flash',
     tag: 'Balanced',
     description: 'Default model for rich customer assistance and catalog searches',
     icon: <Sparkles className="w-3.5 h-3.5 text-blue-400" />,
   },
   {
-    id: 'gemini-3.1-pro-preview',
-    label: 'Gemini 3.1 Pro',
+    id: 'pro',
+    label: 'ShopNiro Pro',
     tag: 'Deep Reasoning',
     description: 'Best for complex comparisons, business strategy & heavy reasoning',
     icon: <Brain className="w-3.5 h-3.5 text-purple-400" />,
@@ -124,8 +124,9 @@ const MODEL_OPTIONS: { id: GeminiModelChoice; label: string; tag: string; descri
 
 export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, initialQuery }) => {
   const [selectedRole, setSelectedRole] = useState<ChatRole>('shopping-assistant');
-  const [selectedModel, setSelectedModel] = useState<GeminiModelChoice>('gemini-3.5-flash');
+  const [selectedModel, setSelectedModel] = useState<AIModelChoice>('flash');
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
+  const [aiStatus, setAiStatus] = useState<'checking' | 'ready' | 'setup' | 'unavailable'>('checking');
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'welcome',
@@ -133,7 +134,7 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
       content:
         "Hello! I am your **ShopNiro AI Assistant**. How can I help you discover verified products, assist your merchant storefront, or track orders today?",
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      modelUsed: 'gemini-3.5-flash',
+      modelUsed: 'flash',
       roleUsed: 'shopping-assistant',
     },
   ]);
@@ -144,6 +145,21 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    api.getAIStatus()
+      .then(({ configured }) => {
+        if (isMounted) setAiStatus(configured ? 'ready' : 'setup');
+      })
+      .catch(() => {
+        if (isMounted) setAiStatus('unavailable');
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Auto-scroll on new message
   useEffect(() => {
@@ -227,13 +243,13 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
       }));
 
       const taskComplexity =
-        selectedModel === 'gemini-3.1-pro-preview'
+        selectedModel === 'pro'
           ? 'complex'
-          : selectedModel === 'gemini-3.1-flash-lite'
+          : selectedModel === 'flash-lite'
           ? 'fast'
           : 'general';
 
-      const res = await api.sendGeminiChatMessage({
+      const res = await api.sendAIChatMessage({
         message: textToSend,
         history,
         role: selectedRole,
@@ -257,7 +273,7 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
       const errorMsg: Message = {
         id: `err-${Date.now()}`,
         role: 'model',
-        content: `⚠️ Error contacting Gemini AI: ${err.message || 'Please check your connection and try again.'}`,
+        content: `ShopNiro AI could not respond: ${err.message || 'Please check your connection and try again.'}`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       };
       setMessages((prev) => [...prev, errorMsg]);
@@ -349,13 +365,20 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
             <div className="flex items-center gap-2">
               <h2 className="text-sm font-bold tracking-tight text-white flex items-center gap-1.5">
                 ShopNiro AI Assistant
-                <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  Online
+                <span
+                  title={aiStatus === 'setup' ? 'Add GROQ_API_KEY to the server environment and restart the server.' : undefined}
+                  className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium border ${
+                    aiStatus === 'ready'
+                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                      : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                  }`}
+                >
+                  {aiStatus === 'ready' ? 'Ready' : aiStatus === 'setup' ? 'Setup needed' : aiStatus === 'unavailable' ? 'Unavailable' : 'Checking'}
                 </span>
               </h2>
             </div>
             <p className="text-[11px] text-zinc-400 flex items-center gap-1">
-              <span>Powered by Gemini Intelligence</span>
+              <span>ShopNiro Intelligence</span>
             </p>
           </div>
         </div>
@@ -366,7 +389,7 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
             <button
               onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-zinc-800/80 hover:bg-zinc-700/80 border border-zinc-700 text-zinc-200 text-xs font-medium transition-colors cursor-pointer"
-              title="Change active Gemini model"
+              title="Change ShopNiro AI mode"
             >
               {activeModelObj.icon}
               <span className="hidden sm:inline">{activeModelObj.tag}</span>
@@ -376,7 +399,7 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
             {isModelDropdownOpen && (
               <div className="absolute right-0 mt-2 w-64 bg-[#12161D] border border-sky-500/25 rounded-2xl shadow-2xl p-2 z-50 text-xs space-y-1">
                 <div className="px-2 py-1 text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
-                  Select Gemini Model
+                  Select ShopNiro AI Mode
                 </div>
                 {MODEL_OPTIONS.map((m) => (
                   <button
@@ -491,7 +514,7 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
                     <div className="flex items-center gap-1.5">
                       {m.modelUsed && (
                         <span className="px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 font-mono text-[9px]">
-                          {m.modelUsed}
+                          {MODEL_OPTIONS.find((option) => option.id === m.modelUsed)?.label || 'ShopNiro AI'}
                         </span>
                       )}
                       <span>{m.timestamp}</span>

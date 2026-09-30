@@ -17,7 +17,7 @@ import productsRoutes from './routes/products.routes.ts';
 import cartRoutes from './routes/cart.routes.ts';
 import ordersRoutes from './routes/orders.routes.ts';
 import reviewsRoutes from './routes/reviews.routes.ts';
-import geminiRoutes from './routes/gemini.routes.ts';
+import aiRoutes from './routes/ai.routes.ts';
 import paymentRoutes from './routes/payment.routes.ts';
 import mapsRoutes from './routes/maps.routes.ts';
 
@@ -130,7 +130,7 @@ app.use('/api/products', productsRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', ordersRoutes);
 app.use('/api/reviews', reviewsRoutes);
-app.use('/api/gemini', geminiRoutes);
+app.use('/api/ai', aiRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/maps', mapsRoutes);
 

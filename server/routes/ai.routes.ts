@@ -1,31 +1,24 @@
 import { Router } from 'express';
-import { GoogleGenAI } from '@google/genai';
+import Groq from 'groq-sdk';
 import { query } from '../db/index.ts';
 
 const router = Router();
 
-const geminiApiKey = process.env.GEMINI_API_KEY?.trim();
+const groqApiKey = process.env.GROQ_API_KEY?.trim();
 
-// Initialize the shared server-side Gemini client only when a key is configured.
-// This avoids noisy startup warnings and surfaces a clear API error when the feature is not enabled.
-const ai = geminiApiKey
-  ? new GoogleGenAI({
-      apiKey: geminiApiKey,
-      httpOptions: {
-        headers: {
-          'User-Agent': 'aistudio-build',
-        },
-      },
-    })
-  : null;
+const groq = groqApiKey ? new Groq({ apiKey: groqApiKey }) : null;
 
-function requireGeminiClient() {
-  if (!ai) {
-    const error = new Error('Gemini API key is not configured. Add GEMINI_API_KEY to your environment or .env file to enable the AI assistant.');
+function requireGroqClient() {
+  if (!groq) {
+    const error = new Error('ShopNiro AI is not configured. Add GROQ_API_KEY to the server environment and restart the server.');
     (error as Error & { statusCode?: number }).statusCode = 503;
     throw error;
   }
 }
+
+router.get('/status', (_req, res) => {
+  res.json({ configured: Boolean(groq) });
+});
 
 interface ChatMessagePart {
   text: string;
@@ -115,30 +108,31 @@ Keep recommendations sharp, enthusiastic, and tailored to the shopper's needs.`;
 }
 
 /**
- * Validates and maps requested model name to authorized Gemini models
- * Supported by user brief:
- * - gemini-3.1-pro-preview (complex tasks)
- * - gemini-3.5-flash (general tasks, default)
- * - gemini-3.1-flash-lite (fast tasks)
+ * Maps the selected ShopNiro mode to a Groq model.
  */
-function resolveModel(requestedModel?: string, taskComplexity?: string): string {
-  if (taskComplexity === 'fast' || requestedModel === 'gemini-3.1-flash-lite') {
-    return 'gemini-3.1-flash-lite';
+function resolveModel(requestedModel?: string, taskComplexity?: string) {
+  const models = {
+    fast: process.env.GROQ_MODEL_FAST?.trim() || 'openai/gpt-oss-20b',
+    flash: process.env.GROQ_MODEL_FLASH?.trim() || 'openai/gpt-oss-20b',
+    pro: process.env.GROQ_MODEL_PRO?.trim() || 'openai/gpt-oss-120b',
+  };
+
+  if (taskComplexity === 'fast' || requestedModel === 'flash-lite') {
+    return { model: models.fast, mode: 'flash-lite' as const };
   }
-  if (taskComplexity === 'complex' || requestedModel === 'gemini-3.1-pro-preview') {
-    return 'gemini-3.1-pro-preview';
+  if (taskComplexity === 'complex' || requestedModel === 'pro') {
+    return { model: models.pro, mode: 'pro' as const };
   }
-  // General default
-  return 'gemini-3.5-flash';
+  return { model: models.flash, mode: 'flash' as const };
 }
 
 /**
- * POST /api/gemini/chat
- * Multi-turn chat endpoint using server-side @google/genai SDK
+ * POST /api/ai/chat
+ * Multi-turn chat endpoint using the server-side Groq SDK.
  */
 router.post('/chat', async (req, res) => {
   try {
-    requireGeminiClient();
+    requireGroqClient();
 
     const {
       message,
@@ -153,7 +147,7 @@ router.post('/chat', async (req, res) => {
     }
 
     // Determine model
-    const targetModel = resolveModel(requestedModel, taskComplexity);
+    const target = resolveModel(requestedModel, taskComplexity);
 
     // Fetch active products to ground the assistant with live catalog context
     let liveProducts: any[] = [];
@@ -166,19 +160,20 @@ router.post('/chat', async (req, res) => {
 
     const systemInstruction = getSystemInstruction(role, { products: liveProducts });
 
-    // Format previous turns into @google/genai contents structure
+    // Convert client history into OpenAI-compatible chat messages.
     const formattedHistory: any[] = [];
+    formattedHistory.push({ role: 'system', content: systemInstruction });
     if (Array.isArray(history)) {
       for (const turn of history) {
         if (turn && (turn.role === 'user' || turn.role === 'model') && Array.isArray(turn.parts)) {
           const validParts = turn.parts
             .filter((p: any) => p && typeof p.text === 'string' && p.text.trim())
-            .map((p: any) => ({ text: p.text.trim() }));
+            .map((p: any) => p.text.trim());
 
           if (validParts.length > 0) {
             formattedHistory.push({
-              role: turn.role,
-              parts: validParts,
+              role: turn.role === 'model' ? 'assistant' : 'user',
+              content: validParts.join('\n'),
             });
           }
         }
@@ -188,38 +183,33 @@ router.post('/chat', async (req, res) => {
     // Append the latest user message
     formattedHistory.push({
       role: 'user',
-      parts: [{ text: message.trim() }],
+      content: message.trim(),
     });
 
     let responseText = '';
-    let usedModel = targetModel;
+    let usedModel = target.mode;
 
     try {
-      const response = await ai.models.generateContent({
-        model: targetModel,
-        contents: formattedHistory,
-        config: {
-          systemInstruction,
-          temperature: targetModel === 'gemini-3.1-pro-preview' ? 0.7 : 0.8,
-        },
+      const response = await groq!.chat.completions.create({
+        model: target.model,
+        messages: formattedHistory,
+        temperature: target.mode === 'pro' ? 0.7 : 0.8,
       });
 
-      responseText = response.text || '';
+      responseText = response.choices[0]?.message?.content || '';
     } catch (primaryError: any) {
-      console.warn(`Primary Gemini call with model ${targetModel} encountered an issue:`, primaryError?.message || primaryError);
+      console.warn(`Primary Groq call for ${target.mode} encountered an issue:`, primaryError?.message || primaryError);
 
-      // If pro model fails (e.g. due to tier/quota or availability), gracefully fall back to general model
-      if (targetModel !== 'gemini-3.5-flash') {
-        console.log('Falling back to gemini-3.5-flash for reliability...');
-        usedModel = 'gemini-3.5-flash';
-        const fallbackResponse = await ai.models.generateContent({
-          model: 'gemini-3.5-flash',
-          contents: formattedHistory,
-          config: {
-            systemInstruction,
-          },
+      if (target.mode !== 'flash') {
+        const fallbackModel = process.env.GROQ_MODEL_FLASH?.trim() || 'openai/gpt-oss-20b';
+        console.log('Falling back to ShopNiro Flash mode.');
+        usedModel = 'flash';
+        const fallbackResponse = await groq!.chat.completions.create({
+          model: fallbackModel,
+          messages: formattedHistory,
+          temperature: 0.8,
         });
-        responseText = fallbackResponse.text || '';
+        responseText = fallbackResponse.choices[0]?.message?.content || '';
       } else {
         throw primaryError;
       }
@@ -231,15 +221,18 @@ router.post('/chat', async (req, res) => {
       roleUsed: role,
     });
   } catch (error: any) {
-    console.error('Gemini Chat Server Error:', error);
-    const errorMessage = error?.message || 'Failed to generate response from Gemini';
-    const statusCode = error?.statusCode || 500;
+    console.error('ShopNiro AI server error:', error);
+    const statusCode = error?.statusCode || error?.status || 500;
+    const errorMessage = statusCode === 503
+      ? 'ShopNiro AI is not configured. Add GROQ_API_KEY to the server environment and restart the server.'
+      : statusCode === 401 || statusCode === 403
+      ? 'ShopNiro AI could not authorize the configured Groq key. Check GROQ_API_KEY and account access.'
+      : statusCode === 429
+      ? 'ShopNiro AI reached its current usage limit. Check Groq account limits and try again later.'
+      : 'ShopNiro AI is temporarily unavailable. Please try again in a moment.';
     return res.status(statusCode).json({
       error: errorMessage,
-      message:
-        statusCode === 503
-          ? 'Gemini AI is not configured on this server. Add GEMINI_API_KEY to enable the assistant.'
-          : 'The AI assistant is temporarily unavailable. Please try again in a moment.',
+      message: errorMessage,
     });
   }
 });

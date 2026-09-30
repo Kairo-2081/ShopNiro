@@ -47,7 +47,7 @@ function isPublicEndpoint(url: string, method: string = 'GET'): boolean {
     cleanUrl === '/api/auth/me' ||
     cleanUrl === '/api/db/status' ||
     cleanUrl === '/api/maps/reverse' ||
-    cleanUrl.startsWith('/api/gemini') ||
+    cleanUrl.startsWith('/api/ai') ||
     cleanUrl.startsWith('/api/payment') ||
     cleanUrl.startsWith('/api/analytics') ||
     cleanUrl.startsWith('/api/stats')
@@ -373,15 +373,17 @@ export const api = {
   // Stats
   getStats: async (): Promise<any> => fetchJson<any>('/api/stats'),
 
-  // Gemini AI Chat
-  sendGeminiChatMessage: async (params: {
+  // ShopNiro AI Chat
+  getAIStatus: async (): Promise<{ configured: boolean }> =>
+    fetchJson<{ configured: boolean }>('/api/ai/status'),
+  sendAIChatMessage: async (params: {
     message: string;
     history?: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }>;
     role?: 'shopping-assistant' | 'seller-advisor' | 'order-specialist' | 'complex-analyst';
-    requestedModel?: 'gemini-3.5-flash' | 'gemini-3.1-flash-lite' | 'gemini-3.1-pro-preview';
+    requestedModel?: 'flash' | 'flash-lite' | 'pro';
     taskComplexity?: 'fast' | 'general' | 'complex';
   }): Promise<{ reply: string; modelUsed: string; roleUsed: string }> =>
-    fetchJson<{ reply: string; modelUsed: string; roleUsed: string }>('/api/gemini/chat', {
+    fetchJson<{ reply: string; modelUsed: string; roleUsed: string }>('/api/ai/chat', {
       method: 'POST',
       body: JSON.stringify(params),
     }),
