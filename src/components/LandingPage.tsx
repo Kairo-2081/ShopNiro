@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { UserRole, Customer, Seller, Admin } from '../types';
 import { shopNiroLogo } from '../lib/branding';
 import { OrbitGlobe } from './landing/OrbitGlobe';
+import { MarketplaceClosing, MarketplaceStat } from './MarketplaceClosing';
 import {
   ShoppingBag,
   SlidersHorizontal,
@@ -26,7 +27,6 @@ import {
   Package,
   Layers,
   Plus,
-  Hand,
   Check,
   Sun,
   Moon,
@@ -42,6 +42,7 @@ import {
 interface LandingPageProps {
   customers: Customer[];
   sellers: Seller[];
+  stats: MarketplaceStat[];
   admin: Admin;
   admins?: Admin[];
   dbStatus: { connected: boolean; provider: string; database: string };
@@ -57,6 +58,7 @@ interface LandingPageProps {
 export const LandingPage: React.FC<LandingPageProps> = ({
   customers,
   sellers,
+  stats,
   admin,
   dbStatus,
   onOpenLogin,
@@ -67,13 +69,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   theme = 'dark',
   onToggleTheme,
 }) => {
-  const [hasWaved, setHasWaved] = useState<boolean>(false);
   const [activeNavTab, setActiveNavTab] = useState<'store' | 'orders' | 'vouchers' | 'hub'>('store');
-
-  const handleWave = () => {
-    setHasWaved(true);
-    setTimeout(() => setHasWaved(false), 3000);
-  };
 
   return (
     <div className="min-h-screen text-zinc-100 font-sans pb-28 transition-colors duration-200 selection:bg-[#80734f] selection:text-white">
@@ -177,7 +173,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <div className="py-1 md:py-2 relative hero-orbit-wrap">
             <div className="floating-badge floating-badge-left">Live Deals</div>
             <div className="floating-badge floating-badge-right">Verified</div>
-            <OrbitGlobe onGreet={() => setHasWaved(true)} />
+            <OrbitGlobe />
           </div>
 
           {/* Hero CTA Buttons */}
@@ -185,10 +181,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             {/* Say Hello / Browse Button */}
             <button
               type="button"
-              onClick={() => {
-                setHasWaved(true);
-                onEnterAsGuest();
-              }}
+              onClick={onEnterAsGuest}
               className="luxury-control flex-1 min-h-12 py-3 px-5 rounded-full premium-button text-white text-xs sm:text-sm shadow-[0_14px_30px_rgba(52,40,20,0.3)] cursor-pointer hover:-translate-y-0.5"
             >
               <Sparkles className="w-4 h-4 text-amber-300" />
@@ -492,80 +485,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
         </section>
 
-        {/* 6. LIVE NETWORK PULSE: Always moving forward */}
-        <section className="bg-[#12161D] rounded-3xl p-5 shadow-xl border border-zinc-800 space-y-4 overflow-hidden animate-fade-up">
-          <div className="flex items-center justify-between">
-            <div>
-              <span className="text-[10px] font-extrabold tracking-widest text-sky-400 uppercase block">
-                LIVE MARKETPLACE PULSE
-              </span>
-              <h3 className="text-lg font-black text-white tracking-tight">
-                Always moving forward
-              </h3>
-            </div>
-            <span className="px-2.5 py-0.5 rounded-full bg-sky-950/90 text-sky-300 text-[10px] font-bold border border-sky-800/50">
-              ● SQL ENGINE OPTIMAL
-            </span>
-          </div>
-
-          {/* 3 Metrics */}
-          <div className="grid grid-cols-3 gap-2 text-center py-1">
-            {[
-              { value: '3', label: 'Active Buyers' },
-              { value: '6', label: 'Live Products' },
-              { value: '2', label: 'Orders Active' },
-            ].map((metric, index) => (
-              <div
-                key={metric.label}
-                className="metric-card p-2.5 rounded-2xl bg-[#161C24] border border-zinc-800"
-                style={{ animationDelay: `${index * 110}ms` }}
-              >
-                <div className="text-xl sm:text-2xl font-black text-sky-400">
-                  {metric.value}
-                </div>
-                <div className="text-[11px] font-medium text-zinc-400 mt-0.5">
-                  {metric.label}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Active Merchant Dispatch: Apex Audio Lab */}
-          <div className="p-3 rounded-2xl bg-[#0F1D2B] border border-blue-900/40 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <img
-                src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80"
-                alt="Merchant Avatar"
-                className="w-10 h-10 rounded-full object-cover border-2 border-zinc-800 shadow-xs"
-              />
-              <div>
-                <div className="font-bold text-xs text-white flex items-center gap-1.5">
-                  <span>Apex Audio Lab (Vendor #1)</span>
-                  <span className="text-amber-400 flex items-center gap-0.5 text-[11px]">
-                    ★ 4.98
-                  </span>
-                </div>
-                <p className="text-[11px] text-zinc-400">
-                  Dispatched Sony WH-1000XM5 near Hudson Sq
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleWave}
-              className={`px-3 py-1.5 rounded-xl font-bold text-xs flex items-center gap-1 transition-all cursor-pointer ${
-                hasWaved
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'bg-blue-600/30 hover:bg-blue-600/50 text-sky-300 border border-blue-500/40'
-              }`}
-            >
-              <Hand className="w-3.5 h-3.5" />
-              <span>{hasWaved ? 'Waved! ✋' : 'Wave ✋'}</span>
-            </button>
-          </div>
-        </section>
-
         {/* 7. EFFORTLESS FLOW: How ShopNiro works */}
         <section className="space-y-3 pt-2">
           <div>
@@ -677,6 +596,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             No subscription or membership contract required
           </p>
         </section>
+
+        <MarketplaceClosing stats={stats} />
       </div>
 
       {/* 10. Bottom Mobile Navigation Bar */}

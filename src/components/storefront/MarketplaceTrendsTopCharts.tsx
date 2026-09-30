@@ -12,7 +12,6 @@ import {
   Star,
   Flame,
   ShoppingBag,
-  Sparkles,
 } from 'lucide-react';
 
 interface MarketplaceTrendsTopChartsProps {
@@ -67,10 +66,6 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
       {/* Header and Filter Switcher */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-zinc-800/80 pb-5">
         <div>
-          <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-blue-50 dark:bg-sky-950/80 text-blue-700 dark:text-sky-400 text-[10px] font-bold tracking-wider uppercase border border-blue-200 dark:border-sky-800/40 mb-1.5">
-            <Sparkles className="w-3 h-3 text-amber-500" />
-            <span>SCHEMA-POWERED MARKET INTELLIGENCE</span>
-          </div>
           <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white flex items-center gap-2">
             Marketplace Charts &amp; Trends
           </h2>

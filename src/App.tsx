@@ -16,6 +16,7 @@ import {
 import { api, db } from './lib/api';
 import { shopNiroLogo } from './lib/branding';
 import { LandingPage } from './components/LandingPage';
+import { MarketplaceClosing, MarketplaceStat } from './components/MarketplaceClosing';
 import { Navbar } from './components/Navbar';
 import { RoleSwitcher } from './components/RoleSwitcher';
 import { Storefront } from './components/storefront/Storefront';
@@ -36,7 +37,7 @@ import { GeminiChatbot } from './components/chat/GeminiChatbot';
 import { ChatFloatingTrigger } from './components/chat/ChatFloatingTrigger';
 import { LiveProductTrackingMap } from './components/tracking/LiveProductTrackingMap';
 import { MarketplaceTrendsTopCharts } from './components/storefront/MarketplaceTrendsTopCharts';
-import { RefreshCw, LayoutGrid, Database, Radio } from 'lucide-react';
+import { RefreshCw, LayoutGrid, Radio } from 'lucide-react';
 
 const scrollViewportToTop = () => {
   const options: ScrollToOptions = { top: 0, behavior: 'smooth' };
@@ -535,6 +536,18 @@ export default function App() {
       ? selectedSeller
       : selectedAdmin;
 
+  const marketplaceStats: MarketplaceStat[] = [
+    {
+      label: 'Live listings',
+      value: products.filter((product) => product.Product_Status?.toLowerCase() !== 'deactivated').length,
+    },
+    { label: 'Categories', value: categories.length },
+    {
+      label: 'Verified sellers',
+      value: sellers.filter((seller) => !seller.Status || seller.Status.toLowerCase() === 'approved').length,
+    },
+  ];
+
   const defaultAdmin = selectedAdmin || (admins.length > 0 ? admins[0] : {
     Admin_ID: 'ADM-1',
     Name: 'Sarah Jenkins (Admin)',
@@ -565,6 +578,7 @@ export default function App() {
         <LandingPage
           customers={customers}
           sellers={sellers}
+          stats={marketplaceStats}
           admin={defaultAdmin}
           admins={admins}
           dbStatus={{ connected: true, provider: 'Raw SQL Database Engine', database: 'marketpulse_db' }}
@@ -616,7 +630,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-transparent text-slate-900 dark:text-zinc-100 font-sans flex flex-col antialiased transition-colors duration-200 app-shell">
-      {/* Top Bar with Landing option & Raw SQL status */}
+      {/* Top Bar with Landing option */}
       <div className="bg-[#171713]/80 dark:bg-[#10100f]/75 border-b border-[#d0c8a5]/15 dark:border-white/10 px-4 py-1.5 flex items-center justify-between text-xs text-slate-700 dark:text-zinc-300 backdrop-blur-xl shadow-[0_10px_30px_rgba(7,7,5,0.25)] animate-fade-up">
         <button
           onClick={() => setViewMode('landing')}
@@ -626,13 +640,6 @@ export default function App() {
           <span>Home / Marketplace Landing</span>
         </button>
 
-        <div className="flex items-center gap-2">
-          <span className="text-emerald-500 dark:text-emerald-400 font-medium flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            <Database className="w-3.5 h-3.5 text-emerald-500" />
-            <span>Raw SQL Mode</span>
-          </span>
-        </div>
       </div>
 
       {/* Role Switcher Bar - Notice: In-profile switching is REMOVED when logged in! */}
@@ -864,7 +871,10 @@ export default function App() {
       </main>
 
       {/* Unified Marketplace Footer */}
-      <footer className="border-t border-white/10 bg-white/10 dark:bg-[#0C1014]/65 py-10 px-4 mt-auto backdrop-blur-xl shadow-[0_-10px_30px_rgba(8,17,20,0.18)]">
+      <footer className="border-t border-white/10 bg-white/10 dark:bg-[#0C1014]/65 py-8 px-4 mt-auto space-y-7 backdrop-blur-xl shadow-[0_-10px_30px_rgba(8,17,20,0.18)]">
+        <div className="max-w-7xl mx-auto">
+          <MarketplaceClosing stats={marketplaceStats} />
+        </div>
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-slate-500 dark:text-zinc-400">
           <div className="flex items-center gap-3">
             <img

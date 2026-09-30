@@ -545,6 +545,11 @@
   .logo-float {
     animation: logoFloat 4s ease-in-out infinite;
   }
+
+  .closing-orb {
+    clip-path: circle(49.5% at 50% 50%);
+    filter: drop-shadow(0 12px 28px rgba(3, 3, 2, 0.38));
+  }
 }
 
 html body > * {
