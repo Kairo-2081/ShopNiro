@@ -135,24 +135,24 @@
     inset: -18% -12%;
     pointer-events: none;
     z-index: 0;
-    filter: blur(90px);
-    opacity: 0.78;
+    filter: blur(60px);
+    opacity: 0.45;
   }
 
   body::before {
     background:
-      radial-gradient(circle at 15% 30%, rgba(192, 185, 156, 0.34), transparent 22%),
-      radial-gradient(circle at 62% 18%, rgba(120, 142, 167, 0.22), transparent 24%),
-      radial-gradient(circle at 80% 72%, rgba(109, 103, 75, 0.28), transparent 28%);
-    animation: ambientDrift 26s ease-in-out infinite alternate;
+      radial-gradient(circle at 15% 30%, rgba(192, 185, 156, 0.24), transparent 22%),
+      radial-gradient(circle at 62% 18%, rgba(120, 142, 167, 0.16), transparent 24%),
+      radial-gradient(circle at 80% 72%, rgba(109, 103, 75, 0.18), transparent 28%);
+    animation: ambientDrift 18s ease-in-out infinite alternate;
   }
 
   body::after {
     background:
-      radial-gradient(circle at 28% 68%, rgba(78, 123, 108, 0.18), transparent 20%),
-      radial-gradient(circle at 80% 42%, rgba(164, 133, 98, 0.18), transparent 20%),
-      radial-gradient(circle at 52% 52%, rgba(255, 255, 255, 0.08), transparent 20%);
-    animation: ambientDrift 34s ease-in-out infinite alternate-reverse;
+      radial-gradient(circle at 28% 68%, rgba(78, 123, 108, 0.14), transparent 20%),
+      radial-gradient(circle at 80% 42%, rgba(164, 133, 98, 0.14), transparent 20%),
+      radial-gradient(circle at 52% 52%, rgba(255, 255, 255, 0.06), transparent 20%);
+    animation: ambientDrift 24s ease-in-out infinite alternate-reverse;
   }
 
   html:not(.dark) body::before {
@@ -193,7 +193,9 @@
   }
 
   #root {
+    width: 100%;
     min-height: 100vh;
+    height: 100vh;
     position: relative;
     z-index: 1;
   }
@@ -204,25 +206,23 @@
       width: 100%;
       height: 100%;
       min-height: 0;
-      overflow: hidden;
+      overflow-x: hidden;
+      overflow-y: auto;
     }
 
     body {
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      display: block;
     }
 
     #root {
-      width: min(100vw, 177.7778vh);
-      height: min(100vh, 56.25vw);
-      min-height: 0;
-      aspect-ratio: 16 / 9;
+      width: 100%;
+      min-height: 100vh;
+      height: 100vh;
       overflow-x: hidden;
       overflow-y: auto;
       overscroll-behavior: contain;
       scrollbar-gutter: stable;
-      border: 1px solid rgba(208, 200, 165, 0.16);
+      border: 0;
     }
   }
 
@@ -252,7 +252,7 @@
 
 @keyframes ambientFloat {
   0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
-  50% { transform: translate3d(0, -12px, 0) scale(1.02); }
+  50% { transform: translate3d(0, -6px, 0) scale(1.01); }
 }
 
 @keyframes fadeUp {
@@ -293,16 +293,16 @@
 
 @keyframes ambientDrift {
   0% {
-    transform: translate3d(-2%, 2%, 0) scale(1.02);
-    opacity: 0.65;
+    transform: translate3d(-1%, 1%, 0) scale(1.01);
+    opacity: 0.38;
   }
   50% {
-    transform: translate3d(2%, -3%, 0) scale(1.08);
-    opacity: 0.82;
+    transform: translate3d(1.4%, -2%, 0) scale(1.04);
+    opacity: 0.5;
   }
   100% {
-    transform: translate3d(-3%, 4%, 0) scale(1.12);
-    opacity: 0.7;
+    transform: translate3d(-1.8%, 2.4%, 0) scale(1.06);
+    opacity: 0.42;
   }
 }
 
@@ -345,8 +345,12 @@
   .premium-button {
     background: linear-gradient(135deg, #b39d73 0%, #7d7252 52%, #514b3d 100%);
     box-shadow: 0 18px 34px -14px rgba(52, 40, 20, 0.42);
-    transition: transform 180ms ease, filter 180ms ease, box-shadow 180ms ease;
+    transition: transform 180ms cubic-bezier(.2,.8,.2,1), filter 180ms ease, box-shadow 180ms ease;
     letter-spacing: 0.02em;
+  }
+
+  .premium-button:active {
+    transform: translateY(0) scale(0.985);
   }
 
   .luxury-control {
@@ -357,7 +361,11 @@
     gap: 0.5rem;
     font-weight: 700;
     line-height: 1;
-    transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+    transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 180ms cubic-bezier(.2,.8,.2,1);
+  }
+
+  .luxury-control:active {
+    transform: scale(0.97);
   }
 
   .luxury-input {
@@ -392,12 +400,46 @@
   }
 
   .pay-pill {
-    transition: border-color 180ms ease, transform 180ms ease;
+    transition: border-color 180ms ease, transform 180ms cubic-bezier(.2,.8,.2,1);
   }
 
   .pay-pill:hover {
     transform: translateY(-1px);
     border-color: rgba(100, 116, 139, 0.5);
+  }
+
+  .pay-pill:active {
+    transform: scale(0.985);
+  }
+
+  .product-card {
+    transition: transform 220ms cubic-bezier(.2,.8,.2,1), box-shadow 220ms ease, border-color 220ms ease;
+  }
+
+  .product-card:hover {
+    transform: translateY(-4px);
+  }
+
+  .product-card-image {
+    transition: transform 500ms cubic-bezier(.2,.8,.2,1), filter 220ms ease;
+  }
+
+  .transition-all {
+    transition-property: color, background-color, border-color, box-shadow, transform !important;
+    transition-duration: 180ms !important;
+    transition-timing-function: cubic-bezier(.2,.8,.2,1) !important;
+  }
+
+  .animate-pulse {
+    animation-duration: 3s !important;
+  }
+
+  .animate-spin {
+    animation-duration: 1.2s !important;
+  }
+
+  .animate-ping {
+    animation-duration: 2.4s !important;
   }
 
   .skeleton-block {
@@ -551,6 +593,7 @@ html body > * {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    transform: none !important;
     scroll-behavior: auto !important;
   }
 }

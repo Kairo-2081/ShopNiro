@@ -48,7 +48,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   return (
     <div
       onClick={() => onSelect(product)}
-      className="group relative bg-[linear-gradient(180deg,rgba(246,245,239,0.98),rgba(228,226,213,0.96))] dark:bg-[linear-gradient(180deg,#292821,#151510)] rounded-[28px] border border-[#d0c8a5]/20 dark:border-[#d0c8a5]/10 shadow-[0_18px_45px_rgba(6,6,4,0.18)] hover:shadow-[0_28px_60px_rgba(7,7,5,0.24)] hover:border-[#a99b72]/50 transition-all duration-200 overflow-hidden flex flex-col cursor-pointer"
+      className="product-card group relative bg-[linear-gradient(180deg,rgba(246,245,239,0.98),rgba(228,226,213,0.96))] dark:bg-[linear-gradient(180deg,#292821,#151510)] rounded-[28px] border border-[#d0c8a5]/20 dark:border-[#d0c8a5]/10 shadow-[0_18px_45px_rgba(6,6,4,0.18)] hover:shadow-[0_28px_60px_rgba(7,7,5,0.24)] hover:border-[#a99b72]/50 overflow-hidden flex flex-col cursor-pointer"
     >
       {/* Product Image */}
       <div className="relative aspect-[4/5] w-full bg-slate-100 dark:bg-[#0C1014] overflow-hidden">
@@ -59,7 +59,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             alt={product.Name}
             onError={() => setImgError(true)}
             referrerPolicy="no-referrer"
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+            className="product-card-image w-full h-full object-cover group-hover:scale-[1.035]"
             loading="lazy"
           />
         ) : (
@@ -98,9 +98,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         </div>
 
         {/* Hover overlay preview action */}
-        <div className="absolute inset-0 bg-slate-900/30 dark:bg-zinc-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-          <span className="bg-white/95 dark:bg-[#181F2A]/90 text-slate-900 dark:text-zinc-100 border border-slate-200 dark:border-zinc-700 text-xs font-semibold px-3.5 py-1.5 rounded-full shadow-lg flex items-center gap-1.5">
-            <Eye className="w-3.5 h-3.5 text-blue-600 dark:text-sky-400" /> Quick View
+        <div className="absolute inset-0 bg-white/12 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-5 pointer-events-none">
+          <span className="translate-y-2 group-hover:translate-y-0 transition-transform duration-300 bg-white/95 dark:bg-[#181F2A]/90 text-slate-900 dark:text-zinc-100 border border-slate-200 dark:border-zinc-700 text-[11px] font-semibold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5">
+            <Eye className="w-3.5 h-3.5 text-[#77775a] dark:text-sky-400" /> Quick View
           </span>
         </div>
       </div>
@@ -149,14 +149,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               isOutOfStock || isDeactivated
                 ? 'bg-slate-100 dark:bg-[#181F2A] text-slate-400 dark:text-zinc-600 cursor-not-allowed'
                 : justAdded
-                ? 'bg-[#77775a] text-white shadow-[0_12px_24px_rgba(86,80,57,0.3)]'
-                : 'premium-button text-white active:scale-95'
+                ? 'bg-[#77775a] text-white shadow-[0_12px_24px_rgba(86,80,57,0.3)] ring-2 ring-[#d9d3b7]/50'
+                : 'premium-button text-white'
             }`}
           >
             {justAdded ? (
               <>
-                <Check className="w-3.5 h-3.5 animate-in zoom-in-50 duration-150" />
-                <span>Added</span>
+                <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-white/20 transition-all duration-200 scale-100 opacity-100">
+                  <Check className="w-2.5 h-2.5" />
+                </span>
+                <span className="transition-all duration-200">Added</span>
               </>
             ) : (
               <>

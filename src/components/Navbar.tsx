@@ -280,7 +280,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 className="luxury-control min-h-9 items-center gap-1.5 rounded-full border border-[#d0c8a5]/25 bg-[#d0c8a5]/10 px-3 text-xs text-[#d0c8a5] hover:bg-[#d0c8a5]/15 cursor-pointer group"
                 title="Open ShopNiro AI Assistant"
               >
-                <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-spin" />
+                <Sparkles className="w-3.5 h-3.5 text-amber-400" />
                 <span className="hidden sm:inline">Ask AI</span>
               </button>
             )}
@@ -309,7 +309,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               >
                 <ShoppingCart className="w-4 h-4" />
                 {cartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center animate-pulse shadow-md shadow-blue-600/40">
+                  <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center animate-[pulse_3s_ease-in-out_infinite] shadow-md shadow-blue-600/40">
                     {cartCount}
                   </span>
                 )}

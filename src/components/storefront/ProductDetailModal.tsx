@@ -55,6 +55,21 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   const [imgError, setImgError] = React.useState(false);
   const [justAdded, setJustAdded] = React.useState(false);
 
+  const [shouldRender, setShouldRender] = React.useState(Boolean(product));
+  const [visible, setVisible] = React.useState(Boolean(product));
+
+  React.useEffect(() => {
+    if (product) {
+      setShouldRender(true);
+      const frame = requestAnimationFrame(() => setVisible(true));
+      return () => cancelAnimationFrame(frame);
+    }
+
+    setVisible(false);
+    const timer = window.setTimeout(() => setShouldRender(false), 260);
+    return () => window.clearTimeout(timer);
+  }, [product]);
+
   React.useEffect(() => {
     setNewRating(0);
     setNewReviewText('');
@@ -65,7 +80,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
     setReviewDraftError('');
   }, [product?.Product_ID]);
 
-  if (!product) return null;
+  if (!shouldRender || !product) return null;
 
   const productReviews = reviews.filter((r) => r.Product_ID === product.Product_ID);
   const avgRating =
@@ -125,8 +140,14 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   const defaultPlaceholder = 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=800&auto=format&fit=crop&q=80';
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-150">
-      <div className="relative bg-white dark:bg-[#12161D] w-full max-w-4xl rounded-3xl shadow-2xl border border-sky-100 dark:border-zinc-800 overflow-hidden my-8 max-h-[90vh] flex flex-col">
+    <div
+      className={`fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4 overflow-y-auto transition-opacity duration-250 ${visible ? 'opacity-100' : 'opacity-0'}`}
+      onClick={onClose}
+    >
+      <div
+        className={`relative bg-white dark:bg-[#12161D] w-full max-w-4xl rounded-3xl shadow-2xl border border-sky-100 dark:border-zinc-800 overflow-hidden my-8 max-h-[90vh] flex flex-col transition-all duration-300 ease-[cubic-bezier(.22,1,.36,1)] ${visible ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-4 scale-[0.97] opacity-0'}`}
+        onClick={(event) => event.stopPropagation()}
+      >
         {/* Header bar */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-[#161C24]/80">
           <div className="flex items-center gap-2">

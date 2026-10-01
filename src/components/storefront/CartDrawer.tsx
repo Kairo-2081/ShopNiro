@@ -20,7 +20,22 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   onRemoveItem,
   onCheckout,
 }) => {
-  if (!isOpen) return null;
+  const [shouldRender, setShouldRender] = React.useState(isOpen);
+  const [visible, setVisible] = React.useState(isOpen);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      setShouldRender(true);
+      const frame = requestAnimationFrame(() => setVisible(true));
+      return () => cancelAnimationFrame(frame);
+    }
+
+    setVisible(false);
+    const timer = window.setTimeout(() => setShouldRender(false), 250);
+    return () => window.clearTimeout(timer);
+  }, [isOpen]);
+
+  if (!shouldRender) return null;
 
   const subtotal = cartItems.reduce((acc, item) => {
     const price = Number(item.Product?.Price) || 0;
@@ -31,8 +46,14 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
   const total = subtotal + shippingFee;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex justify-end animate-in fade-in duration-150">
-      <div className="bg-white dark:bg-[#12161D] w-full max-w-md h-full shadow-2xl flex flex-col border-l border-slate-200 dark:border-zinc-800">
+    <div
+      className={`fixed inset-0 z-50 flex justify-end bg-black/65 transition-opacity duration-250 ${visible ? 'opacity-100' : 'opacity-0'}`}
+      onClick={onClose}
+    >
+      <aside
+        className={`w-full max-w-md h-full shadow-2xl flex flex-col border-l border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#12161D] transition-transform duration-300 ease-[cubic-bezier(.22,1,.36,1)] ${visible ? 'translate-x-0' : 'translate-x-full'}`}
+        onClick={(event) => event.stopPropagation()}
+      >
         <div className="px-4 pt-4 pb-3 border-b border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-[#161C24]/80">
           <div className="flex gap-2 mb-3">
             {['Apple Pay', 'Google Pay'].map((pay) => (
@@ -216,7 +237,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
             </div>
           </div>
         )}
-      </div>
+      </aside>
     </div>
   );
 };
