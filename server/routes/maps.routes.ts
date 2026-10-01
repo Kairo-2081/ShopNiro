@@ -55,11 +55,11 @@ router.get('/reverse', async (req, res) => {
     const road = parts.road || parts.pedestrian || parts.footway || parts.path || parts.residential ||
       parts.neighbourhood || parts.suburb || parts.quarter || '';
     const street = [parts.house_number, road].filter(Boolean).join(' ') || result.name ||
-      parts.neighbourhood || parts.suburb || parts.village || parts.town || parts.city || '';
-    const city = parts.city || parts.town || parts.village || parts.municipality || parts.city_district ||
-      parts.borough || parts.suburb || parts.county || parts.state_district || parts.state || '';
-
-    if (!street || !city) return res.status(404).json({ error: 'No complete address found at this location' });
+      parts.neighbourhood || parts.suburb || parts.quarter || parts.village || parts.town || parts.city ||
+      result.display_name || `GPS ${lat.toFixed(5)}, ${lon.toFixed(5)}`;
+    const city = parts.city || parts.municipality || parts.city_district || parts.borough ||
+      parts.town || parts.village || parts.suburb || parts.county || parts.state_district || parts.state ||
+      parts.region || parts.country || result.name || `GPS ${lat.toFixed(5)}, ${lon.toFixed(5)}`;
 
     const address: Address = {
       House_Name: parts.building || parts.house_name || '',
