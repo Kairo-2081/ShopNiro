@@ -294,6 +294,11 @@ export const api = {
     return response.blob();
   },
   getRiderProfile: async (): Promise<Rider> => fetchJson<Rider>('/api/riders/me'),
+  updateRiderProfile: async (updates: Partial<Rider> & { Password?: string }): Promise<Rider> =>
+    fetchJson<Rider>('/api/riders/me', {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    }),
   updateRiderLocation: async (latitude: number, longitude: number): Promise<{ success: boolean }> =>
     fetchJson('/api/riders/location', {
       method: 'PATCH',

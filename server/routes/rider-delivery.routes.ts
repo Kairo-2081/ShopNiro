@@ -27,6 +27,8 @@ const haversineKm = (lat1: number, lon1: number, lat2: number, lon2: number) => 
 };
 
 const salaryForPoints = (points: number) => Math.round(30000 * Math.max(0, Math.min(100, points)) / 100 * 100) / 100;
+const performancePointsForMonth = (timely: number, late: number) =>
+  Math.max(0, Math.min(100, 100 + timely - Math.min(late, 5) - Math.max(0, late - 5) * 6));
 
 async function creditAvailableSalary(client: any, riderId: string) {
   await client.query(`
@@ -262,9 +264,9 @@ router.post('/deliveries/:id/complete', requireAuth, requireRole(['customer']), 
     `, [riderId, monthStart]);
     const score = scoreResult.rows[0];
     const lateCount = Number(score.late_deliveries) + (wasTimely ? 0 : 1);
-    const points = Math.max(0, Math.min(100, Number(score.performance_points) + (wasTimely ? 1 : -1)));
     const totalDeliveries = Number(score.total_deliveries) + 1;
     const timelyDeliveries = Number(score.timely_deliveries) + (wasTimely ? 1 : 0);
+    const points = performancePointsForMonth(timelyDeliveries, lateCount);
     const salary = salaryForPoints(points);
     await client.query(`
       UPDATE rider_monthly_scores SET performance_points = $3, total_deliveries = $4,
@@ -286,16 +288,16 @@ router.post('/deliveries/:id/complete', requireAuth, requireRole(['customer']), 
         INSERT INTO rider_wallet_entries (id, rider_id, entry_type, amount, reference_id, description)
         VALUES ($1, $2, 'cod_collected', $3, $4, $5)
         ON CONFLICT (rider_id, entry_type, reference_id) DO NOTHING
-      `, [`COD-${req.params.id}`, riderId, Number(delivery.cod_amount), req.params.id, `Cash collected for order ${delivery.order_id}; vendor remittance pending`]);
+      `, [`COD-${req.params.id}`, riderId, Number(delivery.cod_amount), req.params.id, `COD cash collected (not salary credit) for order ${delivery.order_id}`]);
       await client.query(
         'UPDATE riders SET wallet_balance = wallet_balance - $2 WHERE id = $1',
         [riderId, Number(delivery.cod_amount)]
       );
       await client.query(`
         INSERT INTO rider_wallet_entries (id, rider_id, entry_type, amount, reference_id, description)
-        VALUES ($1, $2, 'cod_remittance', $3, $4, $5)
+        VALUES ($1, $2, 'salary_debit', $3, $4, $5)
         ON CONFLICT (rider_id, entry_type, reference_id) DO NOTHING
-      `, [`REM-${req.params.id}`, riderId, -Number(delivery.cod_amount), req.params.id, `COD transferred to seller for order ${delivery.order_id}`]);
+      `, [`REM-${req.params.id}`, riderId, -Number(delivery.cod_amount), req.params.id, `Salary debit for COD remitted to seller for order ${delivery.order_id}`]);
       await client.query(`
         INSERT INTO seller_wallet_entries (id, seller_id, entry_type, amount, reference_id, description)
         VALUES ($1, $2, 'cod_received', $3, $4, $5)
@@ -399,10 +401,9 @@ router.post('/customer-deliveries/:id/review', requireAuth, requireRole(['custom
       );
       if (scoreResult.rows.length) {
         const score = scoreResult.rows[0];
-        const oldLateCount = Number(score.late_deliveries);
-        const newLateCount = oldLateCount + (wasTimely ? -1 : 1);
-        const points = Math.max(0, Math.min(100, Number(score.performance_points) + (wasTimely ? 2 : -2)));
-        const timelyCount = Number(score.timely_deliveries) + (wasTimely ? 1 : -1);
+        const newLateCount = Math.max(0, Number(score.late_deliveries) + (wasTimely ? -1 : 1));
+        const timelyCount = Math.max(0, Number(score.timely_deliveries) + (wasTimely ? 1 : -1));
+        const points = performancePointsForMonth(timelyCount, newLateCount);
         const salary = salaryForPoints(points);
         await client.query(`
           UPDATE rider_monthly_scores SET late_deliveries = $3, timely_deliveries = $4,

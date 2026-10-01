@@ -44,6 +44,11 @@ function cleanList(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string').map((item) => item.trim()).filter(Boolean).slice(0, 20) : [];
 }
 
+function hasMapCoordinates(address: any): boolean {
+  return Number.isFinite(Number(address?.Latitude)) && Number(address.Latitude) >= -90 && Number(address.Latitude) <= 90 &&
+    Number.isFinite(Number(address?.Longitude)) && Number(address.Longitude) >= -180 && Number(address.Longitude) <= 180;
+}
+
 function createRiderCvPdf(profile: { name: string; email: string; phone: string; presentAddress: Address; permanentAddress: Address; experience: string[]; previousJobs: string[]; education: string[] }): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const document = new PDFDocument({ size: 'A4', margin: 54, info: { Title: `${profile.name} | ShopNiro Rider CV`, Author: 'ShopNiro' } });
@@ -97,6 +102,7 @@ function createRiderCvPdf(profile: { name: string; email: string; phone: string;
 }
 
 function mapRider(row: any): Rider {
+  const points = Number(row.current_month_performance_points ?? row.performance_points);
   return {
     Rider_ID: row.id,
     Username: row.username || '',
@@ -116,7 +122,7 @@ function mapRider(row: any): Rider {
     Total_Deliveries: Number(row.total_deliveries) || 0,
     Timely_Deliveries: Number(row.timely_deliveries) || 0,
     Late_Deliveries: Number(row.late_deliveries) || 0,
-    Performance_Points: Number(row.performance_points) || 100,
+    Performance_Points: Number.isFinite(points) ? points : 100,
     Average_Rating: Number(row.average_rating) || 0,
     Wallet_Balance: Number(row.wallet_balance) || 0,
     Created_At: row.created_at ? new Date(row.created_at).toISOString() : new Date().toISOString(),
@@ -198,15 +204,20 @@ router.post('/apply', async (req, res) => {
     return res.status(400).json({ error: 'Name, username, email, password, and phone number are required.' });
   }
   if (String(Password).length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters.' });
+  if (typeof Has_CV !== 'boolean') {
+    return res.status(400).json({ error: 'Choose whether you have a CV.' });
+  }
   if (
     !Present_Address?.Street || !Present_Address?.City || !Permanent_Address?.Street || !Permanent_Address?.City ||
-    !Number.isFinite(Number(Present_Address?.Latitude)) || !Number.isFinite(Number(Present_Address?.Longitude)) ||
-    !Number.isFinite(Number(Permanent_Address?.Latitude)) || !Number.isFinite(Number(Permanent_Address?.Longitude))
+    !hasMapCoordinates(Present_Address) || !hasMapCoordinates(Permanent_Address)
   ) {
     return res.status(400).json({ error: 'Select map locations and complete both present and permanent addresses.' });
   }
 
-  if (Has_CV && CV_Base64) {
+  if (Has_CV && !CV_Base64) {
+    return res.status(400).json({ error: 'Upload your PDF CV to continue.' });
+  }
+  if (Has_CV) {
     try {
       decodePdf(CV_Base64);
     } catch (error: any) {
@@ -337,22 +348,121 @@ router.get('/me', requireAuth, requireRole(['rider']), async (req: AuthRequest, 
       VALUES ($1, $2::date, 100) ON CONFLICT (rider_id, month_start) DO NOTHING`,
       [req.user!.entityId, monthStart]
     );
-    await query(
-      `UPDATE riders SET performance_points = (
-        SELECT performance_points FROM rider_monthly_scores WHERE rider_id = $1 AND month_start = $2::date
-      ) WHERE id = $1`,
-      [req.user!.entityId, monthStart]
-    );
     const result = await query(`
       SELECT r.*, u.username, u.email,
-        COALESCE((SELECT AVG(rr.rating) FROM rider_reviews rr WHERE rr.rider_id = r.id), 0) AS average_rating
-      FROM riders r JOIN users u ON u.id = r.id WHERE r.id = $1
+        COALESCE((SELECT AVG(rr.rating) FROM rider_reviews rr WHERE rr.rider_id = r.id), 0) AS average_rating,
+        COALESCE(ms.performance_points, 100) AS current_month_performance_points
+      FROM riders r JOIN users u ON u.id = r.id
+      LEFT JOIN rider_monthly_scores ms ON ms.rider_id = r.id
+        AND ms.month_start = date_trunc('month', CURRENT_DATE)::date
+      WHERE r.id = $1
     `, [req.user!.entityId]);
     if (!result.rows.length) return res.status(404).json({ error: 'Rider profile not found.' });
     return res.json(mapRider(result.rows[0]));
   } catch (error: any) {
     console.error('Failed to load rider profile:', error);
     return res.status(500).json({ error: 'Failed to load rider profile.' });
+  }
+});
+
+router.put('/me', requireAuth, requireRole(['rider']), async (req: AuthRequest, res) => {
+  const {
+    Username,
+    Name,
+    Email,
+    Password,
+    Number: phone,
+    Present_Address,
+    Permanent_Address,
+    Experience,
+    Previous_Jobs,
+    Education,
+  } = req.body ?? {};
+
+  if (![Username, Name, Email, phone].every((value) => typeof value === 'string' && value.trim()) || !String(Email).includes('@')) {
+    return res.status(400).json({ error: 'Name, username, email, and phone number are required.' });
+  }
+  if (Password !== undefined && Password !== '' && (typeof Password !== 'string' || Password.length < 8)) {
+    return res.status(400).json({ error: 'A new password must be at least 8 characters.' });
+  }
+  if (
+    !Present_Address?.Street || !Present_Address?.City || !Permanent_Address?.Street || !Permanent_Address?.City ||
+    !hasMapCoordinates(Present_Address) || !hasMapCoordinates(Permanent_Address)
+  ) {
+    return res.status(400).json({ error: 'Select map locations and complete both present and permanent addresses.' });
+  }
+
+  const riderId = req.user!.entityId;
+  const username = String(Username).trim().toLowerCase();
+  const email = String(Email).trim().toLowerCase();
+  const experience = cleanList(Experience);
+  const previousJobs = cleanList(Previous_Jobs);
+  const education = cleanList(Education);
+  const cvFileName = `${String(Name).trim().replace(/[^a-zA-Z0-9-_]+/g, '-').replace(/-+/g, '-').slice(0, 100) || 'rider'}-ShopNiro-CV.pdf`;
+
+  const client = await pool.connect();
+  try {
+    const cvBuffer = await createRiderCvPdf({
+      name: String(Name).trim(),
+      email,
+      phone: String(phone).trim(),
+      presentAddress: Present_Address as Address,
+      permanentAddress: Permanent_Address as Address,
+      experience,
+      previousJobs,
+      education,
+    });
+    const passwordHash = typeof Password === 'string' && Password ? await hashPassword(Password) : null;
+    await client.query('BEGIN');
+    const duplicate = await client.query(
+      'SELECT 1 FROM users WHERE id <> $3 AND (lower(email) = $1 OR lower(username) = $2) LIMIT 1',
+      [email, username, riderId]
+    );
+    if (duplicate.rows.length) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'That email or username is already registered.' });
+    }
+    await client.query(
+      'UPDATE users SET username = $2, email = $3, password = COALESCE($4, password) WHERE id = $1',
+      [riderId, username, email, passwordHash]
+    );
+    await client.query(`
+      UPDATE riders SET name = $2, number = $3, present_address_json = $4::jsonb,
+        permanent_address_json = $5::jsonb, experience_json = $6::jsonb,
+        previous_jobs_json = $7::jsonb, education_json = $8::jsonb,
+        has_cv = TRUE, cv_file_name = $9, cv_pdf = $10, status = 'pending',
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+    `, [
+      riderId,
+      String(Name).trim(),
+      String(phone).trim(),
+      JSON.stringify(Present_Address as Address),
+      JSON.stringify(Permanent_Address as Address),
+      JSON.stringify(experience),
+      JSON.stringify(previousJobs),
+      JSON.stringify(education),
+      cvFileName,
+      cvBuffer,
+    ]);
+    const result = await client.query(`
+      SELECT r.*, u.username, u.email,
+        COALESCE((SELECT AVG(rr.rating) FROM rider_reviews rr WHERE rr.rider_id = r.id), 0) AS average_rating,
+        COALESCE(ms.performance_points, 100) AS current_month_performance_points
+      FROM riders r JOIN users u ON u.id = r.id
+      LEFT JOIN rider_monthly_scores ms ON ms.rider_id = r.id
+        AND ms.month_start = date_trunc('month', CURRENT_DATE)::date
+      WHERE r.id = $1
+    `, [riderId]);
+    await client.query('COMMIT');
+    return res.json(mapRider(result.rows[0]));
+  } catch (error: any) {
+    await client.query('ROLLBACK');
+    if (error?.code === '23505') return res.status(409).json({ error: 'That email or username is already registered.' });
+    console.error('Could not update rider profile:', error);
+    return res.status(500).json({ error: 'Could not update your rider details.' });
+  } finally {
+    client.release();
   }
 });
 

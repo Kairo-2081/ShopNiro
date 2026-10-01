@@ -52,7 +52,9 @@ router.get('/me', requireAuth, async (req: AuthRequest, res: Response) => {
     } else if (role === 'rider') {
       const rRes = await query(`
         SELECT r.*, u.username, u.email,
-          COALESCE((SELECT AVG(rr.rating) FROM rider_reviews rr WHERE rr.rider_id = r.id), 0) AS average_rating
+          COALESCE((SELECT AVG(rr.rating) FROM rider_reviews rr WHERE rr.rider_id = r.id), 0) AS average_rating,
+          COALESCE((SELECT ms.performance_points FROM rider_monthly_scores ms WHERE ms.rider_id = r.id
+            AND ms.month_start = date_trunc('month', CURRENT_DATE)::date), 100) AS current_month_performance_points
         FROM riders r JOIN users u ON u.id = r.id WHERE r.id = $1
       `, [targetId]);
       if (rRes.rows.length > 0) {
@@ -75,7 +77,7 @@ router.get('/me', requireAuth, async (req: AuthRequest, res: Response) => {
           Total_Deliveries: Number(r.total_deliveries) || 0,
           Timely_Deliveries: Number(r.timely_deliveries) || 0,
           Late_Deliveries: Number(r.late_deliveries) || 0,
-          Performance_Points: Number(r.performance_points) || 100,
+          Performance_Points: Number(r.current_month_performance_points) || 0,
           Average_Rating: Number(r.average_rating) || 0,
           Wallet_Balance: Number(r.wallet_balance) || 0,
           Created_At: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
@@ -169,7 +171,9 @@ router.post('/login', async (req, res) => {
       } else if (userRole === 'rider') {
         const riderRes = await query(`
           SELECT r.*, u.username, u.email,
-            COALESCE((SELECT AVG(rr.rating) FROM rider_reviews rr WHERE rr.rider_id = r.id), 0) AS average_rating
+            COALESCE((SELECT AVG(rr.rating) FROM rider_reviews rr WHERE rr.rider_id = r.id), 0) AS average_rating,
+            COALESCE((SELECT ms.performance_points FROM rider_monthly_scores ms WHERE ms.rider_id = r.id
+              AND ms.month_start = date_trunc('month', CURRENT_DATE)::date), 100) AS current_month_performance_points
           FROM riders r JOIN users u ON u.id = r.id WHERE r.id = $1
         `, [entityId]);
         const rider = riderRes.rows[0];
@@ -195,7 +199,7 @@ router.post('/login', async (req, res) => {
           Total_Deliveries: Number(rider.total_deliveries) || 0,
           Timely_Deliveries: Number(rider.timely_deliveries) || 0,
           Late_Deliveries: Number(rider.late_deliveries) || 0,
-          Performance_Points: Number(rider.performance_points) || 100,
+          Performance_Points: Number(rider.current_month_performance_points),
           Average_Rating: Number(rider.average_rating) || 0,
           Wallet_Balance: Number(rider.wallet_balance) || 0,
           Created_At: rider.created_at ? new Date(rider.created_at).toISOString() : new Date().toISOString(),
