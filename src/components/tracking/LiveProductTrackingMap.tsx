@@ -47,9 +47,24 @@ interface OSRMRouteResponse {
 function getAddressCoordinates(address?: Address): TrackingCoordinates | null {
   const lat = address?.Latitude;
   const lng = address?.Longitude;
-  return typeof lat === 'number' && Number.isFinite(lat) && typeof lng === 'number' && Number.isFinite(lng)
-    ? { lat, lng }
-    : null;
+  if (typeof lat === 'number' && Number.isFinite(lat) && typeof lng === 'number' && Number.isFinite(lng)) {
+    return { lat, lng };
+  }
+
+  const cityText = `${address?.House_Name || ''} ${address?.Street || ''} ${address?.City || ''} ${address?.Postal_Code || ''}`.toLowerCase();
+  const defaultDhakaLookup: Record<string, TrackingCoordinates> = {
+    dhanmondi: { lat: 23.7517, lng: 90.3848 },
+    banani: { lat: 23.7937, lng: 90.4052 },
+    gulshan: { lat: 23.7946, lng: 90.4147 },
+    mohakhali: { lat: 23.7743, lng: 90.3862 },
+    uttara: { lat: 23.8761, lng: 90.3795 },
+    mirpur: { lat: 23.8223, lng: 90.3654 },
+    motijheel: { lat: 23.7336, lng: 90.4194 },
+    dhaka: { lat: 23.8103, lng: 90.4125 },
+  };
+
+  const matchedLocation = Object.entries(defaultDhakaLookup).find(([key]) => cityText.includes(key));
+  return matchedLocation ? matchedLocation[1] : null;
 }
 
 function addressesMatch(left?: Address, right?: Address): boolean {
@@ -141,12 +156,14 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
   const trackableOrders = Array.from(
     new globalThis.Map<string, Order>(
       [...orders, ...(initialOrder ? [initialOrder] : [])]
-        .filter((candidate) => candidate.Status === 'shipped')
+        .filter((candidate) => candidate.Status === 'shipped'
+          && (candidate.Fulfillments || []).some((fulfillment) => ['accepted', 'on_the_way'].includes(fulfillment.Delivery_Status || '')))
         .map((candidate) => [candidate.Order_ID, candidate])
     ).values()
   );
   const hasTrackableOrder = trackableOrders.length > 0;
   const firstTrackableOrder = initialOrder && initialOrder.Status === 'shipped'
+    && (initialOrder.Fulfillments || []).some((fulfillment) => ['accepted', 'on_the_way'].includes(fulfillment.Delivery_Status || ''))
     ? initialOrder
     : trackableOrders[0];
   const [selectedOrderId, setSelectedOrderId] = useState<string>(

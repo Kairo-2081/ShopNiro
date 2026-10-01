@@ -136,7 +136,10 @@ export const CustomerOrders: React.FC<CustomerOrdersProps> = ({
   };
 
   const customerOrders = orders.filter((o) => o.Customer_ID === currentCustomer.Customer_ID);
-  const trackableOrders = customerOrders.filter((o) => o.Status === 'shipped');
+  const trackableOrders = customerOrders.filter((o) =>
+    o.Status === 'shipped'
+    && (o.Fulfillments || []).some((fulfillment) => ['accepted', 'on_the_way'].includes(fulfillment.Delivery_Status || ''))
+  );
 
   const filteredOrders = customerOrders.filter((o) => {
     if (!searchTracking.trim()) return true;
