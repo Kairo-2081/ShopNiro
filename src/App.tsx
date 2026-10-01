@@ -463,9 +463,35 @@ export default function App() {
   // Customer Profile update
   const handleUpdateCustomer = async (updated: Customer) => {
     try {
-      await api.updateCustomer(updated.Customer_ID, updated);
-      setSelectedCustomer(updated);
-      setCustomers((prev) => prev.map((c) => (c.Customer_ID === updated.Customer_ID ? updated : c)));
+      const refreshed = await api.updateCustomer(updated.Customer_ID, updated);
+      setSelectedCustomer(refreshed);
+      setCustomers((prev) => prev.map((c) => (c.Customer_ID === refreshed.Customer_ID ? refreshed : c)));
+      setOrders((prev) => prev.map((order) => {
+        if (order.Customer_ID !== refreshed.Customer_ID || !['placed', 'processing'].includes(order.Status)) {
+          return order;
+        }
+
+        const mergedShipping = {
+          ...order.Shipping_Address,
+          House_Name: refreshed.Address?.House_Name ?? order.Shipping_Address?.House_Name ?? '',
+          Street: refreshed.Address?.Street ?? order.Shipping_Address?.Street ?? '',
+          City: refreshed.Address?.City ?? order.Shipping_Address?.City ?? '',
+          Postal_Code: refreshed.Address?.Postal_Code ?? order.Shipping_Address?.Postal_Code ?? '',
+          Additional_Info: refreshed.Address?.Additional_Info ?? order.Shipping_Address?.Additional_Info ?? '',
+          Latitude: refreshed.Address?.Latitude ?? order.Shipping_Address?.Latitude,
+          Longitude: refreshed.Address?.Longitude ?? order.Shipping_Address?.Longitude,
+        };
+
+        const mergedBilling = !order.Billing_Address || !order.Billing_Address.Street || order.Billing_Address.Street === order.Shipping_Address?.Street
+          ? { ...order.Billing_Address, ...mergedShipping }
+          : order.Billing_Address;
+
+        return {
+          ...order,
+          Shipping_Address: mergedShipping,
+          Billing_Address: mergedBilling,
+        };
+      }));
     } catch (err: any) {
       alert(err.message || 'Failed to update profile');
     }
@@ -931,8 +957,8 @@ export default function App() {
               className="w-8 h-8 rounded-full object-cover border border-sky-100 dark:border-zinc-700 shadow-md shadow-blue-500/20"
             />
             <div>
-              <div className="font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5 tracking-tight text-sm">
-                ShopNiro <span className="text-[10px] font-mono tracking-widest text-sky-400 uppercase">MARKETPLACE</span>
+              <div className="font-extrabold text-slate-900 dark:text-white tracking-tight text-sm">
+                ShopNiro
               </div>
               <p className="text-[11px] text-slate-400 dark:text-zinc-500">shop smart, ship fast</p>
             </div>

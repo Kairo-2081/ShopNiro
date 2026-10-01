@@ -130,6 +130,29 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res) => {
     }
 
     const c = result.rows[0];
+
+    const nextAddress = {
+      House_Name: addr.House_Name || c.address_house_name || '',
+      Street: addr.Street || c.address_street || '',
+      City: addr.City || c.address_city || '',
+      Postal_Code: addr.Postal_Code || c.address_postal_code || '',
+      Additional_Info: addr.Additional_Info || c.address_additional_info || '',
+      Latitude: latitude ?? c.address_latitude ?? undefined,
+      Longitude: longitude ?? c.address_longitude ?? undefined,
+    };
+
+    await query(
+      `UPDATE orders
+       SET shipping_address_json = $2,
+           billing_address_json = CASE
+             WHEN billing_address_json IS NULL OR billing_address_json = '{}'::text OR billing_address_json = shipping_address_json THEN $2
+             ELSE billing_address_json
+           END
+       WHERE customer_id = $1
+         AND status IN ('placed', 'processing')`,
+      [id, JSON.stringify(nextAddress)]
+    );
+
     const updated: Customer = {
       Customer_ID: c.id,
       Username: c.username || '',

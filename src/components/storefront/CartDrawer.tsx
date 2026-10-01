@@ -22,8 +22,6 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  const defaultPlaceholder = 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=600&auto=format&fit=crop&q=80';
-
   const subtotal = cartItems.reduce((acc, item) => {
     const price = Number(item.Product?.Price) || 0;
     return acc + price * item.Quantity;
@@ -88,15 +86,18 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   key={item.Cart_ID}
                   className="p-3.5 rounded-2xl bg-slate-50 dark:bg-[#161C24] border border-slate-200 dark:border-zinc-800 flex gap-3 items-center"
                 >
-                  <img
-                    src={product.Image || defaultPlaceholder}
-                    alt={product.Name}
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = defaultPlaceholder;
-                    }}
-                    referrerPolicy="no-referrer"
-                    className="w-16 h-16 rounded-xl object-cover bg-white dark:bg-[#0C1014] border border-slate-200 dark:border-zinc-700 shrink-0"
-                  />
+                  {product.Image ? (
+                    <img
+                      src={product.Image}
+                      alt={product.Name}
+                      referrerPolicy="no-referrer"
+                      className="w-16 h-16 rounded-xl object-cover bg-white dark:bg-[#0C1014] border border-slate-200 dark:border-zinc-700 shrink-0"
+                    />
+                  ) : (
+                    <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-slate-200 bg-gradient-to-br from-slate-200 to-slate-100 text-slate-500 dark:border-zinc-700 dark:from-slate-700 dark:to-slate-800 dark:text-slate-300">
+                      <ShoppingCart className="h-5 w-5" />
+                    </div>
+                  )}
                   <div className="flex-1 min-w-0">
                     <h4 className="font-bold text-xs text-slate-900 dark:text-white truncate">
                       {product.Name}

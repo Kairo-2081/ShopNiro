@@ -64,10 +64,10 @@ export const MarketplaceClosing: React.FC<MarketplaceClosingProps> = ({ stats })
     <div className="min-w-0 flex-1 space-y-4">
       <div>
         <p className="text-[10px] font-bold tracking-[0.16em] uppercase text-[#77775a] dark:text-[#d0c8a5]">
-          ShopNiro marketplace
+          ShopNiro
         </p>
         <h2 className="mt-1 text-2xl sm:text-3xl text-slate-900 dark:text-white">
-          Shop from independent sellers.
+          Shop Smart. Ship Fast.
         </h2>
       </div>
 

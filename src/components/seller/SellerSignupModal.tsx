@@ -24,7 +24,7 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [number, setNumber] = useState('');
   const [hasSelectedLocation, setHasSelectedLocation] = useState(false);
-  const [logo, setLogo] = useState('https://images.unsplash.com/photo-1529374255404-311a2a4f1fd9?w=200');
+  const [logo, setLogo] = useState('');
   const [description, setDescription] = useState('');
   const [address, setAddress] = useState<Address>({
     Street: '',

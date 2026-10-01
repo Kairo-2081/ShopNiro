@@ -1248,10 +1248,11 @@ BEGIN
     INSERT INTO sellers (
         id, name, number, logo, description, status,
         address_house_name, address_street, address_city, address_postal_code,
-        address_additional_info, created_at
+        address_additional_info, address_latitude, address_longitude, created_at
     ) VALUES (
         p_id, p_name, p_number, p_logo, p_description, 'pending',
-        p_house_name, p_street, p_city, p_postal_code, p_additional_info, CURRENT_TIMESTAMP
+        p_house_name, p_street, p_city, p_postal_code, p_additional_info,
+        p_latitude, p_longitude, CURRENT_TIMESTAMP
     );
 
     RETURN QUERY SELECT * FROM seller_profiles WHERE id = p_id;
@@ -1352,10 +1353,12 @@ BEGIN
 
     INSERT INTO customers (
         id, name, number, address_house_name,
-        address_street, address_city, address_postal_code, address_additional_info, created_at
+        address_street, address_city, address_postal_code, address_additional_info,
+        address_latitude, address_longitude, created_at
     ) VALUES (
         p_id, p_name, p_number, p_house_name,
-        p_street, p_city, p_postal_code, p_additional_info, CURRENT_TIMESTAMP
+        p_street, p_city, p_postal_code, p_additional_info,
+        p_latitude, p_longitude, CURRENT_TIMESTAMP
     );
 
     RETURN QUERY SELECT * FROM customer_profiles WHERE id = p_id;
@@ -1371,7 +1374,9 @@ CREATE OR REPLACE FUNCTION gocart_customer_update(
     p_street TEXT,
     p_city TEXT,
     p_postal_code TEXT,
-    p_additional_info TEXT
+    p_additional_info TEXT,
+    p_latitude DOUBLE PRECISION,
+    p_longitude DOUBLE PRECISION
 )
 RETURNS SETOF customer_profiles
 LANGUAGE plpgsql
@@ -1385,8 +1390,8 @@ BEGIN
         address_city = COALESCE(p_city, address_city),
         address_postal_code = COALESCE(p_postal_code, address_postal_code),
         address_additional_info = COALESCE(p_additional_info, address_additional_info),
-        address_latitude = p_latitude,
-        address_longitude = p_longitude
+        address_latitude = COALESCE(p_latitude, address_latitude),
+        address_longitude = COALESCE(p_longitude, address_longitude)
     WHERE id = p_id;
 
     IF NOT FOUND THEN

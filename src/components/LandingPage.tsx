@@ -91,9 +91,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <h1 className="font-display text-xl font-normal text-white leading-none">
                 ShopNiro
               </h1>
-              <span className="text-[10px] font-bold text-sky-400 tracking-[0.2em] uppercase block">
-                MARKETPLACE
-              </span>
             </div>
           </div>
 
@@ -164,15 +161,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           {/* Atmospheric background glow */}
           <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-72 h-72 bg-white/10 rounded-full blur-3xl pointer-events-none hero-glow" />
 
-          {/* Pill Badge */}
-          <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-[#24241d]/80 border border-[#d0c8a5]/35 text-[#e7e5d6] text-xs font-semibold tracking-wide shadow-[0_8px_20px_rgba(169,155,114,0.2)]">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#d0c8a5] animate-pulse"></span>
-            <span>APPROVED SELLERS · ORDER TRACKING</span>
-          </div>
-
-          {/* Hero Headline */}
-          <h2 className="text-4xl sm:text-5xl md:text-6xl font-normal text-white leading-[1.08] max-w-4xl mx-auto">
-            Shop smart, ship fast.
+          <h2 className="text-[2.1rem] sm:text-[3rem] md:text-[4.2rem] font-normal text-white leading-[0.92] tracking-[-0.04em] max-w-5xl mx-auto whitespace-nowrap">
+            Shop Smart. Ship Fast.
           </h2>
 
           {/* Subtitle tailored to ShopNiro Marketplace */}

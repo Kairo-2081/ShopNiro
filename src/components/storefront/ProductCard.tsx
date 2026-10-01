@@ -2,7 +2,7 @@ import React from 'react';
 import { Product, Category, Seller, Review } from '../../types';
 import { StarRating } from '../StarRating';
 import { formatCurrency } from '../../lib/api';
-import { ShoppingCart, Tag, Store, Eye, Lock, Check } from 'lucide-react';
+import { ShoppingCart, Tag, Store, Eye, Lock, Check, PackageOpen } from 'lucide-react';
 
 interface ProductCardProps {
   product: Product;
@@ -45,8 +45,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     setTimeout(() => setJustAdded(false), 1500);
   };
 
-  const defaultPlaceholder = 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=600&auto=format&fit=crop&q=80';
-
   return (
     <div
       onClick={() => onSelect(product)}
@@ -55,14 +53,22 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       {/* Product Image */}
       <div className="relative aspect-[4/5] w-full bg-slate-100 dark:bg-[#0C1014] overflow-hidden">
         <div className="absolute inset-0 bg-slate-200/70 dark:bg-zinc-800/80 shimmer skeleton-block" />
-        <img
-          src={imgError || !product.Image ? defaultPlaceholder : product.Image}
-          alt={product.Name}
-          onError={() => setImgError(true)}
-          referrerPolicy="no-referrer"
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
-          loading="lazy"
-        />
+        {product.Image && !imgError ? (
+          <img
+            src={product.Image}
+            alt={product.Name}
+            onError={() => setImgError(true)}
+            referrerPolicy="no-referrer"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 ease-out"
+            loading="lazy"
+          />
+        ) : (
+          <div className="relative z-10 flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(148,163,184,0.30),_transparent_60%),linear-gradient(135deg,#e2e8f0,#cbd5e1_40%,#f8fafc)] dark:bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.15),_transparent_60%),linear-gradient(135deg,#0f172a,#1e293b_40%,#111827)]">
+            <div className="flex h-20 w-20 items-center justify-center rounded-2xl border border-slate-200/80 bg-white/65 text-slate-600 shadow-sm backdrop-blur-sm dark:border-slate-700 dark:bg-slate-900/65 dark:text-slate-200">
+              <PackageOpen className="h-9 w-9" />
+            </div>
+          </div>
+        )}
 
         <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 

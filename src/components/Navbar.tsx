@@ -66,9 +66,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span className="font-display text-xl font-normal text-[#0f1f1d] dark:text-white leading-none block">
                 ShopNiro
               </span>
-              <span className="text-[10px] font-bold text-[#555541] dark:text-[#d0c8a5] tracking-[0.2em] uppercase block">
-                MARKETPLACE
-              </span>
             </div>
           </div>
 
