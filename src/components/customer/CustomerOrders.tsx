@@ -279,6 +279,7 @@ export const CustomerOrders: React.FC<CustomerOrdersProps> = ({
                 order={trackableOrders[0]}
                 orders={trackableOrders}
                 sellers={sellers}
+                customerAddress={currentCustomer.Address}
                 onSelectOrder={(ord) => setTrackingOrderForMap(ord)}
               />
             )}
@@ -514,6 +515,7 @@ export const CustomerOrders: React.FC<CustomerOrdersProps> = ({
               order={trackingOrderForMap}
               orders={trackableOrders}
               sellers={sellers}
+              customerAddress={currentCustomer.Address}
               onSelectOrder={(ord) => setTrackingOrderForMap(ord)}
               onClose={() => setTrackingOrderForMap(null)}
               isModal={true}

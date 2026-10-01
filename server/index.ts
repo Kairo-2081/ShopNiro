@@ -113,6 +113,17 @@ app.get('/api/analytics/top-rated-products', async (req, res) => {
   }
 });
 
+app.get('/api/analytics/top-rated-sellers', async (req, res) => {
+  try {
+    const limit = Number(req.query.limit) || 3;
+    const result = await query(`SELECT * FROM gocart_top_rated_sellers($1)`, [limit]);
+    res.json(result.rows);
+  } catch (error: any) {
+    console.error('Error fetching top rated sellers:', error);
+    res.status(500).json({ error: 'Failed to fetch top rated sellers' });
+  }
+});
+
 app.post('/api/reset-seed', async (req, res) => {
   try {
     await seedDatabaseIfEmpty();

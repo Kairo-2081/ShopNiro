@@ -8,6 +8,7 @@ import 'leaflet/dist/leaflet.css';
 
 interface AccountLocationPickerProps {
   onAddressSelected: (address: Address | null) => void;
+  initialLocation?: { lat: number; lng: number } | null;
 }
 
 const defaultCenter = { lat: 23.8103, lng: 90.4125 };
@@ -47,12 +48,19 @@ function MapViewport({ center }: { center: [number, number] | null }) {
   return null;
 }
 
-function LocationMap({ onAddressSelected }: AccountLocationPickerProps) {
-  const [marker, setMarker] = React.useState<{ lat: number; lng: number } | null>(null);
+function LocationMap({ onAddressSelected, initialLocation }: AccountLocationPickerProps) {
+  const [marker, setMarker] = React.useState<{ lat: number; lng: number } | null>(initialLocation || null);
   const [status, setStatus] = React.useState('Select a point on the map or use your current location.');
   const [isResolving, setIsResolving] = React.useState(false);
   const [isLocating, setIsLocating] = React.useState(false);
-  const [mapCenter, setMapCenter] = React.useState<[number, number] | null>(null);
+  const [mapCenter, setMapCenter] = React.useState<[number, number] | null>(
+    initialLocation ? [initialLocation.lat, initialLocation.lng] : null
+  );
+
+  React.useEffect(() => {
+    setMarker(initialLocation || null);
+    setMapCenter(initialLocation ? [initialLocation.lat, initialLocation.lng] : null);
+  }, [initialLocation?.lat, initialLocation?.lng]);
 
   const selectLocation = async (coordinates: { lat: number; lng: number }) => {
     setMarker(coordinates);
@@ -123,7 +131,12 @@ function LocationMap({ onAddressSelected }: AccountLocationPickerProps) {
         </button>
       </div>
       <div className="relative h-56 w-full touch-pan-x touch-pan-y overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-zinc-700 dark:bg-[#181F2A] sm:h-72">
-        <MapContainer center={defaultCenter} zoom={11} scrollWheelZoom className="h-full w-full">
+        <MapContainer
+          center={initialLocation ? [initialLocation.lat, initialLocation.lng] : defaultCenter}
+          zoom={initialLocation ? 15 : 11}
+          scrollWheelZoom
+          className="h-full w-full"
+        >
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -155,6 +168,6 @@ function LocationMap({ onAddressSelected }: AccountLocationPickerProps) {
   );
 }
 
-export const AccountLocationPicker: React.FC<AccountLocationPickerProps> = ({ onAddressSelected }) => {
-  return <LocationMap onAddressSelected={onAddressSelected} />;
+export const AccountLocationPicker: React.FC<AccountLocationPickerProps> = ({ onAddressSelected, initialLocation }) => {
+  return <LocationMap onAddressSelected={onAddressSelected} initialLocation={initialLocation} />;
 };

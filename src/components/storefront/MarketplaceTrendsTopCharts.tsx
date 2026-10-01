@@ -4,6 +4,7 @@ import {
   TopRatedProduct,
   fetchTrendingProducts,
   fetchTopRatedProducts,
+  fetchTopRatedSellers,
   formatCurrency,
 } from '../../lib/api';
 import { Product } from '../../types';
@@ -12,6 +13,7 @@ import {
   Star,
   Flame,
   ShoppingBag,
+  Store,
 } from 'lucide-react';
 
 interface MarketplaceTrendsTopChartsProps {
@@ -28,6 +30,7 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
   const [activeTab, setActiveTab] = useState<'trends' | 'top-rated'>('trends');
   const [trending, setTrending] = useState<TrendingProduct[]>([]);
   const [topRated, setTopRated] = useState<TopRatedProduct[]>([]);
+  const [topRatedSellers, setTopRatedSellers] = useState<Awaited<ReturnType<typeof fetchTopRatedSellers>>>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -35,14 +38,16 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
     async function loadData() {
       try {
         setLoading(true);
-        const [trendData, ratedData] = await Promise.all([
+        const [trendData, ratedData, sellerData] = await Promise.all([
           fetchTrendingProducts(3).catch(() => []),
-          fetchTopRatedProducts(8).catch(() => []),
+          fetchTopRatedProducts(3).catch(() => []),
+          fetchTopRatedSellers(3).catch(() => []),
         ]);
 
         if (isMounted) {
           setTrending(trendData || []);
           setTopRated(ratedData || []);
+          setTopRatedSellers(sellerData || []);
         }
       } catch (err) {
         console.error('Error loading top charts analytics:', err);
@@ -173,7 +178,7 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
                         type="button"
                         disabled={item.available_stock <= 0 || Number(fullProd.Stock) <= 0 || fullProd.Product_Status !== 'active'}
                         onClick={() => onAddToCart(fullProd, 1)}
-                        className="p-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white transition-all shadow-xs cursor-pointer disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed dark:disabled:bg-zinc-800 dark:disabled:text-zinc-600"
+                        className="p-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white transition-all shadow-xs cursor-pointer disabled:bg-slate-200 disabled:text-blue-900 disabled:cursor-not-allowed dark:disabled:bg-zinc-800 dark:disabled:text-sky-200"
                         title={item.available_stock <= 0 || Number(fullProd.Stock) <= 0 ? 'Out of stock' : 'Add to cart'}
                       >
                         {item.available_stock <= 0 || Number(fullProd.Stock) <= 0 ? 'Out' : <ShoppingBag className="w-3.5 h-3.5" />}
@@ -191,13 +196,47 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
       {activeTab === 'top-rated' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between text-xs text-slate-500 dark:text-zinc-400">
-            <span>Verified buyer favorites with ratings of 4.0 and above</span>
+            <span>Products with 3+ reviews and an average rating of 4.0 or higher</span>
             <span className="font-mono text-amber-500 font-bold">
-              {topRated.length} Hall-of-Fame Items
+              {topRated.length} of 3 Products
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="space-y-3 border-b border-slate-100 pb-5 dark:border-zinc-800">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">Top Vendors</h3>
+              <span className="text-[11px] text-slate-500 dark:text-zinc-400">Ranked across all product reviews</span>
+            </div>
+            {topRatedSellers.length > 0 ? (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                {topRatedSellers.map((seller, idx) => (
+                  <div key={seller.seller_id} className="flex min-w-0 items-center gap-3 border-b border-slate-100 pb-3 dark:border-zinc-800 sm:border-b-0 sm:pb-0">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100 text-xs font-black text-amber-700 dark:bg-amber-950/50 dark:text-amber-300">
+                      {idx + 1}
+                    </span>
+                    {seller.logo ? (
+                      <img src={seller.logo} alt="" className="h-10 w-10 shrink-0 rounded-full border border-slate-200 object-cover dark:border-zinc-700" />
+                    ) : (
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500 dark:bg-[#18202D] dark:text-zinc-400">
+                        <Store className="h-4 w-4" />
+                      </span>
+                    )}
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-bold text-slate-900 dark:text-white">{seller.seller_name}</p>
+                      <p className="flex items-center gap-1 text-[11px] text-slate-500 dark:text-zinc-400">
+                        <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                        {Number(seller.average_rating).toFixed(1)} · {seller.total_reviews} reviews
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-slate-500 dark:text-zinc-400">No vendor reviews are available yet.</p>
+            )}
+          </div>
+
+          {topRated.length > 0 ? <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {topRated.map((item, idx) => {
               const fullProd = resolveFullProduct(item.product_id);
               return (
@@ -248,7 +287,7 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
                         type="button"
                         disabled={Number(fullProd.Stock) <= 0 || fullProd.Product_Status !== 'active'}
                         onClick={() => onAddToCart(fullProd, 1)}
-                        className="p-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-white transition-all shadow-xs cursor-pointer disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed dark:disabled:bg-zinc-800 dark:disabled:text-zinc-600"
+                        className="p-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-white transition-all shadow-xs cursor-pointer disabled:bg-slate-200 disabled:text-blue-900 disabled:cursor-not-allowed dark:disabled:bg-zinc-800 dark:disabled:text-sky-200"
                         title={Number(fullProd.Stock) <= 0 ? 'Out of stock' : 'Add to cart'}
                       >
                         {Number(fullProd.Stock) <= 0 ? 'Out' : <ShoppingBag className="w-3.5 h-3.5" />}
@@ -258,7 +297,7 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
                 </div>
               );
             })}
-          </div>
+          </div> : <p className="py-8 text-center text-sm text-slate-500 dark:text-zinc-400">No products meet the 4.0 rating and 3-review minimum yet.</p>}
         </div>
       )}
 

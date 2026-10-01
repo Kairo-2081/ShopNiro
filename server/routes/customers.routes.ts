@@ -1,5 +1,16 @@
 import { Router } from 'express';
 import { query, mapAddress } from '../db/index.ts';
+
+function getAddressCoordinates(address: any) {
+  const latitude = address?.Latitude;
+  const longitude = address?.Longitude;
+  const hasValidCoordinates = typeof latitude === 'number' && Number.isFinite(latitude) && latitude >= -90 && latitude <= 90
+    && typeof longitude === 'number' && Number.isFinite(longitude) && longitude >= -180 && longitude <= 180;
+
+  return hasValidCoordinates
+    ? { latitude, longitude }
+    : { latitude: null, longitude: null };
+}
 import { hashPassword } from '../db/password.ts';
 import { requireAuth, AuthRequest } from '../middleware/auth.ts';
 import { Customer } from '../../src/types.ts';
@@ -62,10 +73,11 @@ router.post('/', async (req, res) => {
     const city = addr.City.trim();
     const postalCode = addr.Postal_Code || '';
     const addInfo = addr.Additional_Info || '';
+    const { latitude, longitude } = getAddressCoordinates(addr);
 
     const result = await query(
-      `SELECT * FROM gocart_customer_create($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
-      [id, username, name, cleanEmail, hashedPassword, phone, houseName, street, city, postalCode, addInfo]
+      `SELECT * FROM gocart_customer_create($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+      [id, username, name, cleanEmail, hashedPassword, phone, houseName, street, city, postalCode, addInfo, latitude, longitude]
     );
 
     const c = result.rows[0];
@@ -75,13 +87,7 @@ router.post('/', async (req, res) => {
       Name: name,
       Email: cleanEmail,
       Number: phone,
-      Address: {
-        House_Name: houseName,
-        Street: street,
-        City: city,
-        Postal_Code: postalCode,
-        Additional_Info: addInfo,
-      },
+      Address: mapAddress(c),
     };
 
     res.status(201).json(newCustomer);
@@ -101,8 +107,9 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res) => {
     const { Name, Email, Number: phoneNum, Address } = req.body;
 
     const addr = Address || {};
+    const { latitude, longitude } = getAddressCoordinates(addr);
     const result = await query(
-      `SELECT * FROM gocart_customer_update($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      `SELECT * FROM gocart_customer_update($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
       [
         id,
         Name || null,
@@ -113,6 +120,8 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res) => {
         addr.City || null,
         addr.Postal_Code || null,
         addr.Additional_Info || null,
+        latitude,
+        longitude,
       ]
     );
 

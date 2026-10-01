@@ -52,6 +52,19 @@ function getAddressCoordinates(address?: Address): TrackingCoordinates | null {
     : null;
 }
 
+function addressesMatch(left?: Address, right?: Address): boolean {
+  const normalize = (value?: string) => value?.trim().toLocaleLowerCase() || '';
+  const street = normalize(left?.Street);
+  const city = normalize(left?.City);
+  if (!street || !city || street !== normalize(right?.Street) || city !== normalize(right?.City)) return false;
+
+  return (['House_Name', 'Postal_Code'] as const).every((field) => {
+    const leftValue = normalize(left?.[field]);
+    const rightValue = normalize(right?.[field]);
+    return !leftValue || !rightValue || leftValue === rightValue;
+  });
+}
+
 function getRouteProgress(route: TrackingCoordinates[], progress: number): TrackingCoordinates[] {
   if (route.length < 2) return route;
 
@@ -108,6 +121,7 @@ interface LiveProductTrackingMapProps {
   order?: Order | null;
   orders?: Order[];
   sellers?: Seller[];
+  customerAddress?: Address;
   onSelectOrder?: (order: Order) => void;
   onDeliveryComplete?: (orderId: string) => Promise<void>;
   onClose?: () => void;
@@ -118,6 +132,7 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
   order: initialOrder,
   orders = [],
   sellers = [],
+  customerAddress,
   onSelectOrder,
   onDeliveryComplete,
   onClose,
@@ -204,7 +219,8 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
   const activeSellerId = activeFulfillment?.Seller_ID || activeOrder.Items[0]?.Seller_ID;
   const activeSeller = sellers.find((seller) => seller.Seller_ID === activeSellerId);
   const shopLocation = getAddressCoordinates(activeSeller?.Address);
-  const deliveryDestination = getAddressCoordinates(activeOrder.Shipping_Address);
+  const deliveryDestination = getAddressCoordinates(activeOrder.Shipping_Address)
+    || (addressesMatch(activeOrder.Shipping_Address, customerAddress) ? getAddressCoordinates(customerAddress) : null);
   const routeCoordinates = route?.coordinates;
   const travelledRoute = routeCoordinates ? getRouteProgress(routeCoordinates, movementStep) : [];
   const courierLocation = travelledRoute[travelledRoute.length - 1];

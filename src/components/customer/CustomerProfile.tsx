@@ -1,6 +1,7 @@
 import React from 'react';
 import { Customer, Address } from '../../types';
 import { User, Mail, Phone, MapPin, Save, CheckCircle2 } from 'lucide-react';
+import { AccountLocationPicker } from '../AccountLocationPicker';
 
 interface CustomerProfileProps {
   currentCustomer: Customer;
@@ -17,9 +18,12 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ currentCustome
     City: currentCustomer.Address?.City || '',
     Postal_Code: currentCustomer.Address?.Postal_Code || '',
     Additional_Info: currentCustomer.Address?.Additional_Info || '',
+    Latitude: currentCustomer.Address?.Latitude,
+    Longitude: currentCustomer.Address?.Longitude,
   });
 
   const [savedSuccess, setSavedSuccess] = React.useState(false);
+  const [isResolvingLocation, setIsResolvingLocation] = React.useState(false);
 
   React.useEffect(() => {
     setName(currentCustomer.Name);
@@ -31,11 +35,27 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ currentCustome
       City: currentCustomer.Address?.City || '',
       Postal_Code: currentCustomer.Address?.Postal_Code || '',
       Additional_Info: currentCustomer.Address?.Additional_Info || '',
+      Latitude: currentCustomer.Address?.Latitude,
+      Longitude: currentCustomer.Address?.Longitude,
     });
+    setIsResolvingLocation(false);
   }, [currentCustomer]);
+
+  const updateLocationText = (field: 'Street' | 'City', value: string) => {
+    setAddress((currentAddress) => ({
+      ...currentAddress,
+      [field]: value,
+      Latitude: undefined,
+      Longitude: undefined,
+    }));
+  };
+
+  const hasMapLocation = typeof address.Latitude === 'number' && Number.isFinite(address.Latitude)
+    && typeof address.Longitude === 'number' && Number.isFinite(address.Longitude);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isResolvingLocation) return;
     onUpdateCustomer({
       ...currentCustomer,
       Name: name,
@@ -124,9 +144,31 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ currentCustome
         {/* Address */}
         <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-zinc-800">
           <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2 border-b border-slate-100 dark:border-zinc-800 pb-3">
-            <MapPin className="w-4 h-4 text-blue-600 dark:text-sky-400" />
-            Default Shipping Destination
+              <MapPin className="w-4 h-4 text-blue-600 dark:text-sky-400" />
+              Default Shipping Destination
           </h3>
+
+          <div id="customer-profile-location-picker" className="space-y-2">
+            <AccountLocationPicker
+              initialLocation={hasMapLocation ? { lat: address.Latitude!, lng: address.Longitude! } : null}
+              onAddressSelected={(selectedAddress) => {
+                if (!selectedAddress) {
+                  setIsResolvingLocation(true);
+                  return;
+                }
+
+                setIsResolvingLocation(false);
+                setAddress((currentAddress) => ({
+                  ...currentAddress,
+                  Street: selectedAddress.Street || currentAddress.Street,
+                  City: selectedAddress.City || currentAddress.City,
+                  Postal_Code: selectedAddress.Postal_Code || currentAddress.Postal_Code,
+                  Latitude: selectedAddress.Latitude,
+                  Longitude: selectedAddress.Longitude,
+                }));
+              }}
+            />
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
             <div>
@@ -146,7 +188,7 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ currentCustome
                 type="text"
                 required
                 value={address.Street}
-                onChange={(e) => setAddress({ ...address, Street: e.target.value })}
+                onChange={(e) => updateLocationText('Street', e.target.value)}
                 className="w-full p-2.5 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
               />
             </div>
@@ -157,7 +199,7 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ currentCustome
                 type="text"
                 required
                 value={address.City}
-                onChange={(e) => setAddress({ ...address, City: e.target.value })}
+                onChange={(e) => updateLocationText('City', e.target.value)}
                 className="w-full p-2.5 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
               />
             </div>
@@ -188,6 +230,7 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ currentCustome
         <div className="flex justify-end pt-4">
           <button
             type="submit"
+            disabled={isResolvingLocation}
             className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-full text-xs shadow-lg shadow-blue-600/30 transition-all cursor-pointer transform hover:-translate-y-0.5"
           >
             <Save className="w-4 h-4" />

@@ -812,6 +812,7 @@ export default function App() {
                 orders={orders.filter((order) => order.Status === 'shipped' || order.Status === 'delivered')}
                 order={orders.find((order) => order.Status === 'shipped' || order.Status === 'delivered') || null}
                 sellers={sellers}
+                customerAddress={selectedCustomer?.Address}
                 onDeliveryComplete={(orderId) => handleUpdateOrderStatus(orderId, 'delivered')}
               />
             ) : (

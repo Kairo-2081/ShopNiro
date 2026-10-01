@@ -21,8 +21,13 @@ CREATE TABLE IF NOT EXISTS customers (
     address_city VARCHAR(100),
     address_postal_code VARCHAR(50),
     address_additional_info TEXT,
+    address_latitude DOUBLE PRECISION,
+    address_longitude DOUBLE PRECISION,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS address_latitude DOUBLE PRECISION;
+ALTER TABLE customers ADD COLUMN IF NOT EXISTS address_longitude DOUBLE PRECISION;
 
 -- SELLERS / VENDORS TABLE
 CREATE TABLE IF NOT EXISTS sellers (
@@ -1089,15 +1094,29 @@ SELECT
     c.name AS category_name,
     s.name AS seller_name,
     p.price,
-    COALESCE(ROUND(AVG(r.rating), 1), 5.0) AS average_rating,
+    ROUND(AVG(r.rating), 1) AS average_rating,
     COUNT(r.id) AS total_reviews
 FROM products p
 JOIN categories c ON c.id = p.category_id
 JOIN sellers s ON s.id = p.seller_id
-LEFT JOIN reviews r ON r.product_id = p.id
+JOIN reviews r ON r.product_id = p.id
 WHERE p.product_status = 'active'
     AND s.status = 'approved'
-GROUP BY p.id, p.name, p.image, c.name, s.name, p.price;
+GROUP BY p.id, p.name, p.image, c.name, s.name, p.price
+HAVING COUNT(r.id) >= 3 AND AVG(r.rating) >= 4.0;
+
+CREATE OR REPLACE VIEW top_rated_sellers AS
+SELECT
+    s.id AS seller_id,
+    s.name AS seller_name,
+    s.logo,
+    ROUND(AVG(r.rating), 1) AS average_rating,
+    COUNT(r.id) AS total_reviews
+FROM sellers s
+JOIN products p ON p.seller_id = s.id
+JOIN reviews r ON r.product_id = p.id
+WHERE s.status = 'approved'
+GROUP BY s.id, s.name, s.logo;
 
 -- Provide the aggregate counts and revenue used by the admin dashboard.
 CREATE OR REPLACE VIEW admin_dashboard_stats AS
@@ -1115,7 +1134,8 @@ SELECT
 CREATE OR REPLACE VIEW customer_profiles AS
 SELECT c.id, u.username, c.name, u.email, c.number,
        c.address_house_name, c.address_street, c.address_city,
-       c.address_postal_code, c.address_additional_info, c.created_at
+    c.address_postal_code, c.address_additional_info, c.created_at,
+    c.address_latitude, c.address_longitude
 FROM customers c JOIN users u ON u.id = c.id AND u.role = 'customer';
 
 CREATE OR REPLACE VIEW seller_profiles AS
@@ -1214,7 +1234,9 @@ CREATE OR REPLACE FUNCTION gocart_seller_create(
     p_street TEXT,
     p_city TEXT,
     p_postal_code TEXT,
-    p_additional_info TEXT
+    p_additional_info TEXT,
+    p_latitude DOUBLE PRECISION,
+    p_longitude DOUBLE PRECISION
 )
 RETURNS SETOF seller_profiles
 LANGUAGE plpgsql
@@ -1277,10 +1299,12 @@ BEGIN
 
     INSERT INTO admins (
         id, name, number, address_house_name,
-        address_street, address_city, address_postal_code, address_additional_info, created_at
+        address_street, address_city, address_postal_code, address_additional_info,
+        address_latitude, address_longitude, created_at
     ) VALUES (
         p_id, p_name, p_number, p_house_name,
-        p_street, p_city, p_postal_code, p_additional_info, CURRENT_TIMESTAMP
+        p_street, p_city, p_postal_code, p_additional_info,
+        p_latitude, p_longitude, CURRENT_TIMESTAMP
     );
 
     RETURN QUERY SELECT * FROM admin_profiles WHERE id = p_id;
@@ -1315,7 +1339,9 @@ CREATE OR REPLACE FUNCTION gocart_customer_create(
     p_street TEXT,
     p_city TEXT,
     p_postal_code TEXT,
-    p_additional_info TEXT
+    p_additional_info TEXT,
+    p_latitude DOUBLE PRECISION,
+    p_longitude DOUBLE PRECISION
 )
 RETURNS SETOF customer_profiles
 LANGUAGE plpgsql
@@ -1358,7 +1384,9 @@ BEGIN
         address_street = COALESCE(p_street, address_street),
         address_city = COALESCE(p_city, address_city),
         address_postal_code = COALESCE(p_postal_code, address_postal_code),
-        address_additional_info = COALESCE(p_additional_info, address_additional_info)
+        address_additional_info = COALESCE(p_additional_info, address_additional_info),
+        address_latitude = p_latitude,
+        address_longitude = p_longitude
     WHERE id = p_id;
 
     IF NOT FOUND THEN
@@ -1726,8 +1754,17 @@ RETURNS SETOF top_rated_products
 LANGUAGE SQL STABLE
 AS $$
     SELECT * FROM top_rated_products
-    ORDER BY average_rating DESC, total_reviews DESC
-    LIMIT GREATEST(p_limit, 0);
+    ORDER BY average_rating DESC, total_reviews DESC, product_id
+    LIMIT LEAST(GREATEST(COALESCE(p_limit, 3), 0), 3);
+$$;
+
+CREATE OR REPLACE FUNCTION gocart_top_rated_sellers(p_limit INTEGER DEFAULT 3)
+RETURNS SETOF top_rated_sellers
+LANGUAGE SQL STABLE
+AS $$
+    SELECT * FROM top_rated_sellers
+    ORDER BY average_rating DESC, total_reviews DESC, seller_name
+    LIMIT LEAST(GREATEST(COALESCE(p_limit, 3), 0), 3);
 $$;
 
 CREATE OR REPLACE FUNCTION gocart_trending_products(p_limit INTEGER DEFAULT 10)

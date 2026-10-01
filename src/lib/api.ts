@@ -618,11 +618,23 @@ export interface TopRatedProduct {
   total_reviews: number;
 }
 
+export interface TopRatedSeller {
+  seller_id: string;
+  seller_name: string;
+  logo?: string;
+  average_rating: number;
+  total_reviews: number;
+}
+
 export async function fetchTrendingProducts(limit: number = 3): Promise<TrendingProduct[]> {
   return fetchJson<TrendingProduct[]>(`/api/analytics/trending-products?limit=${limit}`);
 }
 
 export async function fetchTopRatedProducts(limit: number = 12): Promise<TopRatedProduct[]> {
   return fetchJson<TopRatedProduct[]>(`/api/analytics/top-rated-products?limit=${limit}`);
+}
+
+export async function fetchTopRatedSellers(limit: number = 3): Promise<TopRatedSeller[]> {
+  return fetchJson<TopRatedSeller[]>(`/api/analytics/top-rated-sellers?limit=${limit}`);
 }
 

@@ -57,6 +57,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     City: currentCustomer.Address?.City || '',
     Postal_Code: currentCustomer.Address?.Postal_Code || '',
     Additional_Info: currentCustomer.Address?.Additional_Info || '',
+    Latitude: currentCustomer.Address?.Latitude,
+    Longitude: currentCustomer.Address?.Longitude,
   });
 
   const [useSameBilling, setUseSameBilling] = React.useState(true);
@@ -66,6 +68,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     City: currentCustomer.Address?.City || '',
     Postal_Code: currentCustomer.Address?.Postal_Code || '',
     Additional_Info: '',
+    Latitude: currentCustomer.Address?.Latitude,
+    Longitude: currentCustomer.Address?.Longitude,
   });
 
   const [paymentMethod, setPaymentMethod] = React.useState<
@@ -105,6 +109,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         City: currentCustomer.Address.City || '',
         Postal_Code: currentCustomer.Address.Postal_Code || '',
         Additional_Info: currentCustomer.Address.Additional_Info || '',
+        Latitude: currentCustomer.Address.Latitude,
+        Longitude: currentCustomer.Address.Longitude,
       });
       setAdditionalNotes(currentCustomer.Address.Additional_Info || '');
     }
@@ -440,7 +446,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                         type="text"
                         required
                         value={shippingAddress.Street}
-                        onChange={(e) => setShippingAddress({ ...shippingAddress, Street: e.target.value })}
+                        onChange={(e) => setShippingAddress({ ...shippingAddress, Street: e.target.value, Latitude: undefined, Longitude: undefined })}
                         placeholder="e.g. Banani, Gulshan, or Dhanmondi"
                         className="w-full p-2.5 bg-white dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
                       />
@@ -452,7 +458,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                         type="text"
                         required
                         value={shippingAddress.City}
-                        onChange={(e) => setShippingAddress({ ...shippingAddress, City: e.target.value })}
+                        onChange={(e) => setShippingAddress({ ...shippingAddress, City: e.target.value, Latitude: undefined, Longitude: undefined })}
                         placeholder="e.g. Dhaka or Chittagong"
                         className="w-full p-2.5 bg-white dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
                       />
