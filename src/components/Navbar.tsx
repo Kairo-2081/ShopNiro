@@ -51,7 +51,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenChat,
 }) => {
   return (
-    <header className="sticky top-0 z-30 bg-[#171713]/85 dark:bg-[#10100f]/80 backdrop-blur-xl border-b border-[#d0c8a5]/15 dark:border-white/10 shadow-[0_12px_32px_rgba(6,6,4,0.25)] transition-colors duration-200">
+    <header className="sticky top-0 z-30 bg-[#f6f5ef]/95 dark:bg-[#10100f]/80 backdrop-blur-xl border-b border-[#80734f]/20 dark:border-white/10 shadow-[0_8px_24px_rgba(41,40,33,0.10)] dark:shadow-[0_12px_32px_rgba(6,6,4,0.25)] transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex min-h-16 items-center justify-between gap-3 py-2">
           {/* Logo & Brand matching Landing Page */}
@@ -65,7 +65,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <span className="font-display text-xl font-normal text-[#0f1f1d] dark:text-white leading-none block">
                 ShopNiro
               </span>
-              <span className="text-[10px] font-bold text-[#77775a] dark:text-[#d0c8a5] tracking-[0.2em] uppercase block">
+              <span className="text-[10px] font-bold text-[#555541] dark:text-[#d0c8a5] tracking-[0.2em] uppercase block">
                 MARKETPLACE
               </span>
             </div>
