@@ -343,6 +343,86 @@ FROM seller_fulfillments sf
 WHERE sf.status = 'shipped'
 ON CONFLICT (fulfillment_id) DO NOTHING;
 
+UPDATE rider_deliveries rd
+SET cod_amount = ROUND(sf.subtotal + CASE
+            WHEN o.subtotal > 0 THEN o.shipping_fee * sf.subtotal / o.subtotal
+            ELSE 0
+        END, 2),
+        cod_collected = CASE WHEN rd.status = 'delivered' THEN TRUE ELSE rd.cod_collected END
+FROM seller_fulfillments sf
+JOIN orders o ON o.id = sf.order_id
+WHERE rd.fulfillment_id = sf.id
+    AND o.payment_method = 'cash_on_delivery'
+    AND (rd.cod_amount = 0 OR (rd.status = 'delivered' AND NOT rd.cod_collected));
+
+INSERT INTO rider_wallet_entries (id, rider_id, entry_type, amount, reference_id, description)
+SELECT 'COD-' || substr(md5(rd.id), 1, 24), rd.rider_id, 'cod_collected', rd.cod_amount, rd.id,
+        'COD collected for completed order ' || sf.order_id || '; applied to monthly salary'
+FROM rider_deliveries rd
+JOIN seller_fulfillments sf ON sf.id = rd.fulfillment_id
+JOIN orders o ON o.id = sf.order_id
+WHERE rd.status = 'delivered' AND rd.cod_collected AND rd.cod_amount > 0
+    AND o.payment_method = 'cash_on_delivery' AND rd.rider_id IS NOT NULL
+ON CONFLICT (rider_id, entry_type, reference_id) DO NOTHING;
+
+INSERT INTO rider_wallet_entries (id, rider_id, entry_type, amount, reference_id, description)
+SELECT 'REM-' || substr(md5(rd.id), 1, 24), rd.rider_id, 'cod_salary_debit', -rd.cod_amount, rd.id,
+        'COD deducted from monthly salary and remitted to seller for order ' || sf.order_id
+FROM rider_deliveries rd
+JOIN seller_fulfillments sf ON sf.id = rd.fulfillment_id
+JOIN orders o ON o.id = sf.order_id
+WHERE rd.status = 'delivered' AND rd.cod_collected AND rd.cod_amount > 0
+    AND o.payment_method = 'cash_on_delivery' AND rd.rider_id IS NOT NULL
+    AND NOT EXISTS (
+            SELECT 1 FROM rider_wallet_entries entry
+            WHERE entry.rider_id = rd.rider_id AND entry.reference_id = rd.id
+                AND entry.entry_type IN ('salary_debit', 'cod_remittance', 'cod_salary_debit')
+    )
+ON CONFLICT (rider_id, entry_type, reference_id) DO NOTHING;
+
+INSERT INTO seller_wallet_entries (id, seller_id, entry_type, amount, reference_id, description)
+SELECT 'VCO-' || RIGHT(sf.id, 24), sf.seller_id, 'cod_received', rd.cod_amount, rd.id,
+        'Cash-on-delivery remittance for order ' || sf.order_id
+FROM rider_deliveries rd
+JOIN seller_fulfillments sf ON sf.id = rd.fulfillment_id
+JOIN orders o ON o.id = sf.order_id
+WHERE rd.status = 'delivered' AND rd.cod_collected AND rd.cod_amount > 0
+    AND o.payment_method = 'cash_on_delivery'
+ON CONFLICT (seller_id, entry_type, reference_id) DO NOTHING;
+
+WITH monthly_totals AS (
+        SELECT rd.rider_id, date_trunc('month', rd.delivered_at)::date AS month_start,
+                COUNT(*)::integer AS total_deliveries,
+                COUNT(*) FILTER (WHERE COALESCE(rd.was_timely, rd.delivered_at <= rd.due_at, FALSE))::integer AS timely_deliveries,
+                COUNT(*) FILTER (WHERE NOT COALESCE(rd.was_timely, rd.delivered_at <= rd.due_at, FALSE))::integer AS late_deliveries,
+                SUM(rd.cod_amount) FILTER (WHERE rd.cod_collected AND rd.cod_amount > 0) AS cod_deductions
+        FROM rider_deliveries rd
+        WHERE rd.status = 'delivered' AND rd.rider_id IS NOT NULL AND rd.delivered_at IS NOT NULL
+        GROUP BY rd.rider_id, date_trunc('month', rd.delivered_at)::date
+), monthly_points AS (
+        SELECT monthly_totals.*,
+                GREATEST(0, 100 - LEAST(late_deliveries, 5) - GREATEST(late_deliveries - 5, 0) * 6) AS points
+        FROM monthly_totals
+)
+INSERT INTO rider_monthly_scores (
+        rider_id, month_start, performance_points, total_deliveries, timely_deliveries,
+        late_deliveries, salary_amount, cod_deductions, salary_available_at
+)
+SELECT rider_id, month_start, points, total_deliveries, timely_deliveries, late_deliveries,
+        GREATEST(0, ROUND(30000 * points / 100.0, 2) - COALESCE(cod_deductions, 0)),
+        COALESCE(cod_deductions, 0),
+        month_start + INTERVAL '1 month 29 days' +
+            CASE WHEN points < 60 THEN INTERVAL '7 days' ELSE INTERVAL '0 days' END
+FROM monthly_points
+ON CONFLICT (rider_id, month_start) DO UPDATE SET
+        performance_points = EXCLUDED.performance_points,
+        total_deliveries = EXCLUDED.total_deliveries,
+        timely_deliveries = EXCLUDED.timely_deliveries,
+        late_deliveries = EXCLUDED.late_deliveries,
+        salary_amount = EXCLUDED.salary_amount,
+        cod_deductions = EXCLUDED.cod_deductions,
+        salary_available_at = EXCLUDED.salary_available_at;
+
 -- PRODUCT REVIEWS TABLE
 CREATE TABLE IF NOT EXISTS reviews (
     id VARCHAR(64) PRIMARY KEY,
