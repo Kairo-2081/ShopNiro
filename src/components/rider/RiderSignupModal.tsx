@@ -111,6 +111,14 @@ export const RiderSignupModal: React.FC<RiderSignupModalProps> = ({ isOpen, onCl
       setError('Choose whether you have a CV.');
       return;
     }
+    if (hasCv && !cvBase64) {
+      setError('Upload your PDF CV before continuing.');
+      return;
+    }
+    if (![experience, previousJobs, education].every((value) => value.trim())) {
+      setError('Complete each work and education field. Write “None” where it does not apply.');
+      return;
+    }
     if (
       !presentAddress.Street || !presentAddress.City || !permanentAddress.Street || !permanentAddress.City ||
       !Number.isFinite(presentAddress.Latitude) || !Number.isFinite(presentAddress.Longitude) ||
@@ -222,7 +230,7 @@ export const RiderSignupModal: React.FC<RiderSignupModalProps> = ({ isOpen, onCl
                 <legend className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Do you have an existing CV to import?</legend>
               <div className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-1 dark:border-zinc-700 dark:bg-zinc-900">
                 {[true, false].map((choice) => (
-                  <button key={String(choice)} type="button" aria-pressed={hasCv === choice} onClick={() => { setHasCv(choice); setError(null); }} className={`rounded-md px-5 py-2 text-sm font-semibold ${hasCv === choice ? 'bg-emerald-700 text-white' : 'text-slate-700 dark:text-zinc-300'}`}>
+                  <button key={String(choice)} type="button" aria-pressed={hasCv === choice} onClick={() => { setHasCv(choice); if (!choice) { setCvFile(null); setCvBase64(''); } setError(null); }} className={`rounded-md px-5 py-2 text-sm font-semibold ${hasCv === choice ? 'bg-emerald-700 text-white' : 'text-slate-700 dark:text-zinc-300'}`}>
                     {choice ? 'Yes, import a CV' : 'No, enter details'}
                   </button>
                 ))}
@@ -232,7 +240,7 @@ export const RiderSignupModal: React.FC<RiderSignupModalProps> = ({ isOpen, onCl
             {hasCv === true && (
               <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-emerald-400 bg-emerald-50/60 p-4 text-sm text-slate-700 dark:border-emerald-800 dark:bg-emerald-950/20 dark:text-zinc-200">
                 <UploadCloud className="h-5 w-5 shrink-0 text-emerald-700 dark:text-emerald-400" />
-                <span className="min-w-0 flex-1">{cvFile ? `${cvFile.name} · ${isParsing ? 'Reading CV...' : 'Ready'}` : 'Optional: import a PDF (maximum 3 MB)'}</span>
+                <span className="min-w-0 flex-1">{cvFile ? `${cvFile.name} · ${isParsing ? 'Reading CV...' : 'Ready'}` : 'Upload a PDF CV (required, maximum 3 MB)'}</span>
                 <input type="file" accept="application/pdf,.pdf" className="sr-only" onChange={handleCvChange} />
               </label>
             )}

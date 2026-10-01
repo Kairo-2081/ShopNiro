@@ -3,6 +3,7 @@ import L from 'leaflet';
 import { MapContainer, Marker, TileLayer, useMapEvents } from 'react-leaflet';
 import { Address, Rider, RiderDelivery } from '../../types';
 import { api } from '../../lib/api';
+import { RiderDetailsModal } from './RiderDetailsModal';
 import { Banknote, CheckCircle2, Clock3, MapPin, RefreshCw, Star, Truck, Wallet } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 
@@ -39,6 +40,7 @@ export const RiderDashboard: React.FC<RiderDashboardProps> = ({ rider }) => {
   const [payoutMethod, setPayoutMethod] = React.useState('bkash');
   const [payoutAccount, setPayoutAccount] = React.useState('');
   const [withdrawing, setWithdrawing] = React.useState(false);
+  const [showDetails, setShowDetails] = React.useState(false);
 
   const refresh = React.useCallback(async () => {
     if (profile.Status !== 'approved' || !location) return;
@@ -128,14 +130,20 @@ export const RiderDashboard: React.FC<RiderDashboardProps> = ({ rider }) => {
   const timelyPercent = profile.Total_Deliveries ? Math.round((profile.Timely_Deliveries / profile.Total_Deliveries) * 100) : 100;
 
   if (profile.Status !== 'approved') {
-    return <div className="mx-auto max-w-xl rounded-xl border border-amber-300 bg-amber-50 p-6 text-center dark:border-amber-900 dark:bg-amber-950/30"><h1 className="text-lg font-bold text-slate-900 dark:text-white">Rider application under review</h1><p className="mt-2 text-sm text-slate-600 dark:text-zinc-300">Your account is signed in, but delivery operations will appear after administrator approval.</p></div>;
+    return <>
+      <div className="mx-auto max-w-xl rounded-xl border border-amber-300 bg-amber-50 p-6 text-center dark:border-amber-900 dark:bg-amber-950/30"><h1 className="text-lg font-bold text-slate-900 dark:text-white">Rider application under review</h1><p className="mt-2 text-sm text-slate-600 dark:text-zinc-300">Your account is signed in, but delivery operations will appear after administrator approval.</p><button type="button" onClick={() => setShowDetails(true)} className="mt-4 rounded-lg bg-emerald-700 px-4 py-2 text-sm font-bold text-white">My details</button></div>
+      <RiderDetailsModal isOpen={showDetails} rider={profile} onClose={() => setShowDetails(false)} onSaved={setProfile} />
+    </>;
   }
 
   return (
     <div className="space-y-6 pb-12">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div><p className="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">Rider operations</p><h1 className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">Good day, {profile.Name}</h1><p className="mt-1 text-sm text-slate-600 dark:text-zinc-400">Your location is used to sort nearby ShopNiro deliveries.</p></div>
-        <button type="button" onClick={() => void refresh()} disabled={loading || !location} className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-zinc-700 dark:bg-[#12161D] dark:text-zinc-200"><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />Refresh jobs</button>
+        <div className="flex gap-2">
+          <button type="button" onClick={() => setShowDetails(true)} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:bg-[#12161D] dark:text-zinc-200">My details</button>
+          <button type="button" onClick={() => void refresh()} disabled={loading || !location} className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-zinc-700 dark:bg-[#12161D] dark:text-zinc-200"><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />Refresh jobs</button>
+        </div>
       </header>
 
       {error && <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300">{error}</p>}
@@ -185,7 +193,7 @@ export const RiderDashboard: React.FC<RiderDashboardProps> = ({ rider }) => {
           { label: 'Successful deliveries', value: profile.Total_Deliveries, icon: Truck },
           { label: 'Timely delivery rate', value: `${timelyPercent}%`, icon: Clock3 },
           { label: 'Customer rating', value: profile.Average_Rating ? `${profile.Average_Rating.toFixed(1)}/5` : 'New', icon: Star },
-          { label: 'Performance points', value: `${profile.Performance_Points}/100`, icon: Star },
+          { label: "This month's points", value: `${profile.Performance_Points}/100`, icon: Star },
           { label: 'Wallet balance', value: `৳${wallet?.balance.toLocaleString() || '0'}`, icon: Wallet },
         ].map(({ label, value, icon: Icon }) => <div key={label} className="rounded-xl border border-slate-200 bg-white p-4 dark:border-zinc-800 dark:bg-[#12161D]"><Icon className="mb-3 h-4 w-4 text-emerald-700 dark:text-emerald-400" /><p className="text-xs text-slate-500 dark:text-zinc-400">{label}</p><p className="mt-1 text-xl font-bold text-slate-900 dark:text-white">{value}</p></div>)}
       </section>
@@ -206,7 +214,8 @@ export const RiderDashboard: React.FC<RiderDashboardProps> = ({ rider }) => {
           <div className="mt-3 max-h-56 space-y-2 overflow-y-auto">{wallet?.entries.map((entry) => <div key={entry.id} className="flex justify-between gap-3 border-b border-slate-100 py-2 text-xs dark:border-zinc-800"><span className="text-slate-600 dark:text-zinc-300">{entry.description || entry.entry_type}</span><span className="font-bold text-slate-900 dark:text-white">৳{Number(entry.amount).toLocaleString()}</span></div>)}{wallet?.withdrawals.map((entry) => <div key={entry.id} className="flex justify-between gap-3 border-b border-slate-100 py-2 text-xs dark:border-zinc-800"><span className="text-slate-600 dark:text-zinc-300">Withdrawal · {entry.status}</span><span className="font-bold text-slate-900 dark:text-white">-৳{Number(entry.amount).toLocaleString()}</span></div>)}{!wallet?.entries.length && !wallet?.withdrawals.length && <p className="py-4 text-xs text-slate-500">No wallet entries yet.</p>}</div>
         </div>
       </section>
-      <p className="text-xs text-slate-500 dark:text-zinc-500">COD collection is tracked separately from withdrawable salary. {profile.Late_Deliveries} late deliveries recorded.</p>
+      <p className="text-xs text-slate-500 dark:text-zinc-500">COD is recorded as a salary debit and credited to the seller ledger. {profile.Late_Deliveries} late deliveries recorded.</p>
+      <RiderDetailsModal isOpen={showDetails} rider={profile} onClose={() => setShowDetails(false)} onSaved={setProfile} />
       {loading && <span className="sr-only" role="status">Refreshing rider dashboard</span>}
       <CheckCircle2 className="sr-only" aria-hidden="true" />
     </div>

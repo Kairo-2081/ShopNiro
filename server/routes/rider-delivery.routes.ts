@@ -271,7 +271,7 @@ router.post('/deliveries/:id/complete', requireAuth, requireRole(['customer']), 
     await client.query(`
       UPDATE rider_monthly_scores SET performance_points = $3, total_deliveries = $4,
         timely_deliveries = $5, late_deliveries = $6, salary_amount = $7,
-        salary_available_at = ($2::date + INTERVAL '1 month 30 days' + CASE WHEN $3 < 60 THEN INTERVAL '7 days' ELSE INTERVAL '0 days' END)
+        salary_available_at = ($2::date + INTERVAL '1 month 29 days' + CASE WHEN $3 < 60 THEN INTERVAL '7 days' ELSE INTERVAL '0 days' END)
       WHERE rider_id = $1 AND month_start = $2::date
     `, [riderId, monthStart, points, totalDeliveries, timelyDeliveries, lateCount, salary]);
     await client.query(`
@@ -408,7 +408,7 @@ router.post('/customer-deliveries/:id/review', requireAuth, requireRole(['custom
         await client.query(`
           UPDATE rider_monthly_scores SET late_deliveries = $3, timely_deliveries = $4,
             performance_points = $5, salary_amount = $6,
-            salary_available_at = ($2::date + INTERVAL '1 month 30 days' + CASE WHEN $5 < 60 THEN INTERVAL '7 days' ELSE INTERVAL '0 days' END)
+            salary_available_at = ($2::date + INTERVAL '1 month 29 days' + CASE WHEN $5 < 60 THEN INTERVAL '7 days' ELSE INTERVAL '0 days' END)
           WHERE rider_id = $1 AND month_start = $2::date
         `, [delivery.rider_id, monthKey, Math.max(0, newLateCount), Math.max(0, timelyCount), points, salary]);
         await client.query(`
