@@ -12,6 +12,7 @@ import {
   SellerStatus,
   ProductStatus,
   AppTab,
+  Rider,
 } from './types';
 import { api, db } from './lib/api';
 import { shopNiroLogo } from './lib/branding';
@@ -37,6 +38,8 @@ import { GeminiChatbot } from './components/chat/GeminiChatbot';
 import { ChatFloatingTrigger } from './components/chat/ChatFloatingTrigger';
 import { LiveProductTrackingMap } from './components/tracking/LiveProductTrackingMap';
 import { MarketplaceTrendsTopCharts } from './components/storefront/MarketplaceTrendsTopCharts';
+import { RiderSignupModal } from './components/rider/RiderSignupModal';
+import { RiderDashboard } from './components/rider/RiderDashboard';
 import { LayoutGrid, Radio } from 'lucide-react';
 
 const scrollViewportToTop = () => {
@@ -65,6 +68,7 @@ export default function App() {
   const [selectedCustomer, setSelectedCustomer] = React.useState<Customer | null>(null);
   const [selectedSeller, setSelectedSeller] = React.useState<Seller | null>(null);
   const [selectedAdmin, setSelectedAdmin] = React.useState<Admin | null>(null);
+  const [selectedRider, setSelectedRider] = React.useState<Rider | null>(null);
 
   // Theme State ('dark' | 'light')
   const [theme, setTheme] = React.useState<'dark' | 'light'>(() => {
@@ -106,6 +110,7 @@ export default function App() {
   const [isCustomerRegistrationOpen, setIsCustomerRegistrationOpen] = React.useState(false);
   const [isSellerRegistrationOpen, setIsSellerRegistrationOpen] = React.useState(false);
   const [isAdminRegistrationOpen, setIsAdminRegistrationOpen] = React.useState(false);
+  const [isRiderSignupOpen, setIsRiderSignupOpen] = React.useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = React.useState(false);
   const [isAdminSecurityModalOpen, setIsAdminSecurityModalOpen] = React.useState(false);
   const [authNotice, setAuthNotice] = React.useState<string | null>(null);
@@ -132,6 +137,12 @@ export default function App() {
           setSelectedAdmin(auth.entity as Admin);
           setSelectedCustomer(null);
           setSelectedSeller(null);
+        } else if (auth.role === 'rider') {
+          setSelectedRider(auth.entity as Rider);
+          setSelectedCustomer(null);
+          setSelectedSeller(null);
+          setSelectedAdmin(null);
+          setActiveTab('rider-dashboard');
         }
         setAuthNotice(null);
         return true;
@@ -141,6 +152,7 @@ export default function App() {
         setSelectedCustomer(null);
         setSelectedSeller(null);
         setSelectedAdmin(null);
+        setSelectedRider(null);
         if (targetTab !== 'storefront') {
           const tabLabel = targetTab.replace('-', ' ');
           setAuthNotice(`Authentication Required: You must be authenticated before processing HTTP requests on the ${tabLabel} page.`);
@@ -169,6 +181,7 @@ export default function App() {
       setSelectedCustomer(null);
       setSelectedSeller(null);
       setSelectedAdmin(null);
+      setSelectedRider(null);
       setAuthNotice('Your session has expired or is invalid. Please sign in again.');
       setIsLoginModalOpen(true);
     };
@@ -221,7 +234,7 @@ export default function App() {
         setIsLoggedIn(true);
         setCurrentRole(auth.role);
         setViewMode('app');
-        setActiveTab(auth.role === 'admin' ? 'admin-dashboard' : auth.role === 'seller' ? 'seller-dashboard' : 'storefront');
+        setActiveTab(auth.role === 'admin' ? 'admin-dashboard' : auth.role === 'seller' ? 'seller-dashboard' : auth.role === 'rider' ? 'rider-dashboard' : 'storefront');
 
         if (auth.role === 'admin') {
           setSelectedAdmin(auth.entity as Admin);
@@ -257,6 +270,8 @@ export default function App() {
           } catch (err) {
             console.error('Error fetching seller orders:', err);
           }
+        } else if (auth.role === 'rider') {
+          setSelectedRider(auth.entity as Rider);
         }
       } else {
         setIsLoggedIn(false);
@@ -338,6 +353,12 @@ export default function App() {
       } catch (err) {
         console.error('Error loading admin data on login:', err);
       }
+    } else if (role === 'rider') {
+      setSelectedRider(entity as Rider);
+      setSelectedCustomer(null);
+      setSelectedSeller(null);
+      setSelectedAdmin(null);
+      setActiveTab('rider-dashboard');
     }
 
     setViewMode('app');
@@ -351,6 +372,7 @@ export default function App() {
     setSelectedCustomer(null);
     setSelectedSeller(null);
     setSelectedAdmin(null);
+    setSelectedRider(null);
     setCurrentRole('customer');
     setActiveTab('storefront');
     setCart([]);
@@ -530,7 +552,9 @@ export default function App() {
       ? selectedCustomer
       : currentRole === 'seller'
       ? selectedSeller
-      : selectedAdmin;
+      : currentRole === 'admin'
+      ? selectedAdmin
+      : selectedRider;
 
   const marketplaceStats: MarketplaceStat[] = [
     {
@@ -575,6 +599,7 @@ export default function App() {
           }}
           onOpenCustomerSignup={() => setIsCustomerRegistrationOpen(true)}
           onOpenSellerSignup={() => setIsSellerRegistrationOpen(true)}
+          onOpenRiderSignup={() => setIsRiderSignupOpen(true)}
           onOpenAdminSignup={() => setIsAdminRegistrationOpen(true)}
           theme={theme}
           onToggleTheme={toggleTheme}
@@ -599,6 +624,13 @@ export default function App() {
           onClose={() => setIsAdminRegistrationOpen(false)}
           onRegisterAdmin={handleRegisterAdmin}
           onSuccessRegistered={handleAccountCreated}
+        />
+
+        <RiderSignupModal
+          isOpen={isRiderSignupOpen}
+          onClose={() => setIsRiderSignupOpen(false)}
+          onOpenLogin={() => setIsLoginModalOpen(true)}
+          onSubmitted={(message) => { setAuthNotice(message); setIsLoginModalOpen(true); }}
         />
 
         <LoginModal
@@ -636,6 +668,7 @@ export default function App() {
         onOpenCustomerSignup={() => setIsCustomerRegistrationOpen(true)}
         onOpenSellerSignup={() => setIsSellerRegistrationOpen(true)}
         onOpenAdminSignup={() => setIsAdminRegistrationOpen(true)}
+        onOpenRiderSignup={() => setIsRiderSignupOpen(true)}
         onOpenLogin={() => setIsLoginModalOpen(true)}
         onLogout={handleLogout}
       />
@@ -714,7 +747,7 @@ export default function App() {
               allProducts={products}
               onSelectProduct={(p) => setSelectedProductForDetail(p)}
               onAddToCart={handleAddToCart}
-              onUpdateOrderStatus={handleUpdateOrderStatus}
+              onRefreshOrders={async () => setOrders(await api.getOrders({ customerId: selectedCustomer.Customer_ID }))}
             />
           ) : (
             <AuthenticationGuard
@@ -848,6 +881,22 @@ export default function App() {
               requiredRole="Admin"
               onOpenLogin={() => {
                 setAuthNotice('Platform Administrator credentials required to access system governance and moderation.');
+                setIsLoginModalOpen(true);
+              }}
+              onBackToStorefront={() => setActiveTab('storefront')}
+            />
+          )
+        )}
+
+        {activeTab === 'rider-dashboard' && (
+          isLoggedIn && selectedRider ? (
+            <RiderDashboard rider={selectedRider} />
+          ) : (
+            <AuthenticationGuard
+              pageName="Delivery Rider Portal"
+              requiredRole="Approved Delivery Rider"
+              onOpenLogin={() => {
+                setAuthNotice('Only approved rider applicants may sign in to the delivery portal.');
                 setIsLoginModalOpen(true);
               }}
               onBackToStorefront={() => setActiveTab('storefront')}
@@ -994,6 +1043,13 @@ export default function App() {
         onClose={() => setIsAdminRegistrationOpen(false)}
         onRegisterAdmin={handleRegisterAdmin}
         onSuccessRegistered={handleAccountCreated}
+      />
+
+      <RiderSignupModal
+        isOpen={isRiderSignupOpen}
+        onClose={() => setIsRiderSignupOpen(false)}
+        onOpenLogin={() => setIsLoginModalOpen(true)}
+        onSubmitted={(message) => { setAuthNotice(message); setIsLoginModalOpen(true); }}
       />
 
       {/* Login Modal with Username & Password */}

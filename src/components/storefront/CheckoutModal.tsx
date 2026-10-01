@@ -71,7 +71,6 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [isSSLModalOpen, setIsSSLModalOpen] = React.useState(false);
   const [isRedirectingToBkash, setIsRedirectingToBkash] = React.useState(false);
   const [isBkashGatewayOpen, setIsBkashGatewayOpen] = React.useState(false);
-  const [pendingBkashTranId, setPendingBkashTranId] = React.useState<string>('');
   const [additionalNotes, setAdditionalNotes] = React.useState('');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [createdOrder, setCreatedOrder] = React.useState<Order | null>(null);
@@ -131,8 +130,6 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       });
     } else if (paymentMethod === 'bkash') {
       // Direct bKash Gateway Redirection
-      const generatedTranId = `SSLCZ-BKASH-${Date.now()}`;
-      setPendingBkashTranId(generatedTranId);
       setIsRedirectingToBkash(true);
       setTimeout(() => {
         setIsRedirectingToBkash(false);
@@ -679,7 +676,6 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         orderTotal={grandTotal}
         customer={currentCustomer}
         shippingAddress={shippingAddress}
-        tranId={pendingBkashTranId}
         onSuccess={handleBkashSuccess}
       />
 

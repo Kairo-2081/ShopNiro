@@ -1,5 +1,5 @@
 import React from 'react';
-import { UserRole, Customer, Seller, Admin } from '../types';
+import { UserRole, Customer, Seller, Admin, Rider } from '../types';
 import {
   Users,
   Store,
@@ -10,15 +10,17 @@ import {
   Database,
   CheckCircle2,
   Lock,
+  Truck,
 } from 'lucide-react';
 
 interface RoleSwitcherProps {
   isLoggedIn: boolean;
   currentRole: UserRole;
-  currentUserEntity: Customer | Seller | Admin | null;
+  currentUserEntity: Customer | Seller | Admin | Rider | null;
   onOpenCustomerSignup?: () => void;
   onOpenSellerSignup: () => void;
   onOpenAdminSignup?: () => void;
+  onOpenRiderSignup?: () => void;
   onOpenLogin: () => void;
   onLogout: () => void;
 }
@@ -30,6 +32,7 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
   onOpenCustomerSignup,
   onOpenSellerSignup,
   onOpenAdminSignup,
+  onOpenRiderSignup,
   onOpenLogin,
   onLogout,
 }) => {
@@ -40,6 +43,8 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
         ? 'bg-[#292821]/90 text-[#e7e5d6] border-[#89714f]/60'
         : currentRole === 'seller'
         ? 'bg-[#27281e]/90 text-[#e2e2d2] border-[#7d7e5e]/70'
+        : currentRole === 'rider'
+          ? 'bg-emerald-950/90 text-emerald-100 border-emerald-700/70'
         : 'bg-[#292821]/90 text-[#e7e5d6] border-[#a99b72]/60';
 
     const roleName =
@@ -47,6 +52,8 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
         ? 'Platform Admin'
         : currentRole === 'seller'
         ? `Merchant (${(currentUserEntity as Seller).Status?.toUpperCase() || 'SELLER'})`
+        : currentRole === 'rider'
+        ? `Delivery Rider (${(currentUserEntity as Rider).Status?.toUpperCase() || 'RIDER'})`
         : 'Verified Customer';
 
     return (
@@ -131,6 +138,16 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
             >
               <Store className="w-3.5 h-3.5" />
               <span>Become a Seller</span>
+            </button>
+          )}
+
+          {onOpenRiderSignup && (
+            <button
+              onClick={onOpenRiderSignup}
+              className="flex items-center gap-1 px-3 py-1.5 bg-emerald-700/10 hover:bg-emerald-700 hover:text-white text-emerald-800 dark:text-emerald-300 border border-emerald-700/20 rounded-full transition-colors cursor-pointer font-medium"
+            >
+              <Truck className="w-3.5 h-3.5" />
+              <span>Rider portal</span>
             </button>
           )}
         </div>

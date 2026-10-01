@@ -164,6 +164,31 @@ router.post('/init', async (req, res) => {
   }
 });
 
+router.post('/bkash/init', async (req, res) => {
+  try {
+    const { customerId, amount, currency = 'BDT', customerPhone = '' } = req.body;
+    const finalAmountBDT = Number(amount);
+    if (!customerId || !Number.isFinite(finalAmountBDT) || finalAmountBDT <= 0) {
+      return res.status(400).json({ error: 'Customer and a valid payment amount are required.' });
+    }
+    if (String(currency).toUpperCase() !== 'BDT') {
+      return res.status(400).json({ error: 'Only BDT payments are supported.' });
+    }
+
+    const tran_id = `SSLCZ-BKASH-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const paymentId = `PAY-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    await query(
+      `SELECT * FROM gocart_payment_create($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [paymentId, null, customerId, finalAmountBDT, 'BDT', 'sslcommerz', 'bkash', tran_id, String(customerPhone)]
+    );
+
+    return res.status(201).json({ success: true, tran_id, paymentId, amountBDT: finalAmountBDT });
+  } catch (error: any) {
+    console.error('Error recording bKash payment:', error);
+    return res.status(500).json({ error: error.message || 'Failed to initialize bKash payment' });
+  }
+});
+
 /**
  * POST /api/payment/sslcommerz/validate
  * Validates SSLCommerz payment and updates via schema gocart_payment_update
@@ -190,11 +215,14 @@ router.post('/sslcommerz/validate', async (req, res) => {
     const cardBrand = card_brand || validation.card_brand || (payment_method === 'bkash' ? 'bKash' : 'SSLCommerz');
     const cardIssuer = validation.card_issuer || (payment_method === 'bkash' ? 'bKash MFS Limited' : 'SSL Wireless');
 
-    // Update payment record in database via schema routine gocart_payment_update
-    await query(
+    // Update the persisted payment so an unknown transaction cannot be marked successful.
+    const paymentUpdate = await query(
       `SELECT * FROM gocart_payment_update($1, 'VALIDATED', $2, $3, $4, $5, $6)`,
       [tran_id, bankTranId, finalValId, cardType, cardBrand, cardIssuer]
     );
+      if (paymentUpdate.rows.length === 0) {
+        return res.status(404).json({ error: 'Payment record not found. Restart checkout and try again.' });
+      }
 
     // If order exists, update status via schema gocart_order_status_update
     if (order_id) {

@@ -1,6 +1,6 @@
 import React from 'react';
-import { Customer, Order, Product } from '../../types';
-import { formatCurrency, formatBDT, formatDate } from '../../lib/api';
+import { Customer, Order, Product, RiderDelivery } from '../../types';
+import { api, formatCurrency, formatBDT, formatDate } from '../../lib/api';
 import { PaymentReceiptModal } from '../payment/PaymentReceiptModal';
 import { LiveProductTrackingMap } from '../tracking/LiveProductTrackingMap';
 import { MarketplaceTrendsTopCharts } from '../storefront/MarketplaceTrendsTopCharts';
@@ -27,7 +27,7 @@ interface CustomerOrdersProps {
   allProducts?: Product[];
   onSelectProduct?: (product: Product) => void;
   onAddToCart?: (product: Product, quantity?: number) => void;
-  onUpdateOrderStatus: (orderId: string, status: string) => Promise<void>;
+  onRefreshOrders?: () => Promise<void>;
 }
 
 export const CustomerOrders: React.FC<CustomerOrdersProps> = ({
@@ -36,12 +36,64 @@ export const CustomerOrders: React.FC<CustomerOrdersProps> = ({
   allProducts = [],
   onSelectProduct,
   onAddToCart,
-  onUpdateOrderStatus,
+  onRefreshOrders,
 }) => {
   const [searchTracking, setSearchTracking] = React.useState('');
   const [receiptOrder, setReceiptOrder] = React.useState<Order | null>(null);
   const [trackingOrderForMap, setTrackingOrderForMap] = React.useState<Order | null>(null);
   const [showTopMap, setShowTopMap] = React.useState<boolean>(true);
+  const [riderDeliveries, setRiderDeliveries] = React.useState<Array<RiderDelivery & { Rider_Name?: string; Rider_Number?: string }>>([]);
+  const [reviewRatings, setReviewRatings] = React.useState<Record<string, number>>({});
+  const [reviewTexts, setReviewTexts] = React.useState<Record<string, string>>({});
+  const [deliveryTimely, setDeliveryTimely] = React.useState<Record<string, boolean>>({});
+  const [reviewSubmittingId, setReviewSubmittingId] = React.useState<string | null>(null);
+  const [deliveryNotice, setDeliveryNotice] = React.useState<string | null>(null);
+  const [deliveryCodes, setDeliveryCodes] = React.useState<Record<string, string>>({});
+  const [confirmingDeliveryId, setConfirmingDeliveryId] = React.useState<string | null>(null);
+
+  const loadRiderDeliveries = React.useCallback(async () => {
+    try {
+      setRiderDeliveries(await api.getCustomerRiderDeliveries());
+    } catch (error: any) {
+      setDeliveryNotice(error.message || 'Could not load rider shipment details.');
+    }
+  }, []);
+
+  React.useEffect(() => { void loadRiderDeliveries(); }, [loadRiderDeliveries, currentCustomer.Customer_ID]);
+
+  const submitRiderReview = async (delivery: RiderDelivery & { Review_ID?: string }) => {
+    setReviewSubmittingId(delivery.Delivery_ID);
+    setDeliveryNotice(null);
+    try {
+      await api.reviewRiderDelivery(
+        delivery.Delivery_ID,
+        reviewRatings[delivery.Delivery_ID] || 5,
+        reviewTexts[delivery.Delivery_ID] || '',
+        deliveryTimely[delivery.Delivery_ID] ?? true
+      );
+      setDeliveryNotice('Thank you. Your rider review has been recorded.');
+      await loadRiderDeliveries();
+    } catch (error: any) {
+      setDeliveryNotice(error.message || 'Could not submit the rider review.');
+    } finally {
+      setReviewSubmittingId(null);
+    }
+  };
+
+  const confirmRiderDelivery = async (delivery: RiderDelivery) => {
+    setConfirmingDeliveryId(delivery.Delivery_ID);
+    setDeliveryNotice(null);
+    try {
+      await api.confirmCustomerDelivery(delivery.Delivery_ID, deliveryCodes[delivery.Delivery_ID] || '');
+      setDeliveryNotice('Delivery confirmed. You can now leave a rider review.');
+      setDeliveryCodes({ ...deliveryCodes, [delivery.Delivery_ID]: '' });
+      await Promise.all([loadRiderDeliveries(), onRefreshOrders?.()]);
+    } catch (error: any) {
+      setDeliveryNotice(error.message || 'Could not confirm delivery. Check the code from your rider.');
+    } finally {
+      setConfirmingDeliveryId(null);
+    }
+  };
 
   const customerOrders = orders.filter((o) => o.Customer_ID === currentCustomer.Customer_ID);
   const trackableOrders = customerOrders.filter((o) => o.Status === 'shipped' || o.Status === 'delivered');
@@ -187,12 +239,56 @@ export const CustomerOrders: React.FC<CustomerOrdersProps> = ({
                 order={trackableOrders[0]}
                 orders={trackableOrders}
                 onSelectOrder={(ord) => setTrackingOrderForMap(ord)}
-                onDeliveryComplete={(orderId) => onUpdateOrderStatus(orderId, 'delivered')}
               />
             )}
           </>
         )}
       </div>
+
+      {riderDeliveries.length > 0 && (
+        <section className="space-y-3" aria-labelledby="rider-shipments-title">
+          <div>
+            <h2 id="rider-shipments-title" className="text-lg font-bold text-slate-900 dark:text-white">Shop shipments and delivery confirmation</h2>
+            <p className="text-xs text-slate-500 dark:text-zinc-400">Each shop shipment is tracked and confirmed separately.</p>
+          </div>
+          {deliveryNotice && <p role="status" className="rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-700 dark:border-zinc-700 dark:bg-[#12161D] dark:text-zinc-200">{deliveryNotice}</p>}
+          {riderDeliveries.map((delivery) => (
+            <article key={delivery.Delivery_ID} className="grid gap-4 rounded-xl border border-slate-200 bg-white p-4 dark:border-zinc-800 dark:bg-[#12161D] sm:grid-cols-[1fr_auto]">
+              <div>
+                <p className="font-bold text-slate-900 dark:text-white">Order {delivery.Order_ID}</p>
+                <p className="mt-1 text-xs font-semibold text-slate-700 dark:text-zinc-300">Shipment from {delivery.Seller_Name || 'ShopNiro merchant'}</p>
+                <p className="mt-1 text-xs text-slate-600 dark:text-zinc-400">Rider: {delivery.Rider_Name || 'Assigning a nearby rider'}{delivery.Rider_Number ? ` · ${delivery.Rider_Number}` : ''}</p>
+                <p className="mt-1 text-xs text-slate-500 dark:text-zinc-500">Delivery status: {delivery.Status.replace('_', ' ')}</p>
+                <ul className="mt-2 text-xs text-slate-600 dark:text-zinc-400">{delivery.Items.map((item) => <li key={item.Product_ID}>{item.Quantity} × {item.Name}</li>)}</ul>
+                {delivery.COD_Amount > 0 && <p className="mt-2 text-xs font-bold text-amber-800 dark:text-amber-300">Cash due on delivery: {formatBDT(delivery.COD_Amount)}</p>}
+              </div>
+              {delivery.Status === 'on_the_way' && (
+                <form onSubmit={(event) => { event.preventDefault(); void confirmRiderDelivery(delivery); }} className="space-y-2 rounded-lg border border-emerald-300 bg-emerald-50 p-3 dark:border-emerald-900 dark:bg-emerald-950/30">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">Enter the code your rider gave you after receiving the parcel<input value={deliveryCodes[delivery.Delivery_ID] || ''} onChange={(event) => setDeliveryCodes({ ...deliveryCodes, [delivery.Delivery_ID]: event.target.value.replace(/\D/g, '').slice(0, 6) })} inputMode="numeric" autoComplete="one-time-code" placeholder="6-digit code" className="mt-1 w-full rounded-lg border border-emerald-300 bg-white px-3 py-2 text-center font-mono text-lg tracking-[0.3em] dark:border-emerald-900 dark:bg-[#181F2A]" /></label>
+                  {delivery.COD_Amount > 0 && <p className="text-xs text-amber-800 dark:text-amber-300">Cash collected: {delivery.COD_Collected ? 'confirmed by rider' : 'waiting for rider to record payment'}.</p>}
+                  <button type="submit" disabled={confirmingDeliveryId === delivery.Delivery_ID || (deliveryCodes[delivery.Delivery_ID] || '').length !== 6} className="w-full rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">{confirmingDeliveryId === delivery.Delivery_ID ? 'Confirming...' : 'Confirm received'}</button>
+                </form>
+              )}
+              {delivery.Status === 'delivered' && !delivery.Review_ID && (
+                <form onSubmit={(event) => { event.preventDefault(); void submitRiderReview(delivery); }} className="space-y-3 border-t border-slate-200 pt-4 sm:col-span-2 dark:border-zinc-800">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">Rate this delivery</h3>
+                  <div className="grid gap-3 sm:grid-cols-[150px_1fr_auto]">
+                    <label className="text-xs font-semibold text-slate-600 dark:text-zinc-300">Rating
+                      <select value={reviewRatings[delivery.Delivery_ID] || 5} onChange={(event) => setReviewRatings({ ...reviewRatings, [delivery.Delivery_ID]: Number(event.target.value) })} className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-[#181F2A]"><option value={5}>5 · Excellent</option><option value={4}>4 · Good</option><option value={3}>3 · Okay</option><option value={2}>2 · Poor</option><option value={1}>1 · Bad</option></select>
+                    </label>
+                    <label className="text-xs font-semibold text-slate-600 dark:text-zinc-300">Delivery timing
+                      <select value={String(deliveryTimely[delivery.Delivery_ID] ?? true)} onChange={(event) => setDeliveryTimely({ ...deliveryTimely, [delivery.Delivery_ID]: event.target.value === 'true' })} className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-[#181F2A]"><option value="true">Timely</option><option value="false">Late</option></select>
+                    </label>
+                    <button type="submit" disabled={reviewSubmittingId === delivery.Delivery_ID} className="self-end rounded-lg bg-emerald-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">{reviewSubmittingId === delivery.Delivery_ID ? 'Saving...' : 'Submit review'}</button>
+                    <textarea value={reviewTexts[delivery.Delivery_ID] || ''} onChange={(event) => setReviewTexts({ ...reviewTexts, [delivery.Delivery_ID]: event.target.value })} maxLength={2000} rows={2} placeholder="Optional comment about the delivery" className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-[#181F2A] sm:col-span-3" />
+                  </div>
+                </form>
+              )}
+              {delivery.Review_ID && delivery.Status === 'delivered' && <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 sm:col-span-2">Review submitted. Thank you.</p>}
+            </article>
+          ))}
+        </section>
+      )}
 
       {/* Orders List */}
       {filteredOrders.length === 0 ? (
@@ -370,7 +466,6 @@ export const CustomerOrders: React.FC<CustomerOrdersProps> = ({
               order={trackingOrderForMap}
               orders={trackableOrders}
               onSelectOrder={(ord) => setTrackingOrderForMap(ord)}
-              onDeliveryComplete={(orderId) => onUpdateOrderStatus(orderId, 'delivered')}
               onClose={() => setTrackingOrderForMap(null)}
               isModal={true}
             />

@@ -4,6 +4,8 @@ export interface Address {
   City: string;
   Postal_Code: string;
   Additional_Info?: string;
+  Latitude?: number;
+  Longitude?: number;
 }
 
 export interface Customer {
@@ -127,6 +129,79 @@ export interface Order {
   Billing_Address: Address;
   Order_Placed_At: string;
   Additional_Info?: string;
+  Seller_Fulfillment_ID?: string;
+  Fulfillments?: OrderFulfillment[];
+}
+
+export interface OrderFulfillment {
+  Fulfillment_ID: string;
+  Seller_ID: string;
+  Seller_Name: string;
+  Status: 'processing' | 'shipped' | 'delivered' | 'cancelled';
+  Items: OrderItem[];
+  Rider_ID?: string;
+  Rider_Name?: string;
+  Delivery_Status?: RiderDelivery['Status'];
+}
+
+export type RiderStatus = 'pending' | 'approved' | 'rejected' | 'suspended';
+
+export interface Rider {
+  Rider_ID: string;
+  Username: string;
+  Name: string;
+  Email: string;
+  Number: string;
+  Present_Address: Address;
+  Permanent_Address: Address;
+  Experience: string[];
+  Previous_Jobs: string[];
+  Education: string[];
+  Status: RiderStatus;
+  Has_CV: boolean;
+  CV_File_Name?: string;
+  Current_Latitude?: number;
+  Current_Longitude?: number;
+  Total_Deliveries: number;
+  Timely_Deliveries: number;
+  Late_Deliveries: number;
+  Performance_Points: number;
+  Average_Rating?: number;
+  Wallet_Balance: number;
+  Created_At: string;
+}
+
+export interface RiderDelivery {
+  Delivery_ID: string;
+  Order_ID: string;
+  Seller_Fulfillment_ID: string;
+  Seller_ID: string;
+  Seller_Name?: string;
+  Rider_ID?: string;
+  Status: 'pending' | 'accepted' | 'on_the_way' | 'delivered' | 'cancelled';
+  Confirmation_Code?: string;
+  COD_Amount: number;
+  COD_Collected: boolean;
+  Distance_KM?: number;
+  Items: OrderItem[];
+  Shipping_Address: Address;
+  Payment_Method: PaymentMethod | string;
+  Customer_Name: string;
+  Customer_Number: string;
+  Rider_Name?: string;
+  Rider_Number?: string;
+  Review_ID?: string;
+}
+
+export interface RiderReview {
+  Review_ID: string;
+  Delivery_ID: string;
+  Rider_ID: string;
+  Customer_ID: string;
+  Rating: number;
+  Review_Text: string;
+  Was_Timely: boolean;
+  Created_At: string;
 }
 
 export interface Review {
@@ -146,9 +221,10 @@ export type AppTab =
   | 'profile'
   | 'seller-dashboard'
   | 'admin-dashboard'
+  | 'rider-dashboard'
   | 'live-tracking';
 
-export type UserRole = 'customer' | 'seller' | 'admin';
+export type UserRole = 'customer' | 'seller' | 'admin' | 'rider';
 
 export interface CurrentUser {
   role: UserRole;

@@ -134,6 +134,8 @@ export function mapAddress(row: any): Address {
     City: row.address_city || '',
     Postal_Code: row.address_postal_code || '',
     Additional_Info: row.address_additional_info || '',
+    Latitude: row.address_latitude === null || row.address_latitude === undefined ? undefined : Number(row.address_latitude),
+    Longitude: row.address_longitude === null || row.address_longitude === undefined ? undefined : Number(row.address_longitude),
   };
 }
 

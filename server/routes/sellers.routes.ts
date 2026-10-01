@@ -75,6 +75,10 @@ router.post('/', async (req, res) => {
       `SELECT * FROM gocart_seller_create($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
       [id, username, Name, cleanEmail, hashedPassword, phone, logoUrl, desc, houseName, street, city, postalCode, addInfo]
     );
+    await query(
+      'UPDATE sellers SET address_latitude = $2, address_longitude = $3 WHERE id = $1',
+      [id, Number.isFinite(Number(addr.Latitude)) ? Number(addr.Latitude) : null, Number.isFinite(Number(addr.Longitude)) ? Number(addr.Longitude) : null]
+    );
 
     const s = result.rows[0];
     const newSeller: Seller = {
@@ -89,6 +93,8 @@ router.post('/', async (req, res) => {
         City: city,
         Postal_Code: postalCode,
         Additional_Info: addInfo,
+        Latitude: Number.isFinite(Number(addr.Latitude)) ? Number(addr.Latitude) : undefined,
+        Longitude: Number.isFinite(Number(addr.Longitude)) ? Number(addr.Longitude) : undefined,
       },
       Logo: logoUrl,
       Description: desc,
@@ -100,6 +106,24 @@ router.post('/', async (req, res) => {
   } catch (error: any) {
     console.error('Error creating seller:', error);
     res.status(500).json({ error: error.message || 'Failed to create seller' });
+  }
+});
+
+router.get('/me/wallet', requireAuth, requireRole(['seller']), async (req: AuthRequest, res) => {
+  try {
+    const result = await query(
+      `SELECT id, entry_type, amount, reference_id, description, created_at
+      FROM seller_wallet_entries WHERE seller_id = $1 ORDER BY created_at DESC LIMIT 100`,
+      [req.user!.entityId]
+    );
+    const total = await query(
+      `SELECT COALESCE(SUM(amount), 0) AS balance FROM seller_wallet_entries WHERE seller_id = $1`,
+      [req.user!.entityId]
+    );
+    return res.json({ balance: Number(total.rows[0]?.balance) || 0, entries: result.rows });
+  } catch (error: any) {
+    console.error('Could not load seller wallet:', error);
+    return res.status(500).json({ error: 'Could not load seller COD remittances.' });
   }
 });
 

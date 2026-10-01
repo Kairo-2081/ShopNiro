@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { randomInt } from 'node:crypto';
 import { query } from '../db/index.ts';
 import { requireAuth, AuthRequest } from '../middleware/auth.ts';
 import { Order } from '../../src/types.ts';
@@ -22,15 +23,46 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
       Subtotal: Number(o.subtotal),
       Shipping_Fee: Number(o.shipping_fee),
       Status: o.status as any,
-      Payment_Status: 'paid',
-      Payment_Method: 'bkash',
-      Transaction_ID: o.tracking_id || '',
+      Payment_Status: o.payment_status || 'pending',
+      Payment_Method: o.payment_method || 'cash_on_delivery',
+      Transaction_ID: o.transaction_id || '',
       Currency: 'BDT',
       Shipping_Address: o.shipping_address_json ? (typeof o.shipping_address_json === 'string' ? JSON.parse(o.shipping_address_json) : o.shipping_address_json) : { Street: '', House_Name: '', City: '', Postal_Code: '' },
       Billing_Address: o.billing_address_json ? (typeof o.billing_address_json === 'string' ? JSON.parse(o.billing_address_json) : o.billing_address_json) : { Street: '', House_Name: '', City: '', Postal_Code: '' },
       Order_Placed_At: o.order_placed_at ? new Date(o.order_placed_at).toISOString() : new Date().toISOString(),
       Additional_Info: o.additional_info || '',
     }));
+
+    const orderIds = formatted.map((order) => order.Order_ID);
+    if (orderIds.length > 0) {
+      const fulfillmentResult = await query(
+        `SELECT sf.id, sf.order_id, sf.seller_id, s.name AS seller_name, sf.items_json, sf.status,
+          rd.rider_id, r.name AS rider_name, rd.status AS delivery_status
+        FROM seller_fulfillments sf
+        JOIN sellers s ON s.id = sf.seller_id
+        LEFT JOIN rider_deliveries rd ON rd.fulfillment_id = sf.id
+        LEFT JOIN riders r ON r.id = rd.rider_id
+        WHERE sf.order_id = ANY($1::varchar[])
+        ORDER BY sf.created_at ASC`,
+        [orderIds]
+      );
+      const fulfillmentsByOrder = new Map<string, NonNullable<Order['Fulfillments']>>();
+      for (const fulfillment of fulfillmentResult.rows) {
+        const current = fulfillmentsByOrder.get(fulfillment.order_id) || [];
+        current.push({
+          Fulfillment_ID: fulfillment.id,
+          Seller_ID: fulfillment.seller_id,
+          Seller_Name: fulfillment.seller_name,
+          Status: fulfillment.status,
+          Items: typeof fulfillment.items_json === 'string' ? JSON.parse(fulfillment.items_json) : fulfillment.items_json || [],
+          Rider_ID: fulfillment.rider_id || undefined,
+          Rider_Name: fulfillment.rider_name || undefined,
+          Delivery_Status: fulfillment.delivery_status || undefined,
+        });
+        fulfillmentsByOrder.set(fulfillment.order_id, current);
+      }
+      formatted.forEach((order) => { order.Fulfillments = fulfillmentsByOrder.get(order.Order_ID) || []; });
+    }
 
     if (customerId) {
       formatted = formatted.filter((o) => o.Customer_ID === customerId);
@@ -95,6 +127,17 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
       addInfo,
     ]);
 
+    await query(
+      'UPDATE orders SET payment_status = $2, payment_method = $3, transaction_id = $4 WHERE id = $1',
+      [id, Payment_Status, Payment_Method, Transaction_ID || null]
+    );
+    if (Transaction_ID && Payment_Method !== 'cash_on_delivery') {
+      await query(
+        'UPDATE payments SET order_id = $2 WHERE transaction_id = $1',
+        [Transaction_ID, id]
+      );
+    }
+
     const newOrder: Order = {
       Order_ID: id,
       Tracking_ID,
@@ -150,18 +193,7 @@ router.patch('/:id/status', requireAuth, async (req: AuthRequest, res) => {
     const existingOrder = accessResult.rows[0];
     let result;
     if (actor.role === 'customer') {
-      if (status !== 'delivered') {
-        return res.status(403).json({ error: 'Customers can only confirm delivery of their own shipped orders' });
-      }
-      result = await query(
-        `UPDATE orders SET status = 'delivered'
-        WHERE id = $1 AND customer_id = $2 AND status = 'shipped'
-        RETURNING *`,
-        [id, actor.entityId]
-      );
-      if (result.rows.length === 0) {
-        return res.status(409).json({ error: 'Only your shipped orders can be marked delivered' });
-      }
+      return res.status(403).json({ error: 'Delivery completion requires the confirmation code from the customer portal.' });
     } else if (actor.role === 'seller') {
       if (!existingOrder.seller_owns_order) {
         return res.status(403).json({ error: 'You can only update orders containing your products' });
@@ -172,7 +204,49 @@ router.patch('/:id/status', requireAuth, async (req: AuthRequest, res) => {
       if (['shipped', 'delivered', 'cancelled'].includes(existingOrder.status) && status !== existingOrder.status) {
         return res.status(409).json({ error: 'This order can no longer move back to an earlier status' });
       }
-      result = await query(`SELECT * FROM gocart_order_status_update($1, $2)`, [id, status]);
+      if (status === 'processing') {
+        await query(
+          `UPDATE seller_fulfillments SET status = 'processing'
+          WHERE order_id = $1 AND seller_id = $2 AND status = 'processing'`,
+          [id, actor.entityId]
+        );
+        result = await query(`SELECT * FROM gocart_orders_list() WHERE id = $1`, [id]);
+      } else {
+        const fulfillmentResult = await query(
+          `UPDATE seller_fulfillments sf
+          SET status = 'shipped', shipped_at = COALESCE(shipped_at, CURRENT_TIMESTAMP)
+          WHERE sf.order_id = $1 AND sf.seller_id = $2
+            AND (sf.status = 'processing' OR (sf.status = 'shipped' AND NOT EXISTS (
+              SELECT 1 FROM rider_deliveries rd WHERE rd.fulfillment_id = sf.id
+            )))
+          RETURNING id, seller_id, subtotal`,
+          [id, actor.entityId]
+        );
+        if (!fulfillmentResult.rows.length) {
+          return res.status(409).json({ error: 'This seller shipment is already dispatched or not ready to ship.' });
+        }
+
+        const fulfillment = fulfillmentResult.rows[0];
+        const orderFinancials = await query(
+          `SELECT subtotal, shipping_fee, payment_method FROM orders WHERE id = $1`,
+          [id]
+        );
+        const financials = orderFinancials.rows[0];
+        const fulfillmentSubtotal = Number(fulfillment.subtotal) || 0;
+        const orderSubtotal = Number(financials?.subtotal) || 0;
+        const shippingShare = orderSubtotal > 0 ? (Number(financials.shipping_fee) * fulfillmentSubtotal) / orderSubtotal : 0;
+        const codAmount = financials?.payment_method === 'cash_on_delivery' ? fulfillmentSubtotal + shippingShare : 0;
+        const deliveryId = `DLV-${fulfillment.id.slice(-24)}`;
+        const confirmationCode = String(randomInt(0, 1_000_000)).padStart(6, '0');
+        await query(
+          `INSERT INTO rider_deliveries (id, fulfillment_id, status, confirmation_code, cod_amount)
+          VALUES ($1, $2, 'pending', $3, $4)
+          ON CONFLICT (fulfillment_id) DO NOTHING`,
+          [deliveryId, fulfillment.id, confirmationCode, codAmount]
+        );
+        await query(`UPDATE orders SET status = 'shipped' WHERE id = $1 AND status NOT IN ('delivered', 'cancelled')`, [id]);
+        result = await query(`SELECT * FROM gocart_orders_list() WHERE id = $1`, [id]);
+      }
     } else if (actor.role === 'admin') {
       result = await query(`SELECT * FROM gocart_order_status_update($1, $2)`, [id, status]);
     } else {

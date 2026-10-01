@@ -1,6 +1,7 @@
 import React from 'react';
 import { Seller, Product, Order, Category, Review, SellerStatus, ProductStatus } from '../../types';
 import { formatCurrency, formatBDT, formatDate } from '../../lib/api';
+import { RiderApplicationsPanel } from './RiderApplicationsPanel';
 import {
   ShieldCheck,
   Store,
@@ -20,6 +21,7 @@ import {
   ExternalLink,
   X,
   AlertCircle,
+  Truck,
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -49,7 +51,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onDeleteCategory,
   onOpenSellerSignup,
 }) => {
-  const [adminTab, setAdminTab] = React.useState<'overview' | 'sellers' | 'categories' | 'products' | 'payments'>('overview');
+  const [adminTab, setAdminTab] = React.useState<'overview' | 'sellers' | 'riders' | 'categories' | 'products' | 'payments'>('overview');
   const [newCategoryName, setNewCategoryName] = React.useState('');
   const [editingCategoryId, setEditingCategoryId] = React.useState<string | null>(null);
   const [editingCategoryName, setEditingCategoryName] = React.useState('');
@@ -266,6 +268,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         >
           <FolderTree className="w-4 h-4" />
           <span>Category Registry ({categories.length})</span>
+        </button>
+
+        <button
+          onClick={() => setAdminTab('riders')}
+          className={`px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
+            adminTab === 'riders'
+              ? 'bg-emerald-700 text-white shadow-lg shadow-emerald-700/25'
+              : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#181F2A]'
+          }`}
+        >
+          <Truck className="w-4 h-4" />
+          <span>Rider Hiring</span>
         </button>
 
         <button
@@ -941,6 +955,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
         </div>
       )}
+
+      {adminTab === 'riders' && <RiderApplicationsPanel />}
 
       {selectedSeller && (
         <div

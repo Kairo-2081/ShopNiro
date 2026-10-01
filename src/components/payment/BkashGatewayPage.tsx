@@ -32,7 +32,6 @@ interface BkashGatewayPageProps {
   orderTotal: number;
   customer: Customer;
   shippingAddress: Address;
-  tranId?: string;
   onSuccess: (paymentData: BkashPaymentSuccessData) => void;
 }
 
@@ -42,7 +41,6 @@ export const BkashGatewayPage: React.FC<BkashGatewayPageProps> = ({
   orderTotal,
   customer,
   shippingAddress,
-  tranId = `SSLCZ-BKASH-${Date.now()}`,
   onSuccess,
 }) => {
   const [step, setStep] = useState<'number' | 'otp' | 'pin' | 'processing' | 'success'>('number');
@@ -132,12 +130,26 @@ export const BkashGatewayPage: React.FC<BkashGatewayPageProps> = ({
     setStep('processing');
 
     try {
-      // 1. Record / validate payment with SSLCommerz / bKash service
+      const initRes = await fetch('/api/payment/bkash/init', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          customerId: customer.Customer_ID,
+          amount: amountBDT,
+          currency: 'BDT',
+          customerPhone: phone,
+        }),
+      });
+      const initData = await initRes.json();
+      if (!initRes.ok || !initData.tran_id) {
+        throw new Error(initData.error || 'Could not initialize the bKash payment.');
+      }
+
       const validateRes = await fetch('/api/payment/sslcommerz/validate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          tran_id: tranId,
+          tran_id: initData.tran_id,
           val_id: `VAL-BKASH-${Date.now()}`,
           payment_method: 'bkash',
           customer_phone: phone,
@@ -146,10 +158,14 @@ export const BkashGatewayPage: React.FC<BkashGatewayPageProps> = ({
       });
 
       const validateData = await validateRes.json();
+      if (!validateRes.ok || validateData.status !== 'VALIDATED') {
+        throw new Error(validateData.error || 'The bKash payment could not be verified. Please try again.');
+      }
+
       const paymentData: BkashPaymentSuccessData = {
-        tran_id: tranId,
-        val_id: validateData.val_id || `VAL-BKASH-${Date.now()}`,
-        bank_tran_id: validateData.bank_tran_id || `BKASH-${Math.floor(10000000 + Math.random() * 90000000)}`,
+        tran_id: initData.tran_id,
+        val_id: validateData.val_id,
+        bank_tran_id: validateData.bank_tran_id,
         payment_method: 'bkash',
         amountBDT,
         customer_phone: phone,
@@ -160,18 +176,8 @@ export const BkashGatewayPage: React.FC<BkashGatewayPageProps> = ({
       setStep('success');
     } catch (err: any) {
       console.error('bKash settlement error:', err);
-      // Fallback valid transaction
-      const fallbackData: BkashPaymentSuccessData = {
-        tran_id: tranId,
-        val_id: `VAL-BKASH-${Date.now()}`,
-        bank_tran_id: `BKASH-${Math.floor(10000000 + Math.random() * 90000000)}`,
-        payment_method: 'bkash',
-        amountBDT,
-        customer_phone: phone,
-        card_brand: 'bKash MFS',
-      };
-      setVerifiedTran(fallbackData);
-      setStep('success');
+      setErrorMsg(err.message || 'The bKash payment could not be verified. Please try again.');
+      setStep('pin');
     }
   };
 

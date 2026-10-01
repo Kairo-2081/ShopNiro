@@ -42,7 +42,7 @@ function LocationMap({ onAddressSelected }: AccountLocationPickerProps) {
 
     try {
       const address = await api.reverseGeocode(coordinates.lat, coordinates.lng);
-      onAddressSelected(address);
+      onAddressSelected({ ...address, Latitude: coordinates.lat, Longitude: coordinates.lng });
       setStatus('Location selected. Review the address below.');
     } catch (error: any) {
       setMarker(null);

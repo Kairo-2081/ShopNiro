@@ -12,6 +12,9 @@ import {
   ProductStatus,
   OrderStatus,
   UserRole,
+  Rider,
+  RiderDelivery,
+  RiderStatus,
 } from '../types';
 
 const TOKEN_KEY = 'marketpulse_jwt_token';
@@ -48,6 +51,9 @@ function isPublicEndpoint(url: string, method: string = 'GET'): boolean {
     cleanUrl === '/api/db/status' ||
     cleanUrl === '/api/maps/reverse' ||
     cleanUrl.startsWith('/api/ai') ||
+    cleanUrl === '/api/riders/apply' ||
+    cleanUrl === '/api/riders/cv/parse' ||
+    cleanUrl === '/api/riders/cv/format' ||
     cleanUrl.startsWith('/api/payment') ||
     cleanUrl.startsWith('/api/analytics') ||
     cleanUrl.startsWith('/api/stats')
@@ -243,6 +249,83 @@ export const api = {
     }),
   updateSellerStatus: async (id: string, status: SellerStatus): Promise<Seller> =>
     fetchJson<Seller>(`/api/sellers/${encodeURIComponent(id)}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    }),
+  getSellerWallet: async (): Promise<{ balance: number; entries: any[] }> => fetchJson('/api/sellers/me/wallet'),
+
+  applyRider: async (data: {
+    Username: string;
+    Name: string;
+    Email: string;
+    Password: string;
+    Number: string;
+    Present_Address: Address;
+    Permanent_Address: Address;
+    Has_CV: boolean;
+    CV_Base64?: string;
+    CV_File_Name?: string;
+    Experience: string[];
+    Previous_Jobs: string[];
+    Education: string[];
+  }): Promise<{ success: boolean; status: 'pending'; message: string }> =>
+    fetchJson('/api/riders/apply', { method: 'POST', body: JSON.stringify(data) }),
+  parseRiderCv: async (cvBase64: string): Promise<{ extracted: { experience: string[]; previousJobs: string[]; education: string[] }; missingFields: string[] }> =>
+    fetchJson('/api/riders/cv/parse', { method: 'POST', body: JSON.stringify({ cvBase64 }) }),
+  formatRiderCv: async (data: { experience: string[]; previousJobs: string[]; education: string[] }): Promise<{ experience: string[]; previousJobs: string[]; education: string[] }> =>
+    fetchJson('/api/riders/cv/format', { method: 'POST', body: JSON.stringify(data) }),
+  getRiderApplications: async (): Promise<Rider[]> => fetchJson<Rider[]>('/api/riders/applications'),
+  setRiderApplicationStatus: async (id: string, status: RiderStatus): Promise<{ Rider_ID: string; Status: RiderStatus }> =>
+    fetchJson(`/api/riders/applications/${encodeURIComponent(id)}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    }),
+  downloadRiderCv: async (id: string): Promise<Blob> => {
+    const token = getAuthToken();
+    const response = await fetch(`/api/riders/applications/${encodeURIComponent(id)}/cv`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!response.ok) throw new Error('Could not download rider CV.');
+    return response.blob();
+  },
+  getRiderProfile: async (): Promise<Rider> => fetchJson<Rider>('/api/riders/me'),
+  updateRiderLocation: async (latitude: number, longitude: number): Promise<{ success: boolean }> =>
+    fetchJson('/api/riders/location', {
+      method: 'PATCH',
+      body: JSON.stringify({ latitude, longitude }),
+    }),
+  getRiderDeliveries: async (latitude: number, longitude: number): Promise<RiderDelivery[]> => {
+    const params = new URLSearchParams({ latitude: String(latitude), longitude: String(longitude) });
+    return fetchJson(`/api/riders/deliveries?${params.toString()}`);
+  },
+  acceptRiderDelivery: async (deliveryId: string): Promise<{ success: boolean }> =>
+    fetchJson(`/api/riders/deliveries/${encodeURIComponent(deliveryId)}/accept`, { method: 'POST' }),
+  setRiderDeliveryOnWay: async (deliveryId: string): Promise<{ success: boolean }> =>
+    fetchJson(`/api/riders/deliveries/${encodeURIComponent(deliveryId)}/on-way`, { method: 'POST' }),
+  markRiderCodCollected: async (deliveryId: string): Promise<{ success: boolean }> =>
+    fetchJson(`/api/riders/deliveries/${encodeURIComponent(deliveryId)}/cod-collected`, { method: 'POST' }),
+  confirmCustomerDelivery: async (deliveryId: string, code: string): Promise<{ success: boolean }> =>
+    fetchJson(`/api/riders/deliveries/${encodeURIComponent(deliveryId)}/complete`, {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    }),
+  getCustomerRiderDeliveries: async (): Promise<Array<RiderDelivery & { Rider_Name?: string; Rider_Number?: string; Review_ID?: string }>> =>
+    fetchJson('/api/riders/customer-deliveries'),
+  reviewRiderDelivery: async (deliveryId: string, rating: number, reviewText: string, wasTimely: boolean): Promise<{ success: boolean }> =>
+    fetchJson(`/api/riders/customer-deliveries/${encodeURIComponent(deliveryId)}/review`, {
+      method: 'POST',
+      body: JSON.stringify({ rating, reviewText, wasTimely }),
+    }),
+  getRiderWallet: async (): Promise<{ balance: number; pendingSalary: number; entries: any[]; withdrawals: any[] }> =>
+    fetchJson('/api/riders/wallet'),
+  requestRiderWithdrawal: async (amount: number, payoutMethod: string, payoutAccount: string): Promise<{ success: boolean; withdrawalId: string }> =>
+    fetchJson('/api/riders/wallet/withdrawals', {
+      method: 'POST',
+      body: JSON.stringify({ amount, payoutMethod, payoutAccount }),
+    }),
+  getRiderWithdrawals: async (): Promise<any[]> => fetchJson('/api/riders/wallet/withdrawals'),
+  processRiderWithdrawal: async (id: string, status: 'paid' | 'rejected'): Promise<{ success: boolean; status: string }> =>
+    fetchJson(`/api/riders/wallet/withdrawals/${encodeURIComponent(id)}`, {
       method: 'PATCH',
       body: JSON.stringify({ status }),
     }),

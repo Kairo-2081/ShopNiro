@@ -1,6 +1,6 @@
 import React from 'react';
 import { Seller, Product, Order, Review, Category, ProductStatus } from '../../types';
-import { formatCurrency, formatDate } from '../../lib/api';
+import { api, formatCurrency, formatDate } from '../../lib/api';
 import { SellerProductModal } from './SellerProductModal';
 import { StarRating } from '../StarRating';
 import {
@@ -14,6 +14,7 @@ import {
   Clock,
   XCircle,
   Truck,
+  Wallet,
 } from 'lucide-react';
 
 interface SellerDashboardProps {
@@ -39,9 +40,16 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
   onUpdateProductStatus,
   onUpdateOrderStatus,
 }) => {
-  const [activeTab, setActiveTab] = React.useState<'products' | 'orders' | 'reviews'>('products');
+  const [activeTab, setActiveTab] = React.useState<'products' | 'orders' | 'reviews' | 'wallet'>('products');
   const [isProductModalOpen, setIsProductModalOpen] = React.useState(false);
   const [productToEdit, setProductToEdit] = React.useState<Product | null>(null);
+  const [sellerWallet, setSellerWallet] = React.useState<{ balance: number; entries: any[] } | null>(null);
+  const [walletError, setWalletError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (activeTab !== 'wallet') return;
+    api.getSellerWallet().then(setSellerWallet).catch((error: any) => setWalletError(error.message || 'Could not load seller wallet.'));
+  }, [activeTab]);
 
   // Filter entities specific to this seller
   const sellerProducts = products.filter((p) => p.Seller_ID === currentSeller.Seller_ID);
@@ -255,6 +263,18 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
           <Star className="w-4 h-4" />
           <span>Customer Reviews ({sellerReviews.length})</span>
         </button>
+
+        <button
+          onClick={() => setActiveTab('wallet')}
+          className={`px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
+            activeTab === 'wallet'
+              ? 'bg-emerald-700 text-white shadow-lg shadow-emerald-700/25'
+              : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#181F2A]'
+          }`}
+        >
+          <Wallet className="w-4 h-4" />
+          <span>COD remittances</span>
+        </button>
       </div>
 
       {/* Tab Content */}
@@ -388,6 +408,8 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
             <div className="space-y-4">
               {sellerOrders.map((order) => {
                 const myItems = order.Items.filter((i) => i.Seller_ID === currentSeller.Seller_ID);
+                const myFulfillment = order.Fulfillments?.find((fulfillment) => fulfillment.Seller_ID === currentSeller.Seller_ID);
+                const fulfillmentStatus = myFulfillment?.Status || order.Status;
 
                 return (
                   <div
@@ -429,19 +451,19 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                       <div className="flex items-center gap-2">
                         <span className="text-slate-500 dark:text-zinc-400 font-medium">Fulfillment:</span>
                         <select
-                          value={order.Status}
+                          value={fulfillmentStatus}
                           onChange={(e) => onUpdateOrderStatus(order.Order_ID, e.target.value)}
                           aria-label={`Fulfillment status for order ${order.Order_ID}`}
                           className="bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-full px-3 py-1.5 font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
-                          <option value={order.Status}>
-                            {order.Status === 'placed' ? 'Placed (Pending)' :
-                              order.Status === 'processing' ? 'Processing' :
-                              order.Status === 'shipped' ? 'Shipped (Tracking Active)' :
-                              order.Status === 'delivered' ? 'Delivered' : 'Cancelled'}
+                          <option value={fulfillmentStatus}>
+                            {fulfillmentStatus === 'placed' ? 'Placed (Pending)' :
+                              fulfillmentStatus === 'processing' ? 'Processing' :
+                              fulfillmentStatus === 'shipped' ? 'Shipped (Tracking Active)' :
+                              fulfillmentStatus === 'delivered' ? 'Delivered' : 'Cancelled'}
                           </option>
-                          {order.Status === 'placed' && <option value="processing">Processing</option>}
-                          {['placed', 'processing'].includes(order.Status) && (
+                          {fulfillmentStatus === 'placed' && <option value="processing">Processing</option>}
+                          {['placed', 'processing'].includes(fulfillmentStatus) && (
                             <option value="shipped">Mark as Shipped</option>
                           )}
                         </select>
@@ -521,6 +543,21 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
             </div>
           )}
         </div>
+      )}
+
+      {activeTab === 'wallet' && (
+        <section className="space-y-4">
+          <header className="flex flex-wrap items-end justify-between gap-3">
+            <div><h2 className="text-lg font-bold text-slate-900 dark:text-white">Cash-on-delivery remittances</h2><p className="text-xs text-slate-500 dark:text-zinc-400">Completed COD deliveries credited to this seller ledger.</p></div>
+            <p className="text-lg font-bold text-emerald-800 dark:text-emerald-300">Total received: ৳{sellerWallet?.balance.toLocaleString() || '0'}</p>
+          </header>
+          {walletError && <p role="alert" className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/30 dark:text-rose-300">{walletError}</p>}
+          <div className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white dark:divide-zinc-800 dark:border-zinc-800 dark:bg-[#12161D]">
+            {sellerWallet?.entries.map((entry) => <div key={entry.id} className="flex flex-wrap items-center justify-between gap-3 p-4"><div><p className="text-sm font-semibold text-slate-900 dark:text-white">{entry.description}</p><p className="mt-1 font-mono text-[10px] text-slate-500">Delivery ref: {entry.reference_id} · {formatDate(entry.created_at)}</p></div><span className="font-bold text-emerald-700 dark:text-emerald-300">+৳{Number(entry.amount).toLocaleString()}</span></div>)}
+            {!sellerWallet?.entries.length && !walletError && <p className="p-8 text-center text-sm text-slate-500">No COD remittances yet.</p>}
+            {!sellerWallet && !walletError && <p className="p-8 text-center text-sm text-slate-500">Loading remittances...</p>}
+          </div>
+        </section>
       )}
 
       {/* Product Create/Edit Modal */}

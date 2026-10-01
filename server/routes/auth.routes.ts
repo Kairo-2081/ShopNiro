@@ -49,6 +49,38 @@ router.get('/me', requireAuth, async (req: AuthRequest, res: Response) => {
           Created_At: s.created_at ? new Date(s.created_at).toISOString() : new Date().toISOString(),
         };
       }
+    } else if (role === 'rider') {
+      const rRes = await query(`
+        SELECT r.*, u.username, u.email,
+          COALESCE((SELECT AVG(rr.rating) FROM rider_reviews rr WHERE rr.rider_id = r.id), 0) AS average_rating
+        FROM riders r JOIN users u ON u.id = r.id WHERE r.id = $1
+      `, [targetId]);
+      if (rRes.rows.length > 0) {
+        const r = rRes.rows[0];
+        entity = {
+          Rider_ID: r.id,
+          Username: r.username,
+          Name: r.name,
+          Email: r.email,
+          Number: r.number || '',
+          Present_Address: r.present_address_json || {},
+          Permanent_Address: r.permanent_address_json || {},
+          Experience: r.experience_json || [],
+          Previous_Jobs: r.previous_jobs_json || [],
+          Education: r.education_json || [],
+          Status: r.status,
+          Has_CV: Boolean(r.has_cv),
+          Current_Latitude: r.current_latitude === null ? undefined : Number(r.current_latitude),
+          Current_Longitude: r.current_longitude === null ? undefined : Number(r.current_longitude),
+          Total_Deliveries: Number(r.total_deliveries) || 0,
+          Timely_Deliveries: Number(r.timely_deliveries) || 0,
+          Late_Deliveries: Number(r.late_deliveries) || 0,
+          Performance_Points: Number(r.performance_points) || 100,
+          Average_Rating: Number(r.average_rating) || 0,
+          Wallet_Balance: Number(r.wallet_balance) || 0,
+          Created_At: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
+        };
+      }
     } else if (role === 'admin') {
       const aRes = await query(`SELECT * FROM gocart_admin_get($1)`, [targetId]);
       if (aRes.rows.length > 0) {
@@ -134,6 +166,50 @@ router.post('/login', async (req, res) => {
             Created_At: s.created_at ? new Date(s.created_at).toISOString() : new Date().toISOString(),
           },
         });
+      } else if (userRole === 'rider') {
+        const riderRes = await query(`
+          SELECT r.*, u.username, u.email,
+            COALESCE((SELECT AVG(rr.rating) FROM rider_reviews rr WHERE rr.rider_id = r.id), 0) AS average_rating
+          FROM riders r JOIN users u ON u.id = r.id WHERE r.id = $1
+        `, [entityId]);
+        const rider = riderRes.rows[0];
+        if (!rider || rider.status !== 'approved') {
+          const message = !rider ? 'Rider profile not found.' : rider.status === 'pending'
+            ? 'Your rider application is pending admin approval.'
+            : `Rider account is ${rider.status}. Contact marketplace support.`;
+          return res.status(403).json({ error: message });
+        }
+        const entity = {
+          Rider_ID: rider.id,
+          Username: rider.username || userMatch.username,
+          Name: rider.name,
+          Email: rider.email || userMatch.email,
+          Number: rider.number || '',
+          Present_Address: rider.present_address_json || {},
+          Permanent_Address: rider.permanent_address_json || {},
+          Experience: rider.experience_json || [],
+          Previous_Jobs: rider.previous_jobs_json || [],
+          Education: rider.education_json || [],
+          Status: rider.status,
+          Has_CV: Boolean(rider.has_cv),
+          Current_Latitude: rider.current_latitude === null ? undefined : Number(rider.current_latitude),
+          Current_Longitude: rider.current_longitude === null ? undefined : Number(rider.current_longitude),
+          Total_Deliveries: Number(rider.total_deliveries) || 0,
+          Timely_Deliveries: Number(rider.timely_deliveries) || 0,
+          Late_Deliveries: Number(rider.late_deliveries) || 0,
+          Performance_Points: Number(rider.performance_points) || 100,
+          Average_Rating: Number(rider.average_rating) || 0,
+          Wallet_Balance: Number(rider.wallet_balance) || 0,
+          Created_At: rider.created_at ? new Date(rider.created_at).toISOString() : new Date().toISOString(),
+        };
+        const token = generateToken({
+          userId: userMatch.id,
+          email: entity.Email,
+          username: entity.Username,
+          role: 'rider',
+          entityId,
+        });
+        return res.json({ success: true, token, role: 'rider', entity });
       } else if (userRole === 'admin') {
         const adminRes = await query(`SELECT * FROM gocart_admin_get($1)`, [entityId]);
         const a = adminRes.rows[0] || {};

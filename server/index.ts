@@ -20,12 +20,14 @@ import reviewsRoutes from './routes/reviews.routes.ts';
 import aiRoutes from './routes/ai.routes.ts';
 import paymentRoutes from './routes/payment.routes.ts';
 import mapsRoutes from './routes/maps.routes.ts';
+import ridersRoutes from './routes/riders.routes.ts';
+import riderDeliveryRoutes from './routes/rider-delivery.routes.ts';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
 // Parse incoming JSON payloads
-app.use(express.json());
+app.use(express.json({ limit: '5mb' }));
 
 // Seed database schema and sample data on server startup if empty
 seedDatabaseIfEmpty().catch((err) => {
@@ -133,6 +135,8 @@ app.use('/api/reviews', reviewsRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/maps', mapsRoutes);
+app.use('/api/riders', ridersRoutes);
+app.use('/api/riders', riderDeliveryRoutes);
 
 // Global Error Handler for API routes
 app.use(errorHandler);

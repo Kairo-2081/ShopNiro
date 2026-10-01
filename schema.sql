@@ -37,7 +37,39 @@ CREATE TABLE IF NOT EXISTS sellers (
     address_city VARCHAR(100),
     address_postal_code VARCHAR(50),
     address_additional_info TEXT,
+    address_latitude DOUBLE PRECISION,
+    address_longitude DOUBLE PRECISION,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE sellers ADD COLUMN IF NOT EXISTS address_latitude DOUBLE PRECISION;
+ALTER TABLE sellers ADD COLUMN IF NOT EXISTS address_longitude DOUBLE PRECISION;
+
+-- DELIVERY RIDERS. Applicants remain pending until an admin approves their account.
+CREATE TABLE IF NOT EXISTS riders (
+    id VARCHAR(64) PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    number VARCHAR(50) NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'pending',
+    present_address_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+    permanent_address_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+    has_cv BOOLEAN NOT NULL DEFAULT FALSE,
+    cv_file_name VARCHAR(255),
+    cv_pdf BYTEA,
+    experience_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+    previous_jobs_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+    education_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+    current_latitude DOUBLE PRECISION,
+    current_longitude DOUBLE PRECISION,
+    total_deliveries INTEGER NOT NULL DEFAULT 0,
+    timely_deliveries INTEGER NOT NULL DEFAULT 0,
+    late_deliveries INTEGER NOT NULL DEFAULT 0,
+    performance_points INTEGER NOT NULL DEFAULT 100,
+    wallet_balance NUMERIC(12, 2) NOT NULL DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_riders_status CHECK (status IN ('pending', 'approved', 'rejected', 'suspended')),
+    CONSTRAINT chk_riders_points CHECK (performance_points BETWEEN 0 AND 100)
 );
 
 -- ADMINS TABLE
@@ -94,7 +126,107 @@ CREATE TABLE IF NOT EXISTS orders (
     shipping_address_json TEXT NOT NULL,
     billing_address_json TEXT NOT NULL,
     additional_info TEXT NOT NULL DEFAULT '',
+    payment_status VARCHAR(32) NOT NULL DEFAULT 'pending',
+    payment_method VARCHAR(32) NOT NULL DEFAULT 'unknown',
+    transaction_id VARCHAR(100),
     order_placed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_status VARCHAR(32) NOT NULL DEFAULT 'pending';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS payment_method VARCHAR(32) NOT NULL DEFAULT 'unknown';
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS transaction_id VARCHAR(100);
+
+-- Split each marketplace checkout into seller-owned fulfillment orders.
+CREATE TABLE IF NOT EXISTS seller_fulfillments (
+    id VARCHAR(64) PRIMARY KEY,
+    order_id VARCHAR(64) NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    seller_id VARCHAR(64) NOT NULL REFERENCES sellers(id) ON DELETE RESTRICT,
+    items_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+    subtotal NUMERIC(10, 2) NOT NULL DEFAULT 0,
+    status VARCHAR(32) NOT NULL DEFAULT 'processing',
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    shipped_at TIMESTAMP WITH TIME ZONE,
+    delivered_at TIMESTAMP WITH TIME ZONE,
+    CONSTRAINT uq_seller_fulfillment_order_seller UNIQUE (order_id, seller_id),
+    CONSTRAINT chk_seller_fulfillment_status CHECK (status IN ('processing', 'shipped', 'delivered', 'cancelled'))
+);
+
+CREATE TABLE IF NOT EXISTS rider_deliveries (
+    id VARCHAR(64) PRIMARY KEY,
+    fulfillment_id VARCHAR(64) NOT NULL UNIQUE REFERENCES seller_fulfillments(id) ON DELETE CASCADE,
+    rider_id VARCHAR(64) REFERENCES riders(id) ON DELETE SET NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'pending',
+    confirmation_code VARCHAR(12) NOT NULL,
+    confirmation_attempts INTEGER NOT NULL DEFAULT 0,
+    cod_amount NUMERIC(10, 2) NOT NULL DEFAULT 0,
+    cod_collected BOOLEAN NOT NULL DEFAULT FALSE,
+    accepted_at TIMESTAMP WITH TIME ZONE,
+    delivered_at TIMESTAMP WITH TIME ZONE,
+    was_timely BOOLEAN,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    due_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT (CURRENT_TIMESTAMP + INTERVAL '24 hours'),
+    CONSTRAINT chk_rider_delivery_status CHECK (status IN ('pending', 'accepted', 'on_the_way', 'delivered', 'cancelled'))
+);
+
+ALTER TABLE rider_deliveries ADD COLUMN IF NOT EXISTS confirmation_attempts INTEGER NOT NULL DEFAULT 0;
+
+CREATE TABLE IF NOT EXISTS rider_reviews (
+    id VARCHAR(64) PRIMARY KEY,
+    delivery_id VARCHAR(64) NOT NULL UNIQUE REFERENCES rider_deliveries(id) ON DELETE CASCADE,
+    rider_id VARCHAR(64) NOT NULL REFERENCES riders(id) ON DELETE CASCADE,
+    customer_id VARCHAR(64) NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+    rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+    review_text TEXT NOT NULL DEFAULT '',
+    was_timely BOOLEAN NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS rider_monthly_scores (
+    rider_id VARCHAR(64) NOT NULL REFERENCES riders(id) ON DELETE CASCADE,
+    month_start DATE NOT NULL,
+    performance_points INTEGER NOT NULL DEFAULT 100 CHECK (performance_points BETWEEN 0 AND 100),
+    total_deliveries INTEGER NOT NULL DEFAULT 0,
+    timely_deliveries INTEGER NOT NULL DEFAULT 0,
+    late_deliveries INTEGER NOT NULL DEFAULT 0,
+    salary_amount NUMERIC(12, 2) NOT NULL DEFAULT 0,
+    salary_available_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (rider_id, month_start)
+);
+
+CREATE TABLE IF NOT EXISTS rider_wallet_entries (
+    id VARCHAR(64) PRIMARY KEY,
+    rider_id VARCHAR(64) NOT NULL REFERENCES riders(id) ON DELETE CASCADE,
+    entry_type VARCHAR(32) NOT NULL,
+    amount NUMERIC(12, 2) NOT NULL,
+    reference_id VARCHAR(100),
+    description TEXT NOT NULL DEFAULT '',
+    available_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_rider_wallet_reference UNIQUE (rider_id, entry_type, reference_id)
+);
+
+CREATE TABLE IF NOT EXISTS seller_wallet_entries (
+    id VARCHAR(64) PRIMARY KEY,
+    seller_id VARCHAR(64) NOT NULL REFERENCES sellers(id) ON DELETE CASCADE,
+    entry_type VARCHAR(32) NOT NULL,
+    amount NUMERIC(12, 2) NOT NULL,
+    reference_id VARCHAR(100),
+    description TEXT NOT NULL DEFAULT '',
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_seller_wallet_reference UNIQUE (seller_id, entry_type, reference_id)
+);
+
+CREATE TABLE IF NOT EXISTS rider_withdrawals (
+    id VARCHAR(64) PRIMARY KEY,
+    rider_id VARCHAR(64) NOT NULL REFERENCES riders(id) ON DELETE CASCADE,
+    amount NUMERIC(12, 2) NOT NULL CHECK (amount > 0),
+    payout_method VARCHAR(32) NOT NULL,
+    payout_account VARCHAR(255) NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'pending',
+    requested_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    processed_at TIMESTAMP WITH TIME ZONE,
+    CONSTRAINT chk_rider_withdrawal_status CHECK (status IN ('pending', 'paid', 'rejected'))
 );
 
 -- Bridge between orders and products; line fields preserve the purchased snapshot.
@@ -111,6 +243,38 @@ CREATE TABLE IF NOT EXISTS order_items (
     image TEXT,
     CONSTRAINT uq_order_items_order_product UNIQUE (order_id, product_id_snapshot)
 );
+
+INSERT INTO seller_fulfillments (id, order_id, seller_id, items_json, subtotal, status, shipped_at, delivered_at)
+SELECT
+    'FUL-' || substr(md5(oi.order_id || ':' || oi.seller_id_snapshot), 1, 20),
+    oi.order_id,
+    oi.seller_id_snapshot,
+    jsonb_agg(jsonb_build_object(
+        'Product_ID', oi.product_id_snapshot,
+        'Name', oi.product_name,
+        'Price', oi.unit_price,
+        'Quantity', oi.quantity,
+        'Image', COALESCE(oi.image, ''),
+        'Seller_ID', oi.seller_id_snapshot
+    ) ORDER BY oi.order_item_id),
+    SUM(oi.unit_price * oi.quantity),
+    CASE WHEN o.status = 'delivered' THEN 'delivered' WHEN o.status = 'shipped' THEN 'shipped' ELSE 'processing' END,
+    CASE WHEN o.status IN ('shipped', 'delivered') THEN o.order_placed_at ELSE NULL END,
+    CASE WHEN o.status = 'delivered' THEN o.order_placed_at ELSE NULL END
+FROM order_items oi
+JOIN orders o ON o.id = oi.order_id
+GROUP BY oi.order_id, oi.seller_id_snapshot, o.status, o.order_placed_at
+ON CONFLICT (order_id, seller_id) DO NOTHING;
+
+INSERT INTO rider_deliveries (id, fulfillment_id, status, confirmation_code)
+SELECT
+    'DLV-' || substr(md5(sf.id), 1, 24),
+    sf.id,
+    'pending',
+    lpad(floor(random() * 1000000)::int::text, 6, '0')
+FROM seller_fulfillments sf
+WHERE sf.status = 'shipped'
+ON CONFLICT (fulfillment_id) DO NOTHING;
 
 -- PRODUCT REVIEWS TABLE
 CREATE TABLE IF NOT EXISTS reviews (
@@ -352,7 +516,7 @@ CREATE INDEX IF NOT EXISTS idx_payments_transaction ON payments(transaction_id);
 -- USERS TABLE CONSTRAINTS
 ALTER TABLE users
     DROP CONSTRAINT IF EXISTS chk_users_role,
-    ADD CONSTRAINT chk_users_role CHECK (role IN ('customer', 'seller', 'admin'));
+    ADD CONSTRAINT chk_users_role CHECK (role IN ('customer', 'seller', 'admin', 'rider'));
 
 -- SELLERS TABLE CONSTRAINTS
 ALTER TABLE sellers
@@ -632,6 +796,24 @@ BEGIN
     JOIN products p ON p.id = c.product_id
     WHERE c.customer_id = p_customer_id;
 
+    INSERT INTO seller_fulfillments (id, order_id, seller_id, items_json, subtotal)
+    SELECT
+        'FUL-' || substr(md5(p_order_id || ':' || oi.seller_id_snapshot), 1, 20),
+        p_order_id,
+        oi.seller_id_snapshot,
+        jsonb_agg(jsonb_build_object(
+            'Product_ID', oi.product_id_snapshot,
+            'Name', oi.product_name,
+            'Price', oi.unit_price,
+            'Quantity', oi.quantity,
+            'Image', COALESCE(oi.image, ''),
+            'Seller_ID', oi.seller_id_snapshot
+        ) ORDER BY oi.order_item_id),
+        SUM(oi.unit_price * oi.quantity)
+    FROM order_items oi
+    WHERE oi.order_id = p_order_id
+    GROUP BY oi.seller_id_snapshot;
+
     UPDATE products p
     SET stock = p.stock - c.quantity
     FROM cart c
@@ -720,7 +902,8 @@ FROM customers c JOIN users u ON u.id = c.id AND u.role = 'customer';
 CREATE OR REPLACE VIEW seller_profiles AS
 SELECT s.id, u.username, s.name, u.email, s.number, s.logo, s.description, s.status,
        s.address_house_name, s.address_street, s.address_city,
-       s.address_postal_code, s.address_additional_info, s.created_at
+    s.address_postal_code, s.address_additional_info,
+    s.address_latitude, s.address_longitude, s.created_at
 FROM sellers s JOIN users u ON u.id = s.id AND u.role = 'seller';
 
 CREATE OR REPLACE VIEW admin_profiles AS

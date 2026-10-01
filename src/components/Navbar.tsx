@@ -15,6 +15,7 @@ import {
   Sparkles,
   Radio,
   Flame,
+  Truck,
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -256,6 +257,20 @@ export const Navbar: React.FC<NavbarProps> = ({
                   Public Storefront
                 </button>
               </>
+            )}
+
+            {isLoggedIn && currentRole === 'rider' && (
+              <button
+                onClick={() => setActiveTab('rider-dashboard')}
+                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                  activeTab === 'rider-dashboard'
+                    ? 'bg-emerald-700 text-white shadow-[0_12px_26px_rgba(5,100,70,0.24)]'
+                    : 'text-slate-700 dark:text-zinc-300 hover:text-emerald-800 dark:hover:text-white hover:bg-white/10 dark:hover:bg-[#181F2A]'
+                }`}
+              >
+                <Truck className="w-3.5 h-3.5" />
+                Rider deliveries
+              </button>
             )}
           </nav>
 
