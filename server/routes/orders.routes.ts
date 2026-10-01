@@ -3,6 +3,7 @@ import { randomInt } from 'node:crypto';
 import { query } from '../db/index.ts';
 import { requireAuth, AuthRequest } from '../middleware/auth.ts';
 import { Order } from '../../src/types.ts';
+import { discountedUnitPrice, getVoucherDiscountPercent, normalizeVoucherCode } from '../../src/lib/vouchers.ts';
 
 const router = Router();
 
@@ -88,6 +89,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
     const {
       Customer_ID,
       Items,
+      Applied_Voucher,
       Shipping_Address,
       Billing_Address,
       Subtotal,
@@ -105,19 +107,47 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
     const trackNum2 = Math.floor(1000 + Math.random() * 9000);
     const Tracking_ID = `TRK-${trackNum1}-${trackNum2}`;
     const id = `ORD-${Date.now()}`;
-    const subtotal = Number(Subtotal) || 0;
     const shippingFee = Number(Shipping_Fee) || 0.0;
     const shipAddrJson = JSON.stringify(Shipping_Address);
     const billAddrJson = JSON.stringify(Billing_Address || Shipping_Address);
     const addInfo = Additional_Info || '';
     const orderPlacedAt = new Date().toISOString();
 
-    // Checkout must use the database procedure so stock is validated and decremented atomically.
-    const cartRes = await query(`SELECT * FROM gocart_cart_list($1)`, [Customer_ID]);
-    if (cartRes.rows.length === 0) {
+    const cartProducts = await query(`
+      SELECT p.id, p.name, p.image, p.price, p.voucher, p.seller_id, c.quantity, c.size
+      FROM cart c JOIN products p ON p.id = c.product_id
+      WHERE c.customer_id = $1
+      ORDER BY c.id
+    `, [Customer_ID]);
+    if (cartProducts.rows.length === 0) {
       return res.status(400).json({ error: 'Checkout Failed: The shopping cart is empty.' });
     }
 
+    const voucherCode = typeof Applied_Voucher === 'string' ? normalizeVoucherCode(Applied_Voucher) : '';
+    const eligibleProducts = voucherCode
+      ? cartProducts.rows.filter((product: any) => normalizeVoucherCode(product.voucher || '') === voucherCode)
+      : [];
+    let discountPercent = 0;
+    if (voucherCode) {
+      if (!eligibleProducts.length) {
+        return res.status(400).json({ error: 'This voucher is not available for any product in your cart.' });
+      }
+      const voucherPercent = getVoucherDiscountPercent(String(eligibleProducts[0].voucher || ''));
+      if (voucherPercent === null) {
+        return res.status(400).json({ error: 'This product voucher does not contain a valid percentage discount.' });
+      }
+      discountPercent = voucherPercent;
+    }
+    const eligibleProductIds = new Set(eligibleProducts.map((product: any) => product.id));
+    const subtotal = cartProducts.rows.reduce((total: number, product: any) => {
+      const price = Number(product.price) || 0;
+      const unitPrice = eligibleProductIds.has(product.id)
+        ? discountedUnitPrice(price, discountPercent)
+        : price;
+      return total + unitPrice * Number(product.quantity);
+    }, 0);
+
+    // Checkout uses the database procedure to validate stock and create per-seller fulfillment rows.
     await query(`CALL process_checkout($1, $2, $3, $4, $5, $6, $7)`, [
       id,
       Tracking_ID,
@@ -127,6 +157,56 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
       billAddrJson,
       addInfo,
     ]);
+
+    if (voucherCode) {
+      await query(`
+        UPDATE order_items oi SET unit_price = ROUND(p.price * (100 - $2::numeric) / 100, 2)
+        FROM products p
+        WHERE oi.order_id = $1 AND p.id = oi.product_id_snapshot
+          AND upper(trim(COALESCE(p.voucher, ''))) = $3
+      `, [id, discountPercent, voucherCode]);
+    }
+
+    await query(`
+      UPDATE seller_fulfillments sf SET
+        subtotal = COALESCE((
+          SELECT SUM(oi.unit_price * oi.quantity) FROM order_items oi
+          WHERE oi.order_id = sf.order_id AND oi.seller_id_snapshot = sf.seller_id
+        ), 0),
+        items_json = COALESCE((
+          SELECT jsonb_agg(jsonb_build_object(
+            'Product_ID', oi.product_id_snapshot,
+            'Name', oi.product_name,
+            'Price', oi.unit_price,
+            'Quantity', oi.quantity,
+            'Image', COALESCE(oi.image, ''),
+            'Size', NULLIF(oi.size, ''),
+            'Seller_ID', oi.seller_id_snapshot
+          ) ORDER BY oi.order_item_id)
+          FROM order_items oi
+          WHERE oi.order_id = sf.order_id AND oi.seller_id_snapshot = sf.seller_id
+        ), '[]'::jsonb)
+      WHERE sf.order_id = $1
+    `, [id]);
+    const orderedItems = await query(`
+      SELECT product_id_snapshot, seller_id_snapshot, product_name, unit_price, quantity, image, size
+      FROM order_items WHERE order_id = $1 ORDER BY order_item_id
+    `, [id]);
+    const finalSubtotal = orderedItems.rows.reduce(
+      (total: number, item: any) => total + Number(item.unit_price) * Number(item.quantity),
+      0
+    );
+    await query(`
+      UPDATE orders SET subtotal = $2, items_json = $3 WHERE id = $1
+    `, [id, finalSubtotal, JSON.stringify(orderedItems.rows.map((item: any) => ({
+      Product_ID: item.product_id_snapshot,
+      Seller_ID: item.seller_id_snapshot,
+      Name: item.product_name,
+      Price: Number(item.unit_price),
+      Quantity: Number(item.quantity),
+      Image: item.image || '',
+      Size: item.size || undefined,
+    })))]);
 
     await query(
       'UPDATE orders SET payment_status = $2, payment_method = $3, transaction_id = $4 WHERE id = $1',
@@ -143,8 +223,16 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
       Order_ID: id,
       Tracking_ID,
       Customer_ID,
-      Items,
-      Subtotal: subtotal,
+      Items: orderedItems.rows.map((item: any) => ({
+        Product_ID: item.product_id_snapshot,
+        Seller_ID: item.seller_id_snapshot,
+        Name: item.product_name,
+        Price: Number(item.unit_price),
+        Quantity: Number(item.quantity),
+        Image: item.image || '',
+        Size: item.size || undefined,
+      })),
+      Subtotal: finalSubtotal,
       Shipping_Fee: shippingFee,
       Status: 'placed',
       Payment_Status,

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Customer, CartItem, Address, Order, PaymentMethod } from '../../types';
 import { api, formatCurrency, formatBDT } from '../../lib/api';
+import { discountedUnitPrice, getVoucherDiscountPercent, normalizeVoucherCode } from '../../lib/vouchers';
 import { SSLCommerzModal, SSLCommerzPaymentSuccessData } from '../payment/SSLCommerzModal';
 import { BkashGatewayPage, BkashPaymentSuccessData } from '../payment/BkashGatewayPage';
 import {
@@ -27,6 +28,7 @@ interface CheckoutModalProps {
   onPlaceOrder: (orderData: {
     Customer_ID: string;
     Items: any[];
+    Applied_Voucher?: string;
     Shipping_Address: Address;
     Billing_Address: Address;
     Subtotal: number;
@@ -75,6 +77,9 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [additionalNotes, setAdditionalNotes] = React.useState(currentCustomer.Address?.Additional_Info || '');
   const [isSuggestingInstructions, setIsSuggestingInstructions] = React.useState(false);
   const [instructionError, setInstructionError] = React.useState('');
+  const [voucherInput, setVoucherInput] = React.useState('');
+  const [appliedVoucher, setAppliedVoucher] = React.useState('');
+  const [voucherError, setVoucherError] = React.useState('');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [createdOrder, setCreatedOrder] = React.useState<Order | null>(null);
   const [verifiedPayment, setVerifiedPayment] = React.useState<SSLCommerzPaymentSuccessData | BkashPaymentSuccessData | null>(null);
@@ -85,6 +90,9 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       setCreatedOrder(null);
       setVerifiedPayment(null);
       setIsSubmitting(false);
+      setVoucherInput('');
+      setAppliedVoucher('');
+      setVoucherError('');
       submissionInProgressRef.current = false;
     }
   }, [isOpen]);
@@ -109,9 +117,40 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     return acc + price * item.Quantity;
   }, 0);
 
+  const appliedVoucherPercent = getVoucherDiscountPercent(appliedVoucher) || 0;
+  const discountedSubtotal = Math.round(cartItems.reduce((total, item) => {
+    const product = item.Product;
+    const matchesVoucher = Boolean(
+      appliedVoucher && product?.Voucher &&
+      normalizeVoucherCode(product.Voucher) === appliedVoucher
+    );
+    const price = product?.Price || 0;
+    const unitPrice = matchesVoucher ? discountedUnitPrice(price, appliedVoucherPercent) : price;
+    return total + unitPrice * item.Quantity;
+  }, 0) * 100) / 100;
+  const voucherSavings = Math.max(0, Math.round((subtotal - discountedSubtotal) * 100) / 100);
   const shippingFee = subtotal > 150 ? 0 : 5.0;
-  const grandTotal = subtotal + shippingFee;
+  const grandTotal = discountedSubtotal + shippingFee;
   const grandTotalBDT = grandTotal;
+
+  const applyVoucher = () => {
+    const code = normalizeVoucherCode(voucherInput);
+    const matchingProducts = cartItems.filter((item) =>
+      item.Product?.Voucher && normalizeVoucherCode(item.Product.Voucher) === code
+    );
+    if (!matchingProducts.length) {
+      setVoucherError('That code does not match a voucher on any product in your cart.');
+      setAppliedVoucher('');
+      return;
+    }
+    if (!getVoucherDiscountPercent(matchingProducts[0].Product!.Voucher)) {
+      setVoucherError('This voucher code does not contain a valid discount percentage.');
+      setAppliedVoucher('');
+      return;
+    }
+    setAppliedVoucher(code);
+    setVoucherError('');
+  };
 
   const validateAddress = () => {
     if (!shippingAddress.Street || !shippingAddress.City || !shippingAddress.Postal_Code) {
@@ -191,7 +230,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       const orderItems = cartItems.map((item) => ({
         Product_ID: item.Product_ID,
         Name: item.Product?.Name || 'Product',
-        Price: item.Product?.Price || 0,
+        Price: item.Product?.Voucher && appliedVoucher &&
+          normalizeVoucherCode(item.Product.Voucher) === appliedVoucher
+          ? discountedUnitPrice(item.Product.Price || 0, appliedVoucherPercent)
+          : item.Product?.Price || 0,
         Quantity: item.Quantity,
         Image: item.Product?.Image || '',
         Seller_ID: item.Product?.Seller_ID || '',
@@ -201,9 +243,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       const order = await onPlaceOrder({
         Customer_ID: currentCustomer.Customer_ID,
         Items: orderItems,
+        Applied_Voucher: appliedVoucher || undefined,
         Shipping_Address: shippingAddress,
         Billing_Address: useSameBilling ? shippingAddress : billingAddress,
-        Subtotal: subtotal,
+        Subtotal: discountedSubtotal,
         Shipping_Fee: shippingFee,
         Additional_Info: additionalNotes,
         Payment_Status: paymentOverrides.Payment_Status,
@@ -618,14 +661,39 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     Order Summary ({cartItems.length} Products)
                   </h4>
 
+                  <div className="space-y-2 rounded-xl border border-blue-100 bg-white/70 p-3 dark:border-zinc-700 dark:bg-[#12161D]">
+                    <label htmlFor="checkout-voucher" className="block text-xs font-semibold text-slate-700 dark:text-zinc-300">Product voucher code</label>
+                    <div className="flex gap-2">
+                      <input
+                        id="checkout-voucher"
+                        value={voucherInput}
+                        onChange={(event) => { setVoucherInput(event.target.value); setVoucherError(''); }}
+                        onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); applyVoucher(); } }}
+                        placeholder="e.g. SAVE20"
+                        aria-invalid={Boolean(voucherError)}
+                        className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs uppercase text-slate-900 placeholder:normal-case placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-zinc-700 dark:bg-[#181F2A] dark:text-white"
+                      />
+                      <button type="button" onClick={applyVoucher} className="rounded-lg bg-blue-700 px-4 py-2 text-xs font-bold text-white hover:bg-blue-600">Apply</button>
+                      {appliedVoucher && <button type="button" onClick={() => { setAppliedVoucher(''); setVoucherInput(''); setVoucherError(''); }} className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 dark:border-zinc-700 dark:text-zinc-200">Remove</button>}
+                    </div>
+                    {voucherError && <p role="alert" className="text-xs text-rose-700 dark:text-rose-300">{voucherError}</p>}
+                    {appliedVoucher && <p role="status" className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">{appliedVoucher} applied: {appliedVoucherPercent}% off matching products.</p>}
+                  </div>
+
                   <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
                     {cartItems.map((item) => (
                       <div key={item.Cart_ID} className="flex justify-between items-center text-xs">
-                        <span className="truncate max-w-[240px] text-slate-700 dark:text-zinc-300">
+                        <span className="min-w-0 truncate max-w-[240px] text-slate-700 dark:text-zinc-300">
                           {item.Quantity}x {item.Product?.Name}
+                          {item.Product?.Voucher && <span className="ml-1 text-[10px] text-blue-600 dark:text-sky-400">Code {item.Product.Voucher}</span>}
                         </span>
-                        <span className="font-bold text-slate-900 dark:text-white">
-                          {formatCurrency((item.Product?.Price || 0) * item.Quantity)}
+                        <span className="flex shrink-0 items-center gap-1.5 font-bold text-slate-900 dark:text-white">
+                          {item.Product?.Voucher && appliedVoucher && normalizeVoucherCode(item.Product.Voucher) === appliedVoucher && (
+                            <span className="text-[10px] font-medium text-slate-500 line-through dark:text-zinc-500">{formatCurrency((item.Product.Price || 0) * item.Quantity)}</span>
+                          )}
+                          {formatCurrency((item.Product?.Voucher && appliedVoucher && normalizeVoucherCode(item.Product.Voucher) === appliedVoucher
+                            ? discountedUnitPrice(item.Product.Price || 0, appliedVoucherPercent)
+                            : item.Product?.Price || 0) * item.Quantity)}
                         </span>
                       </div>
                     ))}
@@ -633,9 +701,19 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
                   <div className="pt-2 border-t border-blue-200/60 dark:border-zinc-800 text-xs space-y-1">
                     <div className="flex justify-between text-slate-600 dark:text-zinc-400">
-                      <span>Subtotal</span>
+                      <span>Product subtotal</span>
                       <span>{formatCurrency(subtotal)}</span>
                     </div>
+                    {voucherSavings > 0 && <>
+                      <div className="flex justify-between font-semibold text-emerald-700 dark:text-emerald-300">
+                        <span>Coupon savings</span>
+                        <span>-{formatCurrency(voucherSavings)}</span>
+                      </div>
+                      <div className="flex justify-between text-slate-600 dark:text-zinc-400">
+                        <span>Subtotal after coupon</span>
+                        <span>{formatCurrency(discountedSubtotal)}</span>
+                      </div>
+                    </>}
                     <div className="flex justify-between text-slate-600 dark:text-zinc-400">
                       <span>Shipping Fee</span>
                       <span>{shippingFee === 0 ? 'FREE' : formatCurrency(shippingFee)}</span>
