@@ -20,7 +20,11 @@ router.get('/', async (req, res) => {
       Product_ID: p.id,
       Name: p.name,
       Image: p.image || '',
+      Images: Array.isArray(p.images_json) && p.images_json.length ? p.images_json : (p.image ? [p.image] : []),
       Description: p.description || '',
+      Size_Gender: p.size_gender || undefined,
+      Sizes: Array.isArray(p.sizes_json) ? p.sizes_json : [],
+      Size_Chart: Array.isArray(p.size_chart_json) ? p.size_chart_json : [],
       Price: Number(p.price),
       Voucher: p.voucher || '',
       Stock: Number(p.stock),
@@ -68,7 +72,11 @@ router.get('/:id', async (req, res) => {
       Product_ID: p.id,
       Name: p.name,
       Image: p.image || '',
+      Images: Array.isArray(p.images_json) && p.images_json.length ? p.images_json : (p.image ? [p.image] : []),
       Description: p.description || '',
+      Size_Gender: p.size_gender || undefined,
+      Sizes: Array.isArray(p.sizes_json) ? p.sizes_json : [],
+      Size_Chart: Array.isArray(p.size_chart_json) ? p.size_chart_json : [],
       Price: Number(p.price),
       Voucher: p.voucher || '',
       Stock: Number(p.stock),
@@ -89,9 +97,18 @@ router.get('/:id', async (req, res) => {
  */
 router.post('/', requireAuth, requireRole(['seller', 'admin']), async (req: AuthRequest, res) => {
   try {
-    const { Name, Image, Description, Price, Voucher, Stock, Category_ID, Seller_ID, Product_Status } = req.body;
+    const { Name, Image, Images, Description, Price, Voucher, Stock, Category_ID, Seller_ID, Product_Status, Size_Gender, Sizes, Size_Chart } = req.body;
     if (!Name || Price === undefined || !Category_ID || !Seller_ID) {
       return res.status(400).json({ error: 'Name, Price, Category, and Seller are required' });
+    }
+    const priceNum = Number(Price);
+    if (!Number.isFinite(priceNum) || priceNum <= 0 || priceNum > 99999999.99) {
+      return res.status(400).json({ error: 'Price must be between 0.01 and 99,999,999.99.' });
+    }
+    const sizes = Array.isArray(Sizes) ? Sizes.map(String).map((size: string) => size.trim()).filter(Boolean) : [];
+    const sizeChart = Array.isArray(Size_Chart) ? Size_Chart : [];
+    if (sizes.length > 0 && !['men', 'women', 'unisex'].includes(Size_Gender)) {
+      return res.status(400).json({ error: 'Choose a size-chart category for apparel sizes.' });
     }
 
     // Moderation: ensure seller exists and is approved via gocart_seller_get
@@ -101,9 +118,9 @@ router.post('/', requireAuth, requireRole(['seller', 'admin']), async (req: Auth
     }
 
     const id = `PROD-${Date.now()}`;
-    const img = Image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80';
+    const images = Array.isArray(Images) ? Images.map(String).map((url: string) => url.trim()).filter(Boolean) : [];
+    const img = images[0] || Image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80';
     const desc = Description || '';
-    const priceNum = Number(Price);
     const vouch = Voucher || '';
     const stockNum = Number(Stock) || 0;
     const prodStat = Product_Status || 'active';
@@ -112,12 +129,14 @@ router.post('/', requireAuth, requireRole(['seller', 'admin']), async (req: Auth
       `SELECT * FROM gocart_product_create($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
       [id, Name, img, desc, priceNum, vouch, stockNum, prodStat, Category_ID, Seller_ID]
     );
+    await query('UPDATE products SET size_gender = $2, sizes_json = $3::jsonb, size_chart_json = $4::jsonb, images_json = $5::jsonb WHERE id = $1', [id, sizes.length ? Size_Gender : null, JSON.stringify(sizes), JSON.stringify(sizeChart), JSON.stringify(images.length ? images : [img])]);
 
     const row = result.rows[0];
     const newProd: Product = {
       Product_ID: row.id,
       Name: row.name,
       Image: row.image,
+      Images: images.length ? images : [img],
       Description: row.description,
       Price: Number(row.price),
       Voucher: row.voucher,
@@ -125,6 +144,9 @@ router.post('/', requireAuth, requireRole(['seller', 'admin']), async (req: Auth
       Product_Status: row.product_status,
       Category_ID: row.category_id,
       Seller_ID: row.seller_id,
+      Size_Gender: sizes.length ? Size_Gender : undefined,
+      Sizes: sizes,
+      Size_Chart: sizeChart,
     };
     res.status(201).json(newProd);
   } catch (error: any) {
@@ -145,24 +167,38 @@ router.put('/:id', requireAuth, requireRole(['seller', 'admin']), async (req: Au
 
     const current: any = existing.rows[0];
     const name = req.body.Name ?? current.name;
-    const image = req.body.Image ?? current.image;
+    const requestedImages = Array.isArray(req.body.Images) ? req.body.Images.map(String).map((url: string) => url.trim()).filter(Boolean) : null;
+    const currentImages = Array.isArray(current.images_json) ? current.images_json : [];
+    const image = requestedImages?.[0] ?? req.body.Image ?? current.image;
     const description = req.body.Description ?? current.description;
     const price = req.body.Price !== undefined ? Number(req.body.Price) : Number(current.price);
+    if (!Number.isFinite(price) || price <= 0 || price > 99999999.99) {
+      return res.status(400).json({ error: 'Price must be between 0.01 and 99,999,999.99.' });
+    }
     const voucher = req.body.Voucher ?? current.voucher;
     const stock = req.body.Stock !== undefined ? Number(req.body.Stock) : Number(current.stock);
     const productStatus = req.body.Product_Status ?? current.product_status;
     const categoryId = req.body.Category_ID ?? current.category_id;
+    const sizeGender = req.body.Size_Gender !== undefined ? req.body.Size_Gender : current.size_gender;
+    const sizes = Array.isArray(req.body.Sizes) ? req.body.Sizes.map(String).map((size: string) => size.trim()).filter(Boolean) : (Array.isArray(current.sizes_json) ? current.sizes_json : []);
+    const sizeChart = Array.isArray(req.body.Size_Chart) ? req.body.Size_Chart : (Array.isArray(current.size_chart_json) ? current.size_chart_json : []);
+    if (sizes.length && !['men', 'women', 'unisex'].includes(sizeGender)) {
+      return res.status(400).json({ error: 'Choose a size-chart category for apparel sizes.' });
+    }
 
     const result = await query(
       `SELECT * FROM gocart_product_update($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
       [id, name, image, description, price, voucher, stock, productStatus, categoryId]
     );
+    const images = requestedImages ?? currentImages;
+    await query('UPDATE products SET size_gender = $2, sizes_json = $3::jsonb, size_chart_json = $4::jsonb, images_json = $5::jsonb WHERE id = $1', [id, sizes.length ? sizeGender : null, JSON.stringify(sizes), JSON.stringify(sizeChart), JSON.stringify(images.length ? images : [image])]);
 
     const row = result.rows[0];
     res.json({
       Product_ID: row.id,
       Name: row.name,
       Image: row.image,
+      Images: images.length ? images : [image],
       Description: row.description,
       Price: Number(row.price),
       Voucher: row.voucher,
@@ -170,6 +206,9 @@ router.put('/:id', requireAuth, requireRole(['seller', 'admin']), async (req: Au
       Product_Status: row.product_status,
       Category_ID: row.category_id,
       Seller_ID: row.seller_id,
+      Size_Gender: sizes.length ? sizeGender : undefined,
+      Sizes: sizes,
+      Size_Chart: sizeChart,
     });
   } catch (error: any) {
     console.error('Error updating product:', error);

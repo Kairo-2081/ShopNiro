@@ -41,7 +41,7 @@ export const RiderDashboard: React.FC<RiderDashboardProps> = ({ rider }) => {
   const [withdrawing, setWithdrawing] = React.useState(false);
 
   const refresh = React.useCallback(async () => {
-    if (!location) return;
+    if (profile.Status !== 'approved' || !location) return;
     setLoading(true);
     setError(null);
     try {
@@ -58,7 +58,7 @@ export const RiderDashboard: React.FC<RiderDashboardProps> = ({ rider }) => {
     } finally {
       setLoading(false);
     }
-  }, [location]);
+  }, [location, profile.Status]);
 
   React.useEffect(() => { void refresh(); }, [refresh]);
 
@@ -120,6 +120,10 @@ export const RiderDashboard: React.FC<RiderDashboardProps> = ({ rider }) => {
   };
 
   const timelyPercent = profile.Total_Deliveries ? Math.round((profile.Timely_Deliveries / profile.Total_Deliveries) * 100) : 100;
+
+  if (profile.Status !== 'approved') {
+    return <div className="mx-auto max-w-xl rounded-xl border border-amber-300 bg-amber-50 p-6 text-center dark:border-amber-900 dark:bg-amber-950/30"><h1 className="text-lg font-bold text-slate-900 dark:text-white">Rider application under review</h1><p className="mt-2 text-sm text-slate-600 dark:text-zinc-300">Your account is signed in, but delivery operations will appear after administrator approval.</p></div>;
+  }
 
   return (
     <div className="space-y-6 pb-12">

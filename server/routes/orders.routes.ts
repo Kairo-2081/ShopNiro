@@ -37,7 +37,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
     if (orderIds.length > 0) {
       const fulfillmentResult = await query(
         `SELECT sf.id, sf.order_id, sf.seller_id, s.name AS seller_name, sf.items_json, sf.status,
-          rd.rider_id, r.name AS rider_name, rd.status AS delivery_status
+          rd.rider_id, r.name AS rider_name, r.number AS rider_number, rd.status AS delivery_status
         FROM seller_fulfillments sf
         JOIN sellers s ON s.id = sf.seller_id
         LEFT JOIN rider_deliveries rd ON rd.fulfillment_id = sf.id
@@ -57,6 +57,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
           Items: typeof fulfillment.items_json === 'string' ? JSON.parse(fulfillment.items_json) : fulfillment.items_json || [],
           Rider_ID: fulfillment.rider_id || undefined,
           Rider_Name: fulfillment.rider_name || undefined,
+          Rider_Number: fulfillment.rider_number || undefined,
           Delivery_Status: fulfillment.delivery_status || undefined,
         });
         fulfillmentsByOrder.set(fulfillment.order_id, current);

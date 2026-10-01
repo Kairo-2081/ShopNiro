@@ -173,11 +173,9 @@ router.post('/login', async (req, res) => {
           FROM riders r JOIN users u ON u.id = r.id WHERE r.id = $1
         `, [entityId]);
         const rider = riderRes.rows[0];
-        if (!rider || rider.status !== 'approved') {
-          const message = !rider ? 'Rider profile not found.' : rider.status === 'pending'
-            ? 'Your rider application is pending admin approval.'
-            : `Rider account is ${rider.status}. Contact marketplace support.`;
-          return res.status(403).json({ error: message });
+        if (!rider) return res.status(404).json({ error: 'Rider profile not found.' });
+        if (rider.status === 'rejected' || rider.status === 'suspended') {
+          return res.status(403).json({ error: `Rider account is ${rider.status}. Contact marketplace support.` });
         }
         const entity = {
           Rider_ID: rider.id,

@@ -252,6 +252,11 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify({ status }),
     }),
+  updateSellerProfile: async (updates: Partial<Seller>): Promise<Seller> =>
+    fetchJson<Seller>('/api/sellers/me/profile', {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    }),
   getSellerWallet: async (): Promise<{ balance: number; entries: any[] }> => fetchJson('/api/sellers/me/wallet'),
 
   applyRider: async (data: {
@@ -388,10 +393,10 @@ export const api = {
   // Cart
   getCart: async (customerId: string): Promise<CartItem[]> =>
     fetchJson<CartItem[]>(`/api/cart?customerId=${encodeURIComponent(customerId)}`),
-  addToCart: async (Customer_ID: string, Product_ID: string, Quantity: number = 1): Promise<CartItem> =>
+  addToCart: async (Customer_ID: string, Product_ID: string, Quantity: number = 1, Size?: string): Promise<CartItem> =>
     fetchJson<CartItem>('/api/cart', {
       method: 'POST',
-      body: JSON.stringify({ Customer_ID, Product_ID, Quantity }),
+      body: JSON.stringify({ Customer_ID, Product_ID, Quantity, Size }),
     }),
   updateCartQuantity: async (cartId: string, Quantity: number): Promise<void> => {
     await fetchJson(`/api/cart/${encodeURIComponent(cartId)}`, {
@@ -469,6 +474,17 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(params),
     }),
+  generateAIReviewDraft: async (params: { productName: string; productDescription: string; sentiment: 'good' | 'bad'; notes?: string }): Promise<{ draft: string }> =>
+    fetchJson('/api/ai/review-draft', { method: 'POST', body: JSON.stringify(params) }),
+  generateDeliveryInstructions: async (params: { products: Array<{ name: string; description: string; quantity: number }>; shippingAddress: Address; preferences?: string }): Promise<{ instruction: string }> =>
+    fetchJson('/api/ai/delivery-instructions', { method: 'POST', body: JSON.stringify(params) }),
+  generateAISizeChart: async (params: {
+    productName: string;
+    categoryName?: string;
+    gender: 'men' | 'women' | 'unisex';
+    imageUrl: string;
+  }): Promise<{ sizes: string[]; sizeChart: Array<{ Size: string; Chest_CM?: number | null; Waist_CM?: number | null; Hip_CM?: number | null; Length_CM?: number | null }>; isEstimate: boolean }> =>
+    fetchJson('/api/ai/size-chart', { method: 'POST', body: JSON.stringify(params) }),
   sendAIChatMessage: async (params: {
     message: string;
     history?: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }>;

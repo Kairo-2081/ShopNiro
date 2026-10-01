@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import Groq from 'groq-sdk';
+import PDFDocument from 'pdfkit';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { pool, query } from '../db/index.ts';
@@ -41,6 +42,58 @@ function parseJsonResponse(value: string): Record<string, unknown> {
 
 function cleanList(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string').map((item) => item.trim()).filter(Boolean).slice(0, 20) : [];
+}
+
+function createRiderCvPdf(profile: { name: string; email: string; phone: string; presentAddress: Address; permanentAddress: Address; experience: string[]; previousJobs: string[]; education: string[] }): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const document = new PDFDocument({ size: 'A4', margin: 54, info: { Title: `${profile.name} | ShopNiro Rider CV`, Author: 'ShopNiro' } });
+    const chunks: Buffer[] = [];
+    document.on('data', (chunk: Buffer) => chunks.push(chunk));
+    document.on('end', () => resolve(Buffer.concat(chunks)));
+    document.on('error', reject);
+
+    document.rect(0, 0, 595.28, 190).fill('#102b3a');
+    document.fillColor('#77d9bd').font('Helvetica-Bold').fontSize(9).text('SHOPNIRO  /  DELIVERY OPERATIONS', 54, 48, { characterSpacing: 1.2 });
+    document.fillColor('#ffffff').fontSize(29).text(profile.name, 54, 78, { width: 490 });
+    document.fillColor('#c7d8dc').font('Helvetica').fontSize(11).text('DELIVERY RIDER  |  PROFESSIONAL PROFILE', 54, 127, { characterSpacing: 0.8 });
+    document.fillColor('#142d38').font('Helvetica-Bold').fontSize(10).text('CONTACT', 54, 220);
+    document.moveTo(54, 238).lineTo(541, 238).lineWidth(1).strokeColor('#d4e0df').stroke();
+    document.fillColor('#33474d').font('Helvetica').fontSize(10)
+      .text(`Email: ${profile.email}    Phone: ${profile.phone}`, 54, 250, { width: 487 });
+
+    const addressText = (address: Address) => [address.House_Name, address.Street, address.City, address.Postal_Code].filter(Boolean).join(', ') || 'Not provided';
+    let y = 284;
+    const section = (title: string, entries: string[]) => {
+      if (!entries.length) return;
+      if (y > 700) {
+        document.addPage();
+        y = 58;
+      }
+      document.fillColor('#147d73').font('Helvetica-Bold').fontSize(10).text(title.toUpperCase(), 54, y, { characterSpacing: 0.8 });
+      y += 20;
+      document.moveTo(54, y).lineTo(541, y).lineWidth(0.7).strokeColor('#d4e0df').stroke();
+      y += 10;
+      for (const entry of entries) {
+        const text = `-  ${entry}`;
+        document.font('Helvetica').fontSize(10);
+        const height = document.heightOfString(text, { width: 475, lineGap: 3 });
+        if (y + height > 760) {
+          document.addPage();
+          y = 58;
+        }
+        document.fillColor('#33474d').font('Helvetica').fontSize(10).text(text, 66, y, { width: 475, lineGap: 3 });
+        y += height + 8;
+      }
+      y += 14;
+    };
+
+    section('Present address', [addressText(profile.presentAddress)]);
+    section('Permanent address', [addressText(profile.permanentAddress)]);
+    section('Relevant experience', profile.experience);
+    section('Previous roles', profile.previousJobs);
+    section('Education and qualifications', profile.education);
+    document.end();
+  });
 }
 
 function mapRider(row: any): Rider {
@@ -153,14 +206,34 @@ router.post('/apply', async (req, res) => {
     return res.status(400).json({ error: 'Select map locations and complete both present and permanent addresses.' });
   }
 
-  let cvBuffer: Buffer | null = null;
-  if (Has_CV) {
+  if (Has_CV && CV_Base64) {
     try {
-      cvBuffer = decodePdf(CV_Base64);
+      decodePdf(CV_Base64);
     } catch (error: any) {
       return res.status(400).json({ error: error.message });
     }
   }
+
+  const experience = cleanList(Experience);
+  const previousJobs = cleanList(Previous_Jobs);
+  const education = cleanList(Education);
+  let cvBuffer: Buffer;
+  try {
+    cvBuffer = await createRiderCvPdf({
+      name: String(Name).trim(),
+      email: String(Email).trim().toLowerCase(),
+      phone: String(phone).trim(),
+      presentAddress: Present_Address as Address,
+      permanentAddress: Permanent_Address as Address,
+      experience,
+      previousJobs,
+      education,
+    });
+  } catch (error) {
+    console.error('Could not generate rider CV PDF:', error);
+    return res.status(500).json({ error: 'Could not generate your rider CV PDF. Please try again.' });
+  }
+  const cvFileName = `${String(Name).trim().replace(/[^a-zA-Z0-9-_]+/g, '-').replace(/-+/g, '-').slice(0, 100) || 'rider'}-ShopNiro-CV.pdf`;
 
   const client = await pool.connect();
   try {
@@ -191,16 +264,16 @@ router.post('/apply', async (req, res) => {
         String(phone).trim(),
         JSON.stringify(Present_Address as Address),
         JSON.stringify(Permanent_Address as Address),
-        Boolean(Has_CV),
-        Has_CV && typeof CV_File_Name === 'string' ? CV_File_Name.slice(0, 255) : null,
+        true,
+        cvFileName,
         cvBuffer,
-        JSON.stringify(cleanList(Experience)),
-        JSON.stringify(cleanList(Previous_Jobs)),
-        JSON.stringify(cleanList(Education)),
+        JSON.stringify(experience),
+        JSON.stringify(previousJobs),
+        JSON.stringify(education),
       ]
     );
     await client.query('COMMIT');
-    return res.status(201).json({ success: true, status: 'pending', message: 'Application received. An administrator must approve your rider account before sign-in.' });
+    return res.status(201).json({ success: true, status: 'pending', message: 'Application received. Your ShopNiro CV PDF has been generated and saved. An administrator must approve your rider account before delivery operations are available.' });
   } catch (error: any) {
     await client.query('ROLLBACK');
     console.error('Rider application failed:', error);

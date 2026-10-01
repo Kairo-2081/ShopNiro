@@ -384,13 +384,13 @@ export default function App() {
   };
 
   // Cart operations
-  const handleAddToCart = async (product: Product, quantity: number = 1) => {
+  const handleAddToCart = async (product: Product, quantity: number = 1, size?: string) => {
     if (!isLoggedIn || !selectedCustomer) {
       setIsLoginModalOpen(true);
       return;
     }
     try {
-      await api.addToCart(selectedCustomer.Customer_ID, product.Product_ID, quantity);
+      await api.addToCart(selectedCustomer.Customer_ID, product.Product_ID, quantity, size);
       const updatedCart = await api.getCart(selectedCustomer.Customer_ID);
       setCart(updatedCart);
       setIsCartOpen(true);
@@ -411,6 +411,7 @@ export default function App() {
       setCart(updatedCart);
     } catch (err: any) {
       console.error('Cart quantity update error:', err);
+      alert(err.message || 'Could not update cart quantity.');
     }
   };
 
@@ -422,6 +423,7 @@ export default function App() {
       setCart(updatedCart);
     } catch (err: any) {
       console.error('Remove from cart error:', err);
+      alert(err.message || 'Could not remove this item from the cart.');
     }
   };
 
@@ -467,6 +469,13 @@ export default function App() {
     } catch (err: any) {
       alert(err.message || 'Failed to update profile');
     }
+  };
+
+  const handleUpdateSellerProfile = async (updates: Partial<Seller>): Promise<Seller> => {
+    const updated = await api.updateSellerProfile(updates);
+    setSelectedSeller(updated);
+    setSellers((prev) => prev.map((seller) => seller.Seller_ID === updated.Seller_ID ? updated : seller));
+    return updated;
   };
 
   // Product CRUD (Seller)
@@ -845,6 +854,7 @@ export default function App() {
               onDeleteProduct={handleDeleteProduct}
               onUpdateProductStatus={handleUpdateProductStatus}
               onUpdateOrderStatus={handleUpdateOrderStatus}
+              onUpdateSellerProfile={handleUpdateSellerProfile}
             />
           ) : (
             <AuthenticationGuard

@@ -50,6 +50,9 @@ export const CustomerOrders: React.FC<CustomerOrdersProps> = ({
   const [deliveryNotice, setDeliveryNotice] = React.useState<string | null>(null);
   const [deliveryCodes, setDeliveryCodes] = React.useState<Record<string, string>>({});
   const [confirmingDeliveryId, setConfirmingDeliveryId] = React.useState<string | null>(null);
+  const refreshOrdersRef = React.useRef(onRefreshOrders);
+
+  React.useEffect(() => { refreshOrdersRef.current = onRefreshOrders; }, [onRefreshOrders]);
 
   const loadRiderDeliveries = React.useCallback(async () => {
     try {
@@ -59,7 +62,20 @@ export const CustomerOrders: React.FC<CustomerOrdersProps> = ({
     }
   }, []);
 
-  React.useEffect(() => { void loadRiderDeliveries(); }, [loadRiderDeliveries, currentCustomer.Customer_ID]);
+  React.useEffect(() => {
+    void loadRiderDeliveries();
+    const refreshOrders = () => {
+      void refreshOrdersRef.current?.().catch((error: any) => {
+        setDeliveryNotice(error.message || 'Could not refresh your orders.');
+      });
+    };
+    refreshOrders();
+    const refreshTimer = window.setInterval(() => {
+      void loadRiderDeliveries();
+      refreshOrders();
+    }, 10000);
+    return () => window.clearInterval(refreshTimer);
+  }, [loadRiderDeliveries, currentCustomer.Customer_ID]);
 
   const submitRiderReview = async (delivery: RiderDelivery & { Review_ID?: string }) => {
     setReviewSubmittingId(delivery.Delivery_ID);

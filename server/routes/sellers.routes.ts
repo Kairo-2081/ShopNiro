@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { query, mapAddress } from '../db/index.ts';
+import { pool, query, mapAddress } from '../db/index.ts';
 import { hashPassword } from '../db/password.ts';
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth.ts';
 import { Seller } from '../../src/types.ts';
@@ -106,6 +106,105 @@ router.post('/', async (req, res) => {
   } catch (error: any) {
     console.error('Error creating seller:', error);
     res.status(500).json({ error: error.message || 'Failed to create seller' });
+  }
+});
+
+router.put('/me/profile', requireAuth, requireRole(['seller']), async (req: AuthRequest, res) => {
+  const { Name, Username, Email, Number: phone, Logo, Description, Address } = req.body ?? {};
+  if (![Name, Username, Email, phone].every((value) => typeof value === 'string' && value.trim())) {
+    return res.status(400).json({ error: 'Store name, username, email, and phone number are required.' });
+  }
+  if (
+    !Address?.Street?.trim() || !Address?.City?.trim() ||
+    !Number.isFinite(Number(Address?.Latitude)) || !Number.isFinite(Number(Address?.Longitude))
+  ) {
+    return res.status(400).json({ error: 'Select the updated business address on the map.' });
+  }
+
+  const client = await pool.connect();
+  try {
+    const sellerId = req.user!.entityId;
+    const username = String(Username).trim().toLowerCase();
+    const email = String(Email).trim().toLowerCase();
+    await client.query('BEGIN');
+    const currentResult = await client.query(
+      `SELECT s.*, u.username, u.email FROM sellers s JOIN users u ON u.id = s.id WHERE s.id = $1 FOR UPDATE OF s, u`,
+      [sellerId]
+    );
+    if (!currentResult.rows.length) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Seller profile not found.' });
+    }
+    const current = currentResult.rows[0];
+    const changed = [
+      [current.name, String(Name).trim()],
+      [current.username, username],
+      [current.email, email],
+      [current.number || '', String(phone).trim()],
+      [current.logo || '', typeof Logo === 'string' ? Logo.trim() : ''],
+      [current.description || '', typeof Description === 'string' ? Description.trim() : ''],
+      [current.address_house_name || '', String(Address.House_Name || '')],
+      [current.address_street || '', String(Address.Street).trim()],
+      [current.address_city || '', String(Address.City).trim()],
+      [current.address_postal_code || '', String(Address.Postal_Code || '')],
+      [current.address_additional_info || '', String(Address.Additional_Info || '')],
+      [Number(current.address_latitude), Number(Address.Latitude)],
+      [Number(current.address_longitude), Number(Address.Longitude)],
+    ].some(([before, after]) => before !== after);
+    const duplicate = await client.query(
+      'SELECT 1 FROM users WHERE id <> $1 AND (lower(username) = $2 OR lower(email) = $3) LIMIT 1',
+      [sellerId, username, email]
+    );
+    if (duplicate.rows.length) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'That username or email is already in use.' });
+    }
+    await client.query('UPDATE users SET username = $2, email = $3 WHERE id = $1 AND role = $4', [sellerId, username, email, 'seller']);
+    await client.query(`
+      UPDATE sellers SET name = $2, number = $3, logo = $4, description = $5,
+        address_house_name = $6, address_street = $7, address_city = $8,
+        address_postal_code = $9, address_additional_info = $10,
+        address_latitude = $11, address_longitude = $12,
+        status = CASE WHEN $13 THEN 'pending' ELSE status END
+      WHERE id = $1
+    `, [
+      sellerId,
+      String(Name).trim(),
+      String(phone).trim(),
+      typeof Logo === 'string' ? Logo.trim() : '',
+      typeof Description === 'string' ? Description.trim() : '',
+      String(Address.House_Name || ''),
+      String(Address.Street).trim(),
+      String(Address.City).trim(),
+      String(Address.Postal_Code || ''),
+      String(Address.Additional_Info || ''),
+      Number(Address.Latitude),
+      Number(Address.Longitude),
+      changed,
+    ]);
+    await client.query('COMMIT');
+    const profile = await query('SELECT * FROM gocart_seller_get($1)', [sellerId]);
+    const seller = profile.rows[0];
+    if (!seller) return res.status(404).json({ error: 'Seller profile not found.' });
+    return res.json({
+      Seller_ID: seller.id,
+      Username: seller.username || username,
+      Name: seller.name,
+      Email: seller.email || email,
+      Number: seller.number || '',
+      Address: mapAddress(seller),
+      Logo: seller.logo || '',
+      Description: seller.description || '',
+      Status: seller.status,
+      Created_At: seller.created_at ? new Date(seller.created_at).toISOString() : new Date().toISOString(),
+    });
+  } catch (error: any) {
+    await client.query('ROLLBACK');
+    if (error?.code === '23505') return res.status(409).json({ error: 'That username or email is already in use.' });
+    console.error('Could not update seller profile:', error);
+    return res.status(500).json({ error: 'Could not update store details.' });
+  } finally {
+    client.release();
   }
 });
 

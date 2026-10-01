@@ -36,6 +36,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const handleAddClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isOutOfStock || isDeactivated) return;
+    if (product.Sizes?.length) {
+      onSelect(product);
+      return;
+    }
     setJustAdded(true);
     onAddToCart(product, e);
     setTimeout(() => setJustAdded(false), 1500);
@@ -151,7 +155,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             ) : (
               <>
                 <ShoppingCart className="w-3.5 h-3.5" />
-                <span>Add to Cart</span>
+                <span>{product.Sizes?.length ? 'Choose size' : 'Add to Cart'}</span>
               </>
             )}
           </button>

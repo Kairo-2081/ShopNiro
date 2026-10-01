@@ -136,17 +136,36 @@ router.post('/deliveries/:id/accept', requireAuth, requireRole(['rider']), requi
 });
 
 router.post('/deliveries/:id/on-way', requireAuth, requireRole(['rider']), requireApprovedRider, async (req: AuthRequest, res) => {
+  const client = await pool.connect();
   try {
-    const result = await query(
+    await client.query('BEGIN');
+    const result = await client.query(
       `UPDATE rider_deliveries SET status = 'on_the_way'
       WHERE id = $1 AND rider_id = $2 AND status = 'accepted' RETURNING id`,
       [req.params.id, req.user!.entityId]
     );
-    if (!result.rows.length) return res.status(409).json({ error: 'Accept this delivery before starting it.' });
+    if (!result.rows.length) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'Accept this delivery before starting it.' });
+    }
+    const fulfillment = await client.query(
+      `UPDATE seller_fulfillments SET status = 'shipped', shipped_at = COALESCE(shipped_at, CURRENT_TIMESTAMP)
+      WHERE id = (SELECT fulfillment_id FROM rider_deliveries WHERE id = $1)
+      RETURNING order_id`,
+      [req.params.id]
+    );
+    await client.query(
+      `UPDATE orders SET status = 'shipped' WHERE id = $1 AND status <> 'delivered'`,
+      [fulfillment.rows[0]?.order_id]
+    );
+    await client.query('COMMIT');
     return res.json({ success: true });
   } catch (error: any) {
+    await client.query('ROLLBACK');
     console.error('Could not start rider delivery:', error);
     return res.status(500).json({ error: 'Could not start this delivery.' });
+  } finally {
+    client.release();
   }
 });
 

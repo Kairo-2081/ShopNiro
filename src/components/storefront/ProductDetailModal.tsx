@@ -1,7 +1,7 @@
 import React from 'react';
 import { Product, Category, Seller, Review, Customer } from '../../types';
 import { StarRating } from '../StarRating';
-import { formatCurrency, formatDate } from '../../lib/api';
+import { api, formatCurrency, formatDate } from '../../lib/api';
 import {
   X,
   ShoppingCart,
@@ -24,7 +24,7 @@ interface ProductDetailModalProps {
   reviews: Review[];
   currentCustomer?: Customer | null;
   onClose: () => void;
-  onAddToCart: (product: Product, quantity: number) => void;
+  onAddToCart: (product: Product, quantity: number, size?: string) => void;
   onSubmitReview: (productId: string, rating: number, reviewText: string) => void;
   onOpenLogin?: () => void;
   onAskAI?: (query: string) => void;
@@ -43,8 +43,13 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   onAskAI,
 }) => {
   const [quantity, setQuantity] = React.useState(1);
+  const [selectedSize, setSelectedSize] = React.useState('');
+  const [galleryIndex, setGalleryIndex] = React.useState(0);
   const [newRating, setNewRating] = React.useState(0);
   const [newReviewText, setNewReviewText] = React.useState('');
+  const [reviewSentiment, setReviewSentiment] = React.useState<'good' | 'bad'>('good');
+  const [isDraftingReview, setIsDraftingReview] = React.useState(false);
+  const [reviewDraftError, setReviewDraftError] = React.useState('');
   const [isSubmittingReview, setIsSubmittingReview] = React.useState(false);
   const [reviewSubmittedMessage, setReviewSubmittedMessage] = React.useState('');
   const [imgError, setImgError] = React.useState(false);
@@ -54,6 +59,10 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
     setNewRating(0);
     setNewReviewText('');
     setReviewSubmittedMessage('');
+    setSelectedSize('');
+    setGalleryIndex(0);
+    setImgError(false);
+    setReviewDraftError('');
   }, [product?.Product_ID]);
 
   if (!product) return null;
@@ -66,6 +75,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
   const isOutOfStock = Number(product.Stock) <= 0;
   const isDeactivated = product.Product_Status === 'deactivated';
+  const productImages = product.Images?.length ? product.Images : [product.Image];
+  const selectedImage = productImages[galleryIndex] || product.Image;
 
   const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -84,12 +95,31 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
   const handleAddToCartClick = () => {
     if (isOutOfStock || isDeactivated) return;
+    if (product.Sizes?.length && !selectedSize) return;
     setJustAdded(true);
-    onAddToCart(product, quantity);
+    onAddToCart(product, quantity, selectedSize || undefined);
     setTimeout(() => {
       setJustAdded(false);
       onClose();
     }, 500);
+  };
+
+  const draftReview = async () => {
+    setIsDraftingReview(true);
+    setReviewDraftError('');
+    try {
+      const result = await api.generateAIReviewDraft({
+        productName: product.Name,
+        productDescription: product.Description,
+        sentiment: reviewSentiment,
+        notes: newReviewText,
+      });
+      setNewReviewText(result.draft);
+    } catch (error: any) {
+      setReviewDraftError(error.message || 'Could not draft a review.');
+    } finally {
+      setIsDraftingReview(false);
+    }
   };
 
   const defaultPlaceholder = 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=800&auto=format&fit=crop&q=80';
@@ -121,7 +151,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             <div className="space-y-4">
               <div className="aspect-square w-full rounded-2xl bg-slate-100 dark:bg-[#0C1014] overflow-hidden border border-slate-200 dark:border-zinc-800 relative">
                 <img
-                  src={imgError || !product.Image ? defaultPlaceholder : product.Image}
+                  src={imgError || !selectedImage ? defaultPlaceholder : selectedImage}
                   alt={product.Name}
                   onError={() => setImgError(true)}
                   referrerPolicy="no-referrer"
@@ -134,6 +164,15 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   </div>
                 )}
               </div>
+              {productImages.length > 1 && (
+                <div className="flex gap-2 overflow-x-auto">
+                  {productImages.map((imageUrl, index) => (
+                    <button key={`${imageUrl}-${index}`} type="button" onClick={() => { setGalleryIndex(index); setImgError(false); }} aria-label={`Show product image ${index + 1}`} aria-pressed={galleryIndex === index} className={`h-14 w-14 shrink-0 overflow-hidden rounded-lg border-2 ${galleryIndex === index ? 'border-blue-600' : 'border-slate-200 dark:border-zinc-700'}`}>
+                      <img src={imageUrl} alt="" className="h-full w-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {/* Seller Info Box */}
               {seller && (
@@ -230,6 +269,25 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
               {/* Quantity & Add to Cart */}
               <div className="pt-4 border-t border-slate-100 dark:border-zinc-800 space-y-4">
+                {product.Sizes?.length ? (
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <span className="text-xs font-semibold text-slate-600 dark:text-zinc-400">Choose size{product.Size_Gender ? ` · ${product.Size_Gender}` : ''}</span>
+                      {product.Size_Chart?.length ? <span className="text-[10px] text-slate-500">Measurements in cm</span> : null}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {product.Sizes.map((size) => <button key={size} type="button" aria-pressed={selectedSize === size} onClick={() => setSelectedSize(size)} className={`min-w-10 rounded-lg border px-3 py-2 text-xs font-bold ${selectedSize === size ? 'border-blue-700 bg-blue-700 text-white' : 'border-slate-300 text-slate-700 dark:border-zinc-700 dark:text-zinc-300'}`}>{size}</button>)}
+                    </div>
+                    {product.Size_Chart?.length ? (
+                      <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-zinc-800">
+                        <table className="w-full min-w-[420px] text-left text-[10px]">
+                          <thead className="bg-slate-50 text-slate-500 dark:bg-[#181F2A] dark:text-zinc-400"><tr><th className="p-2">Size</th><th>Chest</th><th>Waist</th><th>Hip</th><th>Length</th></tr></thead>
+                          <tbody>{product.Size_Chart.filter((row) => product.Sizes?.includes(row.Size)).map((row) => <tr key={row.Size} className="border-t border-slate-100 dark:border-zinc-800"><td className="p-2 font-bold">{row.Size}</td><td>{row.Chest_CM ?? '-'}</td><td>{row.Waist_CM ?? '-'}</td><td>{row.Hip_CM ?? '-'}</td><td>{row.Length_CM ?? '-'}</td></tr>)}</tbody>
+                        </table>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
                 <div className="flex items-center gap-4">
                   <span className="text-xs font-semibold text-slate-600 dark:text-zinc-400">Quantity:</span>
                   <div className="flex items-center border border-slate-200 dark:border-zinc-700 rounded-full overflow-hidden bg-slate-50 dark:bg-[#181F2A]">
@@ -255,10 +313,10 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
                 <button
                   type="button"
-                  disabled={isOutOfStock || isDeactivated}
+                  disabled={isOutOfStock || isDeactivated || Boolean(product.Sizes?.length && !selectedSize)}
                   onClick={handleAddToCartClick}
                   className={`w-full py-3.5 px-6 rounded-full font-bold text-sm shadow-lg flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                    isOutOfStock || isDeactivated
+                    isOutOfStock || isDeactivated || Boolean(product.Sizes?.length && !selectedSize)
                       ? 'bg-slate-200 dark:bg-zinc-800 text-slate-400 dark:text-zinc-600 cursor-not-allowed'
                       : justAdded
                       ? 'bg-emerald-600 text-white shadow-emerald-500/25'
@@ -273,7 +331,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   ) : (
                     <>
                       <ShoppingCart className="w-5 h-5" />
-                      <span>Add {quantity} Item{quantity > 1 ? 's' : ''} to Cart • {formatCurrency(Number(product.Price) * quantity)}</span>
+                      <span>{product.Sizes?.length && !selectedSize ? 'Choose a size' : `Add ${quantity} Item${quantity > 1 ? 's' : ''}${selectedSize ? ` · ${selectedSize}` : ''} to Cart • ${formatCurrency(Number(product.Price) * quantity)}`}</span>
                     </>
                   )}
                 </button>
@@ -350,6 +408,14 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                       placeholder="Share your experience with this product..."
                       className="w-full p-3 text-xs bg-white dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-zinc-100 placeholder-slate-400"
                     />
+
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div className="inline-flex rounded-lg border border-slate-200 bg-white p-1 dark:border-zinc-700 dark:bg-[#181F2A]">
+                        {(['good', 'bad'] as const).map((sentiment) => <button key={sentiment} type="button" aria-pressed={reviewSentiment === sentiment} onClick={() => setReviewSentiment(sentiment)} className={`rounded-md px-3 py-1.5 text-[11px] font-bold capitalize ${reviewSentiment === sentiment ? 'bg-blue-700 text-white' : 'text-slate-600 dark:text-zinc-300'}`}>{sentiment}</button>)}
+                      </div>
+                      <button type="button" onClick={() => void draftReview()} disabled={isDraftingReview} className="inline-flex items-center gap-1.5 rounded-lg border border-blue-300 px-3 py-2 text-xs font-bold text-blue-700 disabled:opacity-50 dark:border-blue-900 dark:text-sky-300"><Sparkles className="h-3.5 w-3.5" />{isDraftingReview ? 'Drafting...' : 'Draft with AI'}</button>
+                    </div>
+                    {reviewDraftError && <p role="alert" className="text-xs text-rose-600">{reviewDraftError}</p>}
 
                     <div className="flex justify-end">
                       <button

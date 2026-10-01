@@ -111,10 +111,6 @@ export const RiderSignupModal: React.FC<RiderSignupModalProps> = ({ isOpen, onCl
       setError('Choose whether you have a CV.');
       return;
     }
-    if (hasCv && (!cvFile || !cvBase64)) {
-      setError('Upload a readable PDF CV, or choose No and enter your details manually.');
-      return;
-    }
     if (
       !presentAddress.Street || !presentAddress.City || !permanentAddress.Street || !permanentAddress.City ||
       !Number.isFinite(presentAddress.Latitude) || !Number.isFinite(presentAddress.Longitude) ||
@@ -178,7 +174,7 @@ export const RiderSignupModal: React.FC<RiderSignupModalProps> = ({ isOpen, onCl
             onClick={() => { onClose(); onOpenLogin(); }}
             className="text-sm font-semibold text-emerald-800 underline decoration-emerald-400 underline-offset-4 dark:text-emerald-300"
           >
-            Already approved? Sign in to the rider portal
+            Already applied? Sign in to the rider portal
           </button>
 
           {error && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300">{error}</p>}
@@ -223,11 +219,11 @@ export const RiderSignupModal: React.FC<RiderSignupModalProps> = ({ isOpen, onCl
               )}
             </div>
             <fieldset className="space-y-2">
-              <legend className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Do you have a CV?</legend>
+                <legend className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Do you have an existing CV to import?</legend>
               <div className="inline-flex rounded-lg border border-slate-200 bg-slate-100 p-1 dark:border-zinc-700 dark:bg-zinc-900">
                 {[true, false].map((choice) => (
                   <button key={String(choice)} type="button" aria-pressed={hasCv === choice} onClick={() => { setHasCv(choice); setError(null); }} className={`rounded-md px-5 py-2 text-sm font-semibold ${hasCv === choice ? 'bg-emerald-700 text-white' : 'text-slate-700 dark:text-zinc-300'}`}>
-                    {choice ? 'Yes, I have a CV' : 'No, enter manually'}
+                    {choice ? 'Yes, import a CV' : 'No, enter details'}
                   </button>
                 ))}
               </div>
@@ -236,7 +232,7 @@ export const RiderSignupModal: React.FC<RiderSignupModalProps> = ({ isOpen, onCl
             {hasCv === true && (
               <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-emerald-400 bg-emerald-50/60 p-4 text-sm text-slate-700 dark:border-emerald-800 dark:bg-emerald-950/20 dark:text-zinc-200">
                 <UploadCloud className="h-5 w-5 shrink-0 text-emerald-700 dark:text-emerald-400" />
-                <span className="min-w-0 flex-1">{cvFile ? `${cvFile.name} · ${isParsing ? 'Reading CV...' : 'Ready'}` : 'Choose your CV (PDF, maximum 3 MB)'}</span>
+                <span className="min-w-0 flex-1">{cvFile ? `${cvFile.name} · ${isParsing ? 'Reading CV...' : 'Ready'}` : 'Optional: import a PDF (maximum 3 MB)'}</span>
                 <input type="file" accept="application/pdf,.pdf" className="sr-only" onChange={handleCvChange} />
               </label>
             )}
@@ -251,7 +247,7 @@ export const RiderSignupModal: React.FC<RiderSignupModalProps> = ({ isOpen, onCl
           </section>
 
           <div className="flex flex-col-reverse justify-between gap-3 border-t border-slate-200 pt-5 dark:border-zinc-800 sm:flex-row sm:items-center">
-            <p className="flex items-center gap-2 text-xs text-slate-500 dark:text-zinc-400"><ShieldCheck className="h-4 w-4 shrink-0" />Rider accounts require administrator approval.</p>
+            <p className="flex items-center gap-2 text-xs text-slate-500 dark:text-zinc-400"><ShieldCheck className="h-4 w-4 shrink-0" />ShopNiro generates and saves a formatted CV PDF from your application details.</p>
             <button type="submit" disabled={isSubmitting || isParsing} className="rounded-lg bg-emerald-700 px-5 py-2.5 text-sm font-bold text-white hover:bg-emerald-600 disabled:opacity-50">
               {isSubmitting ? 'Submitting application...' : 'Submit rider application'}
             </button>

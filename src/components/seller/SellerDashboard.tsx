@@ -2,6 +2,7 @@ import React from 'react';
 import { Seller, Product, Order, Review, Category, ProductStatus } from '../../types';
 import { api, formatCurrency, formatDate } from '../../lib/api';
 import { SellerProductModal } from './SellerProductModal';
+import { SellerProfileModal } from './SellerProfileModal';
 import { StarRating } from '../StarRating';
 import {
   Package,
@@ -27,6 +28,7 @@ interface SellerDashboardProps {
   onDeleteProduct: (productId: string) => Promise<void>;
   onUpdateProductStatus: (productId: string, status: ProductStatus) => Promise<void>;
   onUpdateOrderStatus: (orderId: string, status: string) => Promise<void>;
+  onUpdateSellerProfile: (updates: Partial<Seller>) => Promise<Seller>;
 }
 
 export const SellerDashboard: React.FC<SellerDashboardProps> = ({
@@ -39,9 +41,11 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
   onDeleteProduct,
   onUpdateProductStatus,
   onUpdateOrderStatus,
+  onUpdateSellerProfile,
 }) => {
   const [activeTab, setActiveTab] = React.useState<'products' | 'orders' | 'reviews' | 'wallet'>('products');
   const [isProductModalOpen, setIsProductModalOpen] = React.useState(false);
+  const [isProfileModalOpen, setIsProfileModalOpen] = React.useState(false);
   const [productToEdit, setProductToEdit] = React.useState<Product | null>(null);
   const [sellerWallet, setSellerWallet] = React.useState<{ balance: number; entries: any[] } | null>(null);
   const [walletError, setWalletError] = React.useState<string | null>(null);
@@ -146,21 +150,31 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
             </div>
           </div>
 
-          <button
-            disabled={currentSeller.Status !== 'approved'}
-            onClick={() => {
-              setProductToEdit(null);
-              setIsProductModalOpen(true);
-            }}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-xs shadow-lg transition-all cursor-pointer ${
-              currentSeller.Status !== 'approved'
-                ? 'bg-slate-200 dark:bg-zinc-800 text-slate-400 dark:text-zinc-600 cursor-not-allowed'
-                : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-500/30 transform hover:-translate-y-0.5'
-            }`}
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add New Product Listing</span>
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsProfileModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-slate-300 text-slate-700 dark:border-zinc-700 dark:text-zinc-200 text-xs font-bold hover:bg-slate-50 dark:hover:bg-zinc-800"
+            >
+              <Edit className="w-4 h-4" />
+              <span>Edit store details</span>
+            </button>
+            <button
+              disabled={currentSeller.Status !== 'approved'}
+              onClick={() => {
+                setProductToEdit(null);
+                setIsProductModalOpen(true);
+              }}
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-xs shadow-lg transition-all cursor-pointer ${
+                currentSeller.Status !== 'approved'
+                  ? 'bg-slate-200 dark:bg-zinc-800 text-slate-400 dark:text-zinc-600 cursor-not-allowed'
+                  : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-500/30 transform hover:-translate-y-0.5'
+              }`}
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add New Product Listing</span>
+            </button>
+          </div>
         </div>
 
         {getApprovalStatusBanner()}
@@ -216,7 +230,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
               Store Rating
             </span>
             <div className="text-2xl font-extrabold text-amber-500 mt-1 flex items-center gap-1">
-              {avgSellerRating > 0 ? avgSellerRating.toFixed(1) : '5.0'}
+              {avgSellerRating.toFixed(1)}
               <Star className="w-4 h-4 fill-amber-400" />
             </div>
           </div>
@@ -569,6 +583,13 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
         currentSeller={currentSeller}
         onSaveProduct={(data) => onSaveProduct(data)}
       />
+      {isProfileModalOpen && (
+        <SellerProfileModal
+          seller={currentSeller}
+          onClose={() => setIsProfileModalOpen(false)}
+          onSave={async (updates) => { await onUpdateSellerProfile(updates); }}
+        />
+      )}
     </div>
   );
 };

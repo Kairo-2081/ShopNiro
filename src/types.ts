@@ -55,6 +55,7 @@ export interface Product {
   Product_ID: string;
   Name: string;
   Image: string;
+  Images?: string[];
   Description: string;
   Price: number;
   Voucher: string; // e.g. "SAVE10", "15% OFF", or ""
@@ -63,6 +64,17 @@ export interface Product {
   Category_ID: string;
   Seller_ID: string;
   Review_ID?: string; // FK to latest or primary review
+  Size_Gender?: 'men' | 'women' | 'unisex';
+  Sizes?: string[];
+  Size_Chart?: SizeChartMeasurement[];
+}
+
+export interface SizeChartMeasurement {
+  Size: string;
+  Chest_CM?: number;
+  Waist_CM?: number;
+  Hip_CM?: number;
+  Length_CM?: number;
 }
 
 export interface CartItem {
@@ -70,6 +82,7 @@ export interface CartItem {
   Customer_ID: string;
   Product_ID: string;
   Quantity: number;
+  Size?: string;
   Product?: Product;
 }
 
@@ -80,6 +93,7 @@ export interface OrderItem {
   Quantity: number;
   Image: string;
   Seller_ID: string;
+  Size?: string;
 }
 
 export type OrderStatus = 'placed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
@@ -141,6 +155,7 @@ export interface OrderFulfillment {
   Items: OrderItem[];
   Rider_ID?: string;
   Rider_Name?: string;
+  Rider_Number?: string;
   Delivery_Status?: RiderDelivery['Status'];
 }
 

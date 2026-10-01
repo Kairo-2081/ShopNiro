@@ -135,6 +135,10 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
         Postal_Code: '1213',
       },
     };
+  const assignedRider = activeOrder.Fulfillments?.find((fulfillment) => fulfillment.Rider_Name && ['accepted', 'on_the_way'].includes(fulfillment.Delivery_Status || ''))
+    || activeOrder.Fulfillments?.find((fulfillment) => fulfillment.Rider_Name);
+  const riderName = assignedRider?.Rider_Name || 'Rider not assigned yet';
+  const riderInitials = assignedRider?.Rider_Name?.split(/\s+/).map((part) => part[0]).slice(0, 2).join('').toUpperCase() || 'SN';
 
   // Base coordinates centered in Dhaka commerce corridor
   const originWarehouse: TrackingCoordinates = {
@@ -481,27 +485,21 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
             </div>
           </div>
 
-          {/* Courier Dispatch Agent Card */}
+          {/* Assigned rider card */}
           <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-[#161F2C] border border-slate-200 dark:border-zinc-800 flex items-center justify-between text-xs">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-sky-500/20 text-sky-400 flex items-center justify-center font-bold text-sm">
-                TR
+                {riderInitials}
               </div>
               <div>
-                <span className="font-bold text-slate-900 dark:text-white block">Tanvir Rahman</span>
+                <span className="font-bold text-slate-900 dark:text-white block">{riderName}</span>
                 <span className="text-[11px] text-slate-500 dark:text-zinc-400">
-                  Courier Partner • Paperfly / Pathao Cargo
+                  {assignedRider ? `ShopNiro rider · ${assignedRider.Delivery_Status?.replace('_', ' ') || 'assigned'}` : 'Assigned when the shipment is accepted'}
                 </span>
               </div>
             </div>
 
-            <a
-              href="tel:01700000000"
-              className="p-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center transition-colors shadow-xs"
-              title="Call Dispatch Courier"
-            >
-              <Phone className="w-4 h-4" />
-            </a>
+            {assignedRider?.Rider_Number && <a href={`tel:${assignedRider.Rider_Number}`} className="p-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center transition-colors shadow-xs" title={`Call ${riderName}`}><Phone className="w-4 h-4" /></a>}
           </div>
 
           {/* Payment & Security Snapshot */}

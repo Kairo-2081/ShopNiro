@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import Groq from 'groq-sdk';
 import { query } from '../db/index.ts';
+import { AuthRequest, requireAuth, requireRole } from '../middleware/auth.ts';
 
 const router = Router();
 
@@ -66,6 +67,116 @@ router.post('/description', async (req, res) => {
       ? 'ShopNiro AI reached its current usage limit. Please try again later.'
       : 'ShopNiro AI is temporarily unavailable. Please try again in a moment.';
     return res.status(statusCode).json({ error: errorMessage });
+  }
+});
+
+router.post('/review-draft', requireAuth, requireRole(['customer']), async (req: AuthRequest, res) => {
+  const { productName, productDescription, sentiment, notes } = req.body ?? {};
+  if (
+    typeof productName !== 'string' || !productName.trim() ||
+    !['good', 'bad'].includes(sentiment) ||
+    (notes !== undefined && typeof notes !== 'string')
+  ) {
+    return res.status(400).json({ error: 'Choose whether your experience was good or bad.' });
+  }
+  try {
+    requireGroqClient();
+    const target = resolveModel('flash-lite', 'fast');
+    const response = await groq!.chat.completions.create({
+      model: target.model,
+      temperature: 0.4,
+      messages: [
+        { role: 'system', content: 'Draft a concise first-person product review based only on the customer-provided sentiment and notes plus the supplied product description. Do not invent usage, specifications, or outcomes. Return only the review text.' },
+        { role: 'user', content: JSON.stringify({ productName: productName.trim().slice(0, 160), productDescription: String(productDescription || '').slice(0, 1200), sentiment, notes: String(notes || '').slice(0, 500) }) },
+      ],
+    });
+    const draft = response.choices[0]?.message?.content?.trim();
+    if (!draft) return res.status(502).json({ error: 'AI could not draft this review. Please write it manually.' });
+    return res.json({ draft });
+  } catch (error: any) {
+    const statusCode = error?.statusCode || error?.status || 500;
+    return res.status(statusCode).json({ error: statusCode === 503 ? error.message : 'AI review suggestions are temporarily unavailable.' });
+  }
+});
+
+router.post('/delivery-instructions', requireAuth, requireRole(['customer']), async (req: AuthRequest, res) => {
+  const { products, shippingAddress, preferences } = req.body ?? {};
+  if (!Array.isArray(products) || !shippingAddress || typeof shippingAddress !== 'object') {
+    return res.status(400).json({ error: 'Order items and a delivery address are required.' });
+  }
+  try {
+    requireGroqClient();
+    const target = resolveModel('flash-lite', 'fast');
+    const response = await groq!.chat.completions.create({
+      model: target.model,
+      temperature: 0.3,
+      messages: [
+        { role: 'system', content: 'Write one short, practical delivery instruction the customer can edit. Use only explicit customer preferences, address context, and product names/descriptions. Do not invent access details, contact preferences, or delivery arrangements. If no preference is supplied, return an empty string.' },
+        { role: 'user', content: JSON.stringify({ products: products.slice(0, 20).map((item: any) => ({ name: String(item?.name || '').slice(0, 160), description: String(item?.description || '').slice(0, 600), quantity: Number(item?.quantity) || 1 })), shippingAddress: { street: String(shippingAddress.Street || '').slice(0, 160), city: String(shippingAddress.City || '').slice(0, 100), additionalInfo: String(shippingAddress.Additional_Info || '').slice(0, 300) }, preferences: String(preferences || '').slice(0, 500) }) },
+      ],
+    });
+    const instruction = response.choices[0]?.message?.content?.trim();
+    if (instruction === undefined) return res.status(502).json({ error: 'AI could not suggest delivery instructions.' });
+    return res.json({ instruction });
+  } catch (error: any) {
+    const statusCode = error?.statusCode || error?.status || 500;
+    return res.status(statusCode).json({ error: statusCode === 503 ? error.message : 'AI delivery suggestions are temporarily unavailable.' });
+  }
+});
+
+router.post('/size-chart', requireAuth, requireRole(['seller', 'admin']), async (req: AuthRequest, res) => {
+  try {
+    requireGroqClient();
+    const { productName, categoryName, gender, imageUrl } = req.body ?? {};
+    if (
+      typeof productName !== 'string' || !productName.trim() ||
+      typeof imageUrl !== 'string' ||
+      !['men', 'women', 'unisex'].includes(gender)
+    ) {
+      return res.status(400).json({ error: 'Product title, image URL, and apparel size category are required.' });
+    }
+    let parsedImageUrl: URL;
+    try {
+      parsedImageUrl = new URL(imageUrl);
+    } catch {
+      return res.status(400).json({ error: 'Enter a valid public product image URL first.' });
+    }
+    if (!['http:', 'https:'].includes(parsedImageUrl.protocol) || ['localhost', '127.0.0.1', '::1'].includes(parsedImageUrl.hostname)) {
+      return res.status(400).json({ error: 'Use a public HTTP or HTTPS product image URL.' });
+    }
+
+    const response = await groq!.chat.completions.create({
+      model: process.env.GROQ_MODEL_VISION?.trim() || 'meta-llama/llama-4-scout-17b-16e-instruct',
+      temperature: 0.1,
+      messages: [
+        {
+          role: 'system',
+          content: 'Inspect the apparel image and produce a conservative DRAFT size chart. Image-only measurements are estimates and cannot be exact. Return JSON only with sizes (string array, use standard XS,S,M,L,XL,XXL labels) and sizeChart (array of objects with Size and estimated Chest_CM, Waist_CM, Hip_CM, Length_CM numbers). Use null for measurements the image cannot reasonably inform. Never present estimates as measured facts.',
+        },
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: `Product: ${productName.trim()}\nCategory: ${String(categoryName || '').slice(0, 100)}\nSizing group: ${gender}. Return a draft range appropriate for this group.` },
+            { type: 'image_url', image_url: { url: parsedImageUrl.href } },
+          ],
+        },
+      ],
+    });
+    const content: unknown = response.choices[0]?.message?.content;
+    const responseText = typeof content === 'string'
+      ? content
+      : Array.isArray(content)
+      ? content.map((part: any) => part.text || '').join('\n')
+      : '';
+    const parsed = JSON.parse(responseText.slice(responseText.indexOf('{'), responseText.lastIndexOf('}') + 1));
+    const sizes = Array.isArray(parsed.sizes) ? parsed.sizes.filter((size: unknown) => typeof size === 'string').slice(0, 12) : [];
+    const sizeChart = Array.isArray(parsed.sizeChart) ? parsed.sizeChart.filter((row: any) => row && typeof row.Size === 'string').slice(0, 12) : [];
+    if (!sizes.length || !sizeChart.length) return res.status(502).json({ error: 'AI could not create a usable size chart. Enter sizes manually.' });
+    return res.json({ sizes, sizeChart, isEstimate: true });
+  } catch (error: any) {
+    console.error('AI size chart generation failed:', error);
+    const statusCode = error?.statusCode || 502;
+    return res.status(statusCode).json({ error: 'Could not generate a size chart. You can enter sizes and measurements manually.' });
   }
 });
 

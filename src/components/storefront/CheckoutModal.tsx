@@ -1,6 +1,6 @@
 import React from 'react';
 import { Customer, CartItem, Address, Order, PaymentMethod } from '../../types';
-import { formatCurrency, formatBDT } from '../../lib/api';
+import { api, formatCurrency, formatBDT } from '../../lib/api';
 import { SSLCommerzModal, SSLCommerzPaymentSuccessData } from '../payment/SSLCommerzModal';
 import { BkashGatewayPage, BkashPaymentSuccessData } from '../payment/BkashGatewayPage';
 import {
@@ -16,6 +16,7 @@ import {
   Banknote,
   Lock,
   Printer,
+  Sparkles,
 } from 'lucide-react';
 
 interface CheckoutModalProps {
@@ -71,7 +72,9 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [isSSLModalOpen, setIsSSLModalOpen] = React.useState(false);
   const [isRedirectingToBkash, setIsRedirectingToBkash] = React.useState(false);
   const [isBkashGatewayOpen, setIsBkashGatewayOpen] = React.useState(false);
-  const [additionalNotes, setAdditionalNotes] = React.useState('');
+  const [additionalNotes, setAdditionalNotes] = React.useState(currentCustomer.Address?.Additional_Info || '');
+  const [isSuggestingInstructions, setIsSuggestingInstructions] = React.useState(false);
+  const [instructionError, setInstructionError] = React.useState('');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [createdOrder, setCreatedOrder] = React.useState<Order | null>(null);
   const [verifiedPayment, setVerifiedPayment] = React.useState<SSLCommerzPaymentSuccessData | BkashPaymentSuccessData | null>(null);
@@ -95,6 +98,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         Postal_Code: currentCustomer.Address.Postal_Code || '',
         Additional_Info: currentCustomer.Address.Additional_Info || '',
       });
+      setAdditionalNotes(currentCustomer.Address.Additional_Info || '');
     }
   }, [currentCustomer]);
 
@@ -191,6 +195,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         Quantity: item.Quantity,
         Image: item.Product?.Image || '',
         Seller_ID: item.Product?.Seller_ID || '',
+        Size: item.Size,
       }));
 
       const order = await onPlaceOrder({
@@ -214,6 +219,27 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     } finally {
       submissionInProgressRef.current = false;
       setIsSubmitting(false);
+    }
+  };
+
+  const suggestDeliveryInstructions = async () => {
+    setIsSuggestingInstructions(true);
+    setInstructionError('');
+    try {
+      const result = await api.generateDeliveryInstructions({
+        products: cartItems.map((item) => ({
+          name: item.Product?.Name || 'Product',
+          description: item.Product?.Description || '',
+          quantity: item.Quantity,
+        })),
+        shippingAddress,
+        preferences: additionalNotes,
+      });
+      if (result.instruction) setAdditionalNotes(result.instruction);
+    } catch (error: any) {
+      setInstructionError(error.message || 'Could not suggest delivery instructions.');
+    } finally {
+      setIsSuggestingInstructions(false);
     }
   };
 
@@ -403,16 +429,19 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-slate-600 dark:text-zinc-400 mb-1 font-medium text-xs">
-                      Delivery Instructions / Waypoint Info
-                    </label>
-                    <input
-                      type="text"
-                      value={shippingAddress.Additional_Info}
-                      onChange={(e) => setShippingAddress({ ...shippingAddress, Additional_Info: e.target.value })}
-                      placeholder="e.g. Call before delivery or leave with concierge"
+                    <div className="flex items-center justify-between gap-3">
+                      <label htmlFor="delivery-instructions" className="block text-slate-600 dark:text-zinc-400 font-medium text-xs">Delivery Instructions</label>
+                      <button type="button" onClick={() => void suggestDeliveryInstructions()} disabled={isSuggestingInstructions} className="inline-flex items-center gap-1.5 rounded-lg border border-blue-300 px-3 py-2 text-xs font-bold text-blue-700 disabled:opacity-50 dark:border-blue-900 dark:text-sky-300"><Sparkles className="h-3.5 w-3.5" />{isSuggestingInstructions ? 'Suggesting...' : 'Suggest with AI'}</button>
+                    </div>
+                    <textarea
+                      id="delivery-instructions"
+                      rows={2}
+                      value={additionalNotes}
+                      onChange={(e) => setAdditionalNotes(e.target.value)}
+                      placeholder="Add access details or preferences for your rider"
                       className="w-full p-2.5 bg-white dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs text-slate-900 dark:text-white"
                     />
+                    {instructionError && <p role="alert" className="text-xs text-rose-600 dark:text-rose-300">{instructionError}</p>}
                   </div>
                 </div>
 

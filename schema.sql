@@ -97,6 +97,10 @@ CREATE TABLE IF NOT EXISTS products (
     name VARCHAR(255) NOT NULL,
     image TEXT,
     description TEXT,
+    size_gender VARCHAR(16),
+    sizes_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+    size_chart_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+    images_json JSONB NOT NULL DEFAULT '[]'::jsonb,
     price NUMERIC(10, 2) NOT NULL,
     voucher VARCHAR(50) DEFAULT '',
     stock INTEGER NOT NULL DEFAULT 0,
@@ -106,13 +110,21 @@ CREATE TABLE IF NOT EXISTS products (
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+ALTER TABLE products ADD COLUMN IF NOT EXISTS size_gender VARCHAR(16);
+ALTER TABLE products ADD COLUMN IF NOT EXISTS sizes_json JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS size_chart_json JSONB NOT NULL DEFAULT '[]'::jsonb;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS images_json JSONB NOT NULL DEFAULT '[]'::jsonb;
+
 -- CART ITEMS TABLE
 CREATE TABLE IF NOT EXISTS cart (
     id VARCHAR(64) PRIMARY KEY,
     customer_id VARCHAR(64) NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
     product_id VARCHAR(64) NOT NULL REFERENCES products(id) ON DELETE CASCADE,
-    quantity INTEGER NOT NULL DEFAULT 1
+    quantity INTEGER NOT NULL DEFAULT 1,
+    size VARCHAR(20) NOT NULL DEFAULT ''
 );
+
+ALTER TABLE cart ADD COLUMN IF NOT EXISTS size VARCHAR(20) NOT NULL DEFAULT '';
 
 -- ORDERS TABLE
 CREATE TABLE IF NOT EXISTS orders (
@@ -241,8 +253,17 @@ CREATE TABLE IF NOT EXISTS order_items (
     unit_price NUMERIC(10, 2) NOT NULL CHECK (unit_price >= 0),
     quantity INTEGER NOT NULL CHECK (quantity > 0),
     image TEXT,
-    CONSTRAINT uq_order_items_order_product UNIQUE (order_id, product_id_snapshot)
+    size VARCHAR(20) NOT NULL DEFAULT '',
+    CONSTRAINT uq_order_items_order_product_size UNIQUE (order_id, product_id_snapshot, size)
 );
+
+ALTER TABLE order_items ADD COLUMN IF NOT EXISTS size VARCHAR(20) NOT NULL DEFAULT '';
+UPDATE order_items SET size = '' WHERE size IS NULL;
+ALTER TABLE order_items ALTER COLUMN size SET DEFAULT '';
+ALTER TABLE order_items ALTER COLUMN size SET NOT NULL;
+ALTER TABLE order_items DROP CONSTRAINT IF EXISTS uq_order_items_order_product;
+ALTER TABLE order_items DROP CONSTRAINT IF EXISTS uq_order_items_order_product_size;
+ALTER TABLE order_items ADD CONSTRAINT uq_order_items_order_product_size UNIQUE (order_id, product_id_snapshot, size);
 
 INSERT INTO seller_fulfillments (id, order_id, seller_id, items_json, subtotal, status, shipped_at, delivered_at)
 SELECT
@@ -255,6 +276,7 @@ SELECT
         'Price', oi.unit_price,
         'Quantity', oi.quantity,
         'Image', COALESCE(oi.image, ''),
+        'Size', oi.size,
         'Seller_ID', oi.seller_id_snapshot
     ) ORDER BY oi.order_item_id),
     SUM(oi.unit_price * oi.quantity),
@@ -464,7 +486,7 @@ $$;
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'orders' AND column_name = 'items_json') THEN
-        INSERT INTO order_items (order_id, product_id, seller_id, product_id_snapshot, seller_id_snapshot, product_name, unit_price, quantity, image)
+        INSERT INTO order_items (order_id, product_id, seller_id, product_id_snapshot, seller_id_snapshot, product_name, unit_price, quantity, image, size)
         SELECT o.id,
                 CASE WHEN EXISTS (SELECT 1 FROM products p WHERE p.id = item.value->>'Product_ID')
                     THEN NULLIF(item.value->>'Product_ID', '') END,
@@ -475,10 +497,11 @@ BEGIN
                COALESCE(item.value->>'Name', 'Archived product'),
                COALESCE((item.value->>'Price')::NUMERIC, 0),
                GREATEST(COALESCE((item.value->>'Quantity')::INTEGER, 1), 1),
-               NULLIF(item.value->>'Image', '')
+                             NULLIF(item.value->>'Image', ''),
+                             COALESCE(item.value->>'Size', '')
         FROM orders o
         CROSS JOIN LATERAL jsonb_array_elements(COALESCE(NULLIF(o.items_json, '')::JSONB, '[]'::JSONB)) AS item(value)
-        ON CONFLICT (order_id, product_id_snapshot) DO NOTHING;
+         ON CONFLICT DO NOTHING;
     END IF;
 END;
 $$;
@@ -537,8 +560,9 @@ ALTER TABLE products
 ALTER TABLE cart
     DROP CONSTRAINT IF EXISTS chk_cart_quantity,
     DROP CONSTRAINT IF EXISTS uq_cart_customer_product,
+    DROP CONSTRAINT IF EXISTS uq_cart_customer_product_size,
     ADD CONSTRAINT chk_cart_quantity CHECK (quantity > 0),
-    ADD CONSTRAINT uq_cart_customer_product UNIQUE (customer_id, product_id);
+    ADD CONSTRAINT uq_cart_customer_product_size UNIQUE (customer_id, product_id, size);
 
 -- ORDERS TABLE CONSTRAINTS
 ALTER TABLE orders
@@ -775,6 +799,7 @@ BEGIN
         'Price', p.price,
         'Quantity', c.quantity,
         'Image', COALESCE(p.image, ''),
+        'Size', NULLIF(c.size, ''),
         'Seller_ID', p.seller_id
     ) ORDER BY c.id), '[]'::json)::text
     INTO v_items_json
@@ -790,8 +815,8 @@ BEGIN
         'placed', p_shipping_address, p_billing_address, COALESCE(p_additional_info, ''), CURRENT_TIMESTAMP
     );
 
-    INSERT INTO order_items (order_id, product_id, seller_id, product_id_snapshot, seller_id_snapshot, product_name, unit_price, quantity, image)
-    SELECT p_order_id, p.id, p.seller_id, p.id, p.seller_id, p.name, p.price, c.quantity, p.image
+    INSERT INTO order_items (order_id, product_id, seller_id, product_id_snapshot, seller_id_snapshot, product_name, unit_price, quantity, image, size)
+    SELECT p_order_id, p.id, p.seller_id, p.id, p.seller_id, p.name, p.price, c.quantity, p.image, c.size
     FROM cart c
     JOIN products p ON p.id = c.product_id
     WHERE c.customer_id = p_customer_id;
@@ -807,6 +832,7 @@ BEGIN
             'Price', oi.unit_price,
             'Quantity', oi.quantity,
             'Image', COALESCE(oi.image, ''),
+            'Size', NULLIF(oi.size, ''),
             'Seller_ID', oi.seller_id_snapshot
         ) ORDER BY oi.order_item_id),
         SUM(oi.unit_price * oi.quantity)
@@ -1276,6 +1302,13 @@ AS $$
     SELECT * FROM cart WHERE customer_id = p_customer_id AND product_id = p_product_id LIMIT 1;
 $$;
 
+CREATE OR REPLACE FUNCTION gocart_cart_existing(p_customer_id VARCHAR, p_product_id VARCHAR, p_size VARCHAR)
+RETURNS SETOF cart
+LANGUAGE SQL STABLE
+AS $$
+    SELECT * FROM cart WHERE customer_id = p_customer_id AND product_id = p_product_id AND size = p_size LIMIT 1;
+$$;
+
 CREATE OR REPLACE FUNCTION gocart_cart_create(
     p_id VARCHAR,
     p_customer_id VARCHAR,
@@ -1289,6 +1322,24 @@ BEGIN
     RETURN QUERY
     INSERT INTO cart (id, customer_id, product_id, quantity)
     VALUES (p_id, p_customer_id, p_product_id, p_quantity)
+    RETURNING *;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION gocart_cart_create(
+    p_id VARCHAR,
+    p_customer_id VARCHAR,
+    p_product_id VARCHAR,
+    p_quantity INTEGER,
+    p_size VARCHAR
+)
+RETURNS SETOF cart
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    RETURN QUERY
+    INSERT INTO cart (id, customer_id, product_id, quantity, size)
+    VALUES (p_id, p_customer_id, p_product_id, p_quantity, p_size)
     RETURNING *;
 END;
 $$;
@@ -1333,7 +1384,8 @@ AS $$
                    'Name', oi.product_name,
                    'Price', oi.unit_price,
                    'Quantity', oi.quantity,
-                   'Image', COALESCE(oi.image, ''),
+                'Image', COALESCE(oi.image, ''),
+                'Size', NULLIF(oi.size, ''),
                    'Seller_ID', oi.seller_id_snapshot
                ) ORDER BY oi.order_item_id)::TEXT
                FROM order_items oi WHERE oi.order_id = o.id
@@ -1359,7 +1411,8 @@ AS $$
                    'Name', oi.product_name,
                    'Price', oi.unit_price,
                    'Quantity', oi.quantity,
-                   'Image', COALESCE(oi.image, ''),
+                'Image', COALESCE(oi.image, ''),
+                'Size', NULLIF(oi.size, ''),
                    'Seller_ID', oi.seller_id_snapshot
                ) ORDER BY oi.order_item_id)::TEXT
                FROM order_items oi WHERE oi.order_id = o.id
@@ -1591,16 +1644,17 @@ BEGIN
         WHEN 'orders' THEN
             INSERT INTO orders SELECT (jsonb_populate_record(NULL::orders, p_row)).*
             ON CONFLICT (id) DO NOTHING;
-            INSERT INTO order_items (order_id, product_id, seller_id, product_id_snapshot, seller_id_snapshot, product_name, unit_price, quantity, image)
+            INSERT INTO order_items (order_id, product_id, seller_id, product_id_snapshot, seller_id_snapshot, product_name, unit_price, quantity, image, size)
             SELECT p_row->>'id', NULLIF(item.value->>'Product_ID', ''), NULLIF(item.value->>'Seller_ID', ''),
                 COALESCE(NULLIF(item.value->>'Product_ID', ''), 'deleted-product'),
                 COALESCE(NULLIF(item.value->>'Seller_ID', ''), 'deleted-seller'),
                 COALESCE(item.value->>'Name', 'Archived product'),
                 COALESCE((item.value->>'Price')::NUMERIC, 0),
                 GREATEST(COALESCE((item.value->>'Quantity')::INTEGER, 1), 1),
-                NULLIF(item.value->>'Image', '')
+                NULLIF(item.value->>'Image', ''),
+                COALESCE(item.value->>'Size', '')
             FROM jsonb_array_elements(COALESCE(NULLIF(p_row->>'items_json', '')::JSONB, '[]'::JSONB)) AS item(value)
-            ON CONFLICT (order_id, product_id_snapshot) DO NOTHING;
+            ON CONFLICT DO NOTHING;
         ELSE RAISE EXCEPTION 'Unsupported seed table: %', p_table;
     END CASE;
 END;
