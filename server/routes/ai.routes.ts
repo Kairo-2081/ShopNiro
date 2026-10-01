@@ -99,6 +99,36 @@ router.post('/review-draft', requireAuth, requireRole(['customer']), async (req:
   }
 });
 
+router.post('/rider-review-draft', requireAuth, requireRole(['customer']), async (req: AuthRequest, res) => {
+  const { riderName, rating, wasTimely, notes } = req.body ?? {};
+  if (
+    typeof riderName !== 'string' || !riderName.trim() ||
+    !Number.isInteger(Number(rating)) || Number(rating) < 1 || Number(rating) > 5 ||
+    typeof wasTimely !== 'boolean' ||
+    (notes !== undefined && typeof notes !== 'string')
+  ) {
+    return res.status(400).json({ error: 'A rider, rating, and delivery timing are required.' });
+  }
+  try {
+    requireGroqClient();
+    const target = resolveModel('flash-lite', 'fast');
+    const response = await groq!.chat.completions.create({
+      model: target.model,
+      temperature: 0.4,
+      messages: [
+        { role: 'system', content: 'Draft a concise optional first-person comment about a delivery experience. Use only the customer notes, numeric rating, and whether the delivery was timely. Do not invent conversations, events, or service details. Return only the comment text.' },
+        { role: 'user', content: JSON.stringify({ riderName: riderName.trim().slice(0, 120), rating: Number(rating), wasTimely, notes: String(notes || '').slice(0, 500) }) },
+      ],
+    });
+    const draft = response.choices[0]?.message?.content?.trim();
+    if (!draft) return res.status(502).json({ error: 'AI could not draft a delivery comment. You can leave it blank or write it yourself.' });
+    return res.json({ draft });
+  } catch (error: any) {
+    const statusCode = error?.statusCode || error?.status || 500;
+    return res.status(statusCode).json({ error: statusCode === 503 ? error.message : 'AI delivery comments are temporarily unavailable.' });
+  }
+});
+
 router.post('/delivery-instructions', requireAuth, requireRole(['customer']), async (req: AuthRequest, res) => {
   const { products, shippingAddress, preferences } = req.body ?? {};
   if (!Array.isArray(products) || !shippingAddress || typeof shippingAddress !== 'object') {

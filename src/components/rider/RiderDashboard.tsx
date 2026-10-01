@@ -63,6 +63,12 @@ export const RiderDashboard: React.FC<RiderDashboardProps> = ({ rider }) => {
   React.useEffect(() => { void refresh(); }, [refresh]);
 
   React.useEffect(() => {
+    if (!savedLocation || profile.Status !== 'approved') return;
+    const refreshTimer = window.setInterval(() => { void refresh(); }, 15000);
+    return () => window.clearInterval(refreshTimer);
+  }, [profile.Status, refresh, savedLocation]);
+
+  React.useEffect(() => {
     api.getRiderProfile().then(setProfile).catch((err: any) => setError(err.message || 'Could not refresh rider profile.'));
   }, [rider.Rider_ID]);
 

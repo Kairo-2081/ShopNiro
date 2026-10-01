@@ -49,7 +49,10 @@ export const CustomerOrders: React.FC<CustomerOrdersProps> = ({
   const [reviewSubmittingId, setReviewSubmittingId] = React.useState<string | null>(null);
   const [deliveryNotice, setDeliveryNotice] = React.useState<string | null>(null);
   const [deliveryCodes, setDeliveryCodes] = React.useState<Record<string, string>>({});
+  const [deliveryCodeErrors, setDeliveryCodeErrors] = React.useState<Record<string, string>>({});
   const [confirmingDeliveryId, setConfirmingDeliveryId] = React.useState<string | null>(null);
+  const [reviewDraftingId, setReviewDraftingId] = React.useState<string | null>(null);
+  const [reviewDraftErrors, setReviewDraftErrors] = React.useState<Record<string, string>>({});
   const refreshOrdersRef = React.useRef(onRefreshOrders);
 
   React.useEffect(() => { refreshOrdersRef.current = onRefreshOrders; }, [onRefreshOrders]);
@@ -96,8 +99,27 @@ export const CustomerOrders: React.FC<CustomerOrdersProps> = ({
     }
   };
 
+  const draftRiderReview = async (delivery: RiderDelivery) => {
+    setReviewDraftingId(delivery.Delivery_ID);
+    setReviewDraftErrors((current) => ({ ...current, [delivery.Delivery_ID]: '' }));
+    try {
+      const result = await api.generateAIRiderReviewDraft({
+        riderName: delivery.Rider_Name || 'ShopNiro rider',
+        rating: reviewRatings[delivery.Delivery_ID] || 5,
+        wasTimely: deliveryTimely[delivery.Delivery_ID] ?? true,
+        notes: reviewTexts[delivery.Delivery_ID] || '',
+      });
+      setReviewTexts((current) => ({ ...current, [delivery.Delivery_ID]: result.draft }));
+    } catch (error: any) {
+      setReviewDraftErrors((current) => ({ ...current, [delivery.Delivery_ID]: error.message || 'Could not draft a comment.' }));
+    } finally {
+      setReviewDraftingId(null);
+    }
+  };
+
   const confirmRiderDelivery = async (delivery: RiderDelivery) => {
     setConfirmingDeliveryId(delivery.Delivery_ID);
+    setDeliveryCodeErrors((current) => ({ ...current, [delivery.Delivery_ID]: '' }));
     setDeliveryNotice(null);
     try {
       await api.confirmCustomerDelivery(delivery.Delivery_ID, deliveryCodes[delivery.Delivery_ID] || '');
@@ -105,7 +127,7 @@ export const CustomerOrders: React.FC<CustomerOrdersProps> = ({
       setDeliveryCodes({ ...deliveryCodes, [delivery.Delivery_ID]: '' });
       await Promise.all([loadRiderDeliveries(), onRefreshOrders?.()]);
     } catch (error: any) {
-      setDeliveryNotice(error.message || 'Could not confirm delivery. Check the code from your rider.');
+      setDeliveryCodeErrors((current) => ({ ...current, [delivery.Delivery_ID]: error.message || 'Could not confirm delivery. Check the code from your rider.' }));
     } finally {
       setConfirmingDeliveryId(null);
     }
@@ -280,7 +302,8 @@ export const CustomerOrders: React.FC<CustomerOrdersProps> = ({
               </div>
               {delivery.Status === 'on_the_way' && (
                 <form onSubmit={(event) => { event.preventDefault(); void confirmRiderDelivery(delivery); }} className="space-y-2 rounded-lg border border-emerald-300 bg-emerald-50 p-3 dark:border-emerald-900 dark:bg-emerald-950/30">
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">Enter the code your rider gave you after receiving the parcel<input value={deliveryCodes[delivery.Delivery_ID] || ''} onChange={(event) => setDeliveryCodes({ ...deliveryCodes, [delivery.Delivery_ID]: event.target.value.replace(/\D/g, '').slice(0, 6) })} inputMode="numeric" autoComplete="one-time-code" placeholder="6-digit code" className="mt-1 w-full rounded-lg border border-emerald-300 bg-white px-3 py-2 text-center font-mono text-lg tracking-[0.3em] dark:border-emerald-900 dark:bg-[#181F2A]" /></label>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">Enter the code your rider gave you after receiving the parcel<input aria-invalid={Boolean(deliveryCodeErrors[delivery.Delivery_ID])} aria-describedby={deliveryCodeErrors[delivery.Delivery_ID] ? `delivery-code-error-${delivery.Delivery_ID}` : undefined} value={deliveryCodes[delivery.Delivery_ID] || ''} onChange={(event) => { setDeliveryCodes({ ...deliveryCodes, [delivery.Delivery_ID]: event.target.value.replace(/\D/g, '').slice(0, 6) }); setDeliveryCodeErrors((current) => ({ ...current, [delivery.Delivery_ID]: '' })); }} inputMode="numeric" autoComplete="one-time-code" placeholder="6-digit code" className="mt-1 w-full rounded-lg border border-emerald-300 bg-white px-3 py-2 text-center font-mono text-lg tracking-[0.3em] dark:border-emerald-900 dark:bg-[#181F2A]" /></label>
+                  {deliveryCodeErrors[delivery.Delivery_ID] && <p id={`delivery-code-error-${delivery.Delivery_ID}`} role="alert" className="text-xs font-semibold text-rose-700 dark:text-rose-300">{deliveryCodeErrors[delivery.Delivery_ID]}</p>}
                   {delivery.COD_Amount > 0 && <p className="text-xs text-amber-800 dark:text-amber-300">Cash collected: {delivery.COD_Collected ? 'confirmed by rider' : 'waiting for rider to record payment'}.</p>}
                   <button type="submit" disabled={confirmingDeliveryId === delivery.Delivery_ID || (deliveryCodes[delivery.Delivery_ID] || '').length !== 6} className="w-full rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">{confirmingDeliveryId === delivery.Delivery_ID ? 'Confirming...' : 'Confirm received'}</button>
                 </form>
@@ -296,7 +319,13 @@ export const CustomerOrders: React.FC<CustomerOrdersProps> = ({
                       <select value={String(deliveryTimely[delivery.Delivery_ID] ?? true)} onChange={(event) => setDeliveryTimely({ ...deliveryTimely, [delivery.Delivery_ID]: event.target.value === 'true' })} className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 dark:border-zinc-700 dark:bg-[#181F2A]"><option value="true">Timely</option><option value="false">Late</option></select>
                     </label>
                     <button type="submit" disabled={reviewSubmittingId === delivery.Delivery_ID} className="self-end rounded-lg bg-emerald-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">{reviewSubmittingId === delivery.Delivery_ID ? 'Saving...' : 'Submit review'}</button>
-                    <textarea value={reviewTexts[delivery.Delivery_ID] || ''} onChange={(event) => setReviewTexts({ ...reviewTexts, [delivery.Delivery_ID]: event.target.value })} maxLength={2000} rows={2} placeholder="Optional comment about the delivery" className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-[#181F2A] sm:col-span-3" />
+                    <div className="space-y-2 sm:col-span-3">
+                      <textarea value={reviewTexts[delivery.Delivery_ID] || ''} onChange={(event) => setReviewTexts({ ...reviewTexts, [delivery.Delivery_ID]: event.target.value })} maxLength={2000} rows={2} placeholder="Optional comment about the delivery" className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-[#181F2A]" />
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <button type="button" onClick={() => void draftRiderReview(delivery)} disabled={reviewDraftingId === delivery.Delivery_ID} className="rounded-lg border border-emerald-300 px-3 py-2 text-xs font-bold text-emerald-800 disabled:opacity-50 dark:border-emerald-800 dark:text-emerald-300">{reviewDraftingId === delivery.Delivery_ID ? 'Drafting...' : 'Draft optional comment with AI'}</button>
+                        {reviewDraftErrors[delivery.Delivery_ID] && <p role="alert" className="text-xs text-rose-700 dark:text-rose-300">{reviewDraftErrors[delivery.Delivery_ID]}</p>}
+                      </div>
+                    </div>
                   </div>
                 </form>
               )}

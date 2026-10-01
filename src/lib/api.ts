@@ -476,6 +476,8 @@ export const api = {
     }),
   generateAIReviewDraft: async (params: { productName: string; productDescription: string; sentiment: 'good' | 'bad'; notes?: string }): Promise<{ draft: string }> =>
     fetchJson('/api/ai/review-draft', { method: 'POST', body: JSON.stringify(params) }),
+  generateAIRiderReviewDraft: async (params: { riderName: string; rating: number; wasTimely: boolean; notes?: string }): Promise<{ draft: string }> =>
+    fetchJson('/api/ai/rider-review-draft', { method: 'POST', body: JSON.stringify(params) }),
   generateDeliveryInstructions: async (params: { products: Array<{ name: string; description: string; quantity: number }>; shippingAddress: Address; preferences?: string }): Promise<{ instruction: string }> =>
     fetchJson('/api/ai/delivery-instructions', { method: 'POST', body: JSON.stringify(params) }),
   generateAISizeChart: async (params: {

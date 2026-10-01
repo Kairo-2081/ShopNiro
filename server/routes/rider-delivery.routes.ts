@@ -262,8 +262,7 @@ router.post('/deliveries/:id/complete', requireAuth, requireRole(['customer']), 
     `, [riderId, monthStart]);
     const score = scoreResult.rows[0];
     const lateCount = Number(score.late_deliveries) + (wasTimely ? 0 : 1);
-    const pointPenalty = lateCount === 5 || (lateCount > 5 && (lateCount - 5) % 6 === 0) ? 1 : 0;
-    const points = Math.max(0, Math.min(100, Number(score.performance_points) + 1 - pointPenalty));
+    const points = Math.max(0, Math.min(100, Number(score.performance_points) + (wasTimely ? 1 : -1)));
     const totalDeliveries = Number(score.total_deliveries) + 1;
     const timelyDeliveries = Number(score.timely_deliveries) + (wasTimely ? 1 : 0);
     const salary = salaryForPoints(points);
@@ -402,10 +401,7 @@ router.post('/customer-deliveries/:id/review', requireAuth, requireRole(['custom
         const score = scoreResult.rows[0];
         const oldLateCount = Number(score.late_deliveries);
         const newLateCount = oldLateCount + (wasTimely ? -1 : 1);
-        const crossedPenalty = wasTimely
-          ? oldLateCount === 5 || (oldLateCount > 5 && (oldLateCount - 5) % 6 === 0)
-          : newLateCount === 5 || (newLateCount > 5 && (newLateCount - 5) % 6 === 0);
-        const points = Math.max(0, Math.min(100, Number(score.performance_points) + (crossedPenalty ? (wasTimely ? 1 : -1) : 0)));
+        const points = Math.max(0, Math.min(100, Number(score.performance_points) + (wasTimely ? 2 : -2)));
         const timelyCount = Number(score.timely_deliveries) + (wasTimely ? 1 : -1);
         const salary = salaryForPoints(points);
         await client.query(`
