@@ -27,6 +27,7 @@ const haversineKm = (lat1: number, lon1: number, lat2: number, lon2: number) => 
 };
 
 const roundMoney = (amount: number) => Math.round((amount + Number.EPSILON) * 100) / 100;
+const maxPickupDistanceKm = 20;
 const salaryBaseAfterPointChange = (salaryBase: number, previousPoints: number, points: number) =>
   Math.max(0, roundMoney(salaryBase * (1 + (points - previousPoints) / 100)));
 const monthlySalary = (salaryBase: number, deliveryPay: number, bonus: number, codDeductions: number) =>
@@ -113,7 +114,10 @@ router.get('/deliveries', requireAuth, requireRole(['rider']), requireApprovedRi
         Customer_Name: row.customer_name,
         Customer_Number: row.customer_number || '',
       };
-    }).sort((left: any, right: any) => {
+    }).filter((delivery: any) =>
+      delivery.Rider_ID === req.user!.entityId ||
+      (delivery.Status === 'pending' && delivery.Distance_KM !== null && delivery.Distance_KM <= maxPickupDistanceKm)
+    ).sort((left: any, right: any) => {
       const leftActive = left.Rider_ID === req.user!.entityId;
       const rightActive = right.Rider_ID === req.user!.entityId;
       if (leftActive !== rightActive) return leftActive ? -1 : 1;

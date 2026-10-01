@@ -65,6 +65,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [transactions, setTransactions] = React.useState<any[]>([]);
   const [loadingTransactions, setLoadingTransactions] = React.useState(false);
   const [paymentFilter, setPaymentFilter] = React.useState<string>('all');
+  const filteredTransactions = transactions.filter((transaction) => {
+    if (paymentFilter === 'all') return true;
+    if (paymentFilter === 'cards') return ['visa_mastercard', 'visa', 'mastercard', 'amex'].includes(String(transaction.payment_method).toLowerCase());
+    return String(transaction.payment_method).toLowerCase() === paymentFilter;
+  });
+  const paymentChannelLabel = (method: string) => method === 'visa_mastercard' ? 'Cards' : method.replaceAll('_', ' ');
 
   const fetchTransactions = async () => {
     setLoadingTransactions(true);
@@ -303,7 +309,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           }`}
         >
           <Lock className="w-4 h-4" />
-          <span>SSLCOMMERZ &amp; bKash Payments</span>
+          <span>Online Payments</span>
         </button>
       </div>
 
@@ -789,7 +795,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       )}
 
-      {/* Tab 5: SSLCommerz & bKash Transactions Ledger */}
+      {/* Tab 5: Online Payment Transactions Ledger */}
       {adminTab === 'payments' && (
         <div className="space-y-6 animate-in fade-in duration-200">
           {/* Summary KPIs */}
@@ -856,14 +862,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <div>
                 <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <Lock className="w-4 h-4 text-emerald-500" />
-                  SSLCOMMERZ &amp; bKash Transaction Settlement Ledger
+                  Online Payment Transaction Ledger
                 </h2>
                 <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">
-                  Real-time PostgreSQL logs of gateway payment sessions, validation tokens, and bKash customer numbers.
+                  Online gateway sessions recorded separately by payment channel and transaction status.
                 </p>
               </div>
 
               <div className="flex items-center gap-2">
+                <label className="sr-only" htmlFor="payment-channel-filter">Filter online payments by channel</label>
+                <select
+                  id="payment-channel-filter"
+                  value={paymentFilter}
+                  onChange={(event) => setPaymentFilter(event.target.value)}
+                  className="min-h-9 rounded-full border border-slate-200 bg-slate-50 px-3 text-xs font-semibold text-slate-700 dark:border-zinc-700 dark:bg-[#181F2A] dark:text-zinc-200"
+                >
+                  <option value="all">All online channels</option>
+                  <option value="bkash">bKash</option>
+                  <option value="nagad">Nagad</option>
+                  <option value="rocket">Rocket</option>
+                  <option value="cards">Cards / Internet banking</option>
+                </select>
                 <button
                   type="button"
                   onClick={fetchTransactions}
@@ -891,14 +910,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-sky-100/50 dark:divide-zinc-800/80">
-                  {transactions.length === 0 ? (
+                  {filteredTransactions.length === 0 ? (
                     <tr>
                       <td colSpan={7} className="p-8 text-center text-slate-400 dark:text-zinc-500">
-                        {loadingTransactions ? 'Loading transactions from database...' : 'No transactions recorded yet. Place an order using bKash or SSLCommerz to see live ledger entries.'}
+                        {loadingTransactions ? 'Loading online payment transactions...' : paymentFilter === 'all' ? 'No online payment transactions recorded yet.' : `No ${paymentChannelLabel(paymentFilter)} transactions recorded yet.`}
                       </td>
                     </tr>
                   ) : (
-                    transactions.map((t) => (
+                    filteredTransactions.map((t) => (
                       <tr key={t.id} className="hover:bg-slate-50/80 dark:hover:bg-[#181F2A]/60 transition-colors">
                         <td className="p-4 font-mono font-bold text-blue-600 dark:text-sky-400">
                           {t.transaction_id}
@@ -918,7 +937,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                                 : 'bg-blue-100 dark:bg-blue-950/60 text-blue-600 border border-blue-300'
                             }`}
                           >
-                            {t.payment_method}
+                            {paymentChannelLabel(String(t.payment_method || 'unknown').toLowerCase())}
                           </span>
                         </td>
                         <td className="p-4 font-mono text-slate-700 dark:text-zinc-300">

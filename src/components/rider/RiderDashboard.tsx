@@ -31,6 +31,7 @@ export const RiderDashboard: React.FC<RiderDashboardProps> = ({ rider }) => {
   const [savedLocation, setSavedLocation] = React.useState(
     rider.Current_Latitude !== undefined && rider.Current_Longitude !== undefined
   );
+  const [savingLocation, setSavingLocation] = React.useState(false);
   const [deliveries, setDeliveries] = React.useState<RiderDelivery[]>([]);
   const [wallet, setWallet] = React.useState<{ balance: number; availableBalance: number; lockedBalance: number; lockedCod: number; lockedSalary: number; pendingSalary: number; entries: any[]; withdrawals: any[] } | null>(null);
   const [loading, setLoading] = React.useState(false);
@@ -47,14 +48,13 @@ export const RiderDashboard: React.FC<RiderDashboardProps> = ({ rider }) => {
     setLoading(true);
     setError(null);
     try {
-      const [nextDeliveries, nextWallet, nextProfile] = await Promise.all([
-        api.getRiderDeliveries(location[0], location[1]),
-        api.getRiderWallet(),
-        api.getRiderProfile(),
+      const results = await Promise.allSettled([
+        api.getRiderDeliveries(location[0], location[1]).then(setDeliveries),
+        api.getRiderWallet().then(setWallet),
+        api.getRiderProfile().then(setProfile),
       ]);
-      setDeliveries(nextDeliveries);
-      setWallet(nextWallet);
-      setProfile(nextProfile);
+      const failedRequest = results.find((result) => result.status === 'rejected');
+      if (failedRequest?.status === 'rejected') throw failedRequest.reason;
     } catch (err: any) {
       setError(err.message || 'Could not refresh your rider dashboard.');
     } finally {
@@ -75,7 +75,8 @@ export const RiderDashboard: React.FC<RiderDashboardProps> = ({ rider }) => {
   }, [rider.Rider_ID]);
 
   const saveLocation = async () => {
-    if (!location) return;
+    if (!location || savingLocation) return;
+    setSavingLocation(true);
     setError(null);
     try {
       await api.updateRiderLocation(location[0], location[1]);
@@ -84,6 +85,8 @@ export const RiderDashboard: React.FC<RiderDashboardProps> = ({ rider }) => {
     } catch (err: any) {
       setSavedLocation(false);
       setError(err.message || 'Could not save your location.');
+    } finally {
+      setSavingLocation(false);
     }
   };
 
@@ -151,7 +154,7 @@ export const RiderDashboard: React.FC<RiderDashboardProps> = ({ rider }) => {
       <section className="overflow-hidden rounded-2xl border border-emerald-900/15 bg-white dark:border-emerald-900/40 dark:bg-[#12161D]">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 p-4 dark:border-zinc-800">
           <div><h2 className="font-bold text-slate-900 dark:text-white">Your current location</h2><p className="text-xs text-slate-500 dark:text-zinc-400">Select on the map or use device location to see nearby shipments.</p></div>
-          <div className="flex gap-2"><button type="button" onClick={useDeviceLocation} className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold dark:border-zinc-700">Use device location</button><button type="button" onClick={() => void saveLocation()} disabled={!location || savedLocation} className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">{savedLocation ? 'Location saved' : 'Save location'}</button></div>
+          <div className="flex gap-2"><button type="button" onClick={useDeviceLocation} disabled={savingLocation} className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold disabled:opacity-50 dark:border-zinc-700">Use device location</button><button type="button" onClick={() => void saveLocation()} disabled={!location || savedLocation || savingLocation} className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">{savingLocation ? 'Saving and loading...' : savedLocation ? 'Location saved' : 'Save location'}</button></div>
         </div>
         <div className="relative h-64 sm:h-80">
           <MapContainer center={location || defaultCenter} zoom={location ? 14 : 11} scrollWheelZoom className="h-full w-full">
@@ -164,10 +167,11 @@ export const RiderDashboard: React.FC<RiderDashboardProps> = ({ rider }) => {
       </section>
 
       {!savedLocation ? (
-        <div className="rounded-xl border border-amber-300 bg-amber-50 p-5 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">Save your current location to load available shipments and confirm your starting point.</div>
+        <div role={savingLocation ? 'status' : undefined} className="rounded-xl border border-amber-300 bg-amber-50 p-5 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">{savingLocation ? <span className="inline-flex items-center gap-2"><RefreshCw className="h-4 w-4 animate-spin" />Saving your location and finding nearby shipments...</span> : 'Save your current location to load available shipments and confirm your starting point.'}</div>
       ) : (
         <section className="space-y-3">
-          <div className="flex items-end justify-between"><div><h2 className="text-lg font-bold text-slate-900 dark:text-white">Nearby shipments</h2><p className="text-xs text-slate-500 dark:text-zinc-400">Nearest pickup locations are listed first.</p></div><span className="text-xs font-semibold text-slate-500">{deliveries.length} available</span></div>
+          <div className="flex items-end justify-between"><div><h2 className="text-lg font-bold text-slate-900 dark:text-white">Nearby shipments</h2><p className="text-xs text-slate-500 dark:text-zinc-400">Pending pickups within 20 km, nearest first.</p></div><span className="text-xs font-semibold text-slate-500">{deliveries.length} available</span></div>
+          {loading && deliveries.length === 0 && <div role="status" className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-600 dark:border-zinc-800 dark:bg-[#12161D] dark:text-zinc-300"><RefreshCw className="h-4 w-4 animate-spin text-emerald-600" />Loading nearby shipments...</div>}
           {deliveries.map((delivery) => (
             <article key={delivery.Delivery_ID} className="grid gap-4 rounded-xl border border-slate-200 bg-white p-4 dark:border-zinc-800 dark:bg-[#12161D] lg:grid-cols-[1fr_auto]">
               <div className="space-y-2">
@@ -184,7 +188,7 @@ export const RiderDashboard: React.FC<RiderDashboardProps> = ({ rider }) => {
               </div>
             </article>
           ))}
-          {!loading && deliveries.length === 0 && <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-zinc-700">No nearby shipments are waiting. New seller dispatches will appear here.</div>}
+          {!loading && deliveries.length === 0 && <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500 dark:border-zinc-700">No pending shipments within 20 km. Save a nearby location or check again later.</div>}
         </section>
       )}
 
