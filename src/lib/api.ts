@@ -334,7 +334,7 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ rating, reviewText, wasTimely }),
     }),
-  getRiderWallet: async (): Promise<{ balance: number; availableBalance: number; lockedBalance: number; pendingSalary: number; entries: any[]; withdrawals: any[] }> =>
+  getRiderWallet: async (): Promise<{ balance: number; availableBalance: number; lockedBalance: number; lockedCod: number; lockedSalary: number; pendingSalary: number; entries: any[]; withdrawals: any[] }> =>
     fetchJson('/api/riders/wallet'),
   requestRiderWithdrawal: async (amount: number, payoutMethod: string, payoutAccount: string): Promise<{ success: boolean; withdrawalId: string }> =>
     fetchJson('/api/riders/wallet/withdrawals', {

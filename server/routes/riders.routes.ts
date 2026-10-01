@@ -397,30 +397,51 @@ router.get('/me', requireAuth, requireRole(['rider']), async (req: AuthRequest, 
       WITH delivery_totals AS (
         SELECT COUNT(*)::integer AS total_deliveries,
           COUNT(*) FILTER (WHERE COALESCE(rd.was_timely, rd.delivered_at <= rd.due_at, FALSE))::integer AS timely_deliveries,
-          COUNT(*) FILTER (WHERE NOT COALESCE(rd.was_timely, rd.delivered_at <= rd.due_at, FALSE))::integer AS late_deliveries
+          COUNT(*) FILTER (WHERE NOT COALESCE(rd.was_timely, rd.delivered_at <= rd.due_at, FALSE))::integer AS late_deliveries,
+          COALESCE(SUM(rd.cod_amount) FILTER (WHERE rd.cod_collected AND rd.cod_amount > 0), 0) AS cod_deductions
         FROM rider_deliveries rd
         WHERE rd.rider_id = $1 AND rd.status = 'delivered'
           AND rd.delivered_at >= date_trunc('month', CURRENT_DATE)
           AND rd.delivered_at < date_trunc('month', CURRENT_DATE) + INTERVAL '1 month'
+      ), previous_salary AS (
+        SELECT totals.*,
+          COALESCE(score.performance_points, 100) AS previous_points,
+          COALESCE(score.salary_base_amount,
+            NULLIF(score.salary_amount + score.cod_deductions - score.delivery_pay_amount - score.perfect_month_bonus, 0),
+            30000) AS previous_salary_base
+        FROM delivery_totals totals
+        LEFT JOIN rider_monthly_scores score ON score.rider_id = $1
+          AND score.month_start = date_trunc('month', CURRENT_DATE)::date
+      ), scored AS (
+        SELECT previous_salary.*,
+          GREATEST(0, 100 - LEAST(late_deliveries, 5) - GREATEST(late_deliveries - 5, 0) * 6) AS points
+        FROM previous_salary
       ), monthly_score AS (
         INSERT INTO rider_monthly_scores (
           rider_id, month_start, performance_points, total_deliveries,
-          timely_deliveries, late_deliveries, salary_amount, salary_available_at
+          timely_deliveries, late_deliveries, salary_amount, salary_base_amount,
+          delivery_pay_amount, perfect_month_bonus, cod_deductions, salary_available_at
         )
-        SELECT $1, date_trunc('month', CURRENT_DATE)::date,
-          GREATEST(0, 100 - LEAST(late_deliveries, 5) - GREATEST(late_deliveries - 5, 0) * 6),
+        SELECT $1, date_trunc('month', CURRENT_DATE)::date, points,
           total_deliveries, timely_deliveries, late_deliveries,
-          ROUND(30000 * GREATEST(0, 100 - LEAST(late_deliveries, 5) - GREATEST(late_deliveries - 5, 0) * 6) / 100.0, 2),
-          date_trunc('month', CURRENT_DATE)::date + INTERVAL '1 month 29 days' +
-            CASE WHEN GREATEST(0, 100 - LEAST(late_deliveries, 5) - GREATEST(late_deliveries - 5, 0) * 6) < 60
-              THEN INTERVAL '7 days' ELSE INTERVAL '0 days' END
-        FROM delivery_totals
+          GREATEST(0, ROUND(previous_salary_base * (1 + (points - previous_points) / 100.0) +
+            total_deliveries * 50 + CASE WHEN total_deliveries > 0 AND late_deliveries = 0 THEN 10000 ELSE 0 END - cod_deductions, 2)),
+          ROUND(previous_salary_base * (1 + (points - previous_points) / 100.0), 2),
+          total_deliveries * 50,
+          CASE WHEN total_deliveries > 0 AND late_deliveries = 0 THEN 10000 ELSE 0 END,
+          cod_deductions,
+          date_trunc('month', CURRENT_DATE)::date + INTERVAL '1 month 29 days'
+        FROM scored
         ON CONFLICT (rider_id, month_start) DO UPDATE SET
           performance_points = EXCLUDED.performance_points,
           total_deliveries = EXCLUDED.total_deliveries,
           timely_deliveries = EXCLUDED.timely_deliveries,
           late_deliveries = EXCLUDED.late_deliveries,
-          salary_amount = EXCLUDED.salary_amount - rider_monthly_scores.cod_deductions,
+          salary_amount = EXCLUDED.salary_amount,
+          salary_base_amount = EXCLUDED.salary_base_amount,
+          delivery_pay_amount = EXCLUDED.delivery_pay_amount,
+          perfect_month_bonus = EXCLUDED.perfect_month_bonus,
+          cod_deductions = EXCLUDED.cod_deductions,
           salary_available_at = EXCLUDED.salary_available_at
         RETURNING performance_points
       )

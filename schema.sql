@@ -201,6 +201,9 @@ CREATE TABLE IF NOT EXISTS rider_monthly_scores (
     timely_deliveries INTEGER NOT NULL DEFAULT 0,
     late_deliveries INTEGER NOT NULL DEFAULT 0,
     salary_amount NUMERIC(12, 2) NOT NULL DEFAULT 0,
+    salary_base_amount NUMERIC(12, 2),
+    delivery_pay_amount NUMERIC(12, 2) NOT NULL DEFAULT 0,
+    perfect_month_bonus NUMERIC(12, 2) NOT NULL DEFAULT 0,
     cod_deductions NUMERIC(12, 2) NOT NULL DEFAULT 0,
     salary_available_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -208,6 +211,9 @@ CREATE TABLE IF NOT EXISTS rider_monthly_scores (
 );
 
 ALTER TABLE rider_monthly_scores ADD COLUMN IF NOT EXISTS cod_deductions NUMERIC(12, 2) NOT NULL DEFAULT 0;
+ALTER TABLE rider_monthly_scores ADD COLUMN IF NOT EXISTS salary_base_amount NUMERIC(12, 2);
+ALTER TABLE rider_monthly_scores ADD COLUMN IF NOT EXISTS delivery_pay_amount NUMERIC(12, 2) NOT NULL DEFAULT 0;
+ALTER TABLE rider_monthly_scores ADD COLUMN IF NOT EXISTS perfect_month_bonus NUMERIC(12, 2) NOT NULL DEFAULT 0;
 
 CREATE TABLE IF NOT EXISTS rider_wallet_entries (
     id VARCHAR(64) PRIMARY KEY,
@@ -436,21 +442,42 @@ WITH monthly_totals AS (
                 SUM(rd.cod_amount) FILTER (WHERE rd.cod_collected AND rd.cod_amount > 0) AS cod_deductions
         FROM rider_deliveries rd
         WHERE rd.status = 'delivered' AND rd.rider_id IS NOT NULL AND rd.delivered_at IS NOT NULL
+                    AND (
+                        date_trunc('month', rd.delivered_at) >= date_trunc('month', CURRENT_DATE)
+                        OR NOT EXISTS (
+                            SELECT 1 FROM rider_wallet_entries paid
+                            WHERE paid.rider_id = rd.rider_id AND paid.entry_type = 'salary'
+                                AND paid.reference_id = to_char(date_trunc('month', rd.delivered_at), 'YYYY-MM')
+                        )
+                    )
         GROUP BY rd.rider_id, date_trunc('month', rd.delivered_at)::date
+), previous_salary AS (
+                SELECT monthly_totals.*,
+                    COALESCE(score.performance_points, 100) AS previous_points,
+                    COALESCE(score.salary_base_amount,
+                        NULLIF(score.salary_amount + score.cod_deductions - score.delivery_pay_amount - score.perfect_month_bonus, 0),
+                        30000) AS previous_salary_base
+                FROM monthly_totals
+                LEFT JOIN rider_monthly_scores score
+                    ON score.rider_id = monthly_totals.rider_id AND score.month_start = monthly_totals.month_start
 ), monthly_points AS (
-        SELECT monthly_totals.*,
-                GREATEST(0, 100 - LEAST(late_deliveries, 5) - GREATEST(late_deliveries - 5, 0) * 6) AS points
-        FROM monthly_totals
+                SELECT previous_salary.*,
+                    GREATEST(0, 100 - LEAST(late_deliveries, 5) - GREATEST(late_deliveries - 5, 0) * 6) AS points
+                FROM previous_salary
 )
 INSERT INTO rider_monthly_scores (
         rider_id, month_start, performance_points, total_deliveries, timely_deliveries,
-        late_deliveries, salary_amount, cod_deductions, salary_available_at
+                late_deliveries, salary_amount, salary_base_amount, delivery_pay_amount,
+                perfect_month_bonus, cod_deductions, salary_available_at
 )
 SELECT rider_id, month_start, points, total_deliveries, timely_deliveries, late_deliveries,
-        GREATEST(0, ROUND(30000 * points / 100.0, 2) - COALESCE(cod_deductions, 0)),
-        COALESCE(cod_deductions, 0),
-        month_start + INTERVAL '1 month 29 days' +
-            CASE WHEN points < 60 THEN INTERVAL '7 days' ELSE INTERVAL '0 days' END
+                GREATEST(0, ROUND(previous_salary_base * (1 + (points - previous_points) / 100.0) +
+                    total_deliveries * 50 + CASE WHEN total_deliveries > 0 AND late_deliveries = 0 THEN 10000 ELSE 0 END -
+                    COALESCE(cod_deductions, 0), 2)),
+                ROUND(previous_salary_base * (1 + (points - previous_points) / 100.0), 2),
+                total_deliveries * 50,
+                CASE WHEN total_deliveries > 0 AND late_deliveries = 0 THEN 10000 ELSE 0 END,
+                COALESCE(cod_deductions, 0), month_start + INTERVAL '1 month 29 days'
 FROM monthly_points
 ON CONFLICT (rider_id, month_start) DO UPDATE SET
         performance_points = EXCLUDED.performance_points,
@@ -458,6 +485,9 @@ ON CONFLICT (rider_id, month_start) DO UPDATE SET
         timely_deliveries = EXCLUDED.timely_deliveries,
         late_deliveries = EXCLUDED.late_deliveries,
         salary_amount = EXCLUDED.salary_amount,
+        salary_base_amount = EXCLUDED.salary_base_amount,
+        delivery_pay_amount = EXCLUDED.delivery_pay_amount,
+        perfect_month_bonus = EXCLUDED.perfect_month_bonus,
         cod_deductions = EXCLUDED.cod_deductions,
         salary_available_at = EXCLUDED.salary_available_at;
 

@@ -26,7 +26,11 @@ const haversineKm = (lat1: number, lon1: number, lat2: number, lon2: number) => 
   return 6371 * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 };
 
-const salaryForPoints = (points: number) => Math.round(30000 * Math.max(0, Math.min(100, points)) / 100 * 100) / 100;
+const roundMoney = (amount: number) => Math.round((amount + Number.EPSILON) * 100) / 100;
+const salaryBaseAfterPointChange = (salaryBase: number, previousPoints: number, points: number) =>
+  Math.max(0, roundMoney(salaryBase * (1 + (points - previousPoints) / 100)));
+const monthlySalary = (salaryBase: number, deliveryPay: number, bonus: number, codDeductions: number) =>
+  Math.max(0, roundMoney(salaryBase + deliveryPay + bonus - codDeductions));
 const performancePointsForMonth = (late: number) =>
   Math.max(0, Math.min(100, 100 - Math.min(late, 5) - Math.max(0, late - 5) * 6));
 
@@ -257,23 +261,40 @@ router.post('/deliveries/:id/complete', requireAuth, requireRole(['customer']), 
     const now = new Date();
     const monthStart = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-01`;
     const scoreResult = await client.query(`
-      INSERT INTO rider_monthly_scores (rider_id, month_start, performance_points, total_deliveries, timely_deliveries, late_deliveries)
-      VALUES ($1, $2::date, 100, 0, 0, 0)
+      INSERT INTO rider_monthly_scores (
+        rider_id, month_start, performance_points, total_deliveries, timely_deliveries,
+        late_deliveries, salary_amount, salary_base_amount, delivery_pay_amount,
+        perfect_month_bonus, cod_deductions, salary_available_at
+      )
+      VALUES ($1, $2::date, 100, 0, 0, 0, 30000, 30000, 0, 0, 0, $2::date + INTERVAL '1 month 29 days')
       ON CONFLICT (rider_id, month_start) DO UPDATE SET rider_id = EXCLUDED.rider_id
-      RETURNING performance_points, late_deliveries, total_deliveries, timely_deliveries, cod_deductions
+      RETURNING performance_points, late_deliveries, total_deliveries, timely_deliveries,
+        salary_base_amount, delivery_pay_amount, perfect_month_bonus, cod_deductions
     `, [riderId, monthStart]);
     const score = scoreResult.rows[0];
+    const previousPoints = Number(score.performance_points);
     const lateCount = Number(score.late_deliveries) + (wasTimely ? 0 : 1);
     const totalDeliveries = Number(score.total_deliveries) + 1;
     const timelyDeliveries = Number(score.timely_deliveries) + (wasTimely ? 1 : 0);
     const points = performancePointsForMonth(lateCount);
-    let salary = salaryForPoints(points) - Number(score.cod_deductions || 0);
+    const salaryBase = salaryBaseAfterPointChange(
+      Number(score.salary_base_amount) || 30000,
+      previousPoints,
+      points
+    );
+    const deliveryPay = Number(score.delivery_pay_amount || 0) + 50;
+    const perfectMonthBonus = totalDeliveries > 0 && lateCount === 0 ? 10000 : 0;
+    const codAmount = Number(delivery.cod_amount) || 0;
+    const codDeductions = Number(score.cod_deductions || 0) + codAmount;
+    const salary = monthlySalary(salaryBase, deliveryPay, perfectMonthBonus, codDeductions);
     await client.query(`
       UPDATE rider_monthly_scores SET performance_points = $3, total_deliveries = $4,
-        timely_deliveries = $5, late_deliveries = $6, salary_amount = $7,
-        salary_available_at = ($2::date + INTERVAL '1 month 29 days' + CASE WHEN $3 < 60 THEN INTERVAL '7 days' ELSE INTERVAL '0 days' END)
+        timely_deliveries = $5, late_deliveries = $6, salary_base_amount = $7,
+        delivery_pay_amount = $8, perfect_month_bonus = $9, cod_deductions = $10,
+        salary_amount = $11, salary_available_at = $2::date + INTERVAL '1 month 29 days'
       WHERE rider_id = $1 AND month_start = $2::date
-    `, [riderId, monthStart, points, totalDeliveries, timelyDeliveries, lateCount, salary]);
+    `, [riderId, monthStart, points, totalDeliveries, timelyDeliveries, lateCount,
+      salaryBase, deliveryPay, perfectMonthBonus, codDeductions, salary]);
     await client.query(`
       UPDATE riders SET total_deliveries = total_deliveries + 1,
         timely_deliveries = timely_deliveries + $2,
@@ -283,13 +304,13 @@ router.post('/deliveries/:id/complete', requireAuth, requireRole(['customer']), 
       WHERE id = $1
     `, [riderId, wasTimely ? 1 : 0, wasTimely ? 0 : 1, points]);
 
-    if (Number(delivery.cod_amount) > 0) {
+    if (codAmount > 0) {
       await client.query(`
         INSERT INTO rider_wallet_entries (id, rider_id, entry_type, amount, reference_id, description, available_at)
         VALUES ($1, $2, 'cod_collected', $3, $4, $5, date_trunc('month', CURRENT_DATE)::date + INTERVAL '1 month')
         ON CONFLICT (rider_id, entry_type, reference_id) DO NOTHING
         RETURNING amount
-      `, [`COD-${req.params.id}`, riderId, Number(delivery.cod_amount), req.params.id, `ADDED DIRECTLY TO WALLET - COD for order ${delivery.order_id}; locked until month-end`]);
+      `, [`COD-${req.params.id}`, riderId, codAmount, req.params.id, `ADDED DIRECTLY TO WALLET - COD for order ${delivery.order_id}; locked until month-end`]);
       const walletCreditResult = await client.query(`
         INSERT INTO rider_wallet_entries (id, rider_id, entry_type, amount, reference_id, description, available_at)
         SELECT $1, rider_id, 'cod_wallet_balance', amount, reference_id, $4, available_at
@@ -305,18 +326,12 @@ router.post('/deliveries/:id/complete', requireAuth, requireRole(['customer']), 
         INSERT INTO rider_wallet_entries (id, rider_id, entry_type, amount, reference_id, description)
         VALUES ($1, $2, 'cod_salary_debit', $3, $4, $5)
         ON CONFLICT (rider_id, entry_type, reference_id) DO NOTHING
-      `, [`REM-${req.params.id}`, riderId, -Number(delivery.cod_amount), req.params.id, `COD deducted from monthly salary and remitted to seller for order ${delivery.order_id}`]);
-      await client.query(`
-        UPDATE rider_monthly_scores SET cod_deductions = cod_deductions + $3,
-          salary_amount = salary_amount - $3
-        WHERE rider_id = $1 AND month_start = $2::date
-      `, [riderId, monthStart, Number(delivery.cod_amount)]);
-      salary -= Number(delivery.cod_amount);
+      `, [`REM-${req.params.id}`, riderId, -codAmount, req.params.id, `COD deducted from monthly salary and remitted to seller for order ${delivery.order_id}`]);
       await client.query(`
         INSERT INTO seller_wallet_entries (id, seller_id, entry_type, amount, reference_id, description)
         VALUES ($1, $2, 'cod_received', $3, $4, $5)
         ON CONFLICT (seller_id, entry_type, reference_id) DO NOTHING
-      `, [`VCO-${delivery.fulfillment_id.slice(-24)}`, delivery.seller_id, Number(delivery.cod_amount), req.params.id, `Cash-on-delivery remittance for order ${delivery.order_id}`]);
+      `, [`VCO-${delivery.fulfillment_id.slice(-24)}`, delivery.seller_id, codAmount, req.params.id, `Cash-on-delivery remittance for order ${delivery.order_id}`]);
     }
 
     await client.query('COMMIT');
@@ -410,21 +425,27 @@ router.post('/customer-deliveries/:id/review', requireAuth, requireRole(['custom
       monthStart.setUTCDate(1);
       const monthKey = monthStart.toISOString().slice(0, 10);
       const scoreResult = await client.query(
-        'SELECT performance_points, late_deliveries, timely_deliveries, cod_deductions FROM rider_monthly_scores WHERE rider_id = $1 AND month_start = $2::date FOR UPDATE',
+        `SELECT performance_points, late_deliveries, timely_deliveries, total_deliveries,
+          salary_base_amount, delivery_pay_amount, cod_deductions
+        FROM rider_monthly_scores WHERE rider_id = $1 AND month_start = $2::date FOR UPDATE`,
         [delivery.rider_id, monthKey]
       );
       if (scoreResult.rows.length) {
         const score = scoreResult.rows[0];
+        const previousPoints = Number(score.performance_points);
         const newLateCount = Math.max(0, Number(score.late_deliveries) + (wasTimely ? -1 : 1));
         const timelyCount = Math.max(0, Number(score.timely_deliveries) + (wasTimely ? 1 : -1));
         const points = performancePointsForMonth(newLateCount);
-        const salary = salaryForPoints(points) - Number(score.cod_deductions || 0);
+        const salaryBase = salaryBaseAfterPointChange(Number(score.salary_base_amount) || 30000, previousPoints, points);
+        const perfectMonthBonus = Number(score.total_deliveries) > 0 && newLateCount === 0 ? 10000 : 0;
+        const salary = monthlySalary(salaryBase, Number(score.delivery_pay_amount || 0), perfectMonthBonus, Number(score.cod_deductions || 0));
         await client.query(`
           UPDATE rider_monthly_scores SET late_deliveries = $3, timely_deliveries = $4,
-            performance_points = $5, salary_amount = $6,
-            salary_available_at = ($2::date + INTERVAL '1 month 29 days' + CASE WHEN $5 < 60 THEN INTERVAL '7 days' ELSE INTERVAL '0 days' END)
+            performance_points = $5, salary_base_amount = $6, perfect_month_bonus = $7,
+            salary_amount = $8, salary_available_at = $2::date + INTERVAL '1 month 29 days'
           WHERE rider_id = $1 AND month_start = $2::date
-        `, [delivery.rider_id, monthKey, Math.max(0, newLateCount), Math.max(0, timelyCount), points, salary]);
+        `, [delivery.rider_id, monthKey, newLateCount, timelyCount, points, salaryBase,
+          perfectMonthBonus, salary]);
         await client.query(`
           UPDATE riders SET late_deliveries = GREATEST(0, late_deliveries + $2),
             timely_deliveries = GREATEST(0, timely_deliveries + $3), performance_points = $4,
@@ -452,23 +473,30 @@ router.get('/wallet', requireAuth, requireRole(['rider']), requireApprovedRider,
     const riderId = req.user!.entityId;
     await client.query('BEGIN');
     await creditAvailableSalary(client, riderId);
-    const [riderResult, entriesResult, withdrawalsResult, pendingSalaryResult, lockedCodResult] = await Promise.all([
-      client.query('SELECT wallet_balance FROM riders WHERE id = $1', [riderId]),
-      client.query(`SELECT id, entry_type, amount, reference_id, description, available_at, created_at
-        FROM rider_wallet_entries WHERE rider_id = $1 AND entry_type <> 'cod_wallet_balance'
-        ORDER BY created_at DESC LIMIT 100`, [riderId]),
-      client.query('SELECT id, amount, payout_method, payout_account, status, requested_at, processed_at FROM rider_withdrawals WHERE rider_id = $1 ORDER BY requested_at DESC LIMIT 100', [riderId]),
-      client.query('SELECT COALESCE(SUM(salary_amount), 0) AS total FROM rider_monthly_scores WHERE rider_id = $1 AND salary_available_at > CURRENT_TIMESTAMP', [riderId]),
-      client.query(`SELECT COALESCE(SUM(amount), 0) AS total FROM rider_wallet_entries
-        WHERE rider_id = $1 AND entry_type = 'cod_collected' AND available_at > CURRENT_TIMESTAMP`, [riderId]),
-    ]);
+    const riderResult = await client.query('SELECT wallet_balance FROM riders WHERE id = $1', [riderId]);
+    const entriesResult = await client.query(`SELECT id, entry_type, amount, reference_id, description, available_at, created_at
+      FROM rider_wallet_entries WHERE rider_id = $1 AND entry_type <> 'cod_wallet_balance'
+      ORDER BY created_at DESC LIMIT 100`, [riderId]);
+    const withdrawalsResult = await client.query('SELECT id, amount, payout_method, payout_account, status, requested_at, processed_at FROM rider_withdrawals WHERE rider_id = $1 ORDER BY requested_at DESC LIMIT 100', [riderId]);
+    const pendingSalaryResult = await client.query('SELECT COALESCE(SUM(salary_amount), 0) AS total FROM rider_monthly_scores WHERE rider_id = $1 AND salary_available_at > CURRENT_TIMESTAMP', [riderId]);
+    const lockedCodResult = await client.query(`SELECT COALESCE(SUM(amount), 0) AS total FROM rider_wallet_entries
+      WHERE rider_id = $1 AND entry_type = 'cod_collected' AND available_at > CURRENT_TIMESTAMP`, [riderId]);
+    const lockedSalaryResult = await client.query(`SELECT COALESCE(SUM(entry.amount), 0) AS total
+      FROM rider_wallet_entries entry
+      JOIN rider_monthly_scores score ON score.rider_id = entry.rider_id
+        AND entry.reference_id = to_char(score.month_start, 'YYYY-MM')
+      WHERE entry.rider_id = $1 AND entry.entry_type = 'salary'
+        AND score.performance_points < 60`, [riderId]);
     const balance = Number(riderResult.rows[0]?.wallet_balance) || 0;
     const lockedCod = Number(lockedCodResult.rows[0]?.total) || 0;
+    const lockedSalary = Number(lockedSalaryResult.rows[0]?.total) || 0;
     await client.query('COMMIT');
     return res.json({
       balance,
-      lockedBalance: lockedCod,
-      availableBalance: Math.max(0, balance - lockedCod),
+      lockedCod,
+      lockedSalary,
+      lockedBalance: lockedCod + lockedSalary,
+      availableBalance: Math.max(0, balance - lockedCod - lockedSalary),
       pendingSalary: Number(pendingSalaryResult.rows[0]?.total) || 0,
       entries: entriesResult.rows,
       withdrawals: withdrawalsResult.rows,
@@ -537,7 +565,14 @@ router.post('/wallet/withdrawals', requireAuth, requireRole(['rider']), requireA
       FROM rider_wallet_entries WHERE rider_id = $1 AND entry_type = 'cod_collected'
         AND available_at > CURRENT_TIMESTAMP`, [riderId]);
     const lockedCod = Number(lockedCodResult.rows[0]?.total) || 0;
-    const availableBalance = Math.max(0, balance - lockedCod);
+    const lockedSalaryResult = await client.query(`SELECT COALESCE(SUM(entry.amount), 0) AS total
+      FROM rider_wallet_entries entry
+      JOIN rider_monthly_scores score ON score.rider_id = entry.rider_id
+        AND entry.reference_id = to_char(score.month_start, 'YYYY-MM')
+      WHERE entry.rider_id = $1 AND entry.entry_type = 'salary'
+        AND score.performance_points < 60`, [riderId]);
+    const lockedSalary = Number(lockedSalaryResult.rows[0]?.total) || 0;
+    const availableBalance = Math.max(0, balance - lockedCod - lockedSalary);
     if (amount > availableBalance) {
       await client.query('ROLLBACK');
       return res.status(409).json({ error: 'Withdrawal amount exceeds your available wallet balance. COD funds unlock after month-end.' });
