@@ -753,6 +753,7 @@ export default function App() {
             <CustomerOrders
               currentCustomer={selectedCustomer}
               orders={orders}
+              sellers={sellers}
               allProducts={products}
               onSelectProduct={(p) => setSelectedProductForDetail(p)}
               onAddToCart={handleAddToCart}
@@ -810,6 +811,7 @@ export default function App() {
               <LiveProductTrackingMap
                 orders={orders.filter((order) => order.Status === 'shipped' || order.Status === 'delivered')}
                 order={orders.find((order) => order.Status === 'shipped' || order.Status === 'delivered') || null}
+                sellers={sellers}
                 onDeliveryComplete={(orderId) => handleUpdateOrderStatus(orderId, 'delivered')}
               />
             ) : (

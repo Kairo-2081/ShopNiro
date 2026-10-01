@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import L from 'leaflet';
 import { CircleMarker, MapContainer, Polyline, Popup, TileLayer, Tooltip, useMap } from 'react-leaflet';
-import { Order, Product, Customer } from '../../types';
+import { Address, Order, Product, Customer, Seller } from '../../types';
 import { formatCurrency, formatBDT, formatDate } from '../../lib/api';
 import {
   Package,
@@ -29,23 +29,77 @@ interface TrackingCoordinates {
   lng: number;
 }
 
+type RouteStatus = 'loading' | 'ready' | 'error' | 'unavailable';
+
+interface RoadRoute {
+  coordinates: TrackingCoordinates[];
+  distanceMeters: number;
+}
+
+interface OSRMRouteResponse {
+  code: string;
+  routes?: Array<{
+    distance: number;
+    geometry: { coordinates: [number, number][] };
+  }>;
+}
+
+function getAddressCoordinates(address?: Address): TrackingCoordinates | null {
+  const lat = address?.Latitude;
+  const lng = address?.Longitude;
+  return typeof lat === 'number' && Number.isFinite(lat) && typeof lng === 'number' && Number.isFinite(lng)
+    ? { lat, lng }
+    : null;
+}
+
+function getRouteProgress(route: TrackingCoordinates[], progress: number): TrackingCoordinates[] {
+  if (route.length < 2) return route;
+
+  const segmentLengths = route.slice(1).map((point, index) =>
+    L.latLng(route[index].lat, route[index].lng).distanceTo(L.latLng(point.lat, point.lng))
+  );
+  const totalLength = segmentLengths.reduce((total, length) => total + length, 0);
+  let remaining = totalLength * Math.max(0, Math.min(1, progress));
+  const travelled = [route[0]];
+
+  for (let index = 0; index < segmentLengths.length; index += 1) {
+    const segmentLength = segmentLengths[index];
+    if (remaining >= segmentLength) {
+      travelled.push(route[index + 1]);
+      remaining -= segmentLength;
+      continue;
+    }
+
+    const ratio = segmentLength === 0 ? 0 : remaining / segmentLength;
+    travelled.push({
+      lat: route[index].lat + (route[index + 1].lat - route[index].lat) * ratio,
+      lng: route[index].lng + (route[index + 1].lng - route[index].lng) * ratio,
+    });
+    break;
+  }
+
+  return travelled;
+}
+
 function FitRouteBounds({
   origin,
   destination,
   routeId,
+  routeCoordinates,
 }: {
   origin: TrackingCoordinates;
   destination: TrackingCoordinates;
   routeId: string;
+  routeCoordinates?: TrackingCoordinates[];
 }) {
   const map = useMap();
 
   useEffect(() => {
-    map.fitBounds(
-      L.latLngBounds([origin.lat, origin.lng], [destination.lat, destination.lng]),
-      { padding: [60, 60], maxZoom: 13 }
-    );
-  }, [map, origin.lat, origin.lng, destination.lat, destination.lng, routeId]);
+    const points = routeCoordinates?.length
+      ? routeCoordinates.map(({ lat, lng }) => [lat, lng] as [number, number])
+      : [[origin.lat, origin.lng], [destination.lat, destination.lng]] as [number, number][];
+    map.fitBounds(L.latLngBounds(points), { padding: [60, 60], maxZoom: 13 });
+  }, [map, origin.lat, origin.lng, destination.lat, destination.lng, routeId, routeCoordinates]);
 
   return null;
 }
@@ -53,6 +107,7 @@ function FitRouteBounds({
 interface LiveProductTrackingMapProps {
   order?: Order | null;
   orders?: Order[];
+  sellers?: Seller[];
   onSelectOrder?: (order: Order) => void;
   onDeliveryComplete?: (orderId: string) => Promise<void>;
   onClose?: () => void;
@@ -62,6 +117,7 @@ interface LiveProductTrackingMapProps {
 export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
   order: initialOrder,
   orders = [],
+  sellers = [],
   onSelectOrder,
   onDeliveryComplete,
   onClose,
@@ -81,6 +137,9 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
   const [selectedOrderId, setSelectedOrderId] = useState<string>(
     firstTrackableOrder?.Order_ID || 'TRK-9021'
   );
+  const [selectedFulfillmentId, setSelectedFulfillmentId] = useState('');
+  const [route, setRoute] = useState<RoadRoute | null>(null);
+  const [routeStatus, setRouteStatus] = useState<RouteStatus>('unavailable');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
   const [isSimulatingMovement, setIsSimulatingMovement] = useState(firstTrackableOrder?.Status === 'shipped');
@@ -139,28 +198,66 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
     || activeOrder.Fulfillments?.find((fulfillment) => fulfillment.Rider_Name);
   const riderName = assignedRider?.Rider_Name || 'Rider not assigned yet';
   const riderInitials = assignedRider?.Rider_Name?.split(/\s+/).map((part) => part[0]).slice(0, 2).join('').toUpperCase() || 'SN';
-
-  // Base coordinates centered in Dhaka commerce corridor
-  const originWarehouse: TrackingCoordinates = {
-    lat: 23.8223,
-    lng: 90.3654, // Mirpur Fulfillment Center
-  };
-
-  const deliveryDestination: TrackingCoordinates = {
-    lat: 23.7937,
-    lng: 90.4066, // Banani / Gulshan Destination
-  };
-
-  // Courier position interpolated between origin and destination based on movementStep
-  const courierLocation: TrackingCoordinates = {
-    lat: originWarehouse.lat + (deliveryDestination.lat - originWarehouse.lat) * movementStep,
-    lng: originWarehouse.lng + (deliveryDestination.lng - originWarehouse.lng) * movementStep + Math.sin(movementStep * Math.PI) * 0.008,
-  };
+  const activeFulfillments = (activeOrder.Fulfillments || []).filter((fulfillment) => fulfillment.Status !== 'cancelled');
+  const activeFulfillment = activeFulfillments.find((fulfillment) => fulfillment.Fulfillment_ID === selectedFulfillmentId)
+    || activeFulfillments[0];
+  const activeSellerId = activeFulfillment?.Seller_ID || activeOrder.Items[0]?.Seller_ID;
+  const activeSeller = sellers.find((seller) => seller.Seller_ID === activeSellerId);
+  const shopLocation = getAddressCoordinates(activeSeller?.Address);
+  const deliveryDestination = getAddressCoordinates(activeOrder.Shipping_Address);
+  const routeCoordinates = route?.coordinates;
+  const travelledRoute = routeCoordinates ? getRouteProgress(routeCoordinates, movementStep) : [];
+  const courierLocation = travelledRoute[travelledRoute.length - 1];
 
   useEffect(() => {
     if (!firstTrackableOrder) return;
     setSelectedOrderId(firstTrackableOrder.Order_ID);
   }, [firstTrackableOrder?.Order_ID]);
+
+  useEffect(() => {
+    setSelectedFulfillmentId(activeOrder.Fulfillments?.find((fulfillment) => fulfillment.Status !== 'cancelled')?.Fulfillment_ID || '');
+  }, [activeOrder.Order_ID]);
+
+  useEffect(() => {
+    if (!shopLocation || !deliveryDestination) {
+      setRoute(null);
+      setRouteStatus('unavailable');
+      return;
+    }
+
+    const controller = new AbortController();
+    const loadRoute = async () => {
+      setRoute(null);
+      setRouteStatus('loading');
+      try {
+        const coordinates = `${shopLocation.lng},${shopLocation.lat};${deliveryDestination.lng},${deliveryDestination.lat}`;
+        const response = await fetch(
+          `https://router.project-osrm.org/route/v1/driving/${coordinates}?overview=full&geometries=geojson`,
+          { signal: controller.signal }
+        );
+        if (!response.ok) throw new Error('Road route request failed');
+
+        const result = await response.json() as OSRMRouteResponse;
+        const osrmRoute = result.code === 'Ok' ? result.routes?.[0] : undefined;
+        const routePoints = osrmRoute?.geometry.coordinates
+          .filter(([lng, lat]) => Number.isFinite(lng) && Number.isFinite(lat))
+          .map(([lng, lat]) => ({ lat, lng }));
+        if (!osrmRoute || !Number.isFinite(osrmRoute.distance) || !routePoints || routePoints.length < 2) {
+          throw new Error('No road route was found');
+        }
+
+        setRoute({ coordinates: routePoints, distanceMeters: osrmRoute.distance });
+        setRouteStatus('ready');
+      } catch {
+        if (controller.signal.aborted) return;
+        setRoute(null);
+        setRouteStatus('error');
+      }
+    };
+
+    void loadRoute();
+    return () => controller.abort();
+  }, [shopLocation?.lat, shopLocation?.lng, deliveryDestination?.lat, deliveryDestination?.lng]);
 
   useEffect(() => {
     if (activeOrder.Status === 'delivered') {
@@ -279,7 +376,7 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
 
       {/* Main Content Area: Map + Telemetry Dashboard */}
       <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[580px]">
-        {/* Left 8 Cols: Interactive Google Map */}
+        {/* Left 8 Cols: Interactive OpenStreetMap */}
         <div className="lg:col-span-8 relative min-h-[420px] lg:min-h-[580px] bg-slate-900 overflow-hidden flex flex-col">
           {/* Quick HUD Overlay Controls */}
           <div className="absolute top-4 left-4 z-20 flex flex-wrap items-center gap-2 pointer-events-auto">
@@ -287,15 +384,19 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
               <Truck className="w-4 h-4 text-sky-400" />
               <span>Courier Transit: <strong>{stopsRemaining} stops away</strong></span>
               <span className="text-zinc-500">•</span>
-              <span className="text-emerald-400 font-bold">ETA ~{etaMinutes} mins</span>
+              <span className="text-emerald-400 font-bold">
+                {routeStatus === 'ready' && route
+                  ? `Road distance: ${(route.distanceMeters / 1000).toFixed(1)} km`
+                  : routeStatus === 'loading' ? 'Finding road distance...' : 'Road distance unavailable'}
+              </span>
             </div>
 
           </div>
 
           {/* Interactive OpenStreetMap Instance */}
-          <div className="flex-1 w-full h-full min-h-[420px]">
+          {shopLocation && deliveryDestination ? <div className="flex-1 w-full h-full min-h-[420px] relative">
             <MapContainer
-              center={courierLocation}
+              center={shopLocation}
               zoom={12}
               scrollWheelZoom
               className="relative z-0 h-full w-full min-h-[420px]"
@@ -305,30 +406,38 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
                 url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                 maxZoom={19}
               />
-              <FitRouteBounds origin={originWarehouse} destination={deliveryDestination} routeId={activeOrder.Order_ID} />
-              <Polyline positions={[originWarehouse, courierLocation]} pathOptions={{ color: '#77775a', weight: 5, opacity: 0.9 }} />
-              <Polyline positions={[courierLocation, deliveryDestination]} pathOptions={{ color: '#858585', weight: 4, opacity: 0.65, dashArray: '8 8' }} />
+              <FitRouteBounds
+                origin={shopLocation}
+                destination={deliveryDestination}
+                routeId={`${activeOrder.Order_ID}-${activeFulfillment?.Fulfillment_ID || activeSellerId || ''}`}
+                routeCoordinates={routeCoordinates}
+              />
+              {routeCoordinates && <Polyline positions={routeCoordinates.map(({ lat, lng }) => [lat, lng] as [number, number])} pathOptions={{ color: '#858585', weight: 4, opacity: 0.65, dashArray: '8 8' }} />}
+              {travelledRoute.length > 1 && <Polyline positions={travelledRoute.map(({ lat, lng }) => [lat, lng] as [number, number])} pathOptions={{ color: '#2772ce', weight: 5, opacity: 0.95 }} />}
 
-              <CircleMarker center={originWarehouse} radius={9} pathOptions={{ color: '#fff', weight: 3, fillColor: '#555347', fillOpacity: 1 }}>
-                <Tooltip permanent direction="top">Dispatch Warehouse</Tooltip>
-                <Popup>ShopNiro dispatch warehouse</Popup>
+              <CircleMarker center={shopLocation} radius={9} pathOptions={{ color: '#fff', weight: 3, fillColor: '#555347', fillOpacity: 1 }}>
+                <Tooltip permanent direction="top">{activeSeller?.Name || activeFulfillment?.Seller_Name || 'Shop'}</Tooltip>
+                <Popup>{activeSeller?.Address.Street || activeFulfillment?.Seller_Name || 'Seller shop'}</Popup>
               </CircleMarker>
-              <CircleMarker center={courierLocation} radius={12} pathOptions={{ color: '#fff', weight: 3, fillColor: '#8a805e', fillOpacity: 1 }}>
+              {courierLocation && <CircleMarker center={courierLocation} radius={12} pathOptions={{ color: '#fff', weight: 3, fillColor: '#2772ce', fillOpacity: 1 }}>
                 <Tooltip direction="top">{activeOrder.Items[0]?.Name || 'Parcel in transit'}</Tooltip>
                 <Popup>Courier in transit</Popup>
-              </CircleMarker>
+              </CircleMarker>}
               <CircleMarker center={deliveryDestination} radius={9} pathOptions={{ color: '#fff', weight: 3, fillColor: '#7d7e5e', fillOpacity: 1 }}>
                 <Tooltip permanent direction="top">Customer Destination</Tooltip>
                 <Popup>{activeOrder.Shipping_Address.Street}, {activeOrder.Shipping_Address.City}</Popup>
               </CircleMarker>
             </MapContainer>
-          </div>
+            {routeStatus === 'error' && <div className="absolute bottom-3 left-3 z-10 rounded bg-white/95 px-3 py-2 text-xs text-rose-700 shadow">Road route is unavailable right now.</div>}
+          </div> : <div className="flex flex-1 min-h-[420px] items-center justify-center bg-slate-100 px-6 text-center text-sm text-slate-600 dark:bg-[#161F2C] dark:text-zinc-300">
+            {!shopLocation ? 'The seller shop location is missing map coordinates.' : 'The customer destination is missing map coordinates.'}
+          </div>}
 
           {/* Bottom Map Legend */}
           <div className="p-3 bg-slate-900/90 backdrop-blur-md border-t border-zinc-800 text-zinc-300 text-xs flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-4 text-[11px]">
               <span className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-slate-400" /> Origin: Mirpur Hub
+                <span className="w-2.5 h-2.5 rounded-full bg-slate-400" /> Shop: {activeSeller?.Name || activeFulfillment?.Seller_Name || 'Seller'}
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" /> Live Product Location
@@ -338,7 +447,7 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
               </span>
             </div>
             <span className="text-[10px] text-zinc-500 font-mono">
-              GPS Lat: {courierLocation.lat.toFixed(4)}, Lng: {courierLocation.lng.toFixed(4)}
+              {courierLocation ? `GPS Lat: ${courierLocation.lat.toFixed(4)}, Lng: ${courierLocation.lng.toFixed(4)}` : routeStatus === 'loading' ? 'Loading road route...' : 'Courier location unavailable'}
             </span>
           </div>
         </div>
@@ -363,6 +472,26 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
                 {orders.map((o) => (
                   <option key={o.Order_ID} value={o.Order_ID}>
                     {o.Tracking_ID} ({o.Items[0]?.Name || 'Order'} - {formatCurrency(o.Subtotal + o.Shipping_Fee)})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {activeFulfillments.length > 1 && (
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 block" htmlFor="tracking-fulfillment">
+                Select Shop Shipment
+              </label>
+              <select
+                id="tracking-fulfillment"
+                value={activeFulfillment?.Fulfillment_ID || ''}
+                onChange={(event) => setSelectedFulfillmentId(event.target.value)}
+                className="w-full py-2 px-3 bg-slate-50 dark:bg-[#18202D] border border-slate-200 dark:border-zinc-700 rounded-xl text-xs text-slate-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {activeFulfillments.map((fulfillment) => (
+                  <option key={fulfillment.Fulfillment_ID} value={fulfillment.Fulfillment_ID}>
+                    {fulfillment.Seller_Name}
                   </option>
                 ))}
               </select>
@@ -411,8 +540,8 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
                   <CheckCircle2 className="w-3.5 h-3.5" />
                 </div>
                 <div>
-                  <span className="font-bold text-slate-800 dark:text-zinc-200 block">Dispatched from Hub</span>
-                  <span className="text-[10px] text-slate-400 dark:text-zinc-500">Mirpur Logistics Hub • Package Inspected</span>
+                  <span className="font-bold text-slate-800 dark:text-zinc-200 block">Dispatched from Shop</span>
+                  <span className="text-[10px] text-slate-400 dark:text-zinc-500">{activeSeller?.Name || activeFulfillment?.Seller_Name || 'Seller shop'}</span>
                 </div>
               </div>
 
@@ -425,7 +554,9 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
                     {activeOrder.Status === 'delivered' ? 'Delivered' : 'Out for Delivery (In Transit)'}
                   </span>
                   <span className="text-[10px] text-slate-500 dark:text-zinc-400">
-                    On Mohakhali / Banani Expressway • Courier en route
+                    {routeStatus === 'ready' && route
+                      ? `${(route.distanceMeters / 1000).toFixed(1)} km by road • Courier en route`
+                      : routeStatus === 'loading' ? 'Calculating road route...' : 'Road route unavailable'}
                   </span>
                 </div>
               </div>

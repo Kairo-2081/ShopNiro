@@ -1,5 +1,5 @@
 import React from 'react';
-import { Customer, Order, Product, RiderDelivery } from '../../types';
+import { Customer, Order, Product, RiderDelivery, Seller } from '../../types';
 import { api, formatCurrency, formatBDT, formatDate } from '../../lib/api';
 import { PaymentReceiptModal } from '../payment/PaymentReceiptModal';
 import { LiveProductTrackingMap } from '../tracking/LiveProductTrackingMap';
@@ -24,6 +24,7 @@ import {
 interface CustomerOrdersProps {
   currentCustomer: Customer;
   orders: Order[];
+  sellers?: Seller[];
   allProducts?: Product[];
   onSelectProduct?: (product: Product) => void;
   onAddToCart?: (product: Product, quantity?: number) => void;
@@ -33,6 +34,7 @@ interface CustomerOrdersProps {
 export const CustomerOrders: React.FC<CustomerOrdersProps> = ({
   currentCustomer,
   orders,
+  sellers = [],
   allProducts = [],
   onSelectProduct,
   onAddToCart,
@@ -276,6 +278,7 @@ export const CustomerOrders: React.FC<CustomerOrdersProps> = ({
               <LiveProductTrackingMap
                 order={trackableOrders[0]}
                 orders={trackableOrders}
+                sellers={sellers}
                 onSelectOrder={(ord) => setTrackingOrderForMap(ord)}
               />
             )}
@@ -510,6 +513,7 @@ export const CustomerOrders: React.FC<CustomerOrdersProps> = ({
             <LiveProductTrackingMap
               order={trackingOrderForMap}
               orders={trackableOrders}
+              sellers={sellers}
               onSelectOrder={(ord) => setTrackingOrderForMap(ord)}
               onClose={() => setTrackingOrderForMap(null)}
               isModal={true}
