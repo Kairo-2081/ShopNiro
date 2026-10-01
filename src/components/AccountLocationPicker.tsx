@@ -65,8 +65,16 @@ function LocationMap({ onAddressSelected }: AccountLocationPickerProps) {
       onAddressSelected({ ...address, Latitude: coordinates.lat, Longitude: coordinates.lng });
       setStatus('Location selected. Review the address below.');
     } catch (error: any) {
-      setMarker(null);
-      setStatus('Could not find this address. Check the map connection and try again.');
+      onAddressSelected({
+        House_Name: '',
+        Street: '',
+        City: '',
+        Postal_Code: '',
+        Additional_Info: '',
+        Latitude: coordinates.lat,
+        Longitude: coordinates.lng,
+      });
+      setStatus('Map pin saved. Enter the street and city manually.');
       console.error('OpenStreetMap reverse geocoding failed:', error.message);
     } finally {
       setIsResolving(false);
@@ -136,7 +144,7 @@ function LocationMap({ onAddressSelected }: AccountLocationPickerProps) {
         )}
       </div>
       <p
-        className={`flex items-center gap-1.5 text-[11px] ${status.startsWith('Location selected') ? 'text-emerald-700 dark:text-emerald-300' : 'text-slate-500 dark:text-zinc-400'}`}
+        className={`flex items-center gap-1.5 text-[11px] ${status.startsWith('Location selected') || status.startsWith('Map pin saved') ? 'text-emerald-700 dark:text-emerald-300' : 'text-slate-500 dark:text-zinc-400'}`}
         role="status"
         aria-live="polite"
       >

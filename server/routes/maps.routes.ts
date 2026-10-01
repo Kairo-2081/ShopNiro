@@ -52,9 +52,12 @@ router.get('/reverse', async (req, res) => {
   try {
     const result = await reverseGeocode(lat, lon);
     const parts = result.address || {};
-    const road = parts.road || parts.pedestrian || parts.footway || parts.path || parts.residential || '';
-    const street = [parts.house_number, road].filter(Boolean).join(' ') || result.name || result.display_name || '';
-    const city = parts.city || parts.town || parts.village || parts.municipality || parts.county || parts.state || '';
+    const road = parts.road || parts.pedestrian || parts.footway || parts.path || parts.residential ||
+      parts.neighbourhood || parts.suburb || parts.quarter || '';
+    const street = [parts.house_number, road].filter(Boolean).join(' ') || result.name ||
+      parts.neighbourhood || parts.suburb || parts.village || parts.town || parts.city || '';
+    const city = parts.city || parts.town || parts.village || parts.municipality || parts.city_district ||
+      parts.borough || parts.suburb || parts.county || parts.state_district || parts.state || '';
 
     if (!street || !city) return res.status(404).json({ error: 'No complete address found at this location' });
 
