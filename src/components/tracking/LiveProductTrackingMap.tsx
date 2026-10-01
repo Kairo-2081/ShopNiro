@@ -141,12 +141,12 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
   const trackableOrders = Array.from(
     new globalThis.Map<string, Order>(
       [...orders, ...(initialOrder ? [initialOrder] : [])]
-        .filter((candidate) => candidate.Status === 'shipped' || candidate.Status === 'delivered')
+        .filter((candidate) => candidate.Status === 'shipped')
         .map((candidate) => [candidate.Order_ID, candidate])
     ).values()
   );
   const hasTrackableOrder = trackableOrders.length > 0;
-  const firstTrackableOrder = initialOrder && (initialOrder.Status === 'shipped' || initialOrder.Status === 'delivered')
+  const firstTrackableOrder = initialOrder && initialOrder.Status === 'shipped'
     ? initialOrder
     : trackableOrders[0];
   const [selectedOrderId, setSelectedOrderId] = useState<string>(

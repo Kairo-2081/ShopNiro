@@ -833,10 +833,10 @@ export default function App() {
               </div>
             </div>
 
-            {orders.some((order) => order.Status === 'shipped' || order.Status === 'delivered') ? (
+            {orders.some((order) => order.Status === 'shipped') ? (
               <LiveProductTrackingMap
-                orders={orders.filter((order) => order.Status === 'shipped' || order.Status === 'delivered')}
-                order={orders.find((order) => order.Status === 'shipped' || order.Status === 'delivered') || null}
+                orders={orders.filter((order) => order.Status === 'shipped')}
+                order={orders.find((order) => order.Status === 'shipped') || null}
                 sellers={sellers}
                 customerAddress={selectedCustomer?.Address}
                 onDeliveryComplete={(orderId) => handleUpdateOrderStatus(orderId, 'delivered')}
