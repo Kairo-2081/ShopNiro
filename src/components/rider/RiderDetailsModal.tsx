@@ -2,7 +2,7 @@ import React from 'react';
 import { Address, Rider } from '../../types';
 import { api } from '../../lib/api';
 import { AccountLocationPicker } from '../AccountLocationPicker';
-import { Lock, MapPin, Save, X } from 'lucide-react';
+import { FileText, Lock, MapPin, Save, X } from 'lucide-react';
 
 interface RiderDetailsModalProps {
   isOpen: boolean;
@@ -21,6 +21,10 @@ const emptyAddress = (): Address => ({
 
 const toLines = (values: string[]) => values.join('\n');
 const fromLines = (value: string) => value.split('\n').map((line) => line.trim()).filter(Boolean);
+const addressKey = (address: Address) => JSON.stringify([
+  address.House_Name || '', address.Street || '', address.City || '', address.Postal_Code || '',
+  address.Additional_Info || '', address.Latitude ?? null, address.Longitude ?? null,
+]);
 
 export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, rider, onClose, onSaved }) => {
   const [username, setUsername] = React.useState(rider.Username);
@@ -34,7 +38,9 @@ export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, ri
   const [previousJobs, setPreviousJobs] = React.useState(toLines(rider.Previous_Jobs || []));
   const [education, setEducation] = React.useState(toLines(rider.Education || []));
   const [saving, setSaving] = React.useState(false);
+  const [openingCv, setOpeningCv] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [notice, setNotice] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     if (!isOpen) return;
@@ -49,12 +55,51 @@ export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, ri
     setPreviousJobs(toLines(rider.Previous_Jobs || []));
     setEducation(toLines(rider.Education || []));
     setError(null);
+    setNotice(null);
   }, [isOpen, rider]);
 
   if (!isOpen) return null;
 
+  const profileChanged =
+    username.trim().toLowerCase() !== rider.Username.trim().toLowerCase() ||
+    name.trim() !== rider.Name.trim() ||
+    email.trim().toLowerCase() !== rider.Email.trim().toLowerCase() ||
+    phone.trim() !== rider.Number.trim() ||
+    addressKey(presentAddress) !== addressKey(rider.Present_Address || emptyAddress()) ||
+    addressKey(permanentAddress) !== addressKey(rider.Permanent_Address || emptyAddress()) ||
+    JSON.stringify(fromLines(experience)) !== JSON.stringify(rider.Experience || []) ||
+    JSON.stringify(fromLines(previousJobs)) !== JSON.stringify(rider.Previous_Jobs || []) ||
+    JSON.stringify(fromLines(education)) !== JSON.stringify(rider.Education || []);
+  const hasChanges = profileChanged || password.length > 0;
+
+  const viewCv = async () => {
+    const previewWindow = window.open('', '_blank');
+    if (!previewWindow) {
+      setError('Your browser blocked the CV preview. Allow pop-ups and try again.');
+      return;
+    }
+    setOpeningCv(true);
+    setError(null);
+    try {
+      const cv = await api.getMyRiderCv();
+      const url = URL.createObjectURL(cv);
+      previewWindow.location.replace(url);
+      window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (err: any) {
+      previewWindow.close();
+      setError(err.message || 'Could not open your current CV.');
+    } finally {
+      setOpeningCv(false);
+    }
+  };
+
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (!hasChanges) {
+      setError(null);
+      setNotice('No changes detected. Your current approval remains unchanged.');
+      return;
+    }
     const hasCoordinates = (address: Address) =>
       Number.isFinite(address.Latitude) && Number.isFinite(address.Longitude);
     if (
@@ -101,13 +146,17 @@ export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, ri
         <header className="flex items-center justify-between gap-4 border-b border-slate-200 bg-emerald-50/70 px-5 py-4 dark:border-zinc-800 dark:bg-emerald-950/20 sm:px-7">
           <div>
             <h2 id="rider-details-title" className="font-bold text-slate-900 dark:text-white">My details</h2>
-            <p className="mt-1 text-xs text-slate-600 dark:text-zinc-400">Changes regenerate your CV and require administrator approval.</p>
+            <p className="mt-1 text-xs text-slate-600 dark:text-zinc-400">Profile changes refresh your CV and require approval. Password changes do not.</p>
           </div>
-          <button type="button" onClick={onClose} aria-label="Close rider details" className="rounded-md p-2 text-slate-500 hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-zinc-800"><X className="h-5 w-5" /></button>
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => void viewCv()} disabled={openingCv} className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200"><FileText className="h-4 w-4" />{openingCv ? 'Opening...' : 'View my CV'}</button>
+            <button type="button" onClick={onClose} aria-label="Close rider details" className="rounded-md p-2 text-slate-500 hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-zinc-800"><X className="h-5 w-5" /></button>
+          </div>
         </header>
 
         <form onSubmit={save} className="space-y-6 overflow-y-auto p-5 sm:p-7">
           {error && <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300">{error}</p>}
+          {notice && <p role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200">{notice}</p>}
 
           <section className="space-y-3">
             <h3 className="text-sm font-bold text-slate-900 dark:text-white">Account and contact</h3>
@@ -152,7 +201,7 @@ export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, ri
 
           <footer className="flex flex-col-reverse justify-end gap-2 border-t border-slate-200 pt-4 dark:border-zinc-800 sm:flex-row">
             <button type="button" onClick={onClose} className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 dark:border-zinc-700 dark:text-zinc-200">Cancel</button>
-            <button type="submit" disabled={saving} className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"><Save className="h-4 w-4" />{saving ? 'Saving details...' : 'Save and request approval'}</button>
+            <button type="submit" disabled={saving} className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"><Save className="h-4 w-4" />{saving ? 'Saving details...' : 'Save details'}</button>
           </footer>
         </form>
       </section>

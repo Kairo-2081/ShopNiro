@@ -294,6 +294,14 @@ export const api = {
     return response.blob();
   },
   getRiderProfile: async (): Promise<Rider> => fetchJson<Rider>('/api/riders/me'),
+  getMyRiderCv: async (): Promise<Blob> => {
+    const token = getAuthToken();
+    const response = await fetch('/api/riders/me/cv', {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!response.ok) throw new Error('Could not open your current CV.');
+    return response.blob();
+  },
   updateRiderProfile: async (updates: Partial<Rider> & { Password?: string }): Promise<Rider> =>
     fetchJson<Rider>('/api/riders/me', {
       method: 'PUT',
@@ -326,7 +334,7 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ rating, reviewText, wasTimely }),
     }),
-  getRiderWallet: async (): Promise<{ balance: number; pendingSalary: number; entries: any[]; withdrawals: any[] }> =>
+  getRiderWallet: async (): Promise<{ balance: number; availableBalance: number; lockedBalance: number; pendingSalary: number; entries: any[]; withdrawals: any[] }> =>
     fetchJson('/api/riders/wallet'),
   requestRiderWithdrawal: async (amount: number, payoutMethod: string, payoutAccount: string): Promise<{ success: boolean; withdrawalId: string }> =>
     fetchJson('/api/riders/wallet/withdrawals', {

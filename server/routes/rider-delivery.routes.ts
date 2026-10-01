@@ -285,10 +285,22 @@ router.post('/deliveries/:id/complete', requireAuth, requireRole(['customer']), 
 
     if (Number(delivery.cod_amount) > 0) {
       await client.query(`
-        INSERT INTO rider_wallet_entries (id, rider_id, entry_type, amount, reference_id, description)
-        VALUES ($1, $2, 'cod_collected', $3, $4, $5)
+        INSERT INTO rider_wallet_entries (id, rider_id, entry_type, amount, reference_id, description, available_at)
+        VALUES ($1, $2, 'cod_collected', $3, $4, $5, date_trunc('month', CURRENT_DATE)::date + INTERVAL '1 month')
         ON CONFLICT (rider_id, entry_type, reference_id) DO NOTHING
-      `, [`COD-${req.params.id}`, riderId, Number(delivery.cod_amount), req.params.id, `COD collected for order ${delivery.order_id}; applied to monthly salary`]);
+        RETURNING amount
+      `, [`COD-${req.params.id}`, riderId, Number(delivery.cod_amount), req.params.id, `ADDED DIRECTLY TO WALLET - COD for order ${delivery.order_id}; locked until month-end`]);
+      const walletCreditResult = await client.query(`
+        INSERT INTO rider_wallet_entries (id, rider_id, entry_type, amount, reference_id, description, available_at)
+        SELECT $1, rider_id, 'cod_wallet_balance', amount, reference_id, $4, available_at
+        FROM rider_wallet_entries
+        WHERE rider_id = $2 AND entry_type = 'cod_collected' AND reference_id = $3
+        ON CONFLICT (rider_id, entry_type, reference_id) DO NOTHING
+        RETURNING amount
+      `, [`WBC-${req.params.id}`, riderId, req.params.id, 'COD credited to wallet; locked until month-end']);
+      if (walletCreditResult.rows.length) {
+        await client.query('UPDATE riders SET wallet_balance = wallet_balance + $2 WHERE id = $1', [riderId, Number(walletCreditResult.rows[0].amount)]);
+      }
       await client.query(`
         INSERT INTO rider_wallet_entries (id, rider_id, entry_type, amount, reference_id, description)
         VALUES ($1, $2, 'cod_salary_debit', $3, $4, $5)
@@ -440,15 +452,23 @@ router.get('/wallet', requireAuth, requireRole(['rider']), requireApprovedRider,
     const riderId = req.user!.entityId;
     await client.query('BEGIN');
     await creditAvailableSalary(client, riderId);
-    const [riderResult, entriesResult, withdrawalsResult, pendingSalaryResult] = await Promise.all([
+    const [riderResult, entriesResult, withdrawalsResult, pendingSalaryResult, lockedCodResult] = await Promise.all([
       client.query('SELECT wallet_balance FROM riders WHERE id = $1', [riderId]),
-      client.query('SELECT id, entry_type, amount, reference_id, description, available_at, created_at FROM rider_wallet_entries WHERE rider_id = $1 ORDER BY created_at DESC LIMIT 100', [riderId]),
+      client.query(`SELECT id, entry_type, amount, reference_id, description, available_at, created_at
+        FROM rider_wallet_entries WHERE rider_id = $1 AND entry_type <> 'cod_wallet_balance'
+        ORDER BY created_at DESC LIMIT 100`, [riderId]),
       client.query('SELECT id, amount, payout_method, payout_account, status, requested_at, processed_at FROM rider_withdrawals WHERE rider_id = $1 ORDER BY requested_at DESC LIMIT 100', [riderId]),
       client.query('SELECT COALESCE(SUM(salary_amount), 0) AS total FROM rider_monthly_scores WHERE rider_id = $1 AND salary_available_at > CURRENT_TIMESTAMP', [riderId]),
+      client.query(`SELECT COALESCE(SUM(amount), 0) AS total FROM rider_wallet_entries
+        WHERE rider_id = $1 AND entry_type = 'cod_collected' AND available_at > CURRENT_TIMESTAMP`, [riderId]),
     ]);
+    const balance = Number(riderResult.rows[0]?.wallet_balance) || 0;
+    const lockedCod = Number(lockedCodResult.rows[0]?.total) || 0;
     await client.query('COMMIT');
     return res.json({
-      balance: Number(riderResult.rows[0]?.wallet_balance) || 0,
+      balance,
+      lockedBalance: lockedCod,
+      availableBalance: Math.max(0, balance - lockedCod),
       pendingSalary: Number(pendingSalaryResult.rows[0]?.total) || 0,
       entries: entriesResult.rows,
       withdrawals: withdrawalsResult.rows,
@@ -513,9 +533,14 @@ router.post('/wallet/withdrawals', requireAuth, requireRole(['rider']), requireA
     await creditAvailableSalary(client, riderId);
     const riderResult = await client.query('SELECT wallet_balance FROM riders WHERE id = $1 FOR UPDATE', [riderId]);
     const balance = Number(riderResult.rows[0]?.wallet_balance) || 0;
-    if (amount > balance) {
+    const lockedCodResult = await client.query(`SELECT COALESCE(SUM(amount), 0) AS total
+      FROM rider_wallet_entries WHERE rider_id = $1 AND entry_type = 'cod_collected'
+        AND available_at > CURRENT_TIMESTAMP`, [riderId]);
+    const lockedCod = Number(lockedCodResult.rows[0]?.total) || 0;
+    const availableBalance = Math.max(0, balance - lockedCod);
+    if (amount > availableBalance) {
       await client.query('ROLLBACK');
-      return res.status(409).json({ error: 'Withdrawal amount exceeds your available salary balance.' });
+      return res.status(409).json({ error: 'Withdrawal amount exceeds your available wallet balance. COD funds unlock after month-end.' });
     }
     const withdrawalId = `WD-${Date.now()}-${randomInt(1000, 10000)}`;
     await client.query(

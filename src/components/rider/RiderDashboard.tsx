@@ -32,7 +32,7 @@ export const RiderDashboard: React.FC<RiderDashboardProps> = ({ rider }) => {
     rider.Current_Latitude !== undefined && rider.Current_Longitude !== undefined
   );
   const [deliveries, setDeliveries] = React.useState<RiderDelivery[]>([]);
-  const [wallet, setWallet] = React.useState<{ balance: number; pendingSalary: number; entries: any[]; withdrawals: any[] } | null>(null);
+  const [wallet, setWallet] = React.useState<{ balance: number; availableBalance: number; lockedBalance: number; pendingSalary: number; entries: any[]; withdrawals: any[] } | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [busyId, setBusyId] = React.useState<string | null>(null);
@@ -201,12 +201,12 @@ export const RiderDashboard: React.FC<RiderDashboardProps> = ({ rider }) => {
       <section className="grid gap-5 lg:grid-cols-[1fr_1fr]">
         <div className="rounded-xl border border-slate-200 bg-white p-5 dark:border-zinc-800 dark:bg-[#12161D]">
           <h2 className="flex items-center gap-2 font-bold text-slate-900 dark:text-white"><Wallet className="h-4 w-4 text-emerald-700" />Withdraw salary</h2>
-          <p className="mt-1 text-xs text-slate-500 dark:text-zinc-400">Net salary releases to your wallet 30 days after month-end. Available now: ৳{wallet?.balance.toLocaleString() || '0'} · pending after COD deductions: ৳{wallet?.pendingSalary.toLocaleString() || '0'}.</p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-zinc-400">Wallet total: ৳{wallet?.balance.toLocaleString() || '0'} · available now: ৳{wallet?.availableBalance.toLocaleString() || '0'} · locked COD until month-end: ৳{wallet?.lockedBalance.toLocaleString() || '0'} · pending net salary: ৳{wallet?.pendingSalary.toLocaleString() || '0'}.</p>
           <form onSubmit={withdraw} className="mt-4 grid gap-3 sm:grid-cols-3">
-            <input type="number" min="1" step="0.01" max={wallet?.balance || 0} required value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} placeholder="Amount" className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-[#181F2A]" />
+            <input type="number" min="1" step="0.01" max={wallet?.availableBalance || 0} required value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} placeholder="Amount" className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-[#181F2A]" />
             <select value={payoutMethod} onChange={(e) => setPayoutMethod(e.target.value)} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-[#181F2A]"><option value="bkash">bKash</option><option value="bank">Bank transfer</option><option value="nagad">Nagad</option></select>
             <input required value={payoutAccount} onChange={(e) => setPayoutAccount(e.target.value)} placeholder="Payout account" className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-[#181F2A]" />
-            <button type="submit" disabled={withdrawing || (wallet?.balance || 0) <= 0} className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50 sm:col-span-3">{withdrawing ? 'Requesting...' : 'Request withdrawal'}</button>
+            <button type="submit" disabled={withdrawing || (wallet?.availableBalance || 0) <= 0} className="rounded-lg bg-emerald-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50 sm:col-span-3">{withdrawing ? 'Requesting...' : 'Request withdrawal'}</button>
           </form>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-5 dark:border-zinc-800 dark:bg-[#12161D]">

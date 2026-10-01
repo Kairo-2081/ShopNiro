@@ -355,15 +355,53 @@ WHERE rd.fulfillment_id = sf.id
     AND o.payment_method = 'cash_on_delivery'
     AND (rd.cod_amount = 0 OR (rd.status = 'delivered' AND NOT rd.cod_collected));
 
-INSERT INTO rider_wallet_entries (id, rider_id, entry_type, amount, reference_id, description)
+INSERT INTO rider_wallet_entries (id, rider_id, entry_type, amount, reference_id, description, available_at)
 SELECT 'COD-' || substr(md5(rd.id), 1, 24), rd.rider_id, 'cod_collected', rd.cod_amount, rd.id,
-        'COD collected for completed order ' || sf.order_id || '; applied to monthly salary'
+    'ADDED DIRECTLY TO WALLET - COD for order ' || sf.order_id || '; locked until month-end',
+    date_trunc('month', rd.delivered_at)::date + INTERVAL '1 month'
 FROM rider_deliveries rd
 JOIN seller_fulfillments sf ON sf.id = rd.fulfillment_id
 JOIN orders o ON o.id = sf.order_id
 WHERE rd.status = 'delivered' AND rd.cod_collected AND rd.cod_amount > 0
     AND o.payment_method = 'cash_on_delivery' AND rd.rider_id IS NOT NULL
 ON CONFLICT (rider_id, entry_type, reference_id) DO NOTHING;
+
+UPDATE rider_wallet_entries entry
+SET description = 'ADDED DIRECTLY TO WALLET - COD for order ' || sf.order_id || '; locked until month-end'
+FROM rider_deliveries rd
+JOIN seller_fulfillments sf ON sf.id = rd.fulfillment_id
+JOIN orders o ON o.id = sf.order_id
+WHERE entry.entry_type = 'cod_collected' AND entry.reference_id = rd.id
+    AND o.payment_method = 'cash_on_delivery';
+
+UPDATE rider_wallet_entries entry
+SET available_at = date_trunc('month', delivery.delivered_at)::date + INTERVAL '1 month'
+FROM rider_deliveries delivery
+JOIN seller_fulfillments fulfillment ON fulfillment.id = delivery.fulfillment_id
+JOIN orders o ON o.id = fulfillment.order_id
+WHERE entry.entry_type = 'cod_collected' AND entry.reference_id = delivery.id
+    AND o.payment_method = 'cash_on_delivery' AND delivery.delivered_at IS NOT NULL;
+
+WITH credited AS (
+        INSERT INTO rider_wallet_entries (id, rider_id, entry_type, amount, reference_id, description, available_at)
+        SELECT 'WBC-' || substr(md5(entry.rider_id || ':' || entry.reference_id), 1, 24),
+                entry.rider_id, 'cod_wallet_balance', entry.amount, entry.reference_id,
+                'COD credited to wallet; locked until month-end', entry.available_at
+        FROM rider_wallet_entries entry
+        WHERE entry.entry_type = 'cod_collected'
+            AND NOT EXISTS (
+                    SELECT 1 FROM rider_wallet_entries marker
+                    WHERE marker.rider_id = entry.rider_id
+                        AND marker.entry_type = 'cod_wallet_balance'
+                        AND marker.reference_id = entry.reference_id
+            )
+        ON CONFLICT (rider_id, entry_type, reference_id) DO NOTHING
+        RETURNING rider_id, amount
+), totals AS (
+        SELECT rider_id, SUM(amount) AS amount FROM credited GROUP BY rider_id
+)
+UPDATE riders rider SET wallet_balance = rider.wallet_balance + totals.amount, updated_at = CURRENT_TIMESTAMP
+FROM totals WHERE rider.id = totals.rider_id;
 
 INSERT INTO rider_wallet_entries (id, rider_id, entry_type, amount, reference_id, description)
 SELECT 'REM-' || substr(md5(rd.id), 1, 24), rd.rider_id, 'cod_salary_debit', -rd.cod_amount, rd.id,
