@@ -1,6 +1,7 @@
 import React from 'react';
 import { Product, Category, Seller, ProductStatus } from '../../types';
-import { X, Package, Save } from 'lucide-react';
+import { api } from '../../lib/api';
+import { X, Package, Save, Sparkles } from 'lucide-react';
 
 interface SellerProductModalProps {
   isOpen: boolean;
@@ -28,6 +29,8 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
   const [categoryId, setCategoryId] = React.useState('');
   const [status, setStatus] = React.useState<ProductStatus>('active');
   const [isSaving, setIsSaving] = React.useState(false);
+  const [isGeneratingDescription, setIsGeneratingDescription] = React.useState(false);
+  const [descriptionError, setDescriptionError] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
@@ -82,6 +85,30 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
       setError(err.message || 'Failed to save product');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleGenerateDescription = async () => {
+    if (!name.trim()) {
+      setDescriptionError('Enter a product title first.');
+      return;
+    }
+
+    setIsGeneratingDescription(true);
+    setDescriptionError(null);
+    try {
+      const selectedCategory = categories.find((category) => category.Category_ID === categoryId);
+      const result = await api.generateAIDescription({
+        kind: 'product',
+        shopName: currentSeller.Name,
+        productName: name.trim(),
+        categoryName: selectedCategory?.Name,
+      });
+      setDescription(result.description);
+    } catch (err: any) {
+      setDescriptionError(err.message || 'Could not generate a description. Please try again.');
+    } finally {
+      setIsGeneratingDescription(false);
     }
   };
 
@@ -223,16 +250,29 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-slate-700 dark:text-zinc-300 font-semibold mb-1">
-              Description
-            </label>
+            <div className="flex items-center justify-between gap-3 mb-1">
+              <label className="block text-slate-700 dark:text-zinc-300 font-semibold">Description</label>
+              <button
+                type="button"
+                onClick={handleGenerateDescription}
+                disabled={isGeneratingDescription}
+                className="inline-flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300 font-semibold hover:text-emerald-800 dark:hover:text-emerald-200 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-md"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                {isGeneratingDescription ? 'Writing...' : 'Write with AI'}
+              </button>
+            </div>
             <textarea
               rows={3}
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => {
+                setDescription(e.target.value);
+                setDescriptionError(null);
+              }}
               placeholder="Detailed specs and key features..."
               className="w-full p-2.5 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500"
             />
+            {descriptionError && <p role="alert" className="mt-1 text-rose-600 dark:text-rose-300">{descriptionError}</p>}
           </div>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-zinc-800">

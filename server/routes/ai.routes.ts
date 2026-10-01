@@ -20,6 +20,55 @@ router.get('/status', (_req, res) => {
   res.json({ configured: Boolean(groq) });
 });
 
+router.post('/description', async (req, res) => {
+  try {
+    requireGroqClient();
+
+    const { kind, shopName, productName, categoryName } = req.body ?? {};
+    if (
+      (kind !== 'shop' && kind !== 'product') ||
+      typeof shopName !== 'string' ||
+      !shopName.trim() ||
+      (kind === 'product' && (typeof productName !== 'string' || !productName.trim()))
+    ) {
+      return res.status(400).json({ error: 'A shop name and valid description type are required.' });
+    }
+
+    const prompt = kind === 'shop'
+      ? `Write a concise, welcoming 2-3 sentence shop description for the business named "${shopName.trim()}". The name is the only confirmed fact: do not claim specific products, credentials, guarantees, or services unless they are explicit in the name. Keep the wording flexible if the shop's specialty is unclear.`
+      : `Write a concise, appealing 2-3 sentence product description for "${productName.trim()}" in the "${typeof categoryName === 'string' ? categoryName.trim() : ''}" category, sold by the shop "${shopName.trim()}". Do not invent specifications, materials, certifications, warranties, discounts, or other factual claims not present in those details.`;
+
+    const target = resolveModel('flash-lite', 'fast');
+    const response = await groq!.chat.completions.create({
+      model: target.model,
+      messages: [
+        {
+          role: 'system',
+          content: 'You write clear, trustworthy marketplace copy. Return only the description, with no heading, quotation marks, or markdown.',
+        },
+        { role: 'user', content: prompt },
+      ],
+      temperature: 0.6,
+    });
+    const description = response.choices[0]?.message?.content?.trim();
+
+    if (!description) {
+      return res.status(502).json({ error: 'AI could not create a description. Please try again.' });
+    }
+
+    return res.json({ description });
+  } catch (error: any) {
+    console.error('ShopNiro AI description error:', error);
+    const statusCode = error?.statusCode || error?.status || 500;
+    const errorMessage = statusCode === 503
+      ? 'ShopNiro AI is not configured. Add GROQ_API_KEY to the server environment and restart the server.'
+      : statusCode === 429
+      ? 'ShopNiro AI reached its current usage limit. Please try again later.'
+      : 'ShopNiro AI is temporarily unavailable. Please try again in a moment.';
+    return res.status(statusCode).json({ error: errorMessage });
+  }
+});
+
 interface ChatMessagePart {
   text: string;
 }

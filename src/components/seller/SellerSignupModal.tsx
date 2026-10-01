@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Seller, Address } from '../../types';
+import { api } from '../../lib/api';
 import { AccountLocationPicker } from '../AccountLocationPicker';
-import { X, Store, Send, MapPin, Lock, Eye, EyeOff, User, Mail, Phone, Image } from 'lucide-react';
+import { X, Store, Send, MapPin, Lock, Eye, EyeOff, User, Mail, Phone, Image, Sparkles } from 'lucide-react';
 
 interface SellerSignupModalProps {
   isOpen: boolean;
@@ -34,6 +35,8 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
+  const [descriptionError, setDescriptionError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
@@ -66,6 +69,24 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
       setError(err.message || 'Failed to submit seller application');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleGenerateDescription = async () => {
+    if (!name.trim()) {
+      setDescriptionError('Enter your business name first.');
+      return;
+    }
+
+    setIsGeneratingDescription(true);
+    setDescriptionError(null);
+    try {
+      const result = await api.generateAIDescription({ kind: 'shop', shopName: name.trim() });
+      setDescription(result.description);
+    } catch (err: any) {
+      setDescriptionError(err.message || 'Could not generate a description. Please try again.');
+    } finally {
+      setIsGeneratingDescription(false);
     }
   };
 
@@ -206,14 +227,29 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
           </div>
 
           <div>
-            <label className="block text-slate-700 dark:text-zinc-300 font-semibold mb-1">Brand Story &amp; Description</label>
+            <div className="flex items-center justify-between gap-3 mb-1">
+              <label className="block text-slate-700 dark:text-zinc-300 font-semibold">Brand Story &amp; Description</label>
+              <button
+                type="button"
+                onClick={handleGenerateDescription}
+                disabled={isGeneratingDescription}
+                className="inline-flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300 font-semibold hover:text-emerald-800 dark:hover:text-emerald-200 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-md"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                {isGeneratingDescription ? 'Writing...' : 'Write with AI'}
+              </button>
+            </div>
             <textarea
               rows={2}
               placeholder="Tell buyers and admins about your brand and product quality..."
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={(e) => {
+                setDescription(e.target.value);
+                setDescriptionError(null);
+              }}
               className="w-full p-2.5 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none"
             />
+            {descriptionError && <p role="alert" className="mt-1 text-rose-600 dark:text-rose-300">{descriptionError}</p>}
           </div>
 
           <div className="pt-2 border-t border-slate-100 dark:border-zinc-800">

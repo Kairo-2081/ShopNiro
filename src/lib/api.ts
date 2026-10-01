@@ -376,6 +376,16 @@ export const api = {
   // ShopNiro AI Chat
   getAIStatus: async (): Promise<{ configured: boolean }> =>
     fetchJson<{ configured: boolean }>('/api/ai/status'),
+  generateAIDescription: async (params: {
+    kind: 'shop' | 'product';
+    shopName: string;
+    productName?: string;
+    categoryName?: string;
+  }): Promise<{ description: string }> =>
+    fetchJson<{ description: string }>('/api/ai/description', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    }),
   sendAIChatMessage: async (params: {
     message: string;
     history?: Array<{ role: 'user' | 'model'; parts: Array<{ text: string }> }>;
