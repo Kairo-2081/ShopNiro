@@ -341,22 +341,45 @@ router.patch('/applications/:id/status', requireAuth, requireRole(['admin']), as
 
 router.get('/me', requireAuth, requireRole(['rider']), async (req: AuthRequest, res) => {
   try {
-    const currentDate = new Date();
-    const monthStart = `${currentDate.getUTCFullYear()}-${String(currentDate.getUTCMonth() + 1).padStart(2, '0')}-01`;
-    await query(
-      `INSERT INTO rider_monthly_scores (rider_id, month_start, performance_points)
-      VALUES ($1, $2::date, 100) ON CONFLICT (rider_id, month_start) DO NOTHING`,
-      [req.user!.entityId, monthStart]
-    );
+    const riderId = req.user!.entityId;
     const result = await query(`
+      WITH delivery_totals AS (
+        SELECT COUNT(*)::integer AS total_deliveries,
+          COUNT(*) FILTER (WHERE COALESCE(rd.was_timely, rd.delivered_at <= rd.due_at, FALSE))::integer AS timely_deliveries,
+          COUNT(*) FILTER (WHERE NOT COALESCE(rd.was_timely, rd.delivered_at <= rd.due_at, FALSE))::integer AS late_deliveries
+        FROM rider_deliveries rd
+        WHERE rd.rider_id = $1 AND rd.status = 'delivered'
+          AND rd.delivered_at >= date_trunc('month', CURRENT_DATE)
+          AND rd.delivered_at < date_trunc('month', CURRENT_DATE) + INTERVAL '1 month'
+      ), monthly_score AS (
+        INSERT INTO rider_monthly_scores (
+          rider_id, month_start, performance_points, total_deliveries,
+          timely_deliveries, late_deliveries, salary_amount, salary_available_at
+        )
+        SELECT $1, date_trunc('month', CURRENT_DATE)::date,
+          GREATEST(0, 100 - LEAST(late_deliveries, 5) - GREATEST(late_deliveries - 5, 0) * 6),
+          total_deliveries, timely_deliveries, late_deliveries,
+          ROUND(30000 * GREATEST(0, 100 - LEAST(late_deliveries, 5) - GREATEST(late_deliveries - 5, 0) * 6) / 100.0, 2),
+          date_trunc('month', CURRENT_DATE)::date + INTERVAL '1 month 29 days' +
+            CASE WHEN GREATEST(0, 100 - LEAST(late_deliveries, 5) - GREATEST(late_deliveries - 5, 0) * 6) < 60
+              THEN INTERVAL '7 days' ELSE INTERVAL '0 days' END
+        FROM delivery_totals
+        ON CONFLICT (rider_id, month_start) DO UPDATE SET
+          performance_points = EXCLUDED.performance_points,
+          total_deliveries = EXCLUDED.total_deliveries,
+          timely_deliveries = EXCLUDED.timely_deliveries,
+          late_deliveries = EXCLUDED.late_deliveries,
+          salary_amount = EXCLUDED.salary_amount,
+          salary_available_at = EXCLUDED.salary_available_at
+        RETURNING performance_points
+      )
       SELECT r.*, u.username, u.email,
         COALESCE((SELECT AVG(rr.rating) FROM rider_reviews rr WHERE rr.rider_id = r.id), 0) AS average_rating,
-        COALESCE(ms.performance_points, 100) AS current_month_performance_points
+        monthly_score.performance_points AS current_month_performance_points
       FROM riders r JOIN users u ON u.id = r.id
-      LEFT JOIN rider_monthly_scores ms ON ms.rider_id = r.id
-        AND ms.month_start = date_trunc('month', CURRENT_DATE)::date
+      CROSS JOIN monthly_score
       WHERE r.id = $1
-    `, [req.user!.entityId]);
+    `, [riderId]);
     if (!result.rows.length) return res.status(404).json({ error: 'Rider profile not found.' });
     return res.json(mapRider(result.rows[0]));
   } catch (error: any) {

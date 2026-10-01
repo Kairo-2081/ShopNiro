@@ -27,8 +27,8 @@ const haversineKm = (lat1: number, lon1: number, lat2: number, lon2: number) => 
 };
 
 const salaryForPoints = (points: number) => Math.round(30000 * Math.max(0, Math.min(100, points)) / 100 * 100) / 100;
-const performancePointsForMonth = (timely: number, late: number) =>
-  Math.max(0, Math.min(100, 100 + timely - Math.min(late, 5) - Math.max(0, late - 5) * 6));
+const performancePointsForMonth = (late: number) =>
+  Math.max(0, Math.min(100, 100 - Math.min(late, 5) - Math.max(0, late - 5) * 6));
 
 async function creditAvailableSalary(client: any, riderId: string) {
   await client.query(`
@@ -266,7 +266,7 @@ router.post('/deliveries/:id/complete', requireAuth, requireRole(['customer']), 
     const lateCount = Number(score.late_deliveries) + (wasTimely ? 0 : 1);
     const totalDeliveries = Number(score.total_deliveries) + 1;
     const timelyDeliveries = Number(score.timely_deliveries) + (wasTimely ? 1 : 0);
-    const points = performancePointsForMonth(timelyDeliveries, lateCount);
+    const points = performancePointsForMonth(lateCount);
     const salary = salaryForPoints(points);
     await client.query(`
       UPDATE rider_monthly_scores SET performance_points = $3, total_deliveries = $4,
@@ -403,7 +403,7 @@ router.post('/customer-deliveries/:id/review', requireAuth, requireRole(['custom
         const score = scoreResult.rows[0];
         const newLateCount = Math.max(0, Number(score.late_deliveries) + (wasTimely ? -1 : 1));
         const timelyCount = Math.max(0, Number(score.timely_deliveries) + (wasTimely ? 1 : -1));
-        const points = performancePointsForMonth(timelyCount, newLateCount);
+        const points = performancePointsForMonth(newLateCount);
         const salary = salaryForPoints(points);
         await client.query(`
           UPDATE rider_monthly_scores SET late_deliveries = $3, timely_deliveries = $4,
