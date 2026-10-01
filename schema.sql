@@ -201,10 +201,13 @@ CREATE TABLE IF NOT EXISTS rider_monthly_scores (
     timely_deliveries INTEGER NOT NULL DEFAULT 0,
     late_deliveries INTEGER NOT NULL DEFAULT 0,
     salary_amount NUMERIC(12, 2) NOT NULL DEFAULT 0,
+    cod_deductions NUMERIC(12, 2) NOT NULL DEFAULT 0,
     salary_available_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (rider_id, month_start)
 );
+
+ALTER TABLE rider_monthly_scores ADD COLUMN IF NOT EXISTS cod_deductions NUMERIC(12, 2) NOT NULL DEFAULT 0;
 
 CREATE TABLE IF NOT EXISTS rider_wallet_entries (
     id VARCHAR(64) PRIMARY KEY,
@@ -217,6 +220,48 @@ CREATE TABLE IF NOT EXISTS rider_wallet_entries (
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT uq_rider_wallet_reference UNIQUE (rider_id, entry_type, reference_id)
 );
+
+WITH legacy_debits AS (
+    SELECT entry.rider_id, entry.reference_id, -entry.amount AS amount
+    FROM rider_wallet_entries entry
+        WHERE entry.entry_type IN ('salary_debit', 'cod_remittance')
+            AND entry.amount < 0 AND entry.reference_id IS NOT NULL
+      AND NOT EXISTS (
+          SELECT 1 FROM rider_wallet_entries reversal
+          WHERE reversal.rider_id = entry.rider_id
+            AND reversal.entry_type = 'cod_balance_restored'
+            AND reversal.reference_id = entry.reference_id
+      )
+), restored AS (
+    INSERT INTO rider_wallet_entries (id, rider_id, entry_type, amount, reference_id, description)
+    SELECT 'CDR-' || md5(legacy.rider_id || ':' || legacy.reference_id), legacy.rider_id,
+        'cod_balance_restored', legacy.amount, legacy.reference_id,
+        'Previous COD debit restored from available wallet and moved to pending salary deduction'
+    FROM legacy_debits legacy
+    ON CONFLICT (rider_id, entry_type, reference_id) DO NOTHING
+    RETURNING rider_id, amount
+), totals AS (
+    SELECT rider_id, SUM(amount) AS amount FROM restored GROUP BY rider_id
+)
+UPDATE riders rider SET wallet_balance = rider.wallet_balance + totals.amount, updated_at = CURRENT_TIMESTAMP
+FROM totals WHERE rider.id = totals.rider_id;
+
+WITH cod_totals AS (
+    SELECT entry.rider_id, date_trunc('month', delivery.delivered_at)::date AS month_start,
+        SUM(-entry.amount) AS amount
+    FROM rider_wallet_entries entry
+    JOIN rider_deliveries delivery ON delivery.id = entry.reference_id
+    WHERE entry.entry_type IN ('salary_debit', 'cod_remittance', 'cod_salary_debit')
+      AND entry.amount < 0 AND delivery.delivered_at IS NOT NULL
+    GROUP BY entry.rider_id, date_trunc('month', delivery.delivered_at)::date
+)
+UPDATE rider_monthly_scores score
+SET salary_amount = score.salary_amount + score.cod_deductions - cod_totals.amount,
+    cod_deductions = cod_totals.amount
+FROM cod_totals
+WHERE score.rider_id = cod_totals.rider_id
+  AND score.month_start = cod_totals.month_start
+  AND score.cod_deductions IS DISTINCT FROM cod_totals.amount;
 
 CREATE TABLE IF NOT EXISTS seller_wallet_entries (
     id VARCHAR(64) PRIMARY KEY,

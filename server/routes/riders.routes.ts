@@ -369,7 +369,7 @@ router.get('/me', requireAuth, requireRole(['rider']), async (req: AuthRequest, 
           total_deliveries = EXCLUDED.total_deliveries,
           timely_deliveries = EXCLUDED.timely_deliveries,
           late_deliveries = EXCLUDED.late_deliveries,
-          salary_amount = EXCLUDED.salary_amount,
+          salary_amount = EXCLUDED.salary_amount - rider_monthly_scores.cod_deductions,
           salary_available_at = EXCLUDED.salary_available_at
         RETURNING performance_points
       )

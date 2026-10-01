@@ -201,7 +201,7 @@ export const RiderDashboard: React.FC<RiderDashboardProps> = ({ rider }) => {
       <section className="grid gap-5 lg:grid-cols-[1fr_1fr]">
         <div className="rounded-xl border border-slate-200 bg-white p-5 dark:border-zinc-800 dark:bg-[#12161D]">
           <h2 className="flex items-center gap-2 font-bold text-slate-900 dark:text-white"><Wallet className="h-4 w-4 text-emerald-700" />Withdraw salary</h2>
-          <p className="mt-1 text-xs text-slate-500 dark:text-zinc-400">Salary releases to your wallet 30 days after month-end. Available now: ৳{wallet?.balance.toLocaleString() || '0'} · pending salary: ৳{wallet?.pendingSalary.toLocaleString() || '0'}.</p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-zinc-400">Net salary releases to your wallet 30 days after month-end. Available now: ৳{wallet?.balance.toLocaleString() || '0'} · pending after COD deductions: ৳{wallet?.pendingSalary.toLocaleString() || '0'}.</p>
           <form onSubmit={withdraw} className="mt-4 grid gap-3 sm:grid-cols-3">
             <input type="number" min="1" step="0.01" max={wallet?.balance || 0} required value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} placeholder="Amount" className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-[#181F2A]" />
             <select value={payoutMethod} onChange={(e) => setPayoutMethod(e.target.value)} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-[#181F2A]"><option value="bkash">bKash</option><option value="bank">Bank transfer</option><option value="nagad">Nagad</option></select>
@@ -214,7 +214,7 @@ export const RiderDashboard: React.FC<RiderDashboardProps> = ({ rider }) => {
           <div className="mt-3 max-h-56 space-y-2 overflow-y-auto">{wallet?.entries.map((entry) => <div key={entry.id} className="flex justify-between gap-3 border-b border-slate-100 py-2 text-xs dark:border-zinc-800"><span className="text-slate-600 dark:text-zinc-300">{entry.description || entry.entry_type}</span><span className="font-bold text-slate-900 dark:text-white">৳{Number(entry.amount).toLocaleString()}</span></div>)}{wallet?.withdrawals.map((entry) => <div key={entry.id} className="flex justify-between gap-3 border-b border-slate-100 py-2 text-xs dark:border-zinc-800"><span className="text-slate-600 dark:text-zinc-300">Withdrawal · {entry.status}</span><span className="font-bold text-slate-900 dark:text-white">-৳{Number(entry.amount).toLocaleString()}</span></div>)}{!wallet?.entries.length && !wallet?.withdrawals.length && <p className="py-4 text-xs text-slate-500">No wallet entries yet.</p>}</div>
         </div>
       </section>
-      <p className="text-xs text-slate-500 dark:text-zinc-500">COD is recorded as a salary debit and credited to the seller ledger. {profile.Late_Deliveries} late deliveries recorded.</p>
+      <p className="text-xs text-slate-500 dark:text-zinc-500">COD appears in wallet activity and is deducted from pending monthly salary; it is not withdrawable before salary release. {profile.Late_Deliveries} late deliveries recorded.</p>
       <RiderDetailsModal isOpen={showDetails} rider={profile} onClose={() => setShowDetails(false)} onSaved={setProfile} />
       {loading && <span className="sr-only" role="status">Refreshing rider dashboard</span>}
       <CheckCircle2 className="sr-only" aria-hidden="true" />
