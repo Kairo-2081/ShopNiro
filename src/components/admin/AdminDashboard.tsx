@@ -18,6 +18,8 @@ import {
   RefreshCw,
   Smartphone,
   ExternalLink,
+  X,
+  AlertCircle,
 } from 'lucide-react';
 
 interface AdminDashboardProps {
@@ -55,6 +57,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [sellerStatusFilter, setSellerStatusFilter] = React.useState<string>('all');
   const [isSubmittingCat, setIsSubmittingCat] = React.useState(false);
   const [feedbackMsg, setFeedbackMsg] = React.useState<string | null>(null);
+  const [feedbackTone, setFeedbackTone] = React.useState<'success' | 'error'>('success');
+  const [updatingSellerId, setUpdatingSellerId] = React.useState<string | null>(null);
+  const [selectedSellerId, setSelectedSellerId] = React.useState<string | null>(null);
   const [transactions, setTransactions] = React.useState<any[]>([]);
   const [loadingTransactions, setLoadingTransactions] = React.useState(false);
   const [paymentFilter, setPaymentFilter] = React.useState<string>('all');
@@ -80,8 +85,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   }, [adminTab]);
 
-  const showNotification = (msg: string) => {
+  const showNotification = (msg: string, tone: 'success' | 'error' = 'success') => {
     setFeedbackMsg(msg);
+    setFeedbackTone(tone);
     setTimeout(() => setFeedbackMsg(null), 3500);
   };
 
@@ -110,6 +116,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
     return true;
   });
+  const selectedSeller = sellers.find((seller) => seller.Seller_ID === selectedSellerId) || null;
+
+  const handleSellerStatusChange = async (seller: Seller, status: SellerStatus) => {
+    setUpdatingSellerId(seller.Seller_ID);
+    try {
+      await onUpdateSellerStatus(seller.Seller_ID, status);
+      const action = status === 'approved' ? 'Approved' : status === 'rejected' ? 'Rejected' : 'Suspended';
+      showNotification(`${action} merchant ${seller.Name}`);
+    } catch (err: any) {
+      showNotification(err.message || `Could not update ${seller.Name}'s status.`, 'error');
+    } finally {
+      setUpdatingSellerId(null);
+    }
+  };
 
   const handleCreateCategory = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,8 +162,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     <div className="space-y-6 pb-16 text-slate-900 dark:text-zinc-100">
       {/* Toast Feedback */}
       {feedbackMsg && (
-        <div className="fixed top-20 right-6 z-50 bg-blue-600 text-white px-4 py-2.5 rounded-2xl shadow-xl shadow-blue-500/30 text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-200">
-          <CheckCircle2 className="w-4 h-4 text-sky-200" />
+        <div role="status" className={`fixed top-20 right-6 z-50 text-white px-4 py-2.5 rounded-2xl shadow-xl text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-200 ${feedbackTone === 'error' ? 'bg-rose-600 shadow-rose-500/30' : 'bg-blue-600 shadow-blue-500/30'}`}>
+          {feedbackTone === 'error' ? <AlertCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4 text-sky-200" />}
           <span>{feedbackMsg}</span>
         </div>
       )}
@@ -308,7 +328,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   {sellers.map((seller) => (
                     <tr key={seller.Seller_ID} className="hover:bg-slate-50 dark:hover:bg-[#181F2A]/60 transition-colors">
                       <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedSellerId(seller.Seller_ID)}
+                          aria-label={`View ${seller.Name} application details`}
+                          className="flex items-center gap-3 text-left rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                        >
                           <img
                             src={seller.Logo}
                             alt={seller.Name}
@@ -317,8 +342,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           <div>
                             <p className="font-semibold text-slate-900 dark:text-white">{seller.Name}</p>
                             <p className="text-[10px] text-slate-400 dark:text-zinc-500 font-mono">ID: {seller.Seller_ID}</p>
+                            <p className="text-[10px] text-blue-600 dark:text-sky-400">View application</p>
                           </div>
-                        </div>
+                        </button>
                       </td>
                       <td className="px-6 py-4 text-slate-600 dark:text-zinc-400">{seller.Email}</td>
                       <td className="px-6 py-4 text-slate-600 dark:text-zinc-400">{formatDate(seller.Created_At)}</td>
@@ -329,7 +355,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           </span>
                         )}
                         {seller.Status === 'pending' && (
-                          <span className="px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-bold border border-amber-500/20 uppercase">
+                          <span className="inline-flex whitespace-nowrap px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-bold border border-amber-500/20 uppercase">
                             Pending Review
                           </span>
                         )}
@@ -343,22 +369,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <div className="flex items-center justify-end gap-2">
                           {seller.Status !== 'approved' && (
                             <button
-                              onClick={() => {
-                                onUpdateSellerStatus(seller.Seller_ID, 'approved');
-                                showNotification(`Approved merchant ${seller.Name}`);
-                              }}
-                              className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full text-[10px] font-bold transition-all cursor-pointer shadow-sm shadow-emerald-500/20"
+                              type="button"
+                              onClick={() => void handleSellerStatusChange(seller, 'approved')}
+                              disabled={updatingSellerId === seller.Seller_ID}
+                              className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-full text-[10px] font-bold transition-all cursor-pointer shadow-sm shadow-emerald-500/20"
                             >
-                              Approve
+                              {updatingSellerId === seller.Seller_ID ? 'Updating...' : 'Approve'}
                             </button>
                           )}
                           {seller.Status !== 'suspended' && (
                             <button
-                              onClick={() => {
-                                onUpdateSellerStatus(seller.Seller_ID, 'suspended');
-                                showNotification(`Suspended merchant ${seller.Name}`);
-                              }}
-                              className="px-3 py-1 bg-rose-600/80 hover:bg-rose-500 text-white rounded-full text-[10px] font-bold transition-all cursor-pointer"
+                              type="button"
+                              onClick={() => void handleSellerStatusChange(seller, 'suspended')}
+                              disabled={updatingSellerId === seller.Seller_ID}
+                              className="px-3 py-1 bg-rose-600/80 hover:bg-rose-500 disabled:opacity-50 text-white rounded-full text-[10px] font-bold transition-all cursor-pointer"
                             >
                               Suspend
                             </button>
@@ -487,10 +511,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             alt={seller.Name}
                             className="w-10 h-10 rounded-xl object-cover bg-slate-100 dark:bg-[#181F2A] border border-sky-100 dark:border-zinc-700"
                           />
-                          <div>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedSellerId(seller.Seller_ID)}
+                            aria-label={`View ${seller.Name} application details`}
+                            className="text-left rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                          >
                             <span className="font-bold text-slate-900 dark:text-white block">{seller.Name}</span>
-                            <span className="text-[10px] text-slate-400 dark:text-zinc-500 font-mono">ID: {seller.Seller_ID}</span>
-                          </div>
+                            <span className="text-[10px] text-slate-400 dark:text-zinc-500 font-mono block">ID: {seller.Seller_ID}</span>
+                            <span className="text-[10px] text-blue-600 dark:text-sky-400 block">View application</span>
+                          </button>
                         </div>
                       </td>
                       <td className="p-4 text-slate-700 dark:text-zinc-300">
@@ -507,7 +537,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           </span>
                         )}
                         {seller.Status === 'pending' && (
-                          <span className="px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-bold border border-amber-500/20 uppercase">
+                          <span className="inline-flex whitespace-nowrap px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-bold border border-amber-500/20 uppercase">
                             Pending Review
                           </span>
                         )}
@@ -521,33 +551,30 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <div className="flex items-center justify-end gap-2">
                           {seller.Status !== 'approved' && (
                             <button
-                              onClick={() => {
-                                onUpdateSellerStatus(seller.Seller_ID, 'approved');
-                                showNotification(`Approved merchant ${seller.Name}`);
-                              }}
-                              className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-full text-xs font-bold transition-all cursor-pointer shadow-sm shadow-emerald-500/20"
+                              type="button"
+                              onClick={() => void handleSellerStatusChange(seller, 'approved')}
+                              disabled={updatingSellerId === seller.Seller_ID}
+                              className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-full text-xs font-bold transition-all cursor-pointer shadow-sm shadow-emerald-500/20"
                             >
-                              Approve
+                              {updatingSellerId === seller.Seller_ID ? 'Updating...' : 'Approve'}
                             </button>
                           )}
                           {seller.Status !== 'rejected' && seller.Status === 'pending' && (
                             <button
-                              onClick={() => {
-                                onUpdateSellerStatus(seller.Seller_ID, 'rejected');
-                                showNotification(`Rejected application for ${seller.Name}`);
-                              }}
-                              className="px-3 py-1 bg-slate-200 hover:bg-slate-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-slate-800 dark:text-zinc-200 rounded-full text-xs font-bold transition-colors cursor-pointer"
+                              type="button"
+                              onClick={() => void handleSellerStatusChange(seller, 'rejected')}
+                              disabled={updatingSellerId === seller.Seller_ID}
+                              className="px-3 py-1 bg-slate-200 hover:bg-slate-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 disabled:opacity-50 text-slate-800 dark:text-zinc-200 rounded-full text-xs font-bold transition-colors cursor-pointer"
                             >
                               Reject
                             </button>
                           )}
                           {seller.Status !== 'suspended' && (
                             <button
-                              onClick={() => {
-                                onUpdateSellerStatus(seller.Seller_ID, 'suspended');
-                                showNotification(`Suspended merchant ${seller.Name}`);
-                              }}
-                              className="px-3 py-1 bg-rose-600/80 hover:bg-rose-500 text-white rounded-full text-xs font-bold transition-all cursor-pointer"
+                              type="button"
+                              onClick={() => void handleSellerStatusChange(seller, 'suspended')}
+                              disabled={updatingSellerId === seller.Seller_ID}
+                              className="px-3 py-1 bg-rose-600/80 hover:bg-rose-500 disabled:opacity-50 text-white rounded-full text-xs font-bold transition-all cursor-pointer"
                             >
                               Suspend
                             </button>
@@ -912,6 +939,116 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </table>
             </div>
           </div>
+        </div>
+      )}
+
+      {selectedSeller && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-black/70 p-4"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setSelectedSellerId(null);
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="seller-application-title"
+            className="my-auto w-full max-w-xl overflow-hidden rounded-2xl border border-sky-100 bg-white shadow-2xl dark:border-zinc-700 dark:bg-[#12161D]"
+          >
+            <header className="flex items-start justify-between gap-4 border-b border-slate-200 p-5 dark:border-zinc-800">
+              <div className="flex min-w-0 items-center gap-3">
+                {selectedSeller.Logo ? (
+                  <img src={selectedSeller.Logo} alt="" className="h-12 w-12 shrink-0 rounded-xl border border-slate-200 object-cover dark:border-zinc-700" />
+                ) : (
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-zinc-800"><Store className="h-5 w-5" /></div>
+                )}
+                <div className="min-w-0">
+                  <h2 id="seller-application-title" className="truncate text-lg font-bold text-slate-900 dark:text-white">{selectedSeller.Name}</h2>
+                  <p className="text-xs text-slate-500 dark:text-zinc-400">Seller application · {selectedSeller.Seller_ID}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedSellerId(null)}
+                aria-label="Close seller details"
+                className="rounded-full p-2 text-slate-500 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-zinc-400 dark:hover:bg-zinc-800"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </header>
+
+            <div className="max-h-[65vh] space-y-5 overflow-y-auto p-5 text-sm">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="font-semibold text-slate-900 dark:text-white">Application details</h3>
+                <span className={`whitespace-nowrap rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase ${selectedSeller.Status === 'approved' ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : selectedSeller.Status === 'pending' ? 'border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'border-rose-500/20 bg-rose-500/10 text-rose-600 dark:text-rose-400'}`}>
+                  {selectedSeller.Status === 'pending' ? 'Pending review' : selectedSeller.Status}
+                </span>
+              </div>
+
+              <div>
+                <p className="mb-1 text-xs font-semibold text-slate-500 dark:text-zinc-400">Business description</p>
+                <p className="whitespace-pre-wrap break-words text-slate-800 dark:text-zinc-200">{selectedSeller.Description || 'No description was provided.'}</p>
+              </div>
+
+              <dl className="grid gap-4 border-y border-slate-200 py-4 sm:grid-cols-2 dark:border-zinc-800">
+                <div className="min-w-0">
+                  <dt className="text-xs font-semibold text-slate-500 dark:text-zinc-400">Email</dt>
+                  <dd className="break-all text-slate-800 dark:text-zinc-200">{selectedSeller.Email || 'Not provided'}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-semibold text-slate-500 dark:text-zinc-400">Phone</dt>
+                  <dd className="text-slate-800 dark:text-zinc-200">{selectedSeller.Number || 'Not provided'}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-semibold text-slate-500 dark:text-zinc-400">Username</dt>
+                  <dd className="text-slate-800 dark:text-zinc-200">{selectedSeller.Username || 'Not provided'}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-semibold text-slate-500 dark:text-zinc-400">Registered</dt>
+                  <dd className="text-slate-800 dark:text-zinc-200">{formatDate(selectedSeller.Created_At)}</dd>
+                </div>
+                <div className="sm:col-span-2">
+                  <dt className="text-xs font-semibold text-slate-500 dark:text-zinc-400">Business address</dt>
+                  <dd className="break-words text-slate-800 dark:text-zinc-200">
+                    {[selectedSeller.Address.House_Name, selectedSeller.Address.Street, selectedSeller.Address.City, selectedSeller.Address.Postal_Code, selectedSeller.Address.Additional_Info].filter(Boolean).join(', ') || 'Not provided'}
+                  </dd>
+                </div>
+              </dl>
+            </div>
+
+            <footer className="flex flex-wrap justify-end gap-2 border-t border-slate-200 bg-slate-50 p-4 dark:border-zinc-800 dark:bg-[#181F2A]">
+              {selectedSeller.Status !== 'approved' && (
+                <button
+                  type="button"
+                  onClick={() => void handleSellerStatusChange(selectedSeller, 'approved')}
+                  disabled={updatingSellerId === selectedSeller.Seller_ID}
+                  className="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500 disabled:opacity-50"
+                >
+                  {updatingSellerId === selectedSeller.Seller_ID ? 'Updating...' : 'Approve seller'}
+                </button>
+              )}
+              {selectedSeller.Status === 'pending' && (
+                <button
+                  type="button"
+                  onClick={() => void handleSellerStatusChange(selectedSeller, 'rejected')}
+                  disabled={updatingSellerId === selectedSeller.Seller_ID}
+                  className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                >
+                  Reject
+                </button>
+              )}
+              {selectedSeller.Status !== 'suspended' && (
+                <button
+                  type="button"
+                  onClick={() => void handleSellerStatusChange(selectedSeller, 'suspended')}
+                  disabled={updatingSellerId === selectedSeller.Seller_ID}
+                  className="rounded-lg bg-rose-600 px-4 py-2 text-xs font-bold text-white hover:bg-rose-500 disabled:opacity-50"
+                >
+                  Suspend
+                </button>
+              )}
+            </footer>
+          </section>
         </div>
       )}
     </div>

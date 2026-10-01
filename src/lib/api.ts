@@ -241,10 +241,10 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(sellerData),
     }),
-  updateSellerStatus: async (id: string, Status: SellerStatus): Promise<Seller> =>
+  updateSellerStatus: async (id: string, status: SellerStatus): Promise<Seller> =>
     fetchJson<Seller>(`/api/sellers/${encodeURIComponent(id)}/status`, {
-      method: 'PUT',
-      body: JSON.stringify({ Status }),
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
     }),
 
   // Admins
