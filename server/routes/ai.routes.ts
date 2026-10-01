@@ -316,6 +316,44 @@ function resolveModel(requestedModel?: string, taskComplexity?: string) {
   return { model: models.flash, mode: 'flash' as const };
 }
 
+function isGenericAIRefusal(text?: string): boolean {
+  if (!text) return true;
+  return /(sorry,? but i can['’]?t help|can't help|can['’]?t assist|cannot help|cannot assist|unable to help|not able to help|i am not able to)/i.test(text);
+}
+
+function buildHelpfulFallback(role: string, message: string, products: any[] = []): string {
+  const productList = products.slice(0, 3).map((p: any) => `- ${p.name || p.Name} (৳${Number(p.price ?? p.Price ?? 0).toLocaleString('en-BD', { maximumFractionDigits: 2 })})`).join('\n');
+
+  if (role === 'order-specialist') {
+    return [
+      'I can help with ShopNiro order tracking and delivery questions.',
+      '',
+      'For a live tracking update, I need either:',
+      '- the order ID or tracking ID',
+      '- the rider acceptance status',
+      '- the shipment status (processing, shipped, delivered)',
+      '',
+      'If the rider has not accepted the parcel yet, the shipment should not appear in live tracking until acceptance is confirmed.',
+    ].join('\n');
+  }
+
+  const productHint = productList
+    ? ['I can also compare current ShopNiro products that are available in the catalog:', productList].join('\n')
+    : 'I can help you browse the current ShopNiro catalog, compare products, and check active voucher deals.';
+
+  return [
+    'I can help with ShopNiro product discovery, stock checks, and voucher guidance.',
+    '',
+    productHint,
+    '',
+    'Try asking for something like:',
+    '- best wireless headphones under a budget',
+    '- active vouchers today',
+    '- product comparisons for home or tech items',
+    '- order or shipping status questions',
+  ].join('\n');
+}
+
 /**
  * POST /api/ai/chat
  * Multi-turn chat endpoint using the server-side Groq SDK.
@@ -403,6 +441,10 @@ router.post('/chat', async (req, res) => {
       } else {
         throw primaryError;
       }
+    }
+
+    if (!responseText || isGenericAIRefusal(responseText)) {
+      responseText = buildHelpfulFallback(role, message, liveProducts);
     }
 
     return res.json({
