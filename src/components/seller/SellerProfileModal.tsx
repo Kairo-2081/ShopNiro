@@ -23,8 +23,15 @@ export const SellerProfileModal: React.FC<SellerProfileModalProps> = ({ seller, 
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (!hasSelectedLocation || !address.Street.trim() || !address.City.trim() || !Number.isFinite(address.Latitude) || !Number.isFinite(address.Longitude)) {
-      setError('Choose the updated business location on the map.');
+    const addressLocationChanged =
+      address.Street.trim() !== seller.Address.Street.trim() ||
+      address.City.trim() !== seller.Address.City.trim();
+    if (
+      !address.Street.trim() || !address.City.trim() ||
+      !Number.isFinite(address.Latitude) || !Number.isFinite(address.Longitude) ||
+      (addressLocationChanged && !hasSelectedLocation)
+    ) {
+      setError('Choose the updated business location on the map when changing the street or city.');
       return;
     }
     setIsSaving(true);

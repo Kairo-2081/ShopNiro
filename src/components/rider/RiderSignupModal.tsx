@@ -124,7 +124,7 @@ export const RiderSignupModal: React.FC<RiderSignupModalProps> = ({ isOpen, onCl
       !Number.isFinite(presentAddress.Latitude) || !Number.isFinite(presentAddress.Longitude) ||
       !Number.isFinite(permanentAddress.Latitude) || !Number.isFinite(permanentAddress.Longitude)
     ) {
-      setError('Choose both address locations on their maps and confirm the streets and cities.');
+      setError('Use current location or select a map point for both addresses, then confirm the streets and cities.');
       return;
     }
 

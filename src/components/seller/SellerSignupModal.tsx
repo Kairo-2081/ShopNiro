@@ -44,7 +44,7 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !email.trim() || !password.trim() || !number.trim() || !hasSelectedLocation || !address.Street.trim() || !address.City.trim()) {
-      setError('Complete the required fields, enter a phone number, and select your location on the map.');
+      setError('Complete the required fields, enter a phone number, and use current location or select a point on the map.');
       return;
     }
 

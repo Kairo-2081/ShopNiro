@@ -42,7 +42,7 @@ export const CustomerSignupModal: React.FC<CustomerSignupModalProps> = ({
       return;
     }
     if (!number.trim() || !hasSelectedLocation) {
-      setError('Enter a phone number and select your location on the map.');
+      setError('Enter a phone number and use current location or select a point on the map.');
       return;
     }
     setError(null);

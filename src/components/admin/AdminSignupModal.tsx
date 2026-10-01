@@ -45,7 +45,7 @@ export const AdminSignupModal: React.FC<AdminSignupModalProps> = ({
       return;
     }
     if (!number.trim() || !hasSelectedLocation || !address.Street.trim() || !address.City.trim()) {
-      setError('Enter a phone number and select your office location on the map.');
+      setError('Enter a phone number and use current location or select an office point on the map.');
       return;
     }
 

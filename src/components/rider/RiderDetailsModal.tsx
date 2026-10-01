@@ -1,8 +1,7 @@
 import React from 'react';
 import { Address, Rider } from '../../types';
 import { api } from '../../lib/api';
-import { AccountLocationPicker } from '../AccountLocationPicker';
-import { FileText, Lock, MapPin, Save, X } from 'lucide-react';
+import { FileText, Lock, Save, X } from 'lucide-react';
 
 interface RiderDetailsModalProps {
   isOpen: boolean;
@@ -106,7 +105,7 @@ export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, ri
       !presentAddress.Street || !presentAddress.City || !hasCoordinates(presentAddress) ||
       !permanentAddress.Street || !permanentAddress.City || !hasCoordinates(permanentAddress)
     ) {
-      setError('Choose a map location and complete the street and city for both addresses.');
+      setError('Complete the street and city for both addresses. Their saved map locations will be retained.');
       return;
     }
 
@@ -174,8 +173,7 @@ export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, ri
 
           {addressForms.map((addressForm) => (
             <section key={addressForm.title} className="space-y-3">
-              <h3 className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white"><MapPin className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />{addressForm.title}</h3>
-              <AccountLocationPicker onAddressSelected={(selected) => addressForm.set(selected ? { ...addressForm.value, ...selected } : { ...addressForm.value, Street: '', City: '' })} />
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">{addressForm.title}</h3>
               <div className="grid gap-3 sm:grid-cols-2">
                 <input className={fieldClass} required placeholder="House / building" value={addressForm.value.House_Name || ''} onChange={(event) => addressForm.set({ ...addressForm.value, House_Name: event.target.value })} />
                 <input className={fieldClass} required placeholder="Street" value={addressForm.value.Street || ''} onChange={(event) => addressForm.set({ ...addressForm.value, Street: event.target.value })} />

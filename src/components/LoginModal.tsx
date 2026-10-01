@@ -93,7 +93,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       return;
     }
     if (!regPhone.trim() || !regHasSelectedLocation || !regAddress.Street.trim() || !regAddress.City.trim()) {
-      setError('Phone number and map-selected location are required to create an account.');
+      setError('Phone number and a location from GPS or the map are required to create an account.');
       return;
     }
 
@@ -452,7 +452,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
               <div className="space-y-2">
                 <label className="block text-slate-700 dark:text-zinc-300 font-semibold">
-                  Select your location on the map *
+                  Use current location or select a point on the map *
                 </label>
                 <AccountLocationPicker
                   onAddressSelected={(selectedAddress) => {
