@@ -809,6 +809,7 @@ const messages = {
     browseCurrentListings: 'Browse current listings from independent sellers. Product details, prices, and stock are shown before you order.',
     seeWhatsAvailable: 'See what’s available today.',
     liveListings: 'Live listings',
+    categoriesTitle: 'Categories',
     approvedSellers: 'Approved sellers',
 
     authRequired: 'Authentication Required',
@@ -1862,6 +1863,7 @@ const messages = {
     browseCurrentListings: 'স্বাধীন বিক্রেতাদের পণ্য দেখুন। অর্ডারের আগেই পণ্যের বিবরণ, মূল্য ও স্টক জেনে নিন।',
     seeWhatsAvailable: 'আজই দেখে নিন কী কী পাওয়া যাচ্ছে।',
     liveListings: 'সক্রিয় পণ্য তালিকা',
+    categoriesTitle: 'বিভাগসমূহ',
     approvedSellers: 'অনুমোদিত বিক্রেতা',
 
     authRequired: 'প্রবেশাধিকার যাচাই আবশ্যক',

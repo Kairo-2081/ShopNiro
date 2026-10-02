@@ -982,12 +982,12 @@ export default function App() {
   // Get active user entity
   const marketplaceStats: MarketplaceStat[] = [
     {
-      label: 'Live listings',
+      label: t('liveListings'),
       value: products.filter((product) => product.Product_Status?.toLowerCase() !== 'deactivated').length,
     },
-    { label: 'Categories', value: categories.length },
+    { label: t('categoriesTitle'), value: categories.length },
     {
-      label: 'Approved sellers',
+      label: t('approvedSellers'),
       value: sellers.filter((seller) => !seller.Status || seller.Status.toLowerCase() === 'approved').length,
     },
   ];
