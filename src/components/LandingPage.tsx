@@ -134,12 +134,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-72 h-72 bg-white/10 rounded-full blur-3xl pointer-events-none hero-glow" />
 
           <h2 className="text-[2.1rem] sm:text-[3rem] md:text-[4.2rem] font-normal text-white leading-[0.92] tracking-[-0.04em] max-w-5xl mx-auto">
-            Shop Smart. Ship Fast.
+            {t('shopSmartShipFast')}
           </h2>
 
           {/* Subtitle tailored to ShopNiro Marketplace */}
           <p className="text-surface-300 text-xs sm:text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
-            Browse products from approved sellers, check current stock, and follow your orders from one place.
+            {t('heroSubtitle')}
           </p>
 
           {/* 3D Interactive Marketplace Globe */}
@@ -189,14 +189,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <div className="brand-track">
               {[
                 { name: 'ShopNiro', accent: 'bg-[#d0c8a5]/15 text-[#f7f3e6]' },
-                { name: 'Approved Sellers', accent: 'bg-brand-500/10 text-brand-200' },
-                { name: 'Order Updates', accent: 'bg-success-500/10 text-success-200' },
-                { name: 'Secure Checkout', accent: 'bg-violet-500/10 text-violet-200' },
-                { name: 'Customer Reviews', accent: 'bg-warning-500/10 text-warning-200' },
+                { name: t('approvedSellers'), accent: 'bg-brand-500/10 text-brand-200' },
+                { name: t('orderUpdatesBadge'), accent: 'bg-success-500/10 text-success-200' },
+                { name: t('secureCheckout'), accent: 'bg-violet-500/10 text-violet-200' },
+                { name: t('customerReviews'), accent: 'bg-warning-500/10 text-warning-200' },
                 { name: 'ShopNiro', accent: 'bg-[#d0c8a5]/15 text-[#f7f3e6]' },
-                { name: 'Approved Sellers', accent: 'bg-brand-500/10 text-brand-200' },
-                { name: 'Order Updates', accent: 'bg-success-500/10 text-success-200' },
-                { name: 'Order Tracking', accent: 'bg-violet-500/10 text-violet-200' },
+                { name: t('approvedSellers'), accent: 'bg-brand-500/10 text-brand-200' },
+                { name: t('orderUpdatesBadge'), accent: 'bg-success-500/10 text-success-200' },
+                { name: t('orderTrackingFeature'), accent: 'bg-violet-500/10 text-violet-200' },
               ].map((item, index) => (
                 <div key={`${item.name}-${index}`} className={`brand-chip ${item.accent}`}>
                   <img
@@ -218,19 +218,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <div className="flex items-center gap-2 flex-wrap">
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-success-950/60 border border-success-800/60 text-success-300 text-micro font-bold">
               <span className="w-1.5 h-1.5 rounded-full bg-success-500"></span>
-              SHOPPERS · SELLERS · ADMINS
+              {t('shoppersSellersAdmins')}
             </span>
           </div>
 
           <div>
             <span className="text-micro font-extrabold tracking-widest text-brand-400 uppercase block">
-              ShopNiro marketplace
+              {t('marketplaceTitle')}
             </span>
             <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight mt-0.5">
-              One place to shop, sell, and manage.
+              {t('onePlaceToShop')}
             </h3>
             <p className="text-xs text-surface-400 mt-1 leading-relaxed">
-              Browse products, manage a store, or review seller applications from the right account.
+              {t('browseOrManage')}
             </p>
           </div>
 
@@ -244,21 +244,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </div>
                 <div>
                   <h4 className="font-bold text-base text-white leading-tight">
-                    Shopping account
+                    {t('shoppingAccount')}
                   </h4>
                   <p className="text-micro text-surface-300 mt-0.5">
-                    Cart, orders, and delivery updates
+                    {t('cartOrdersDelivery')}
                   </p>
                 </div>
               </div>
 
               <span className="px-2.5 py-0.5 rounded-full bg-brand-900/80 text-brand-300 text-micro font-semibold border border-brand-800/40">
-                For shoppers
+                {t('forShoppers')}
               </span>
             </div>
 
             <p className="text-xs text-surface-300 leading-relaxed">
-              Browse products from different sellers, add what you like to your cart, and check your order status in your account.
+              {t('shopperDescription')}
             </p>
 
             {/* Launch Customer Portal Button */}
@@ -292,21 +292,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </div>
                 <div>
                   <h4 className="font-bold text-base text-white leading-tight">
-                    Seller dashboard
+                    {t('sellerDashboardTitle')}
                   </h4>
                   <p className="text-micro text-surface-300 mt-0.5">
-                    Products, stock, and customer orders
+                    {t('productsStockOrders')}
                   </p>
                 </div>
               </div>
 
               <span className="px-2.5 py-0.5 rounded-full bg-success-900/80 text-success-300 text-micro font-semibold border border-success-800/40">
-                For sellers
+                {t('forSellers')}
               </span>
             </div>
 
             <p className="text-xs text-surface-300 leading-relaxed">
-              Add products, update stock, and keep customers up to date as you process their orders.
+              {t('sellerDescription')}
             </p>
 
             {/* Enter Merchant Studio Button */}
@@ -340,21 +340,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </div>
                 <div>
                   <h4 className="font-bold text-base text-white leading-tight">
-                    Admin tools
+                    {t('adminTools')}
                   </h4>
                   <p className="text-micro text-surface-300 mt-0.5">
-                    Seller approvals and product categories
+                    {t('sellerApprovalsCategories')}
                   </p>
                 </div>
               </div>
 
               <span className="px-2.5 py-0.5 rounded-full bg-brand-900/80 text-brand-300 text-micro font-semibold border border-brand-800/40">
-                For admins
+                {t('forAdmins')}
               </span>
             </div>
 
             <p className="text-xs text-surface-300 leading-relaxed">
-              Review seller applications, manage product categories, and update listing status.
+              {t('adminDescription')}
             </p>
 
             {/* Admin Access Button */}
@@ -369,8 +369,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
             {/* Biometrics badge */}
             <div className="flex items-center justify-between text-micro pt-1 text-brand-300 font-medium">
-              <span>For ShopNiro administrators</span>
-              <span className="font-bold tracking-wider uppercase text-brand-400">ADMIN ACCOUNT REQUIRED</span>
+              <span>{t('forShopNiroAdmins')}</span>
+              <span className="font-bold tracking-wider uppercase text-brand-400">{t('adminAccountRequired')}</span>
             </div>
           </div>
 
@@ -398,10 +398,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <section className="space-y-3 pt-2">
           <div>
             <span className="text-micro font-extrabold tracking-widest text-brand-400 uppercase block">
-              On ShopNiro
+              {t('onShopNiro')}
             </span>
             <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight mt-0.5">
-              The basics, all in one place
+              {t('theBasicsOnePlace')}
             </h3>
           </div>
 
@@ -414,14 +414,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <div className="flex-1 space-y-1">
               <div className="flex items-center justify-between">
                 <h4 className="font-bold text-sm text-white">
-                  Seller approval
+                  {t('sellerApprovalFeature')}
                 </h4>
                 <span className="px-2 py-0.5 rounded-full bg-brand-950 text-brand-300 text-micro font-semibold border border-brand-800/40">
-                  Reviewed before listing
+                  {t('reviewedBeforeListing')}
                 </span>
               </div>
               <p className="text-xs text-surface-400 leading-relaxed">
-                Seller accounts are reviewed before their products appear in the marketplace.
+                {t('sellerApprovalDesc')}
               </p>
             </div>
           </div>
@@ -434,14 +434,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <div className="flex-1 space-y-1">
               <div className="flex items-center justify-between">
                 <h4 className="font-bold text-sm text-white">
-                  Order tracking
+                  {t('orderTrackingFeature')}
                 </h4>
                 <span className="px-2 py-0.5 rounded-full bg-brand-950 text-brand-300 text-micro font-semibold border border-brand-800/40">
-                  Order updates
+                  {t('orderUpdatesBadge')}
                 </span>
               </div>
               <p className="text-xs text-surface-400 leading-relaxed">
-                Check your order status as it moves from processing to shipped and delivered.
+                {t('orderTrackingDesc')}
               </p>
             </div>
           </div>
@@ -454,14 +454,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <div className="flex-1 space-y-1">
               <div className="flex items-center justify-between">
                 <h4 className="font-bold text-sm text-white">
-                  Order details
+                  {t('orderDetailsFeature')}
                 </h4>
                 <span className="px-2 py-0.5 rounded-full bg-warning-950 text-warning-300 text-micro font-semibold border border-warning-800/40">
-                  In your account
+                  {t('inYourAccount')}
                 </span>
               </div>
               <p className="text-xs text-surface-400 leading-relaxed">
-                Find your payment and delivery updates together, so it’s easier to keep track of a purchase.
+                {t('orderDetailsDesc')}
               </p>
             </div>
           </div>
@@ -472,10 +472,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <section className="space-y-3 pt-2">
           <div>
             <span className="text-micro font-extrabold tracking-widest text-brand-400 uppercase block">
-              Simple steps
+              {t('simpleSteps')}
             </span>
             <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight mt-0.5">
-              How ShopNiro works
+              {t('howShopNiroWorks')}
             </h3>
           </div>
 
@@ -487,10 +487,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
             <div>
               <h4 className="font-bold text-sm text-white">
-                Browse products
+                {t('step1Title')}
               </h4>
               <p className="text-xs text-surface-400 mt-1 leading-relaxed">
-                Compare products, check prices and stock, then add your picks to the cart.
+                {t('step1Desc')}
               </p>
             </div>
           </div>
@@ -502,10 +502,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
             <div>
               <h4 className="font-bold text-sm text-white">
-                The seller prepares your order
+                {t('step2Title')}
               </h4>
               <p className="text-xs text-surface-400 mt-1 leading-relaxed">
-                The seller updates your order as it’s processed and shipped. Tracking appears when it’s available.
+                {t('step2Desc')}
               </p>
             </div>
           </div>
@@ -517,10 +517,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
             <div>
               <h4 className="font-bold text-sm text-white">
-                Follow your delivery
+                {t('step3Title')}
               </h4>
               <p className="text-xs text-surface-400 mt-1 leading-relaxed">
-                Check delivery updates in your account, then leave a review after your order arrives.
+                {t('step3Desc')}
               </p>
             </div>
           </div>
@@ -531,14 +531,14 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <section className="space-y-3 pt-1 animate-fade-up">
           <div className="flex items-center justify-between gap-2">
             <span className="text-micro font-extrabold tracking-widest text-brand-400 uppercase block">
-              ShopNiro features
+              {t('shopNiroFeatures')}
             </span>
           </div>
 
           <div className="brand-marquee">
             <div className="brand-track">
               {[
-                'Product listings', 'Seller approval', 'Order tracking', 'Customer reviews', 'Product listings', 'Seller approval', 'Order tracking', 'Customer reviews'
+                t('allProducts'), t('sellerApprovalFeature'), t('orderTrackingFeature'), t('customerReviews'), t('allProducts'), t('sellerApprovalFeature'), t('orderTrackingFeature'), t('customerReviews')
               ].map((brand, index) => (
                 <div key={`${brand}-${index}`} className="brand-chip bg-white/5 text-surface-200">
                   <span className="w-2 h-2 rounded-full bg-gradient-to-r from-brand-400 to-success-400 inline-block shadow-[0_0_18px_rgba(96,165,250,0.7)]" />
@@ -553,15 +553,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <section className="rounded-3xl p-6 sm:p-7 bg-brand-800 text-white text-center space-y-3.5 shadow-2xl relative overflow-hidden animate-fade-up">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 border border-white/25 text-white text-micro font-semibold tracking-wide">
             <Tag className="w-3 h-3 text-brand-200" />
-            <span>ShopNiro marketplace</span>
+            <span>{t('marketplaceTitle')}</span>
           </div>
 
           <h3 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-            Find something you’ll love.
+            {t('findSomethingYouLove')}
           </h3>
 
           <p className="text-brand-100 text-xs sm:text-sm max-w-sm mx-auto leading-relaxed">
-            Browse current listings from independent sellers. Product details, prices, and stock are shown before you order.
+            {t('browseCurrentListings')}
           </p>
 
           <div className="pt-2">
@@ -576,7 +576,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           <p className="text-micro text-brand-100">
-            See what’s available today.
+            {t('seeWhatsAvailable')}
           </p>
         </section>
 
