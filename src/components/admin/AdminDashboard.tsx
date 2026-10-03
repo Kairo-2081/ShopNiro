@@ -2,7 +2,9 @@ import React from 'react';
 import { Seller, Product, Order, Category, Review, SellerStatus, ProductStatus } from '../../types';
 import { formatCurrency, formatBDT, formatDate } from '../../lib/api';
 import { RiderApplicationsPanel } from './RiderApplicationsPanel';
+import { AdminMarketplaceMetrics } from './AdminMarketplaceMetrics';
 import {
+  BarChart3,
   ShieldCheck,
   Store,
   FolderTree,
@@ -51,7 +53,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onDeleteCategory,
   onOpenSellerSignup,
 }) => {
-  const [adminTab, setAdminTab] = React.useState<'overview' | 'sellers' | 'riders' | 'categories' | 'products' | 'payments'>('overview');
+  const [adminTab, setAdminTab] = React.useState<'overview' | 'metrics' | 'sellers' | 'riders' | 'categories' | 'products' | 'payments'>('overview');
   const [newCategoryName, setNewCategoryName] = React.useState('');
   const [editingCategoryId, setEditingCategoryId] = React.useState<string | null>(null);
   const [editingCategoryName, setEditingCategoryName] = React.useState('');
@@ -239,7 +241,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex gap-2 border-b border-sky-100 dark:border-zinc-800 pb-2">
+      <div className="flex flex-wrap gap-2 border-b border-sky-100 dark:border-zinc-800 pb-2">
         <button
           onClick={() => setAdminTab('overview')}
           className={`px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
@@ -250,6 +252,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         >
           <Activity className="w-4 h-4" />
           <span>Governance Overview</span>
+        </button>
+
+        <button
+          onClick={() => setAdminTab('metrics')}
+          className={`px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
+            adminTab === 'metrics'
+              ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25'
+              : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#181F2A]'
+          }`}
+        >
+          <BarChart3 className="w-4 h-4" />
+          <span>Marketplace Metrics</span>
         </button>
 
         <button
@@ -312,6 +326,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <span>Online Payments</span>
         </button>
       </div>
+
+      {adminTab === 'metrics' && (
+        <AdminMarketplaceMetrics
+          products={products}
+          sellers={sellers}
+          orders={orders}
+        />
+      )}
 
       {/* Tab 1: Overview & Seller Approval Workflow */}
       {adminTab === 'overview' && (
