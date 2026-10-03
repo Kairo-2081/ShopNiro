@@ -1,8 +1,8 @@
 import React from 'react';
-import { Product, Category, Seller, Review } from '../../types';
+import { Product, Category, Seller, Review, ProductBundle } from '../../types';
 import { ProductCard } from './ProductCard';
 import { MarketplaceTrendsTopCharts } from './MarketplaceTrendsTopCharts';
-import { formatCurrency } from '../../lib/api';
+import { api, formatCurrency } from '../../lib/api';
 import { discountedPriceForVoucher, getVoucherCountdownLabel, isVoucherExpired } from '../../lib/vouchers';
 import { Search, SlidersHorizontal, ShoppingBag, ArrowUpDown, X, Check, Truck, Tag } from 'lucide-react';
 
@@ -26,6 +26,17 @@ export const Storefront: React.FC<StorefrontProps> = ({
   const [searchQuery, setSearchQuery] = React.useState('');
   const [stockFilter, setStockFilter] = React.useState<'all' | 'inStock'>('all');
   const [sortBy, setSortBy] = React.useState<'featured' | 'price-asc' | 'price-desc' | 'rating' | 'newest'>('featured');
+  const [bundles, setBundles] = React.useState<ProductBundle[]>([]);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    api.getBundles().then((result) => {
+      if (isMounted) setBundles(result);
+    }).catch(() => {
+      if (isMounted) setBundles([]);
+    });
+    return () => { isMounted = false; };
+  }, []);
   
   // Calculate dynamic highest price from available products
   const maxPossiblePrice = React.useMemo(() => {
@@ -103,6 +114,12 @@ export const Storefront: React.FC<StorefrontProps> = ({
     product.Featured_Deal && product.Voucher && !isVoucherExpired(product.Voucher_Expires_At) &&
     product.Product_Status === 'active' && Number(product.Stock) > 0 && approvedSellerIds.has(product.Seller_ID)
   ).slice(0, 4);
+  const visibleBundles = bundles.filter((bundle) =>
+    bundle.Product_IDs.length >= 2 && bundle.Product_IDs.every((productId) => {
+      const product = products.find((item) => item.Product_ID === productId);
+      return product && product.Product_Status === 'active' && Number(product.Stock) > 0 && approvedSellerIds.has(product.Seller_ID);
+    })
+  );
 
   return (
     <div className="space-y-8 pb-16 text-slate-900 dark:text-zinc-100">
@@ -229,31 +246,62 @@ export const Storefront: React.FC<StorefrontProps> = ({
         <span className="inline-flex items-center gap-2"><Tag className="h-3.5 w-3.5" />Automatic 5% cart savings at ৳500+</span>
       </div>
 
-      {featuredDeals.length > 0 && (
-        <section aria-labelledby="featured-deals-title" className="space-y-3 border-y border-amber-200 py-5 dark:border-amber-900/60">
+      {(featuredDeals.length > 0 || visibleBundles.length > 0) && (
+        <section aria-labelledby="offers-bundles-title" className="space-y-5 border-y border-amber-200 py-5 dark:border-amber-900/60">
           <header className="flex flex-wrap items-end justify-between gap-2">
             <div>
-              <h2 id="featured-deals-title" className="text-lg font-black text-slate-900 dark:text-white">Featured Deals</h2>
-              <p className="text-xs text-slate-500 dark:text-zinc-400">Seller-selected offers while the voucher is active.</p>
+              <h2 id="offers-bundles-title" className="text-lg font-black text-slate-900 dark:text-white">Offers &amp; Bundles</h2>
+              <p className="text-xs text-slate-500 dark:text-zinc-400">Active voucher offers and seller bundle savings.</p>
             </div>
             <Tag className="h-5 w-5 text-amber-600 dark:text-amber-300" />
           </header>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {featuredDeals.map((product) => {
-              const countdown = getVoucherCountdownLabel(product.Voucher_Expires_At);
-              return (
-                <article key={product.Product_ID} className="flex min-w-0 items-center gap-3 border-l-2 border-amber-400 bg-white/70 p-3 dark:bg-[#12161D]/70">
-                  <img src={product.Image} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover" loading="lazy" />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs font-bold text-slate-900 dark:text-white">{product.Name}</p>
-                    <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-300">{product.Voucher}{countdown ? ` · ${countdown}` : ''}</p>
-                    <p className="text-[11px] font-bold text-slate-700 dark:text-zinc-200">{formatCurrency(discountedPriceForVoucher(product.Price, product.Voucher))}</p>
-                  </div>
-                  <button type="button" onClick={() => onSelectProduct(product)} className="shrink-0 text-[10px] font-bold text-blue-700 hover:underline dark:text-sky-300">View</button>
-                </article>
-              );
-            })}
-          </div>
+          {featuredDeals.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-xs font-bold uppercase text-amber-800 dark:text-amber-300">Featured offers</h3>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {featuredDeals.map((product) => {
+                  const countdown = getVoucherCountdownLabel(product.Voucher_Expires_At);
+                  return (
+                    <article key={product.Product_ID} className="flex min-w-0 items-center gap-3 border-l-2 border-amber-400 bg-white/70 p-3 dark:bg-[#12161D]/70">
+                      <img src={product.Image} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover" loading="lazy" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-bold text-slate-900 dark:text-white">{product.Name}</p>
+                        <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-300">{product.Voucher}{countdown ? ` · ${countdown}` : ''}</p>
+                        <p className="text-[11px] font-bold text-slate-700 dark:text-zinc-200">{formatCurrency(discountedPriceForVoucher(product.Price, product.Voucher))}</p>
+                      </div>
+                      <button type="button" onClick={() => onSelectProduct(product)} className="shrink-0 text-[10px] font-bold text-blue-700 hover:underline dark:text-sky-300">View</button>
+                    </article>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          {visibleBundles.length > 0 && (
+            <div className="space-y-2">
+              <h3 className="text-xs font-bold uppercase text-amber-800 dark:text-amber-300">Bundle offers</h3>
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                {visibleBundles.map((bundle) => {
+                  const bundleProducts = bundle.Product_IDs.map((productId) => products.find((product) => product.Product_ID === productId)).filter((product): product is Product => Boolean(product));
+                  const bundleSubtotal = bundleProducts.reduce((sum, product) => sum + product.Price, 0);
+                  const bundlePrice = bundleSubtotal * (1 - bundle.Discount_Percent / 100);
+                  const firstProduct = bundleProducts[0];
+                  return (
+                    <article key={bundle.Bundle_ID} className="flex min-w-0 items-center gap-3 border-l-2 border-emerald-500 bg-white/70 p-3 dark:bg-[#12161D]/70">
+                      <div className="flex shrink-0 -space-x-3">
+                        {bundleProducts.slice(0, 3).map((product) => <img key={product.Product_ID} src={product.Image} alt="" className="h-12 w-12 rounded-full border-2 border-white object-cover dark:border-[#12161D]" loading="lazy" />)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-bold text-slate-900 dark:text-white">{bundle.Name}</p>
+                        <p className="truncate text-[10px] text-slate-500 dark:text-zinc-400">{bundleProducts.map((product) => product.Name).join(' + ')}</p>
+                        <p className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">{bundle.Discount_Percent}% off together · {formatCurrency(bundlePrice)}</p>
+                      </div>
+                      {firstProduct && <button type="button" onClick={() => onSelectProduct(firstProduct)} className="shrink-0 text-[10px] font-bold text-blue-700 hover:underline dark:text-sky-300">View bundle</button>}
+                    </article>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </section>
       )}
 
