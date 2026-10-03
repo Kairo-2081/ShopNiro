@@ -33,6 +33,7 @@
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
     "react-leaflet": "^5.0.0",
+    "react-markdown": "^10.1.0",
     "recharts": "^3.10.1",
     "vite": "^6.2.3"
   },

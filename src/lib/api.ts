@@ -15,9 +15,21 @@ import {
   Rider,
   RiderDelivery,
   RiderStatus,
+  ProductBundle,
 } from '../types';
 
 const TOKEN_KEY = 'marketpulse_jwt_token';
+const ANALYTICS_SESSION_KEY = 'shopniro_analytics_session';
+
+function getAnalyticsSessionId(): string {
+  if (typeof window === 'undefined') return 'server-render-session';
+  let sessionId = window.sessionStorage.getItem(ANALYTICS_SESSION_KEY);
+  if (!sessionId) {
+    sessionId = window.crypto.randomUUID();
+    window.sessionStorage.setItem(ANALYTICS_SESSION_KEY, sessionId);
+  }
+  return sessionId;
+}
 
 export function getAuthToken(): string | null {
   if (typeof window === 'undefined') return null;
@@ -69,6 +81,7 @@ function isPublicEndpoint(url: string, method: string = 'GET'): boolean {
   }
   // Storefront read catalog endpoints (categories, active products, reviews, sellers)
   if (upperMethod === 'GET') {
+    if (cleanUrl === '/api/bundles') return true;
     if (
       cleanUrl.startsWith('/api/categories') ||
       cleanUrl.startsWith('/api/products') ||
@@ -258,6 +271,31 @@ export const api = {
       body: JSON.stringify(updates),
     }),
   getSellerWallet: async (): Promise<{ balance: number; entries: any[] }> => fetchJson('/api/sellers/me/wallet'),
+  trackProductEvent: async (Product_ID: string, Event_Type: 'impression' | 'click'): Promise<{ success: boolean }> =>
+    fetchJson('/api/analytics/events', {
+      method: 'POST',
+      body: JSON.stringify({ Product_ID, Event_Type, Session_ID: getAnalyticsSessionId() }),
+    }),
+  getSellerProductAnalytics: async (): Promise<Array<{
+    Product_ID: string;
+    Impressions_7d: number;
+    Clicks_7d: number;
+    CTR_7d: number | null;
+    CTR_Previous_7d: number | null;
+    Returned_Units_30d: number;
+    Sold_Units_30d: number;
+    Return_Rate_30d: number | null;
+  }>> => fetchJson('/api/analytics/seller'),
+
+  // Seller bundle offers
+  getBundles: async (): Promise<ProductBundle[]> => fetchJson('/api/bundles'),
+  getSellerBundles: async (): Promise<ProductBundle[]> => fetchJson('/api/bundles/seller'),
+  createSellerBundle: async (data: Pick<ProductBundle, 'Name' | 'Product_IDs' | 'Discount_Percent' | 'Ends_At'>): Promise<ProductBundle> =>
+    fetchJson('/api/bundles', { method: 'POST', body: JSON.stringify(data) }),
+  setSellerBundleActive: async (id: string, Active: boolean): Promise<ProductBundle> =>
+    fetchJson(`/api/bundles/${encodeURIComponent(id)}/active`, { method: 'PATCH', body: JSON.stringify({ Active }) }),
+  deleteSellerBundle: async (id: string): Promise<{ success: boolean }> =>
+    fetchJson(`/api/bundles/${encodeURIComponent(id)}`, { method: 'DELETE' }),
 
   applyRider: async (data: {
     Username: string;
@@ -626,6 +664,12 @@ export interface TopRatedSeller {
   total_reviews: number;
 }
 
+export interface RelatedProduct {
+  product_id: string;
+  co_purchase_orders: number;
+  units_together: number;
+}
+
 export async function fetchTrendingProducts(limit: number = 3): Promise<TrendingProduct[]> {
   return fetchJson<TrendingProduct[]>(`/api/analytics/trending-products?limit=${limit}`);
 }
@@ -636,5 +680,9 @@ export async function fetchTopRatedProducts(limit: number = 12): Promise<TopRate
 
 export async function fetchTopRatedSellers(limit: number = 3): Promise<TopRatedSeller[]> {
   return fetchJson<TopRatedSeller[]>(`/api/analytics/top-rated-sellers?limit=${limit}`);
+}
+
+export async function fetchRelatedProducts(productId: string, limit: number = 3): Promise<RelatedProduct[]> {
+  return fetchJson<RelatedProduct[]>(`/api/analytics/related-products?productId=${encodeURIComponent(productId)}&limit=${limit}`);
 }
 

@@ -42,7 +42,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
     return acc + price * item.Quantity;
   }, 0);
 
-  const shippingFee = subtotal > 150 ? 0 : subtotal > 0 ? 5.0 : 0;
+  const shippingFee = subtotal >= 400 ? 0 : subtotal > 0 ? 5.0 : 0;
   const total = subtotal + shippingFee;
 
   return (
@@ -194,20 +194,20 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   )}
                 </span>
               </div>
-              {subtotal > 0 && subtotal <= 150 && (
+              {subtotal > 0 && subtotal < 400 && (
                 <div className="space-y-2 pt-1">
                   <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-zinc-400">
                     <span>Free shipping progress</span>
-                    <span>{Math.min(100, Math.round((subtotal / 150) * 100))}%</span>
+                    <span>{Math.min(100, Math.round((subtotal / 400) * 100))}%</span>
                   </div>
                   <div className="h-2 w-full rounded-full bg-slate-200 dark:bg-zinc-800 overflow-hidden">
                     <div
                       className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-sky-500 transition-all duration-500"
-                      style={{ width: `${Math.min(100, (subtotal / 150) * 100)}%` }}
+                      style={{ width: `${Math.min(100, (subtotal / 400) * 100)}%` }}
                     />
                   </div>
                   <p className="text-[11px] text-slate-500 dark:text-zinc-400 italic">
-                    Add {formatCurrency(150 - subtotal)} more for FREE express dispatch!
+                    Add {formatCurrency(400 - subtotal)} more for free shipping!
                   </p>
                 </div>
               )}

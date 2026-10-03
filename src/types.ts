@@ -16,6 +16,7 @@ export interface Customer {
   Password?: string;
   Number: string;
   Address: Address;
+  Marketing_Consent?: boolean;
 }
 
 export interface Admin {
@@ -55,10 +56,16 @@ export interface Product {
   Product_ID: string;
   Name: string;
   Image: string;
+  Video_URL?: string;
   Images?: string[];
+  Highlights?: string[];
   Description: string;
+  Warranty_Information?: string;
+  Return_Policy?: string;
   Price: number;
   Voucher: string; // e.g. "SAVE10", "15% OFF", or ""
+  Voucher_Expires_At?: string | null;
+  Featured_Deal?: boolean;
   Stock: number;
   Product_Status: ProductStatus;
   Category_ID: string;
@@ -68,6 +75,16 @@ export interface Product {
   Size_Gender?: 'men' | 'women' | 'unisex';
   Sizes?: string[];
   Size_Chart?: SizeChartMeasurement[];
+}
+
+export interface ProductBundle {
+  Bundle_ID: string;
+  Seller_ID: string;
+  Name: string;
+  Product_IDs: string[];
+  Discount_Percent: number;
+  Ends_At?: string;
+  Active: boolean;
 }
 
 export interface SizeChartMeasurement {
@@ -139,6 +156,7 @@ export interface Order {
   Payment_Method?: PaymentMethod | string;
   Transaction_ID?: string;
   Payment_ID?: string;
+  Applied_Voucher?: string;
   Currency?: string;
   Shipping_Address: Address;
   Billing_Address: Address;

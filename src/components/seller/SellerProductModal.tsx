@@ -1,7 +1,47 @@
 import React from 'react';
 import { Product, Category, Seller, ProductStatus, SizeChartMeasurement } from '../../types';
 import { api } from '../../lib/api';
+import { describeVoucher } from '../../lib/vouchers';
 import { X, Package, Save, Sparkles, Plus, Trash2 } from 'lucide-react';
+const toLocalDateTimeInput = (value?: string) => {
+  if (!value) return '';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? ''
+    : new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+};
+
+const measureImageWidth = (url: string) => new Promise<number>((resolve, reject) => {
+  const imageElement = new window.Image();
+  const timeout = window.setTimeout(() => reject(new Error('Image validation timed out. Check the image URL and try again.')), 10000);
+  imageElement.onload = () => {
+    window.clearTimeout(timeout);
+    resolve(imageElement.naturalWidth);
+  };
+  imageElement.onerror = () => {
+    window.clearTimeout(timeout);
+    reject(new Error('An image could not be loaded. Check the URL and try again.'));
+  };
+  imageElement.src = url;
+});
+
+const measureVideoDuration = (url: string) => new Promise<number>((resolve, reject) => {
+  const videoElement = document.createElement('video');
+  videoElement.preload = 'metadata';
+  const timeout = window.setTimeout(() => reject(new Error('Video validation timed out. Check the video URL and try again.')), 10000);
+  videoElement.onloadedmetadata = () => {
+    window.clearTimeout(timeout);
+    resolve(videoElement.duration);
+    videoElement.removeAttribute('src');
+    videoElement.load();
+  };
+  videoElement.onerror = () => {
+    window.clearTimeout(timeout);
+    reject(new Error('The video could not be loaded. Use a direct video URL and try again.'));
+  };
+  videoElement.src = url;
+  videoElement.load();
+});
 
 interface SellerProductModalProps {
   isOpen: boolean;
@@ -22,9 +62,15 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
 }) => {
   const [name, setName] = React.useState('');
   const [image, setImage] = React.useState('');
+  const [videoUrl, setVideoUrl] = React.useState('');
   const [additionalImages, setAdditionalImages] = React.useState<string[]>([]);
+  const [highlights, setHighlights] = React.useState<string[]>([]);
   const [description, setDescription] = React.useState('');
+  const [warrantyInformation, setWarrantyInformation] = React.useState('');
+  const [returnPolicy, setReturnPolicy] = React.useState('');
   const [price, setPrice] = React.useState<number | ''>('');
+    const [voucherExpiresAt, setVoucherExpiresAt] = React.useState('');
+    const [featuredDeal, setFeaturedDeal] = React.useState(false);
   const [voucher, setVoucher] = React.useState('');
   const [stock, setStock] = React.useState<number | ''>('');
   const [categoryId, setCategoryId] = React.useState('');
@@ -39,15 +85,29 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
   const [isGeneratingDescription, setIsGeneratingDescription] = React.useState(false);
   const [descriptionError, setDescriptionError] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  const selectedCategoryName = categories.find((category) => category.Category_ID === categoryId)?.Name || '';
+  const promotionContext = `${selectedCategoryName} ${name}`.toLowerCase();
+  const voucherSuggestions = [
+    { code: 'SAVE20', matches: /audio|headphone|earbud|headset/.test(promotionContext) },
+    { code: 'TECH10', matches: /electronic|gadget|wearable|smart watch|tech/.test(promotionContext) },
+    { code: 'BREW15', matches: /coffee|brew|home|living|kitchen|dripper/.test(promotionContext) },
+    { code: 'NEW20', matches: /apparel|fashion|clothing|hoodie|kurta|shirt|dress/.test(promotionContext) },
+  ].filter((suggestion) => suggestion.matches);
 
   React.useEffect(() => {
     setError(null);
     if (productToEdit) {
       setName(productToEdit.Name);
       setImage(productToEdit.Images?.[0] || productToEdit.Image);
+      setVideoUrl(productToEdit.Video_URL || '');
       setAdditionalImages(productToEdit.Images?.slice(1) || []);
+      setHighlights(productToEdit.Highlights || []);
       setDescription(productToEdit.Description);
+      setWarrantyInformation(productToEdit.Warranty_Information || '');
+      setReturnPolicy(productToEdit.Return_Policy || '');
       setPrice(productToEdit.Price);
+        setVoucherExpiresAt(toLocalDateTimeInput(productToEdit.Voucher_Expires_At));
+        setFeaturedDeal(Boolean(productToEdit.Featured_Deal));
       setVoucher(productToEdit.Voucher || '');
       setStock(productToEdit.Stock);
       setCategoryId(productToEdit.Category_ID);
@@ -59,9 +119,15 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
     } else {
       setName('');
       setImage('https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80');
+      setVideoUrl('');
       setAdditionalImages([]);
+      setHighlights([]);
       setDescription('');
+      setWarrantyInformation('');
+      setReturnPolicy('');
       setPrice(99.0);
+        setVoucherExpiresAt('');
+        setFeaturedDeal(false);
       setVoucher('');
       setStock(15);
       const initialCategoryId = categories[0]?.Category_ID || 'CAT-1';
@@ -85,6 +151,19 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
       setError('Please fill out all required fields.');
       return;
     }
+    if (name.trim().length > 80) {
+      setError('Keep the product title within 80 characters.');
+      return;
+    }
+    if (description.trim().split(/\s+/).filter(Boolean).length > 300) {
+      setError('Keep the product description within 300 words.');
+      return;
+    }
+    const imageUrls = [image, ...additionalImages].map((url) => url.trim()).filter(Boolean);
+    if (imageUrls.length < 5 || imageUrls.length > 7) {
+      setError('A listing needs 5 to 7 product images.');
+      return;
+    }
     if (hasSizes && sizes.length === 0) {
       setError('Choose at least one available size.');
       return;
@@ -93,13 +172,29 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
     setIsSaving(true);
     setError(null);
     try {
+      const imageWidths = await Promise.all(imageUrls.map(measureImageWidth));
+      const lowResolutionIndex = imageWidths.findIndex((width) => width < 1200);
+      if (lowResolutionIndex >= 0) {
+        setError(`Image ${lowResolutionIndex + 1} must be at least 1200px wide.`);
+        return;
+      }
+      if (videoUrl.trim() && await measureVideoDuration(videoUrl.trim()) > 15) {
+        setError('Product videos must be 15 seconds or shorter.');
+        return;
+      }
       await onSaveProduct({
         Product_ID: productToEdit ? productToEdit.Product_ID : undefined,
         Name: name,
         Image: image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800',
+        Video_URL: videoUrl.trim(),
         Images: [image, ...additionalImages].map((url) => url.trim()).filter(Boolean),
+        Highlights: highlights.map((highlight) => highlight.trim()).filter(Boolean),
         Description: description,
+        Warranty_Information: warrantyInformation,
+        Return_Policy: returnPolicy,
         Price: Number(price),
+          Voucher_Expires_At: voucherExpiresAt ? new Date(voucherExpiresAt).toISOString() : null,
+          Featured_Deal: Boolean(voucher.trim() && featuredDeal),
         Voucher: voucher,
         Stock: Number(stock) || 0,
         Category_ID: categoryId,
@@ -221,11 +316,16 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
             <input
               type="text"
               required
+              maxLength={80}
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Wireless Noise-Canceling Headphones"
               className="w-full p-2.5 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500"
             />
+            <div className="mt-1 flex justify-between gap-3 text-[10px] text-slate-500 dark:text-zinc-400">
+              <span>Lead with the brand, model, and main feature.</span>
+              <span className="shrink-0 tabular-nums">{name.length}/80</span>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -304,11 +404,34 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
                 placeholder="e.g. SAVE10"
                 className="w-full p-2.5 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white uppercase"
               />
+              <p className="mt-1 text-[10px] text-slate-500 dark:text-zinc-400">Campaigns discount matching products at checkout; TECH10 is a flat ৳10 per item.</p>
+              {voucherSuggestions.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {voucherSuggestions.map(({ code }) => (
+                    <button key={code} type="button" onClick={() => setVoucher(code)} aria-pressed={voucher === code} className={`rounded-lg border px-2.5 py-1.5 text-[10px] font-semibold transition-colors ${voucher === code ? 'border-emerald-600 bg-emerald-50 text-emerald-800 dark:border-emerald-500 dark:bg-emerald-950/30 dark:text-emerald-200' : 'border-slate-300 text-slate-600 hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800'}`}>
+                      {code} · {describeVoucher(code)}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <label className="mt-2 block text-[10px] font-semibold text-slate-600 dark:text-zinc-300">
+                Offer end date
+                <input type="datetime-local" value={voucherExpiresAt} onChange={(event) => setVoucherExpiresAt(event.target.value)} disabled={!voucher.trim()} className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 text-xs text-slate-900 disabled:opacity-50 dark:border-zinc-700 dark:bg-[#181F2A] dark:text-white" />
+              </label>
+              <label className="mt-2 flex items-center gap-2 text-[10px] font-semibold text-slate-600 dark:text-zinc-300">
+                <input type="checkbox" checked={featuredDeal} onChange={(event) => setFeaturedDeal(event.target.checked)} disabled={!voucher.trim()} />
+                Show in Featured Deals
+              </label>
             </div>
           </div>
 
           <section className="space-y-2">
-            <label className="block text-slate-700 dark:text-zinc-300 font-semibold">Product Image URLs</label>
+            <div className="flex items-baseline justify-between gap-3">
+              <label className="block text-slate-700 dark:text-zinc-300 font-semibold">Product Image URLs</label>
+              <span className="shrink-0 text-[10px] tabular-nums text-slate-500 dark:text-zinc-400">
+                {[image, ...additionalImages].filter((url) => url.trim()).length}/7
+              </span>
+            </div>
             <input
               type="url"
               value={image}
@@ -328,7 +451,44 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
                 <button type="button" onClick={() => setAdditionalImages((current) => current.filter((_, itemIndex) => itemIndex !== index))} aria-label={`Remove image ${index + 2}`} className="rounded-lg border border-slate-300 px-3 text-slate-500 hover:text-rose-600 dark:border-zinc-700"><Trash2 className="h-4 w-4" /></button>
               </div>
             ))}
-            <button type="button" onClick={() => setAdditionalImages((current) => [...current, ''])} className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 px-3 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300"><Plus className="h-3.5 w-3.5" />Add another image</button>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-[10px] text-slate-500 dark:text-zinc-400">Add 5–7 clear product views. Each image must be at least 1200 px wide.</p>
+              <button type="button" disabled={[image, ...additionalImages].filter((url) => url.trim()).length >= 7} onClick={() => setAdditionalImages((current) => [...current, ''])} className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 px-3 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-emerald-800 dark:text-emerald-300"><Plus className="h-3.5 w-3.5" />Add image</button>
+            </div>
+          </section>
+
+          <div>
+            <label htmlFor="seller-product-video" className="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-300">Product video URL · 15 seconds max</label>
+            <input id="seller-product-video" type="url" value={videoUrl} onChange={(event) => setVideoUrl(event.target.value)} placeholder="https://example.com/product-demo.mp4" className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-[#181F2A] dark:text-white" />
+          </div>
+
+          <section className="space-y-2 rounded-xl border border-slate-200 p-4 dark:border-zinc-800">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-xs font-bold text-slate-800 dark:text-zinc-200">Key product specs</h3>
+                <p className="mt-0.5 text-[10px] text-slate-500 dark:text-zinc-400">Add up to 5 concise benefits or specifications.</p>
+              </div>
+              <span className="text-[10px] tabular-nums text-slate-500 dark:text-zinc-400">{highlights.filter(Boolean).length}/5</span>
+            </div>
+            {highlights.map((highlight, index) => (
+              <div key={index} className="flex gap-2">
+                <input
+                  type="text"
+                  maxLength={120}
+                  value={highlight}
+                  onChange={(event) => setHighlights((current) => current.map((item, itemIndex) => itemIndex === index ? event.target.value : item))}
+                  placeholder={`Key spec ${index + 1}`}
+                  aria-label={`Key product spec ${index + 1}`}
+                  className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-[#181F2A] dark:text-white"
+                />
+                <button type="button" onClick={() => setHighlights((current) => current.filter((_, itemIndex) => itemIndex !== index))} aria-label={`Remove key spec ${index + 1}`} className="rounded-lg border border-slate-300 px-3 text-slate-500 hover:text-rose-600 dark:border-zinc-700"><Trash2 className="h-4 w-4" /></button>
+              </div>
+            ))}
+            {highlights.length < 5 && (
+              <button type="button" onClick={() => setHighlights((current) => [...current, ''])} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800">
+                <Plus className="h-3.5 w-3.5" />Add spec
+              </button>
+            )}
           </section>
 
           <section className="space-y-3 rounded-xl border border-slate-200 p-4 dark:border-zinc-800">
@@ -374,7 +534,7 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
 
           <div>
             <div className="flex items-center justify-between gap-3 mb-1">
-              <label className="block text-slate-700 dark:text-zinc-300 font-semibold">Description</label>
+              <label className="block text-slate-700 dark:text-zinc-300 font-semibold">Product description · up to 300 words</label>
               <button
                 type="button"
                 onClick={handleGenerateDescription}
@@ -387,16 +547,32 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
             </div>
             <textarea
               rows={3}
+              maxLength={2200}
               value={description}
               onChange={(e) => {
                 setDescription(e.target.value);
                 setDescriptionError(null);
               }}
-              placeholder="Detailed specs and key features..."
+              placeholder={'## Highlights\n**Benefit one:** ...\n**Benefit two:** ...\n\n## Specifications\n- ...'}
               className="w-full p-2.5 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500"
             />
+            <p className="mt-1 text-[10px] text-slate-500 dark:text-zinc-400">Use H2 headings, bold your two strongest benefits, and list key specifications.</p>
+            <p className="mt-1 text-right text-[10px] tabular-nums text-slate-500 dark:text-zinc-400">
+              {description.trim() ? description.trim().split(/\s+/).filter(Boolean).length : 0}/300 words
+            </p>
             {descriptionError && <p role="alert" className="mt-1 text-rose-600 dark:text-rose-300">{descriptionError}</p>}
           </div>
+
+          <section className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div>
+              <label htmlFor="seller-warranty-info" className="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-300">Warranty details · seller provided</label>
+              <textarea id="seller-warranty-info" rows={2} maxLength={500} value={warrantyInformation} onChange={(event) => setWarrantyInformation(event.target.value)} placeholder="State the applicable warranty, or leave blank." className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-[#181F2A] dark:text-white" />
+            </div>
+            <div>
+              <label htmlFor="seller-return-policy" className="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-300">Return terms · seller provided</label>
+              <textarea id="seller-return-policy" rows={2} maxLength={500} value={returnPolicy} onChange={(event) => setReturnPolicy(event.target.value)} placeholder="State return conditions, or leave blank." className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-[#181F2A] dark:text-white" />
+            </div>
+          </section>
 
           <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-zinc-800">
             <button

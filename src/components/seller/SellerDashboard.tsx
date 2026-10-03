@@ -3,7 +3,9 @@ import { Seller, Product, Order, Review, Category, ProductStatus } from '../../t
 import { api, formatCurrency, formatDate } from '../../lib/api';
 import { SellerProductModal } from './SellerProductModal';
 import { SellerProfileModal } from './SellerProfileModal';
+import { SellerBundlesPanel } from './SellerBundlesPanel';
 import { StarRating } from '../StarRating';
+import { discountedPriceForVoucher, isVoucherExpired } from '../../lib/vouchers';
 import {
   Package,
   ShoppingBag,
@@ -16,7 +18,11 @@ import {
   XCircle,
   Truck,
   Wallet,
+  BarChart3,
+  Tag,
 } from 'lucide-react';
+
+const compactSellerValue = (value: number) => value >= 1000 ? `${(value / 1000).toFixed(1)}k` : String(Math.round(value));
 
 interface SellerDashboardProps {
   currentSeller: Seller;
@@ -43,16 +49,38 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
   onUpdateOrderStatus,
   onUpdateSellerProfile,
 }) => {
-  const [activeTab, setActiveTab] = React.useState<'products' | 'orders' | 'reviews' | 'wallet'>('products');
+  const [activeTab, setActiveTab] = React.useState<'products' | 'orders' | 'analytics' | 'reviews' | 'wallet' | 'promotions'>('products');
   const [isProductModalOpen, setIsProductModalOpen] = React.useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = React.useState(false);
   const [productToEdit, setProductToEdit] = React.useState<Product | null>(null);
   const [sellerWallet, setSellerWallet] = React.useState<{ balance: number; entries: any[] } | null>(null);
   const [walletError, setWalletError] = React.useState<string | null>(null);
+  const [productAnalytics, setProductAnalytics] = React.useState<Array<{
+    Product_ID: string;
+    Impressions_7d: number;
+    Clicks_7d: number;
+    CTR_7d: number | null;
+    CTR_Previous_7d: number | null;
+    Returned_Units_30d: number;
+    Sold_Units_30d: number;
+    Return_Rate_30d: number | null;
+  }>>([]);
+  const [analyticsError, setAnalyticsError] = React.useState('');
 
   React.useEffect(() => {
     if (activeTab !== 'wallet') return;
     api.getSellerWallet().then(setSellerWallet).catch((error: any) => setWalletError(error.message || 'Could not load seller wallet.'));
+  }, [activeTab]);
+
+  React.useEffect(() => {
+    if (activeTab !== 'analytics') return;
+    let isMounted = true;
+    api.getSellerProductAnalytics().then((metrics) => {
+      if (isMounted) setProductAnalytics(metrics);
+    }).catch((error: any) => {
+      if (isMounted) setAnalyticsError(error.message || 'Could not load listing analytics.');
+    });
+    return () => { isMounted = false; };
   }, [activeTab]);
 
   // Filter entities specific to this seller
@@ -60,14 +88,84 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
   const sellerOrders = orders.filter((o) =>
     o.Items.some((item) => item.Seller_ID === currentSeller.Seller_ID)
   );
+  const billableSellerOrders = sellerOrders.filter((order) => order.Status !== 'cancelled' && order.Payment_Status !== 'refunded');
 
   const sellerProductIds = new Set(sellerProducts.map((p) => p.Product_ID));
   const sellerReviews = reviews.filter((r) => sellerProductIds.has(r.Product_ID));
 
-  const totalSalesRevenue = sellerOrders.reduce((sum, order) => {
+  const totalSalesRevenue = billableSellerOrders.reduce((sum, order) => {
     const sellerItems = order.Items.filter((i) => i.Seller_ID === currentSeller.Seller_ID);
     return sum + sellerItems.reduce((acc, item) => acc + item.Price * item.Quantity, 0);
   }, 0);
+  const sellerUnitsSold = billableSellerOrders.reduce((total, order) => total + order.Items
+    .filter((item) => item.Seller_ID === currentSeller.Seller_ID)
+    .reduce((units, item) => units + Math.max(0, Number(item.Quantity) || 0), 0), 0);
+  const averageSellerOrderValue = billableSellerOrders.length ? totalSalesRevenue / billableSellerOrders.length : 0;
+
+  const sellerProductPerformance = (() => {
+    const totals = new Map<string, { units: number; revenue: number }>();
+    billableSellerOrders.forEach((order) => {
+      order.Items.filter((item) => item.Seller_ID === currentSeller.Seller_ID).forEach((item) => {
+        const current = totals.get(item.Product_ID) || { units: 0, revenue: 0 };
+        current.units += Math.max(0, Number(item.Quantity) || 0);
+        current.revenue += Math.max(0, Number(item.Price) || 0) * Math.max(0, Number(item.Quantity) || 0);
+        totals.set(item.Product_ID, current);
+      });
+    });
+    return Array.from(totals.entries())
+      .map(([productId, metrics]) => ({ product: sellerProducts.find((product) => product.Product_ID === productId), ...metrics }))
+      .filter((row): row is typeof row & { product: Product } => Boolean(row.product))
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5);
+  })();
+
+  const sellerPricingGuidance = sellerProducts.map((product) => {
+    const comparablePrices = products
+      .filter((candidate) => candidate.Product_ID !== product.Product_ID
+        && candidate.Category_ID === product.Category_ID
+        && candidate.Product_Status === 'active'
+        && Number(candidate.Stock) > 0)
+      .map((candidate) => Number(candidate.Price) || 0)
+      .filter((price) => price > 0)
+      .sort((first, second) => first - second);
+    const middle = Math.floor(comparablePrices.length / 2);
+    const categoryMedian = comparablePrices.length
+      ? comparablePrices.length % 2
+        ? comparablePrices[middle]
+        : (comparablePrices[middle - 1] + comparablePrices[middle]) / 2
+      : null;
+    const effectivePrice = product.Voucher && !isVoucherExpired(product.Voucher_Expires_At)
+      ? discountedPriceForVoucher(product.Price, product.Voucher)
+      : product.Price;
+    const variance = categoryMedian ? ((effectivePrice - categoryMedian) / categoryMedian) * 100 : null;
+    return { product, categoryMedian, effectivePrice, variance };
+  });
+
+  const recentMonthlySales = (() => {
+    const now = new Date();
+    const months = Array.from({ length: 6 }, (_, index) => {
+      const date = new Date(now.getFullYear(), now.getMonth() - 5 + index, 1);
+      return {
+        key: `${date.getFullYear()}-${date.getMonth()}`,
+        label: date.toLocaleDateString(undefined, { month: 'short' }),
+        revenue: 0,
+        orders: 0,
+      };
+    });
+    const monthMap = new Map(months.map((month) => [month.key, month]));
+    billableSellerOrders.forEach((order) => {
+      const date = new Date(order.Order_Placed_At);
+      if (Number.isNaN(date.getTime())) return;
+      const month = monthMap.get(`${date.getFullYear()}-${date.getMonth()}`);
+      if (!month) return;
+      month.orders += 1;
+      month.revenue += order.Items
+        .filter((item) => item.Seller_ID === currentSeller.Seller_ID)
+        .reduce((sum, item) => sum + Math.max(0, Number(item.Price) || 0) * Math.max(0, Number(item.Quantity) || 0), 0);
+    });
+    return months;
+  })();
+  const maximumMonthlyRevenue = Math.max(1, ...recentMonthlySales.map((month) => month.revenue));
 
   const avgSellerRating =
     sellerReviews.length > 0
@@ -279,6 +377,30 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
         </button>
 
         <button
+          onClick={() => setActiveTab('analytics')}
+          className={`px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
+            activeTab === 'analytics'
+              ? 'bg-sky-700 text-white shadow-lg shadow-sky-700/20'
+              : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#181F2A]'
+          }`}
+        >
+          <BarChart3 className="h-4 w-4" />
+          <span>Sales Analytics</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('promotions')}
+          className={`px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
+            activeTab === 'promotions'
+              ? 'bg-amber-600 text-white shadow-lg shadow-amber-500/25'
+              : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#181F2A]'
+          }`}
+        >
+          <Tag className="h-4 w-4" />
+          <span>Deals &amp; Bundles</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('wallet')}
           className={`px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
             activeTab === 'wallet'
@@ -407,6 +529,8 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
         </div>
       )}
 
+      {activeTab === 'promotions' && <SellerBundlesPanel products={sellerProducts} />}
+
       {/* Tab 2: Incoming Orders */}
       {activeTab === 'orders' && (
         <div className="space-y-4">
@@ -512,6 +636,121 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
             </div>
           )}
         </div>
+      )}
+
+      {activeTab === 'analytics' && (
+        <section className="space-y-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              { label: 'Net product sales', value: formatCurrency(totalSalesRevenue), note: 'Excludes cancelled and refunded orders' },
+              { label: 'Units sold', value: sellerUnitsSold.toLocaleString(), note: `${billableSellerOrders.length} eligible orders` },
+              { label: 'Average order value', value: formatCurrency(averageSellerOrderValue), note: 'Across eligible seller orders' },
+              { label: 'Product rating', value: avgSellerRating ? `${avgSellerRating.toFixed(1)} / 5` : 'No ratings', note: `${sellerReviews.length} customer reviews` },
+            ].map((metric) => (
+              <article key={metric.label} className="rounded-2xl border border-sky-100 bg-white p-4 dark:border-sky-500/20 dark:bg-[#12161D]">
+                <p className="text-[10px] font-semibold uppercase text-slate-500 dark:text-zinc-400">{metric.label}</p>
+                <p className="mt-2 text-xl font-bold tabular-nums text-slate-900 dark:text-white">{metric.value}</p>
+                <p className="mt-1 text-[10px] text-slate-500 dark:text-zinc-400">{metric.note}</p>
+              </article>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-zinc-800 dark:bg-[#12161D]">
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white">Monthly sales</h2>
+              <p className="mt-1 text-[11px] text-slate-500 dark:text-zinc-400">Product revenue across the last six months.</p>
+              <div role="img" aria-label="Monthly product sales for the last six months" className="mt-5 grid h-44 grid-cols-6 items-end gap-2">
+                {recentMonthlySales.map((month) => (
+                  <div key={month.key} className="flex h-full min-w-0 flex-col items-center justify-end gap-2">
+                    <span className="text-center text-[9px] tabular-nums text-slate-500 dark:text-zinc-400">{month.revenue ? compactSellerValue(month.revenue) : ''}</span>
+                    <div className="flex h-28 w-full items-end rounded-md bg-slate-100 dark:bg-[#1B2430]">
+                      <div
+                        className="w-full rounded-md bg-emerald-600 transition-[height] duration-500 dark:bg-emerald-500"
+                        style={{ height: `${month.revenue ? Math.max(5, (month.revenue / maximumMonthlyRevenue) * 100) : 0}%` }}
+                        title={`${month.label}: ${formatCurrency(month.revenue)} · ${month.orders} orders`}
+                      />
+                    </div>
+                    <span className="text-[10px] text-slate-600 dark:text-zinc-300">{month.label}</span>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-zinc-800 dark:bg-[#12161D]">
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white">Top products</h2>
+              <p className="mt-1 text-[11px] text-slate-500 dark:text-zinc-400">Ranked by net product sales.</p>
+              {sellerProductPerformance.length ? (
+                <ol className="mt-3 divide-y divide-slate-100 dark:divide-zinc-800">
+                  {sellerProductPerformance.map(({ product, units, revenue }, index) => (
+                    <li key={product.Product_ID} className="flex items-center gap-3 py-3">
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-slate-100 text-xs font-bold text-slate-700 dark:bg-zinc-800 dark:text-zinc-200">{index + 1}</span>
+                      <img src={product.Image} alt="" className="h-9 w-9 shrink-0 rounded-md object-cover" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-semibold text-slate-900 dark:text-white">{product.Name}</p>
+                        <p className="text-[10px] text-slate-500 dark:text-zinc-400">{units.toLocaleString()} units sold</p>
+                      </div>
+                      <span className="shrink-0 text-xs font-bold tabular-nums text-slate-800 dark:text-zinc-200">{formatCurrency(revenue)}</span>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="py-10 text-center text-xs text-slate-500 dark:text-zinc-400">Sales analytics appear after your first eligible order.</p>
+              )}
+            </section>
+          </div>
+          <section className="overflow-x-auto rounded-2xl border border-slate-200 bg-white dark:border-zinc-800 dark:bg-[#12161D]">
+            <div className="p-5">
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white">Price positioning</h2>
+              <p className="mt-1 text-[11px] text-slate-500 dark:text-zinc-400">Compares effective price with the median of other active, in-stock ShopNiro listings in the same category. This is not external competitor data or a margin estimate.</p>
+            </div>
+            <table className="w-full min-w-[560px] text-left text-xs">
+              <thead className="border-y border-slate-200 bg-slate-50 text-[10px] uppercase text-slate-500 dark:border-zinc-800 dark:bg-[#181F2A] dark:text-zinc-400"><tr><th className="p-3">Product</th><th className="p-3">List price</th><th className="p-3">Effective price</th><th className="p-3">Category median</th><th className="p-3">Position</th></tr></thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
+                {sellerPricingGuidance.map(({ product, categoryMedian, effectivePrice, variance }) => (
+                  <tr key={product.Product_ID}>
+                    <td className="p-3 font-semibold text-slate-900 dark:text-white">{product.Name}</td>
+                    <td className="p-3 tabular-nums">{formatCurrency(product.Price)}</td>
+                    <td className="p-3 tabular-nums">{formatCurrency(effectivePrice)}</td>
+                    <td className="p-3 tabular-nums">{categoryMedian === null ? 'Not enough listings' : formatCurrency(categoryMedian)}</td>
+                    <td className="p-3 text-slate-600 dark:text-zinc-300">{variance === null ? 'No comparison' : `${variance > 0 ? '+' : ''}${variance.toFixed(1)}% vs median`}</td>
+                  </tr>
+                ))}
+                {!sellerPricingGuidance.length && <tr><td colSpan={5} className="p-6 text-center text-xs text-slate-500">Add products to compare category pricing.</td></tr>}
+              </tbody>
+            </table>
+          </section>
+          <section className="overflow-x-auto rounded-2xl border border-slate-200 bg-white dark:border-zinc-800 dark:bg-[#12161D]">
+            <div className="p-5">
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white">Listing performance</h2>
+              <p className="mt-1 text-[11px] text-slate-500 dark:text-zinc-400">Click-through uses unique daily storefront impressions and clicks for the last 7 days; return rate uses refunded order units from the last 30 days.</p>
+            </div>
+            {analyticsError && <p role="alert" className="mx-5 mb-3 text-xs text-rose-700 dark:text-rose-300">{analyticsError}</p>}
+            <table className="w-full min-w-[680px] text-left text-xs">
+              <thead className="border-y border-slate-200 bg-slate-50 text-[10px] uppercase text-slate-500 dark:border-zinc-800 dark:bg-[#181F2A] dark:text-zinc-400">
+                <tr><th className="p-3">Product</th><th className="p-3">Views · 7d</th><th className="p-3">Clicks · 7d</th><th className="p-3">CTR</th><th className="p-3">Returned · 30d</th><th className="p-3">Return rate</th><th className="p-3">Next action</th></tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
+                {productAnalytics.map((metric) => {
+                  const product = sellerProducts.find((item) => item.Product_ID === metric.Product_ID);
+                  if (!product) return null;
+                  const lowCtr = metric.Impressions_7d >= 25 && metric.CTR_7d !== null && metric.CTR_7d < 2;
+                  const ctrDrop = metric.CTR_Previous_7d !== null && metric.CTR_Previous_7d > 0 && metric.CTR_7d !== null && metric.CTR_7d <= metric.CTR_Previous_7d * 0.9;
+                  const highReturns = metric.Returned_Units_30d >= 2 && metric.Return_Rate_30d !== null && metric.Return_Rate_30d >= 10;
+                  return <tr key={metric.Product_ID}>
+                    <td className="p-3 font-semibold text-slate-900 dark:text-white">{product.Name}</td>
+                    <td className="p-3 tabular-nums">{metric.Impressions_7d.toLocaleString()}</td>
+                    <td className="p-3 tabular-nums">{metric.Clicks_7d.toLocaleString()}</td>
+                    <td className="p-3 tabular-nums">{metric.CTR_7d === null ? '—' : `${metric.CTR_7d.toFixed(1)}%`}</td>
+                    <td className="p-3 tabular-nums">{metric.Returned_Units_30d.toLocaleString()}</td>
+                    <td className="p-3 tabular-nums">{metric.Return_Rate_30d === null ? '—' : `${metric.Return_Rate_30d.toFixed(1)}%`}</td>
+                    <td className="p-3 text-[10px] text-slate-600 dark:text-zinc-300">{ctrDrop ? 'CTR down 10%+; review listing' : lowCtr ? 'Refresh image or title' : highReturns ? 'Review product details and fit' : metric.Impressions_7d < 25 ? 'Gather more views' : 'On track'}</td>
+                  </tr>;
+                })}
+                {!productAnalytics.length && !analyticsError && <tr><td colSpan={7} className="p-6 text-center text-xs text-slate-500">Listing metrics will appear as shoppers view and buy your products.</td></tr>}
+              </tbody>
+            </table>
+          </section>
+        </section>
       )}
 
       {/* Tab 3: Reviews */}

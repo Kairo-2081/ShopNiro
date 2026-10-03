@@ -398,6 +398,23 @@ export default function App() {
     }
   };
 
+  const handleBuyNow = async (product: Product, quantity: number, size?: string) => {
+    if (!isLoggedIn || !selectedCustomer) {
+      setIsLoginModalOpen(true);
+      return;
+    }
+    try {
+      await api.addToCart(selectedCustomer.Customer_ID, product.Product_ID, quantity, size);
+      const updatedCart = await api.getCart(selectedCustomer.Customer_ID);
+      setCart(updatedCart);
+      setIsCartOpen(false);
+      setSelectedProductForDetail(null);
+      setIsCheckoutOpen(true);
+    } catch (err: any) {
+      alert(err.message || 'Could not start checkout');
+    }
+  };
+
   const handleUpdateCartQuantity = async (cartId: string, quantity: number) => {
     if (!selectedCustomer) return;
     try {
@@ -1041,10 +1058,13 @@ export default function App() {
           category={categories.find((c) => c.Category_ID === selectedProductForDetail.Category_ID)}
           seller={sellers.find((s) => s.Seller_ID === selectedProductForDetail.Seller_ID)}
           reviews={reviews}
+          allProducts={products}
           currentCustomer={selectedCustomer || null}
           onClose={() => setSelectedProductForDetail(null)}
           onAddToCart={handleAddToCart}
+          onBuyNow={handleBuyNow}
           onSubmitReview={handleSubmitReview}
+          onSelectProduct={(nextProduct) => setSelectedProductForDetail(nextProduct)}
           onOpenLogin={() => setIsLoginModalOpen(true)}
           onAskAI={(query) => {
             setChatInitialQuery(query);
@@ -1071,6 +1091,7 @@ export default function App() {
           isOpen={isCheckoutOpen}
           onClose={() => setIsCheckoutOpen(false)}
           currentCustomer={selectedCustomer}
+          previousOrderCount={orders.filter((order) => order.Customer_ID === selectedCustomer.Customer_ID).length}
           cartItems={cart}
           onPlaceOrder={handlePlaceOrder}
           onOrderSuccess={() => {

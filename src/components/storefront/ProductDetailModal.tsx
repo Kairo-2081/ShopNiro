@@ -1,7 +1,9 @@
 import React from 'react';
-import { Product, Category, Seller, Review, Customer } from '../../types';
+import ReactMarkdown from 'react-markdown';
+import { Product, Category, Seller, Review, Customer, ProductBundle } from '../../types';
 import { StarRating } from '../StarRating';
-import { api, formatCurrency, formatDate } from '../../lib/api';
+import { api, fetchRelatedProducts, formatCurrency, formatDate } from '../../lib/api';
+import { describeVoucher, discountedPriceForVoucher, getVoucherCountdownLabel, isVoucherExpired } from '../../lib/vouchers';
 import {
   X,
   ShoppingCart,
@@ -22,10 +24,13 @@ interface ProductDetailModalProps {
   category?: Category;
   seller?: Seller;
   reviews: Review[];
+  allProducts?: Product[];
   currentCustomer?: Customer | null;
   onClose: () => void;
   onAddToCart: (product: Product, quantity: number, size?: string) => void;
+  onBuyNow: (product: Product, quantity: number, size?: string) => void;
   onSubmitReview: (productId: string, rating: number, reviewText: string) => void;
+  onSelectProduct?: (product: Product) => void;
   onOpenLogin?: () => void;
   onAskAI?: (query: string) => void;
 }
@@ -35,10 +40,13 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   category,
   seller,
   reviews,
+  allProducts = [],
   currentCustomer,
   onClose,
   onAddToCart,
+  onBuyNow,
   onSubmitReview,
+  onSelectProduct,
   onOpenLogin,
   onAskAI,
 }) => {
@@ -57,6 +65,49 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
   const [shouldRender, setShouldRender] = React.useState(Boolean(product));
   const [visible, setVisible] = React.useState(Boolean(product));
+  const [coPurchasedIds, setCoPurchasedIds] = React.useState<string[]>([]);
+  const [availableBundles, setAvailableBundles] = React.useState<ProductBundle[]>([]);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    if (!product) {
+      setCoPurchasedIds([]);
+      return () => { isMounted = false; };
+    }
+    fetchRelatedProducts(product.Product_ID, 5)
+      .then((results) => { if (isMounted) setCoPurchasedIds(results.map((result) => result.product_id)); })
+      .catch(() => { if (isMounted) setCoPurchasedIds([]); });
+    return () => { isMounted = false; };
+  }, [product?.Product_ID]);
+
+  React.useEffect(() => {
+    let isMounted = true;
+    api.getBundles().then((result) => {
+      if (isMounted) setAvailableBundles(result);
+    }).catch(() => {
+      if (isMounted) setAvailableBundles([]);
+    });
+    return () => { isMounted = false; };
+  }, [product?.Product_ID]);
+
+  const relatedProducts = React.useMemo(() => {
+    if (!product) return { products: [], basedOnOrders: false };
+    const activeProducts = allProducts.filter((candidate) => candidate.Product_ID !== product.Product_ID
+      && candidate.Product_Status === 'active'
+      && Number(candidate.Stock) > 0);
+    const productById = new Map(activeProducts.map((candidate) => [candidate.Product_ID, candidate]));
+    const coPurchased = coPurchasedIds.map((productId) => productById.get(productId)).filter((item): item is Product => Boolean(item));
+    const suggestions = coPurchased.length
+      ? coPurchased.slice(0, 3)
+      : activeProducts.filter((candidate) => candidate.Category_ID === product.Category_ID).slice(0, 3);
+    return {
+      products: suggestions,
+      basedOnOrders: coPurchased.length > 0,
+    };
+  }, [allProducts, coPurchasedIds, product?.Category_ID, product?.Product_ID]);
+  const matchingBundles = product
+    ? availableBundles.filter((bundle) => bundle.Product_IDs.includes(product.Product_ID))
+    : [];
 
   React.useEffect(() => {
     if (product) {
@@ -92,6 +143,10 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   const isDeactivated = product.Product_Status === 'deactivated';
   const productImages = product.Images?.length ? product.Images : [product.Image];
   const selectedImage = productImages[galleryIndex] || product.Image;
+  const hasActiveVoucher = Boolean(product.Voucher && !isVoucherExpired(product.Voucher_Expires_At));
+  const voucherPrice = hasActiveVoucher ? discountedPriceForVoucher(Number(product.Price) || 0, product.Voucher) : Number(product.Price) || 0;
+  const hasVoucherDiscount = Boolean(hasActiveVoucher && voucherPrice < Number(product.Price));
+  const voucherCountdown = getVoucherCountdownLabel(product.Voucher_Expires_At);
 
   const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -194,6 +249,11 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   ))}
                 </div>
               )}
+              {product.Video_URL && (
+                <video controls preload="metadata" src={product.Video_URL} className="w-full rounded-xl border border-slate-200 bg-black dark:border-zinc-800">
+                  Your browser does not support product video playback.
+                </video>
+              )}
 
               {/* Seller Info Box */}
               {seller && (
@@ -213,7 +273,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                         <span className="truncate">{seller.Name}</span>
                       </span>
                       <span className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 px-2.5 py-0.5 rounded-full font-semibold text-[10px] uppercase shrink-0 border border-emerald-500/20">
-                        Verified Merchant
+                        Approved Seller
                       </span>
                     </div>
                     {seller.Description && (
@@ -243,8 +303,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 <div className="flex items-center gap-3">
                   <StarRating rating={avgRating} size="md" showText totalReviews={productReviews.length} />
                   <span className="text-slate-300 dark:text-zinc-700">•</span>
-                  <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Ready for Fast Dispatch
+                    <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" /> Available from this seller
                   </span>
                 </div>
 
@@ -252,15 +312,18 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 <div className="p-4 rounded-2xl bg-blue-50/50 dark:bg-[#161C24] border border-blue-100 dark:border-blue-900/40 flex items-baseline justify-between">
                   <div>
                     <span className="text-xs text-slate-500 dark:text-zinc-400 uppercase tracking-wider font-semibold block">
-                      Price
+                      {hasVoucherDiscount ? 'Price with code' : 'Price'}
                     </span>
                     <span className="text-3xl font-black text-blue-600 dark:text-sky-400">
-                      {formatCurrency(Number(product.Price) || 0)}
+                      {formatCurrency(voucherPrice)}
                     </span>
+                    {hasVoucherDiscount && <span className="ml-2 text-xs text-slate-500 line-through dark:text-zinc-500">{formatCurrency(Number(product.Price))}</span>}
                   </div>
-                  {product.Voucher && (
-                    <span className="text-xs font-semibold bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-sky-300 px-3 py-1 rounded-full border border-blue-200 dark:border-blue-800">
-                      Use code <code className="font-bold">{product.Voucher}</code>
+                  {hasActiveVoucher && (
+                    <span title={describeVoucher(product.Voucher)} className="max-w-[180px] text-right text-[10px] font-semibold text-blue-700 dark:text-sky-300">
+                      <span className="block">Use code <code className="font-bold">{product.Voucher}</code></span>
+                      <span className="mt-0.5 block font-normal text-slate-500 dark:text-zinc-400">{describeVoucher(product.Voucher)}</span>
+                      {voucherCountdown && <span className="mt-0.5 block font-semibold text-amber-700 dark:text-amber-300">{voucherCountdown}</span>}
                     </span>
                   )}
                 </div>
@@ -270,10 +333,43 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 mb-1">
                     Product Details
                   </h3>
-                  <p className="text-sm text-slate-600 dark:text-zinc-300 leading-relaxed">
-                    {product.Description || 'No description provided.'}
-                  </p>
+                  <div className="space-y-2 text-sm leading-relaxed text-slate-600 dark:text-zinc-300">
+                    <ReactMarkdown components={{
+                      h1: ({ children }) => <h2 className="pt-2 text-sm font-bold text-slate-900 dark:text-white">{children}</h2>,
+                      h2: ({ children }) => <h2 className="pt-2 text-sm font-bold text-slate-900 dark:text-white">{children}</h2>,
+                      h3: ({ children }) => <h3 className="pt-1 text-xs font-bold text-slate-900 dark:text-white">{children}</h3>,
+                      p: ({ children }) => <p>{children}</p>,
+                      strong: ({ children }) => <strong className="font-bold text-slate-900 dark:text-white">{children}</strong>,
+                      ul: ({ children }) => <ul className="list-disc space-y-1 pl-5">{children}</ul>,
+                      ol: ({ children }) => <ol className="list-decimal space-y-1 pl-5">{children}</ol>,
+                      li: ({ children }) => <li>{children}</li>,
+                    }}>
+                      {product.Description || 'No description provided.'}
+                    </ReactMarkdown>
+                  </div>
                 </div>
+
+                {product.Highlights?.some((highlight) => highlight.trim()) && (
+                  <section className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-zinc-800 dark:bg-[#161C24]">
+                    <h3 className="mb-2 text-xs font-bold text-slate-800 dark:text-zinc-200">Key product specs</h3>
+                    <ul className="space-y-1.5 text-xs text-slate-600 dark:text-zinc-300">
+                      {product.Highlights.filter((highlight) => highlight.trim()).map((highlight) => (
+                        <li key={highlight} className="flex items-start gap-2">
+                          <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                          <span>{highlight}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                )}
+
+                {(product.Warranty_Information || product.Return_Policy) && (
+                  <section className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-zinc-800 dark:bg-[#161C24]">
+                    <h3 className="mb-2 text-xs font-bold text-slate-800 dark:text-zinc-200">Seller-provided policies</h3>
+                    {product.Warranty_Information && <p className="text-xs text-slate-600 dark:text-zinc-300"><strong>Warranty:</strong> {product.Warranty_Information}</p>}
+                    {product.Return_Policy && <p className="mt-1 text-xs text-slate-600 dark:text-zinc-300"><strong>Returns:</strong> {product.Return_Policy}</p>}
+                  </section>
+                )}
 
                 {/* Specs pills */}
                 <div className="grid grid-cols-2 gap-3 text-xs">
@@ -332,30 +428,31 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  disabled={isOutOfStock || isDeactivated || Boolean(product.Sizes?.length && !selectedSize)}
-                  onClick={handleAddToCartClick}
-                  className={`w-full py-3.5 px-6 rounded-full font-bold text-sm shadow-lg flex items-center justify-center gap-2 transition-all cursor-pointer ${
-                    isOutOfStock || isDeactivated || Boolean(product.Sizes?.length && !selectedSize)
-                      ? 'bg-slate-200 dark:bg-zinc-800 text-slate-400 dark:text-zinc-600 cursor-not-allowed'
-                      : justAdded
-                      ? 'bg-emerald-600 text-white shadow-emerald-500/25'
-                      : 'bg-blue-600 hover:bg-blue-500 text-white shadow-blue-600/30 active:scale-98'
-                  }`}
-                >
-                  {justAdded ? (
-                    <>
-                      <Check className="w-5 h-5" />
-                      <span>Added to Shopping Cart!</span>
-                    </>
-                  ) : (
-                    <>
-                      <ShoppingCart className="w-5 h-5" />
-                      <span>{product.Sizes?.length && !selectedSize ? 'Choose a size' : `Add ${quantity} Item${quantity > 1 ? 's' : ''}${selectedSize ? ` · ${selectedSize}` : ''} to Cart • ${formatCurrency(Number(product.Price) * quantity)}`}</span>
-                    </>
-                  )}
-                </button>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    disabled={isOutOfStock || isDeactivated || Boolean(product.Sizes?.length && !selectedSize)}
+                    onClick={handleAddToCartClick}
+                    className={`w-full py-3.5 px-4 rounded-full font-bold text-sm shadow-lg flex items-center justify-center gap-2 transition-all cursor-pointer ${
+                      isOutOfStock || isDeactivated || Boolean(product.Sizes?.length && !selectedSize)
+                        ? 'bg-slate-200 dark:bg-zinc-800 text-slate-400 dark:text-zinc-600 cursor-not-allowed'
+                        : justAdded
+                        ? 'bg-emerald-600 text-white shadow-emerald-500/25'
+                        : 'bg-slate-100 text-slate-900 hover:bg-slate-200 dark:bg-[#202938] dark:text-white dark:hover:bg-[#2b3749]'
+                    }`}
+                  >
+                    {justAdded ? <Check className="w-5 h-5" /> : <ShoppingCart className="w-5 h-5" />}
+                    <span>{justAdded ? 'Added to cart' : 'Add to Cart'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isOutOfStock || isDeactivated || Boolean(product.Sizes?.length && !selectedSize)}
+                    onClick={() => onBuyNow(product, quantity, selectedSize || undefined)}
+                    className="w-full rounded-full bg-blue-600 px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-600/30 transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none dark:disabled:bg-zinc-800 dark:disabled:text-zinc-600"
+                  >
+                    Buy Now · {formatCurrency(Number(product.Price) * quantity)}
+                  </button>
+                </div>
 
                 {onAskAI && (
                   <button
@@ -375,6 +472,59 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               </div>
             </div>
           </div>
+
+          {relatedProducts.products.length > 0 && (
+            <section className="space-y-3 border-t border-slate-200 pt-6 dark:border-zinc-800">
+              <header>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                  {relatedProducts.basedOnOrders ? 'Frequently bought together' : 'You may also like'}
+                </h2>
+                <p className="mt-1 text-xs text-slate-500 dark:text-zinc-400">
+                  {relatedProducts.basedOnOrders ? 'Suggestions based on products in the same orders.' : 'More available products from the marketplace.'}
+                </p>
+              </header>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                {relatedProducts.products.map((suggestion) => (
+                  <article key={suggestion.Product_ID} className="flex min-w-0 items-center gap-3 rounded-xl border border-slate-200 p-3 dark:border-zinc-800 dark:bg-[#161C24]">
+                    <img src={suggestion.Image} alt="" className="h-12 w-12 shrink-0 rounded-lg object-cover" loading="lazy" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-semibold text-slate-900 dark:text-white">{suggestion.Name}</p>
+                      <p className="mt-0.5 text-xs font-bold text-slate-700 dark:text-zinc-200">{formatCurrency(Number(suggestion.Price))}</p>
+                      <button
+                        type="button"
+                        onClick={() => suggestion.Sizes?.length ? onSelectProduct?.(suggestion) : onAddToCart(suggestion, 1)}
+                        className="mt-1 text-[10px] font-semibold text-blue-700 hover:underline dark:text-sky-300"
+                      >
+                        {suggestion.Sizes?.length ? 'Choose options' : 'Add to cart'}
+                      </button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {matchingBundles.length > 0 && (
+            <section className="space-y-3 border-t border-slate-200 pt-6 dark:border-zinc-800">
+              <header>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white">Bundle and save</h2>
+                <p className="mt-1 text-xs text-slate-500 dark:text-zinc-400">Add every item in a bundle to your cart; savings are applied at checkout and can stack with vouchers.</p>
+              </header>
+              {matchingBundles.map((bundle) => (
+                <article key={bundle.Bundle_ID} className="border-l-2 border-amber-400 bg-amber-50/70 p-4 dark:bg-amber-950/20">
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">{bundle.Name} · {bundle.Discount_Percent}% off</h3>
+                  {bundle.Ends_At && <p className="mt-1 text-[10px] text-amber-800 dark:text-amber-300">Offer ends {new Date(bundle.Ends_At).toLocaleString()}</p>}
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {bundle.Product_IDs.filter((productId) => productId !== product.Product_ID).map((productId) => {
+                      const bundleProduct = allProducts.find((candidate) => candidate.Product_ID === productId);
+                      if (!bundleProduct) return null;
+                      return <button key={productId} type="button" onClick={() => bundleProduct.Sizes?.length ? onSelectProduct?.(bundleProduct) : onAddToCart(bundleProduct, 1)} className="rounded-md border border-amber-300 px-3 py-2 text-[10px] font-bold text-amber-900 hover:bg-amber-100 dark:border-amber-800 dark:text-amber-200 dark:hover:bg-amber-950/50">Add {bundleProduct.Name}</button>;
+                    })}
+                  </div>
+                </article>
+              ))}
+            </section>
+          )}
 
           {/* Customer Reviews Section */}
           <div className="pt-8 border-t border-slate-200 dark:border-zinc-800 space-y-6">

@@ -459,6 +459,12 @@ export const CustomerOrders: React.FC<CustomerOrdersProps> = ({
                       <span>Shipping Fee</span>
                       <span>{order.Shipping_Fee === 0 ? 'FREE' : formatCurrency(order.Shipping_Fee)}</span>
                     </div>
+                    {order.Applied_Voucher && (
+                      <div className="flex justify-between gap-3 text-[11px] text-emerald-700 dark:text-emerald-300">
+                        <span>Promotions applied</span>
+                        <span className="text-right font-semibold">{order.Applied_Voucher.split('+').join(' · ')}</span>
+                      </div>
+                    )}
                     {order.Transaction_ID && (
                       <div className="flex justify-between text-[11px] pt-1 border-t border-slate-100 dark:border-zinc-800">
                         <span className="text-slate-400">Tran ID:</span>

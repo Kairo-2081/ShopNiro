@@ -2,8 +2,9 @@ import { Router } from 'express';
 import { randomInt } from 'node:crypto';
 import { query } from '../db/index.ts';
 import { requireAuth, AuthRequest } from '../middleware/auth.ts';
-import { Order } from '../../src/types.ts';
-import { discountedUnitPrice, getVoucherDiscountPercent, normalizeVoucherCode } from '../../src/lib/vouchers.ts';
+import { Order, ProductBundle } from '../../src/types.ts';
+import { discountedPriceForVoucher, discountedUnitPrice, getVoucherRule, isVoucherExpired, normalizeVoucherCode } from '../../src/lib/vouchers.ts';
+import { calculateBundlePrices } from '../../src/lib/bundles.ts';
 
 const router = Router();
 
@@ -27,6 +28,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
       Payment_Status: o.payment_status || 'pending',
       Payment_Method: o.payment_method || 'cash_on_delivery',
       Transaction_ID: o.transaction_id || '',
+      Applied_Voucher: o.applied_voucher || undefined,
       Currency: 'BDT',
       Shipping_Address: o.shipping_address_json ? (typeof o.shipping_address_json === 'string' ? JSON.parse(o.shipping_address_json) : o.shipping_address_json) : { Street: '', House_Name: '', City: '', Postal_Code: '' },
       Billing_Address: o.billing_address_json ? (typeof o.billing_address_json === 'string' ? JSON.parse(o.billing_address_json) : o.billing_address_json) : { Street: '', House_Name: '', City: '', Postal_Code: '' },
@@ -107,14 +109,13 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
     const trackNum2 = Math.floor(1000 + Math.random() * 9000);
     const Tracking_ID = `TRK-${trackNum1}-${trackNum2}`;
     const id = `ORD-${Date.now()}`;
-    const shippingFee = Number(Shipping_Fee) || 0.0;
     const shipAddrJson = JSON.stringify(Shipping_Address);
     const billAddrJson = JSON.stringify(Billing_Address || Shipping_Address);
     const addInfo = Additional_Info || '';
     const orderPlacedAt = new Date().toISOString();
 
     const cartProducts = await query(`
-      SELECT p.id, p.name, p.image, p.price, p.voucher, p.seller_id, c.quantity, c.size
+      SELECT p.id, p.name, p.image, p.price, p.voucher, p.voucher_expires_at, p.seller_id, c.quantity, c.size
       FROM cart c JOIN products p ON p.id = c.product_id
       WHERE c.customer_id = $1
       ORDER BY c.id
@@ -123,29 +124,64 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
       return res.status(400).json({ error: 'Checkout Failed: The shopping cart is empty.' });
     }
 
-    const voucherCode = typeof Applied_Voucher === 'string' ? normalizeVoucherCode(Applied_Voucher) : '';
+    const appliedCodes = typeof Applied_Voucher === 'string'
+      ? Applied_Voucher.split('+').map(normalizeVoucherCode).filter(Boolean)
+      : [];
+    const voucherCode = appliedCodes.find((code: string) => code !== 'CART5' && !code.startsWith('BUNDLE:')) || '';
     const eligibleProducts = voucherCode
       ? cartProducts.rows.filter((product: any) => normalizeVoucherCode(product.voucher || '') === voucherCode)
       : [];
-    let discountPercent = 0;
+    const activeEligibleProducts = eligibleProducts.filter((product: any) => !isVoucherExpired(product.voucher_expires_at));
+    let voucherRule = null;
     if (voucherCode) {
       if (!eligibleProducts.length) {
         return res.status(400).json({ error: 'This voucher is not available for any product in your cart.' });
       }
-      const voucherPercent = getVoucherDiscountPercent(String(eligibleProducts[0].voucher || ''));
-      if (voucherPercent === null) {
-        return res.status(400).json({ error: 'This product voucher does not contain a valid percentage discount.' });
+      if (!activeEligibleProducts.length) {
+        return res.status(400).json({ error: 'This voucher has expired.' });
       }
-      discountPercent = voucherPercent;
+      voucherRule = getVoucherRule(String(activeEligibleProducts[0].voucher || ''));
+      if (!voucherRule) {
+        return res.status(400).json({ error: 'This product voucher is not valid.' });
+      }
+      if (voucherRule.firstOrderOnly) {
+        const orderHistory = await query('SELECT COUNT(*)::integer AS order_count FROM orders WHERE customer_id = $1', [Customer_ID]);
+        if (Number(orderHistory.rows[0]?.order_count) > 0) {
+          return res.status(400).json({ error: 'NEW20 is available on your first ShopNiro order only.' });
+        }
+      }
     }
-    const eligibleProductIds = new Set(eligibleProducts.map((product: any) => product.id));
-    const subtotal = cartProducts.rows.reduce((total: number, product: any) => {
-      const price = Number(product.price) || 0;
-      const unitPrice = eligibleProductIds.has(product.id)
-        ? discountedUnitPrice(price, discountPercent)
-        : price;
-      return total + unitPrice * Number(product.quantity);
-    }, 0);
+    const eligibleProductIds = new Set(activeEligibleProducts.map((product: any) => product.id));
+    const originalSubtotal = cartProducts.rows.reduce((total: number, product: any) => total + (Number(product.price) || 0) * Number(product.quantity), 0);
+    const cartDiscountEligible = originalSubtotal >= 500;
+    const shippingFee = originalSubtotal >= 400 ? 0 : 5;
+    const requestedBundleIds = appliedCodes.filter((code: string) => code.startsWith('BUNDLE:')).map((code: string) => code.slice('BUNDLE:'.length));
+    const bundleRows = requestedBundleIds.length ? await query(`
+      SELECT id, seller_id, name, product_ids_json, discount_percent, ends_at, active
+      FROM seller_bundles
+      WHERE id = ANY($1::varchar[]) AND active = TRUE AND (ends_at IS NULL OR ends_at > CURRENT_TIMESTAMP)
+    `, [requestedBundleIds]) : { rows: [] as any[] };
+    const activeBundles: ProductBundle[] = bundleRows.rows.map((bundle: any) => ({
+      Bundle_ID: bundle.id,
+      Seller_ID: bundle.seller_id,
+      Name: bundle.name,
+      Product_IDs: Array.isArray(bundle.product_ids_json) ? bundle.product_ids_json : [],
+      Discount_Percent: Number(bundle.discount_percent),
+      Ends_At: bundle.ends_at ? new Date(bundle.ends_at).toISOString() : undefined,
+      Active: Boolean(bundle.active),
+    }));
+    const bundlePricing = calculateBundlePrices(cartProducts.rows.map((product: any) => ({
+      Product_ID: product.id,
+      Price: eligibleProductIds.has(product.id) ? discountedPriceForVoucher(Number(product.price) || 0, voucherCode) : Number(product.price) || 0,
+      Quantity: Number(product.quantity) || 0,
+    })), activeBundles);
+    const pricingRows = cartProducts.rows.map((product: any) => {
+      const originalPrice = Number(product.price) || 0;
+      const voucherPrice = eligibleProductIds.has(product.id) ? discountedPriceForVoucher(originalPrice, voucherCode) : originalPrice;
+      const bundlePrice = bundlePricing.unitPrices.get(product.id) ?? voucherPrice;
+      const unitPrice = cartDiscountEligible ? discountedUnitPrice(bundlePrice, 5) : bundlePrice;
+      return { product_id: product.id, unit_price: unitPrice };
+    });
 
     // Checkout uses the database procedure to validate stock and create per-seller fulfillment rows.
     await query(`CALL process_checkout($1, $2, $3, $4, $5, $6, $7)`, [
@@ -158,14 +194,12 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
       addInfo,
     ]);
 
-    if (voucherCode) {
-      await query(`
-        UPDATE order_items oi SET unit_price = ROUND(p.price * (100 - $2::numeric) / 100, 2)
-        FROM products p
-        WHERE oi.order_id = $1 AND p.id = oi.product_id_snapshot
-          AND upper(trim(COALESCE(p.voucher, ''))) = $3
-      `, [id, discountPercent, voucherCode]);
-    }
+    await query(`
+      UPDATE order_items oi
+      SET unit_price = pricing.unit_price
+      FROM jsonb_to_recordset($2::jsonb) AS pricing(product_id VARCHAR, unit_price NUMERIC)
+      WHERE oi.order_id = $1 AND oi.product_id_snapshot = pricing.product_id
+    `, [id, JSON.stringify(pricingRows)]);
 
     await query(`
       UPDATE seller_fulfillments sf SET
@@ -196,8 +230,9 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
       (total: number, item: any) => total + Number(item.unit_price) * Number(item.quantity),
       0
     );
+    const recordedPromotions = [voucherCode, ...bundlePricing.appliedBundleIds.map((bundleId) => `BUNDLE:${bundleId}`), cartDiscountEligible ? 'CART5' : ''].filter(Boolean).join('+');
     await query(`
-      UPDATE orders SET subtotal = $2, items_json = $3 WHERE id = $1
+      UPDATE orders SET subtotal = $2, items_json = $3, applied_voucher = $4 WHERE id = $1
     `, [id, finalSubtotal, JSON.stringify(orderedItems.rows.map((item: any) => ({
       Product_ID: item.product_id_snapshot,
       Seller_ID: item.seller_id_snapshot,
@@ -206,7 +241,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
       Quantity: Number(item.quantity),
       Image: item.image || '',
       Size: item.size || undefined,
-    })))]);
+    }))), recordedPromotions]);
 
     await query(
       'UPDATE orders SET payment_status = $2, payment_method = $3, transaction_id = $4 WHERE id = $1',
@@ -238,6 +273,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
       Payment_Status,
       Payment_Method,
       Transaction_ID: Transaction_ID || Tracking_ID,
+      Applied_Voucher: recordedPromotions || undefined,
       Currency: 'BDT',
       Shipping_Address,
       Billing_Address: Billing_Address || Shipping_Address,

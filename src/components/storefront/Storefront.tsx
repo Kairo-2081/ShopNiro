@@ -3,7 +3,8 @@ import { Product, Category, Seller, Review } from '../../types';
 import { ProductCard } from './ProductCard';
 import { MarketplaceTrendsTopCharts } from './MarketplaceTrendsTopCharts';
 import { formatCurrency } from '../../lib/api';
-import { Search, SlidersHorizontal, ShoppingBag, ArrowUpDown, X, Check } from 'lucide-react';
+import { discountedPriceForVoucher, getVoucherCountdownLabel, isVoucherExpired } from '../../lib/vouchers';
+import { Search, SlidersHorizontal, ShoppingBag, ArrowUpDown, X, Check, Truck, Tag } from 'lucide-react';
 
 interface StorefrontProps {
   products: Product[];
@@ -97,6 +98,11 @@ export const Storefront: React.FC<StorefrontProps> = ({
       return 0;
     });
   }, [products, sellers, approvedSellerIds, stockFilter, maxPrice, searchQuery, categories, sortBy, ratingMap]);
+
+  const featuredDeals = products.filter((product) =>
+    product.Featured_Deal && product.Voucher && !isVoucherExpired(product.Voucher_Expires_At) &&
+    product.Product_Status === 'active' && Number(product.Stock) > 0 && approvedSellerIds.has(product.Seller_ID)
+  ).slice(0, 4);
 
   return (
     <div className="space-y-8 pb-16 text-slate-900 dark:text-zinc-100">
@@ -217,6 +223,39 @@ export const Storefront: React.FC<StorefrontProps> = ({
           </div>
         </div>
       </div>
+
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-xs text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/25 dark:text-emerald-200">
+        <span className="inline-flex items-center gap-2 font-semibold"><Truck className="h-4 w-4" />Free shipping on orders of ৳400+</span>
+        <span className="inline-flex items-center gap-2"><Tag className="h-3.5 w-3.5" />Automatic 5% cart savings at ৳500+</span>
+      </div>
+
+      {featuredDeals.length > 0 && (
+        <section aria-labelledby="featured-deals-title" className="space-y-3 border-y border-amber-200 py-5 dark:border-amber-900/60">
+          <header className="flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <h2 id="featured-deals-title" className="text-lg font-black text-slate-900 dark:text-white">Featured Deals</h2>
+              <p className="text-xs text-slate-500 dark:text-zinc-400">Seller-selected offers while the voucher is active.</p>
+            </div>
+            <Tag className="h-5 w-5 text-amber-600 dark:text-amber-300" />
+          </header>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {featuredDeals.map((product) => {
+              const countdown = getVoucherCountdownLabel(product.Voucher_Expires_At);
+              return (
+                <article key={product.Product_ID} className="flex min-w-0 items-center gap-3 border-l-2 border-amber-400 bg-white/70 p-3 dark:bg-[#12161D]/70">
+                  <img src={product.Image} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover" loading="lazy" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-bold text-slate-900 dark:text-white">{product.Name}</p>
+                    <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-300">{product.Voucher}{countdown ? ` · ${countdown}` : ''}</p>
+                    <p className="text-[11px] font-bold text-slate-700 dark:text-zinc-200">{formatCurrency(discountedPriceForVoucher(product.Price, product.Voucher))}</p>
+                  </div>
+                  <button type="button" onClick={() => onSelectProduct(product)} className="shrink-0 text-[10px] font-bold text-blue-700 hover:underline dark:text-sky-300">View</button>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      )}
 
       {/* Schema-Powered Top Charts, Top Sellers, and Trending Products */}
       <MarketplaceTrendsTopCharts

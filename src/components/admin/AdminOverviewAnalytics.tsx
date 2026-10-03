@@ -4,7 +4,6 @@ import {
   CartesianGrid,
   Cell,
   ComposedChart,
-  Legend,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -46,8 +45,8 @@ const AdminChartTooltip: React.FC<Partial<TooltipContentProps<number, string>>> 
   if (!active || !payload?.length) return null;
 
   return (
-    <div className="space-y-1.5 rounded-xl border border-white/15 bg-[#151B23]/95 p-3 text-xs text-white shadow-[0_12px_32px_rgba(0,0,0,0.35)] backdrop-blur-md">
-      <p className="border-b border-white/10 pb-1 font-bold text-zinc-200">{label}</p>
+    <div className="rounded-2xl border border-white/20 bg-slate-900/85 p-3.5 shadow-2xl backdrop-blur-md text-xs text-white space-y-1.5 animate-in fade-in duration-150">
+      <p className="font-bold text-slate-300 border-b border-white/10 pb-1">{label}</p>
       {payload.map((entry, index) => {
         const name = String(entry.name || entry.dataKey || 'Metric');
         const value = Number(entry.value) || 0;
@@ -55,7 +54,7 @@ const AdminChartTooltip: React.FC<Partial<TooltipContentProps<number, string>>> 
         return (
           <div key={`${name}-${index}`} className="flex items-center gap-2">
             <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
-            <span className="text-zinc-400">{name}</span>
+            <span className="text-slate-400 capitalize">{name}:</span>
             <span className="ml-auto font-semibold tabular-nums text-white">
               {name.toLowerCase().includes('value') ? formatBDT(value) : value.toLocaleString()}
             </span>
@@ -132,35 +131,33 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
         </p>
       </header>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1.55fr)_minmax(300px,1fr)]">
-        <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-[#151B23] sm:p-5">
-          <div className="mb-4 flex flex-wrap items-end justify-between gap-x-4 gap-y-3">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
+        <section className="lg:col-span-8 rounded-3xl border border-sky-100 dark:border-sky-500/20 bg-white dark:bg-[#12161D] p-5 shadow-xs transition-all hover:shadow-md">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
             <div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">Orders &amp; order value</h3>
-              <p className="mt-1 text-[11px] text-slate-500 dark:text-zinc-400">
-                Order value excludes cancelled and refunded orders.
-              </p>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">Monthly Orders &amp; Volume</h3>
+              <p className="text-[11px] text-slate-500 dark:text-zinc-400">Order revenue trends against completed order count</p>
             </div>
-            <div className="flex flex-col items-start gap-0.5 sm:items-end">
-              <span className="whitespace-nowrap text-xl font-bold tabular-nums text-slate-900 dark:text-white">{formatBDT(trailingOrderValue)}</span>
-              <span className="text-[10px] font-semibold text-slate-500 dark:text-zinc-400">
-                {trailingOrderCount.toLocaleString()} orders · trailing 12 months
+            <div className="text-right">
+              <span className="text-lg font-black text-blue-600 dark:text-sky-400 block">{formatBDT(trailingOrderValue)}</span>
+              <span className="text-[10px] text-slate-500 dark:text-zinc-400 font-medium">
+                {trailingOrderCount.toLocaleString()} total orders (12 mo)
               </span>
             </div>
           </div>
 
           {hasRecentOrders ? (
-            <div role="img" aria-label="Monthly order count and order value for the past 12 months" className="h-[280px] min-w-0 w-full overflow-hidden sm:h-[320px]">
+            <div role="img" aria-label="Monthly order count and order value for the past 12 months" className="h-[290px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={monthlyMetrics} margin={{ top: 8, right: 8, bottom: 4, left: -14 }}>
                   <defs>
-                    <linearGradient id="admin-order-bars" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.95} />
-                      <stop offset="100%" stopColor="#0284c7" stopOpacity={0.68} />
+                    <linearGradient id="barBlueGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.9} />
+                      <stop offset="100%" stopColor="#1D4ED8" stopOpacity={0.3} />
                     </linearGradient>
-                    <linearGradient id="admin-order-value-area" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.25} />
-                      <stop offset="100%" stopColor="#f59e0b" stopOpacity={0.015} />
+                    <linearGradient id="areaAmberGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#F59E0B" stopOpacity={0.35} />
+                      <stop offset="100%" stopColor="#F59E0B" stopOpacity={0.0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid stroke="#94a3b8" strokeDasharray="3 5" strokeOpacity={0.16} vertical={false} />
@@ -189,25 +186,17 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
                     width={42}
                   />
                   <Tooltip content={<AdminChartTooltip />} cursor={{ fill: 'rgba(148, 163, 184, 0.08)' }} />
-                  <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
                   <Area
                     yAxisId="value"
                     type="monotone"
                     dataKey="orderValue"
-                    name="Order value"
-                    stroke="#f59e0b"
-                    strokeWidth={2.5}
-                    fill="url(#admin-order-value-area)"
-                    activeDot={{ r: 4, strokeWidth: 0, fill: '#f59e0b' }}
+                    name="Order Value"
+                    stroke="#F59E0B"
+                    strokeWidth={3}
+                    fill="url(#areaAmberGradient)"
+                    activeDot={{ r: 4, strokeWidth: 0, fill: '#F59E0B' }}
                   />
-                  <Bar
-                    yAxisId="orders"
-                    dataKey="orderCount"
-                    name="Orders"
-                    fill="url(#admin-order-bars)"
-                    radius={[5, 5, 0, 0]}
-                    maxBarSize={24}
-                  />
+                  <Bar yAxisId="orders" dataKey="orderCount" name="Orders" fill="url(#barBlueGradient)" radius={[6, 6, 0, 0]} maxBarSize={22} />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
@@ -218,58 +207,48 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
           )}
         </section>
 
-        <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-[#151B23] sm:p-5">
+        <section className="min-w-0 rounded-2xl border border-sky-100 dark:border-sky-500/20 bg-white dark:bg-[#12161D] p-5 shadow-xs transition-all hover:shadow-md">
           <div className="mb-1">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Order status mix</h3>
-            <p className="mt-1 text-[11px] text-slate-500 dark:text-zinc-400">All orders, including cancelled.</p>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Order Status Mix</h3>
+            <p className="mt-1 text-[11px] text-slate-500 dark:text-zinc-400">Lifecycle distribution across all orders</p>
           </div>
 
-          {statusMetrics.length > 0 ? (
-            <>
-              <div role="img" aria-label="Donut chart showing the number of orders by status" className="relative h-[210px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={statusMetrics}
-                      dataKey="value"
-                      nameKey="name"
-                      innerRadius={62}
-                      outerRadius={88}
-                      paddingAngle={3}
-                      stroke="none"
-                    >
-                      {statusMetrics.map((entry) => <Cell key={entry.status} fill={entry.color} />)}
-                    </Pie>
-                    <Tooltip content={<AdminChartTooltip />} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-2xl font-bold tabular-nums text-slate-900 dark:text-white">{orders.length.toLocaleString()}</span>
-                  <span className="text-[10px] text-slate-500 dark:text-zinc-400">total orders</span>
-                </div>
-              </div>
-              <ul className="grid grid-cols-2 gap-x-3 gap-y-2 border-t border-slate-100 pt-3 dark:border-zinc-800">
-                {statusMetrics.map((status) => (
-                  <li key={status.status} className="flex min-w-0 items-center justify-between gap-2 text-[11px]">
-                    <span className="flex min-w-0 items-center gap-2 text-slate-600 dark:text-zinc-300">
-                      <span aria-hidden="true" className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ backgroundColor: status.color }} />
-                      <span className="truncate">{status.name}</span>
-                    </span>
-                    <span className="flex shrink-0 items-baseline gap-1.5">
-                      <span className="font-semibold tabular-nums text-slate-900 dark:text-white">{status.value.toLocaleString()}</span>
-                      <span className="text-[10px] tabular-nums text-slate-500 dark:text-zinc-400">
-                        {Math.round((status.value / orders.length) * 100)}%
-                      </span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </>
-          ) : (
-            <div className="flex h-[280px] items-center justify-center text-center text-xs text-slate-500 dark:text-zinc-400">
-              No order status data is available yet.
+          <div className="relative h-[200px] my-2">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={statusMetrics}
+                  dataKey="value"
+                  nameKey="name"
+                  innerRadius={58}
+                  outerRadius={82}
+                  paddingAngle={4}
+                  stroke="none"
+                >
+                  {statusMetrics.map((entry) => (
+                    <Cell key={entry.status} fill={entry.color} className="transition-all duration-300 hover:opacity-80" />
+                  ))}
+                </Pie>
+                <Tooltip content={<AdminChartTooltip />} />
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-2xl font-black text-slate-900 dark:text-white">{orders.length.toLocaleString()}</span>
+              <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Orders</span>
             </div>
-          )}
+          </div>
+
+          <ul className="grid grid-cols-2 gap-2 border-t border-slate-100 dark:border-zinc-800/80 pt-3">
+            {statusMetrics.map((status) => (
+              <li key={status.status} className="flex items-center justify-between text-[11px]">
+                <span className="flex items-center gap-1.5 text-slate-600 dark:text-zinc-300 truncate">
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: status.color }} />
+                  <span className="truncate">{status.name}</span>
+                </span>
+                <span className="font-bold text-slate-900 dark:text-white ml-1">{status.value}</span>
+              </li>
+            ))}
+          </ul>
         </section>
       </div>
     </section>

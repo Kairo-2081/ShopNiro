@@ -1,7 +1,8 @@
 import React from 'react';
-import { Customer, CartItem, Address, Order, PaymentMethod } from '../../types';
+import { Customer, CartItem, Address, Order, PaymentMethod, ProductBundle } from '../../types';
 import { api, formatCurrency, formatBDT } from '../../lib/api';
-import { discountedUnitPrice, getVoucherDiscountPercent, normalizeVoucherCode } from '../../lib/vouchers';
+import { calculateBundlePrices } from '../../lib/bundles';
+import { describeVoucher, discountedPriceForVoucher, discountedUnitPrice, getVoucherRule, isVoucherExpired, normalizeVoucherCode } from '../../lib/vouchers';
 import { SSLCommerzModal, SSLCommerzPaymentSuccessData } from '../payment/SSLCommerzModal';
 import { BkashGatewayPage, BkashPaymentSuccessData } from '../payment/BkashGatewayPage';
 import {
@@ -24,6 +25,7 @@ interface CheckoutModalProps {
   isOpen: boolean;
   onClose: () => void;
   currentCustomer: Customer;
+  previousOrderCount: number;
   cartItems: CartItem[];
   onPlaceOrder: (orderData: {
     Customer_ID: string;
@@ -47,6 +49,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   isOpen,
   onClose,
   currentCustomer,
+  previousOrderCount,
   cartItems,
   onPlaceOrder,
   onOrderSuccess,
@@ -84,10 +87,22 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [voucherInput, setVoucherInput] = React.useState('');
   const [appliedVoucher, setAppliedVoucher] = React.useState('');
   const [voucherError, setVoucherError] = React.useState('');
+  const [bundles, setBundles] = React.useState<ProductBundle[]>([]);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [createdOrder, setCreatedOrder] = React.useState<Order | null>(null);
   const [verifiedPayment, setVerifiedPayment] = React.useState<SSLCommerzPaymentSuccessData | BkashPaymentSuccessData | null>(null);
   const submissionInProgressRef = React.useRef(false);
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+    let isMounted = true;
+    api.getBundles().then((result) => {
+      if (isMounted) setBundles(result);
+    }).catch(() => {
+      if (isMounted) setBundles([]);
+    });
+    return () => { isMounted = false; };
+  }, [isOpen]);
 
   React.useEffect(() => {
     if (!isOpen) {
@@ -116,6 +131,16 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     }
   }, [currentCustomer]);
 
+  React.useEffect(() => {
+    if (!isOpen || previousOrderCount > 0 || appliedVoucher) return;
+    const hasNewCustomerVoucher = cartItems.some((item) => normalizeVoucherCode(item.Product?.Voucher || '') === 'NEW20' && !isVoucherExpired(item.Product?.Voucher_Expires_At));
+    if (hasNewCustomerVoucher) {
+      setVoucherInput('NEW20');
+      setAppliedVoucher('NEW20');
+      setVoucherError('');
+    }
+  }, [appliedVoucher, cartItems, isOpen, previousOrderCount]);
+
   if (!isOpen) return null;
 
   const subtotal = cartItems.reduce((acc, item) => {
@@ -123,34 +148,70 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     return acc + price * item.Quantity;
   }, 0);
 
-  const appliedVoucherPercent = getVoucherDiscountPercent(appliedVoucher) || 0;
-  const discountedSubtotal = Math.round(cartItems.reduce((total, item) => {
+  const voucherAdjustedSubtotal = Math.round(cartItems.reduce((total, item) => {
     const product = item.Product;
     const matchesVoucher = Boolean(
       appliedVoucher && product?.Voucher &&
-      normalizeVoucherCode(product.Voucher) === appliedVoucher
+      normalizeVoucherCode(product.Voucher) === appliedVoucher &&
+      !isVoucherExpired(product.Voucher_Expires_At)
     );
     const price = product?.Price || 0;
-    const unitPrice = matchesVoucher ? discountedUnitPrice(price, appliedVoucherPercent) : price;
+    const unitPrice = matchesVoucher ? discountedPriceForVoucher(price, appliedVoucher) : price;
     return total + unitPrice * item.Quantity;
   }, 0) * 100) / 100;
-  const voucherSavings = Math.max(0, Math.round((subtotal - discountedSubtotal) * 100) / 100);
-  const shippingFee = subtotal > 150 ? 0 : 5.0;
+  const voucherSavings = Math.max(0, Math.round((subtotal - voucherAdjustedSubtotal) * 100) / 100);
+  const bundlePricing = calculateBundlePrices(cartItems.map((item) => {
+    const product = item.Product;
+    const matchesVoucher = Boolean(product?.Voucher && appliedVoucher && normalizeVoucherCode(product.Voucher) === appliedVoucher && !isVoucherExpired(product.Voucher_Expires_At));
+    const price = Number(product?.Price) || 0;
+    return {
+      Product_ID: item.Product_ID,
+      Price: matchesVoucher ? discountedPriceForVoucher(price, appliedVoucher) : price,
+      Quantity: item.Quantity,
+    };
+  }), bundles);
+  const bundleAdjustedSubtotal = Math.round(cartItems.reduce((total, item) =>
+    total + (bundlePricing.unitPrices.get(item.Product_ID) ?? Number(item.Product?.Price) ?? 0) * item.Quantity, 0) * 100) / 100;
+  const bundleSavings = Math.max(0, Math.round((voucherAdjustedSubtotal - bundleAdjustedSubtotal) * 100) / 100);
+  const cartDiscountEligible = subtotal >= 500;
+  const discountedSubtotal = Math.round(cartItems.reduce((total, item) => {
+    const bundleUnitPrice = bundlePricing.unitPrices.get(item.Product_ID) ?? Number(item.Product?.Price) ?? 0;
+    const finalUnitPrice = cartDiscountEligible ? discountedUnitPrice(bundleUnitPrice, 5) : bundleUnitPrice;
+    return total + finalUnitPrice * item.Quantity;
+  }, 0) * 100) / 100;
+  const cartSavings = Math.max(0, Math.round((bundleAdjustedSubtotal - discountedSubtotal) * 100) / 100);
+  const shippingFee = subtotal >= 400 ? 0 : 5.0;
   const grandTotal = discountedSubtotal + shippingFee;
   const grandTotalBDT = grandTotal;
+  const getCartItemFinalUnitPrice = (item: CartItem) => {
+    const bundleUnitPrice = bundlePricing.unitPrices.get(item.Product_ID) ?? Number(item.Product?.Price) ?? 0;
+    return cartDiscountEligible ? discountedUnitPrice(bundleUnitPrice, 5) : bundleUnitPrice;
+  };
 
   const applyVoucher = () => {
     const code = normalizeVoucherCode(voucherInput);
     const matchingProducts = cartItems.filter((item) =>
       item.Product?.Voucher && normalizeVoucherCode(item.Product.Voucher) === code
     );
+    const activeMatchingProducts = matchingProducts.filter((item) => !isVoucherExpired(item.Product?.Voucher_Expires_At));
     if (!matchingProducts.length) {
       setVoucherError('That code does not match a voucher on any product in your cart.');
       setAppliedVoucher('');
       return;
     }
-    if (!getVoucherDiscountPercent(matchingProducts[0].Product!.Voucher)) {
-      setVoucherError('This voucher code does not contain a valid discount percentage.');
+    if (!activeMatchingProducts.length) {
+      setVoucherError('This offer has expired.');
+      setAppliedVoucher('');
+      return;
+    }
+    const voucherRule = getVoucherRule(activeMatchingProducts[0].Product!.Voucher);
+    if (!voucherRule) {
+      setVoucherError('This voucher code is not valid.');
+      setAppliedVoucher('');
+      return;
+    }
+    if (voucherRule.firstOrderOnly && previousOrderCount > 0) {
+      setVoucherError('NEW20 is available on your first ShopNiro order only.');
       setAppliedVoucher('');
       return;
     }
@@ -236,10 +297,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       const orderItems = cartItems.map((item) => ({
         Product_ID: item.Product_ID,
         Name: item.Product?.Name || 'Product',
-        Price: item.Product?.Voucher && appliedVoucher &&
-          normalizeVoucherCode(item.Product.Voucher) === appliedVoucher
-          ? discountedUnitPrice(item.Product.Price || 0, appliedVoucherPercent)
-          : item.Product?.Price || 0,
+        Price: getCartItemFinalUnitPrice(item),
         Quantity: item.Quantity,
         Image: item.Product?.Image || '',
         Seller_ID: item.Product?.Seller_ID || '',
@@ -249,7 +307,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       const order = await onPlaceOrder({
         Customer_ID: currentCustomer.Customer_ID,
         Items: orderItems,
-        Applied_Voucher: appliedVoucher || undefined,
+        Applied_Voucher: [appliedVoucher, ...bundlePricing.appliedBundleIds.map((bundleId) => `BUNDLE:${bundleId}`), cartSavings > 0 ? 'CART5' : ''].filter(Boolean).join('+') || undefined,
         Shipping_Address: shippingAddress,
         Billing_Address: useSameBilling ? shippingAddress : billingAddress,
         Subtotal: discountedSubtotal,
@@ -683,26 +741,34 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       {appliedVoucher && <button type="button" onClick={() => { setAppliedVoucher(''); setVoucherInput(''); setVoucherError(''); }} className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 dark:border-zinc-700 dark:text-zinc-200">Remove</button>}
                     </div>
                     {voucherError && <p role="alert" className="text-xs text-rose-700 dark:text-rose-300">{voucherError}</p>}
-                    {appliedVoucher && <p role="status" className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">{appliedVoucher} applied: {appliedVoucherPercent}% off matching products.</p>}
+                    {appliedVoucher && <p role="status" className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">{appliedVoucher} applied: {describeVoucher(appliedVoucher)}</p>}
+                    {bundlePricing.appliedBundleIds.map((bundleId) => {
+                      const bundle = bundles.find((item) => item.Bundle_ID === bundleId);
+                      return <p key={bundleId} role="status" className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">{bundle?.Name || 'Bundle offer'} applied: {bundle?.Discount_Percent}% off together.</p>;
+                    })}
+                    {cartDiscountEligible ? (
+                      <p role="status" className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">CART5 applied: 5% off your ৳500+ cart.</p>
+                    ) : (
+                      <p className="text-[10px] text-slate-500 dark:text-zinc-400">Add {formatCurrency(Math.max(0, 500 - subtotal))} more for 5% off your cart.</p>
+                    )}
                   </div>
 
                   <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-                    {cartItems.map((item) => (
+                    {cartItems.map((item) => {
+                      const originalLinePrice = (Number(item.Product?.Price) || 0) * item.Quantity;
+                      const finalLinePrice = getCartItemFinalUnitPrice(item) * item.Quantity;
+                      return (
                       <div key={item.Cart_ID} className="flex justify-between items-center text-xs">
                         <span className="min-w-0 truncate max-w-[240px] text-slate-700 dark:text-zinc-300">
                           {item.Quantity}x {item.Product?.Name}
-                          {item.Product?.Voucher && <span className="ml-1 text-[10px] text-blue-600 dark:text-sky-400">Code {item.Product.Voucher}</span>}
+                          {item.Product?.Voucher && !isVoucherExpired(item.Product.Voucher_Expires_At) && <span className="ml-1 text-[10px] text-blue-600 dark:text-sky-400">Code {item.Product.Voucher}</span>}
                         </span>
                         <span className="flex shrink-0 items-center gap-1.5 font-bold text-slate-900 dark:text-white">
-                          {item.Product?.Voucher && appliedVoucher && normalizeVoucherCode(item.Product.Voucher) === appliedVoucher && (
-                            <span className="text-[10px] font-medium text-slate-500 line-through dark:text-zinc-500">{formatCurrency((item.Product.Price || 0) * item.Quantity)}</span>
-                          )}
-                          {formatCurrency((item.Product?.Voucher && appliedVoucher && normalizeVoucherCode(item.Product.Voucher) === appliedVoucher
-                            ? discountedUnitPrice(item.Product.Price || 0, appliedVoucherPercent)
-                            : item.Product?.Price || 0) * item.Quantity)}
+                          {finalLinePrice < originalLinePrice && <span className="text-[10px] font-medium text-slate-500 line-through dark:text-zinc-500">{formatCurrency(originalLinePrice)}</span>}
+                          {formatCurrency(finalLinePrice)}
                         </span>
                       </div>
-                    ))}
+                    );})}
                   </div>
 
                   <div className="pt-2 border-t border-blue-200/60 dark:border-zinc-800 text-xs space-y-1">
@@ -715,15 +781,30 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                         <span>Coupon savings</span>
                         <span>-{formatCurrency(voucherSavings)}</span>
                       </div>
+                    </>}
+                    {bundleSavings > 0 && (
+                      <div className="flex justify-between font-semibold text-emerald-700 dark:text-emerald-300">
+                        <span>Bundle savings</span>
+                        <span>-{formatCurrency(bundleSavings)}</span>
+                      </div>
+                    )}
+                    {cartSavings > 0 && (
+                      <div className="flex justify-between font-semibold text-emerald-700 dark:text-emerald-300">
+                        <span>Cart savings (CART5)</span>
+                        <span>-{formatCurrency(cartSavings)}</span>
+                      </div>
+                    )}
+                    {(voucherSavings > 0 || bundleSavings > 0 || cartSavings > 0) && (
                       <div className="flex justify-between text-slate-600 dark:text-zinc-400">
-                        <span>Subtotal after coupon</span>
+                        <span>Subtotal after promotions</span>
                         <span>{formatCurrency(discountedSubtotal)}</span>
                       </div>
-                    </>}
+                    )}
                     <div className="flex justify-between text-slate-600 dark:text-zinc-400">
                       <span>Shipping Fee</span>
                       <span>{shippingFee === 0 ? 'FREE' : formatCurrency(shippingFee)}</span>
                     </div>
+                    <p className="text-[10px] text-slate-500 dark:text-zinc-400">Free shipping on product subtotals of ৳400 or more.</p>
                     <div className="flex justify-between font-black text-sm text-slate-900 dark:text-white pt-1">
                       <span>Total Amount Payable</span>
                       <div className="text-right">

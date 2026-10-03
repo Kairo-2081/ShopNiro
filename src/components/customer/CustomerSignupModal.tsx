@@ -21,6 +21,7 @@ export const CustomerSignupModal: React.FC<CustomerSignupModalProps> = ({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [marketingConsent, setMarketingConsent] = useState(false);
   const [number, setNumber] = useState('');
   const [hasSelectedLocation, setHasSelectedLocation] = useState(false);
   const [address, setAddress] = useState<Address>({
@@ -57,6 +58,7 @@ export const CustomerSignupModal: React.FC<CustomerSignupModalProps> = ({
         Password: password.trim(),
         Number: number.trim(),
         Address: address,
+        Marketing_Consent: marketingConsent,
       });
 
       onSuccessRegistered(newCustomer);
@@ -242,6 +244,11 @@ export const CustomerSignupModal: React.FC<CustomerSignupModalProps> = ({
               </div>
             </div>
           </div>
+
+          <label className="flex items-start gap-2 border-t border-slate-100 pt-3 text-[11px] text-slate-600 dark:border-zinc-800 dark:text-zinc-300">
+            <input type="checkbox" checked={marketingConsent} onChange={(event) => setMarketingConsent(event.target.checked)} className="mt-0.5" />
+            <span>Email me the one-time NEW20 welcome offer for eligible apparel. This is optional.</span>
+          </label>
 
           <div className="pt-3 flex items-center justify-end gap-3">
             <button

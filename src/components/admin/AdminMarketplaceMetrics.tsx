@@ -45,12 +45,6 @@ const formatMetricDate = (value?: string) => {
   return new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 };
 
-const rankBadgeClasses = [
-  'bg-amber-100 text-amber-900 ring-1 ring-inset ring-amber-300 dark:bg-amber-400/15 dark:text-amber-200 dark:ring-amber-400/40',
-  'bg-slate-200 text-slate-800 ring-1 ring-inset ring-slate-300 dark:bg-zinc-300/15 dark:text-zinc-100 dark:ring-zinc-300/35',
-  'bg-orange-100 text-orange-900 ring-1 ring-inset ring-orange-300 dark:bg-orange-500/15 dark:text-orange-200 dark:ring-orange-400/35',
-];
-
 export const AdminMarketplaceMetrics: React.FC<AdminMarketplaceMetricsProps> = ({
   products,
   sellers,
@@ -366,26 +360,36 @@ export const AdminMarketplaceMetrics: React.FC<AdminMarketplaceMetricsProps> = (
                 {leaderboard.entries.length > 0 ? (
                   <ol className="divide-y divide-slate-100 dark:divide-zinc-800/80">
                     {leaderboard.entries.map((entry, index) => (
-                      <li key={entry.id} className="group relative isolate flex min-w-0 items-center gap-2.5 rounded-lg px-2 py-3 transition-colors hover:bg-slate-50 dark:hover:bg-[#181F2A]/80 first:pt-2 last:pb-2">
+                      <li key={entry.id} className="group relative isolate flex min-w-0 items-center gap-3 rounded-xl p-2.5 transition-all hover:bg-slate-50 dark:hover:bg-[#181F2A]/80 first:pt-2 last:pb-2">
                         {entry.progress !== undefined && (
                           <span
                             aria-hidden="true"
-                            className="pointer-events-none absolute inset-y-0 left-0 -z-10 rounded-lg bg-sky-500/[0.06] transition-[width] duration-500 dark:bg-sky-400/[0.08]"
+                            className="pointer-events-none absolute inset-y-0 left-0 -z-10 rounded-lg bg-gradient-to-r from-sky-500/10 to-blue-500/10 transition-[width] duration-500 dark:from-sky-400/8 dark:to-blue-400/8"
                             style={{ width: `${entry.progress}%` }}
                           />
                         )}
-                        <span className={`relative z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[10px] font-black tabular-nums shadow-xs ${rankBadgeClasses[index] || 'bg-slate-100 text-slate-600 dark:bg-[#202833] dark:text-zinc-300'}`}>
+                        <span
+                          className={`relative z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-black shadow-xs ${
+                            index === 0
+                              ? 'bg-gradient-to-br from-amber-300 to-amber-500 text-slate-950 shadow-amber-500/20'
+                              : index === 1
+                              ? 'bg-gradient-to-br from-slate-200 to-slate-400 text-slate-900 shadow-slate-400/20'
+                              : index === 2
+                              ? 'bg-gradient-to-br from-amber-700 to-orange-800 text-amber-100'
+                              : 'bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400'
+                          }`}
+                        >
                           {index + 1}
                         </span>
                         {entry.image ? (
-                          <img src={entry.image} alt="" className="relative z-10 h-9 w-9 shrink-0 rounded-md border border-slate-200 object-cover dark:border-zinc-700" />
+                          <img src={entry.image} alt="" className="relative z-10 h-10 w-10 shrink-0 rounded-xl border border-slate-200 dark:border-zinc-700 object-cover" />
                         ) : (
-                          <span className="relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-500 dark:bg-[#202833] dark:text-zinc-400">
-                            <FallbackIcon className="h-4 w-4" />
+                          <span className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-400">
+                            <FallbackIcon className="h-5 w-5" />
                           </span>
                         )}
                         <div className="relative z-10 min-w-0 flex-1">
-                          <p className="truncate text-xs font-semibold text-slate-900 transition-colors group-hover:text-blue-600 dark:text-white dark:group-hover:text-sky-400">{entry.name}</p>
+                          <p className="truncate text-xs font-bold text-slate-900 transition-colors group-hover:text-blue-600 dark:text-white dark:group-hover:text-sky-400">{entry.name}</p>
                           <p className="truncate text-[10px] text-slate-500 dark:text-zinc-400">{entry.detail}</p>
                         </div>
                         <div className="relative z-10 shrink-0 text-right">

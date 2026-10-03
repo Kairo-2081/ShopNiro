@@ -14,6 +14,7 @@ function getAddressCoordinates(address: any) {
 import { hashPassword } from '../db/password.ts';
 import { requireAuth, AuthRequest } from '../middleware/auth.ts';
 import { Customer } from '../../src/types.ts';
+import { sendWelcomeOfferEmail } from '../services/email.service.ts';
 
 const router = Router();
 
@@ -45,7 +46,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
  */
 router.post('/', async (req, res) => {
   try {
-    const { Name, Email, Password, Number: phoneNum, Address, Username } = req.body;
+    const { Name, Email, Password, Number: phoneNum, Address, Username, Marketing_Consent } = req.body;
     const phone = typeof phoneNum === 'string' ? phoneNum.trim() : '';
     if (!phone) {
       return res.status(400).json({ error: 'A phone number is required' });
@@ -80,6 +81,20 @@ router.post('/', async (req, res) => {
       [id, username, name, cleanEmail, hashedPassword, phone, houseName, street, city, postalCode, addInfo, latitude, longitude]
     );
 
+    const marketingConsent = Marketing_Consent === true;
+    let welcomeOfferSent = false;
+    if (marketingConsent) {
+      await query('UPDATE customers SET marketing_consent_at = CURRENT_TIMESTAMP WHERE id = $1', [id]);
+      try {
+        welcomeOfferSent = await sendWelcomeOfferEmail({ name, email: cleanEmail });
+        if (welcomeOfferSent) {
+          await query('UPDATE customers SET welcome_offer_email_sent_at = CURRENT_TIMESTAMP WHERE id = $1', [id]);
+        }
+      } catch (emailError) {
+        console.error('Could not send welcome offer email:', emailError);
+      }
+    }
+
     const c = result.rows[0];
     const newCustomer: Customer = {
       Customer_ID: id,
@@ -88,6 +103,7 @@ router.post('/', async (req, res) => {
       Email: cleanEmail,
       Number: phone,
       Address: mapAddress(c),
+      Marketing_Consent: marketingConsent,
     };
 
     res.status(201).json(newCustomer);

@@ -22,6 +22,8 @@ import paymentRoutes from './routes/payment.routes.ts';
 import mapsRoutes from './routes/maps.routes.ts';
 import ridersRoutes from './routes/riders.routes.ts';
 import riderDeliveryRoutes from './routes/rider-delivery.routes.ts';
+import bundlesRoutes from './routes/bundles.routes.ts';
+import sellerAnalyticsRoutes from './routes/analytics.routes.ts';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
@@ -124,6 +126,42 @@ app.get('/api/analytics/top-rated-sellers', async (req, res) => {
   }
 });
 
+app.get('/api/analytics/related-products', async (req, res) => {
+  try {
+    const productId = typeof req.query.productId === 'string' ? req.query.productId.trim() : '';
+    const limit = Math.min(5, Math.max(1, Number(req.query.limit) || 3));
+    if (!productId) return res.status(400).json({ error: 'A productId is required.' });
+
+    const result = await query(`
+      SELECT companion.product_id_snapshot AS product_id,
+        COUNT(DISTINCT companion.order_id)::integer AS co_purchase_orders,
+        SUM(companion.quantity)::integer AS units_together
+      FROM order_items selected
+      JOIN orders order_record ON order_record.id = selected.order_id
+      JOIN order_items companion
+        ON companion.order_id = selected.order_id
+        AND companion.product_id_snapshot <> selected.product_id_snapshot
+      JOIN products product ON product.id = companion.product_id_snapshot
+      WHERE selected.product_id_snapshot = $1
+        AND order_record.status <> 'cancelled'
+        AND product.product_status = 'active'
+        AND product.stock > 0
+      GROUP BY companion.product_id_snapshot
+      ORDER BY COUNT(DISTINCT companion.order_id) DESC, SUM(companion.quantity) DESC
+      LIMIT $2
+    `, [productId, limit]);
+
+    res.json(result.rows.map((row) => ({
+      product_id: row.product_id,
+      co_purchase_orders: Number(row.co_purchase_orders) || 0,
+      units_together: Number(row.units_together) || 0,
+    })));
+  } catch (error: any) {
+    console.error('Error fetching related products:', error);
+    res.status(500).json({ error: 'Failed to fetch related products' });
+  }
+});
+
 app.post('/api/reset-seed', async (req, res) => {
   try {
     await seedDatabaseIfEmpty();
@@ -142,6 +180,8 @@ app.use('/api/admins', adminsRoutes);
 app.use('/api/products', productsRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', ordersRoutes);
+app.use('/api/bundles', bundlesRoutes);
+app.use('/api/analytics', sellerAnalyticsRoutes);
 app.use('/api/reviews', reviewsRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/payment', paymentRoutes);
