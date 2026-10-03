@@ -26,6 +26,10 @@ import {
   Truck,
 } from 'lucide-react';
 
+const AdminOverviewAnalytics = React.lazy(() =>
+  import('./AdminOverviewAnalytics').then(({ AdminOverviewAnalytics: Component }) => ({ default: Component }))
+);
+
 interface AdminDashboardProps {
   sellers: Seller[];
   products: Product[];
@@ -213,7 +217,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <div className="bg-white dark:bg-[#12161D] border border-sky-100 dark:border-sky-500/20 rounded-3xl p-5 flex flex-col justify-between shadow-xs">
           <p className="text-xs text-slate-500 dark:text-zinc-400 font-medium">Total Market Value</p>
           <p className="text-2xl font-bold text-slate-900 dark:text-white mt-2">{formatCurrency(totalMarketValue)}</p>
-          <div className="text-[11px] text-emerald-500 font-medium mt-2">+12.4% order volume</div>
+          <div className="text-[11px] text-slate-500 dark:text-zinc-400 font-medium mt-2">Current catalog stock value</div>
         </div>
 
         <div className="bg-white dark:bg-[#12161D] border border-sky-100 dark:border-sky-500/20 rounded-3xl p-5 flex flex-col justify-between shadow-xs">
@@ -337,6 +341,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       {/* Tab 1: Overview & Seller Approval Workflow */}
       {adminTab === 'overview' && (
+        <>
         <div className="grid grid-cols-12 gap-6">
           {/* Main Approval Table (Span 8) */}
           <div className="col-span-12 lg:col-span-8 bg-white dark:bg-[#12161D] border border-sky-100 dark:border-sky-500/20 rounded-3xl flex flex-col overflow-hidden shadow-xs">
@@ -487,6 +492,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
           </div>
         </div>
+        <React.Suspense fallback={<p className="py-8 text-center text-sm text-slate-500 dark:text-zinc-400">Loading overview charts...</p>}>
+          <AdminOverviewAnalytics orders={orders} />
+        </React.Suspense>
+        </>
       )}
 
       {/* Tab 2: Full Merchant Accounts Management */}

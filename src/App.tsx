@@ -16,31 +16,31 @@ import {
 } from './types';
 import { api, db } from './lib/api';
 import { shopNiroLogo } from './lib/branding';
-import { LandingPage } from './components/LandingPage';
 import { MarketplaceClosing, MarketplaceStat } from './components/MarketplaceClosing';
 import { Navbar } from './components/Navbar';
 import { RoleSwitcher } from './components/RoleSwitcher';
-import { Storefront } from './components/storefront/Storefront';
-import { ProductDetailModal } from './components/storefront/ProductDetailModal';
-import { CartDrawer } from './components/storefront/CartDrawer';
-import { CheckoutModal } from './components/storefront/CheckoutModal';
-import { SellerDashboard } from './components/seller/SellerDashboard';
-import { SellerSignupModal } from './components/seller/SellerSignupModal';
-import { CustomerSignupModal } from './components/customer/CustomerSignupModal';
-import { AdminSignupModal } from './components/admin/AdminSignupModal';
-import { AdminSecurityModal } from './components/admin/AdminSecurityModal';
-import { LoginModal } from './components/LoginModal';
 import { AuthenticationGuard } from './components/AuthenticationGuard';
-import { CustomerOrders } from './components/customer/CustomerOrders';
-import { CustomerProfile } from './components/customer/CustomerProfile';
-import { AdminDashboard } from './components/admin/AdminDashboard';
-import { GeminiChatbot } from './components/chat/GeminiChatbot';
 import { ChatFloatingTrigger } from './components/chat/ChatFloatingTrigger';
-import { LiveProductTrackingMap } from './components/tracking/LiveProductTrackingMap';
-import { MarketplaceTrendsTopCharts } from './components/storefront/MarketplaceTrendsTopCharts';
-import { RiderSignupModal } from './components/rider/RiderSignupModal';
-import { RiderDashboard } from './components/rider/RiderDashboard';
 import { LayoutGrid, Radio } from 'lucide-react';
+
+const LandingPage = React.lazy(() => import('./components/LandingPage').then((module) => ({ default: module.LandingPage })));
+const Storefront = React.lazy(() => import('./components/storefront/Storefront').then((module) => ({ default: module.Storefront })));
+const MarketplaceTrendsTopCharts = React.lazy(() => import('./components/storefront/MarketplaceTrendsTopCharts').then((module) => ({ default: module.MarketplaceTrendsTopCharts })));
+const ProductDetailModal = React.lazy(() => import('./components/storefront/ProductDetailModal').then((module) => ({ default: module.ProductDetailModal })));
+const CartDrawer = React.lazy(() => import('./components/storefront/CartDrawer').then((module) => ({ default: module.CartDrawer })));
+const CheckoutModal = React.lazy(() => import('./components/storefront/CheckoutModal').then((module) => ({ default: module.CheckoutModal })));
+const CustomerOrders = React.lazy(() => import('./components/customer/CustomerOrders').then((module) => ({ default: module.CustomerOrders })));
+const CustomerProfile = React.lazy(() => import('./components/customer/CustomerProfile').then((module) => ({ default: module.CustomerProfile })));
+const AdminDashboard = React.lazy(() => import('./components/admin/AdminDashboard').then((module) => ({ default: module.AdminDashboard })));
+const SellerDashboard = React.lazy(() => import('./components/seller/SellerDashboard').then((module) => ({ default: module.SellerDashboard })));
+const LiveProductTrackingMap = React.lazy(() => import('./components/tracking/LiveProductTrackingMap').then((module) => ({ default: module.LiveProductTrackingMap })));
+const RiderDashboard = React.lazy(() => import('./components/rider/RiderDashboard').then((module) => ({ default: module.RiderDashboard })));
+const SellerSignupModal = React.lazy(() => import('./components/seller/SellerSignupModal').then((module) => ({ default: module.SellerSignupModal })));
+const CustomerSignupModal = React.lazy(() => import('./components/customer/CustomerSignupModal').then((module) => ({ default: module.CustomerSignupModal })));
+const AdminSignupModal = React.lazy(() => import('./components/admin/AdminSignupModal').then((module) => ({ default: module.AdminSignupModal })));
+const LoginModal = React.lazy(() => import('./components/LoginModal').then((module) => ({ default: module.LoginModal })));
+const GeminiChatbot = React.lazy(() => import('./components/chat/GeminiChatbot').then((module) => ({ default: module.GeminiChatbot })));
+const RiderSignupModal = React.lazy(() => import('./components/rider/RiderSignupModal').then((module) => ({ default: module.RiderSignupModal })));
 
 const scrollViewportToTop = () => {
   const options: ScrollToOptions = { top: 0, behavior: 'smooth' };
@@ -112,7 +112,6 @@ export default function App() {
   const [isAdminRegistrationOpen, setIsAdminRegistrationOpen] = React.useState(false);
   const [isRiderSignupOpen, setIsRiderSignupOpen] = React.useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = React.useState(false);
-  const [isAdminSecurityModalOpen, setIsAdminSecurityModalOpen] = React.useState(false);
   const [authNotice, setAuthNotice] = React.useState<string | null>(null);
   const [isValidatingAuth, setIsValidatingAuth] = React.useState<boolean>(false);
 
@@ -619,6 +618,7 @@ export default function App() {
   // Render Landing Page
   if (viewMode === 'landing') {
     return (
+      <React.Suspense fallback={<div className="flex min-h-screen items-center justify-center text-sm text-slate-500 dark:text-zinc-400">Loading ShopNiro...</div>}>
       <>
         <LandingPage
           customers={customers}
@@ -640,44 +640,55 @@ export default function App() {
           onToggleTheme={toggleTheme}
         />
 
-        <CustomerSignupModal
-          isOpen={isCustomerRegistrationOpen}
-          onClose={() => setIsCustomerRegistrationOpen(false)}
-          onRegisterCustomer={handleRegisterCustomer}
-          onSuccessRegistered={handleAccountCreated}
-        />
+        {isCustomerRegistrationOpen && (
+          <CustomerSignupModal
+            isOpen={isCustomerRegistrationOpen}
+            onClose={() => setIsCustomerRegistrationOpen(false)}
+            onRegisterCustomer={handleRegisterCustomer}
+            onSuccessRegistered={handleAccountCreated}
+          />
+        )}
 
-        <SellerSignupModal
-          isOpen={isSellerRegistrationOpen}
-          onClose={() => setIsSellerRegistrationOpen(false)}
-          onRegisterSeller={handleRegisterSeller}
-          onSuccessRegistered={handleAccountCreated}
-        />
+        {isSellerRegistrationOpen && (
+          <SellerSignupModal
+            isOpen={isSellerRegistrationOpen}
+            onClose={() => setIsSellerRegistrationOpen(false)}
+            onRegisterSeller={handleRegisterSeller}
+            onSuccessRegistered={handleAccountCreated}
+          />
+        )}
 
-        <AdminSignupModal
-          isOpen={isAdminRegistrationOpen}
-          onClose={() => setIsAdminRegistrationOpen(false)}
-          onRegisterAdmin={handleRegisterAdmin}
-          onSuccessRegistered={handleAccountCreated}
-        />
+        {isAdminRegistrationOpen && (
+          <AdminSignupModal
+            isOpen={isAdminRegistrationOpen}
+            onClose={() => setIsAdminRegistrationOpen(false)}
+            onRegisterAdmin={handleRegisterAdmin}
+            onSuccessRegistered={handleAccountCreated}
+          />
+        )}
 
-        <RiderSignupModal
-          isOpen={isRiderSignupOpen}
-          onClose={() => setIsRiderSignupOpen(false)}
-          onOpenLogin={() => setIsLoginModalOpen(true)}
-          onSubmitted={(message) => { setAuthNotice(message); setIsLoginModalOpen(true); }}
-        />
+        {isRiderSignupOpen && (
+          <RiderSignupModal
+            isOpen={isRiderSignupOpen}
+            onClose={() => setIsRiderSignupOpen(false)}
+            onOpenLogin={() => setIsLoginModalOpen(true)}
+            onSubmitted={(message) => { setAuthNotice(message); setIsLoginModalOpen(true); }}
+          />
+        )}
 
-        <LoginModal
-          isOpen={isLoginModalOpen}
-          onClose={() => {
-            setIsLoginModalOpen(false);
-            setAuthNotice(null);
-          }}
-          onLoginSuccess={handleLoginSuccess}
-          noticeMessage={authNotice}
-        />
+        {isLoginModalOpen && (
+          <LoginModal
+            isOpen={isLoginModalOpen}
+            onClose={() => {
+              setIsLoginModalOpen(false);
+              setAuthNotice(null);
+            }}
+            onLoginSuccess={handleLoginSuccess}
+            noticeMessage={authNotice}
+          />
+        )}
       </>
+      </React.Suspense>
     );
   }
 
@@ -734,6 +745,7 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-16 app-panel animate-fade-up">
+        <React.Suspense fallback={<div className="flex min-h-[40vh] items-center justify-center text-sm text-slate-500 dark:text-zinc-400">Loading marketplace...</div>}>
         {/* Authentication Notice Banner if set */}
         {authNotice && !isLoginModalOpen && (
           <div className="mb-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs flex items-center justify-between gap-3 shadow-xs">
@@ -945,6 +957,7 @@ export default function App() {
             />
           )
         )}
+        </React.Suspense>
       </main>
 
       {/* Unified Marketplace Footer */}
@@ -1020,25 +1033,28 @@ export default function App() {
         </div>
       </footer>
 
+      <React.Suspense fallback={null}>
       {/* Product Detail Modal */}
-      <ProductDetailModal
-        product={selectedProductForDetail}
-        category={categories.find((c) => c.Category_ID === selectedProductForDetail?.Category_ID)}
-        seller={sellers.find((s) => s.Seller_ID === selectedProductForDetail?.Seller_ID)}
-        reviews={reviews}
-        currentCustomer={selectedCustomer || null}
-        onClose={() => setSelectedProductForDetail(null)}
-        onAddToCart={handleAddToCart}
-        onSubmitReview={handleSubmitReview}
-        onOpenLogin={() => setIsLoginModalOpen(true)}
-        onAskAI={(query) => {
-          setChatInitialQuery(query);
-          setIsChatOpen(true);
-        }}
-      />
+      {selectedProductForDetail && (
+        <ProductDetailModal
+          product={selectedProductForDetail}
+          category={categories.find((c) => c.Category_ID === selectedProductForDetail.Category_ID)}
+          seller={sellers.find((s) => s.Seller_ID === selectedProductForDetail.Seller_ID)}
+          reviews={reviews}
+          currentCustomer={selectedCustomer || null}
+          onClose={() => setSelectedProductForDetail(null)}
+          onAddToCart={handleAddToCart}
+          onSubmitReview={handleSubmitReview}
+          onOpenLogin={() => setIsLoginModalOpen(true)}
+          onAskAI={(query) => {
+            setChatInitialQuery(query);
+            setIsChatOpen(true);
+          }}
+        />
+      )}
 
       {/* Cart Drawer */}
-      {selectedCustomer && (
+      {selectedCustomer && isCartOpen && (
         <CartDrawer
           isOpen={isCartOpen}
           onClose={() => setIsCartOpen(false)}
@@ -1050,7 +1066,7 @@ export default function App() {
       )}
 
       {/* Checkout Modal */}
-      {selectedCustomer && (
+      {selectedCustomer && isCheckoutOpen && (
         <CheckoutModal
           isOpen={isCheckoutOpen}
           onClose={() => setIsCheckoutOpen(false)}
@@ -1064,56 +1080,69 @@ export default function App() {
       )}
 
       {/* Customer Signup Modal */}
-      <CustomerSignupModal
-        isOpen={isCustomerRegistrationOpen}
-        onClose={() => setIsCustomerRegistrationOpen(false)}
-        onRegisterCustomer={handleRegisterCustomer}
-        onSuccessRegistered={handleAccountCreated}
-      />
+      {isCustomerRegistrationOpen && (
+        <CustomerSignupModal
+          isOpen={isCustomerRegistrationOpen}
+          onClose={() => setIsCustomerRegistrationOpen(false)}
+          onRegisterCustomer={handleRegisterCustomer}
+          onSuccessRegistered={handleAccountCreated}
+        />
+      )}
 
       {/* Seller Signup Modal */}
-      <SellerSignupModal
-        isOpen={isSellerRegistrationOpen}
-        onClose={() => setIsSellerRegistrationOpen(false)}
-        onRegisterSeller={handleRegisterSeller}
-        onSuccessRegistered={handleAccountCreated}
-      />
+      {isSellerRegistrationOpen && (
+        <SellerSignupModal
+          isOpen={isSellerRegistrationOpen}
+          onClose={() => setIsSellerRegistrationOpen(false)}
+          onRegisterSeller={handleRegisterSeller}
+          onSuccessRegistered={handleAccountCreated}
+        />
+      )}
 
       {/* Admin Signup Modal */}
-      <AdminSignupModal
-        isOpen={isAdminRegistrationOpen}
-        onClose={() => setIsAdminRegistrationOpen(false)}
-        onRegisterAdmin={handleRegisterAdmin}
-        onSuccessRegistered={handleAccountCreated}
-      />
+      {isAdminRegistrationOpen && (
+        <AdminSignupModal
+          isOpen={isAdminRegistrationOpen}
+          onClose={() => setIsAdminRegistrationOpen(false)}
+          onRegisterAdmin={handleRegisterAdmin}
+          onSuccessRegistered={handleAccountCreated}
+        />
+      )}
 
-      <RiderSignupModal
-        isOpen={isRiderSignupOpen}
-        onClose={() => setIsRiderSignupOpen(false)}
-        onOpenLogin={() => setIsLoginModalOpen(true)}
-        onSubmitted={(message) => { setAuthNotice(message); setIsLoginModalOpen(true); }}
-      />
+      {isRiderSignupOpen && (
+        <RiderSignupModal
+          isOpen={isRiderSignupOpen}
+          onClose={() => setIsRiderSignupOpen(false)}
+          onOpenLogin={() => setIsLoginModalOpen(true)}
+          onSubmitted={(message) => { setAuthNotice(message); setIsLoginModalOpen(true); }}
+        />
+      )}
 
       {/* Login Modal with Username & Password */}
-      <LoginModal
-        isOpen={isLoginModalOpen}
-        onClose={() => {
-          setIsLoginModalOpen(false);
-          setAuthNotice(null);
-        }}
-        onLoginSuccess={handleLoginSuccess}
-        noticeMessage={authNotice}
-      />
+      {isLoginModalOpen && (
+        <LoginModal
+          isOpen={isLoginModalOpen}
+          onClose={() => {
+            setIsLoginModalOpen(false);
+            setAuthNotice(null);
+          }}
+          onLoginSuccess={handleLoginSuccess}
+          noticeMessage={authNotice}
+        />
+      )}
 
       {/* Gemini AI Multi-turn Chatbot Modal */}
-      <GeminiChatbot
-        isOpen={isChatOpen}
-        onClose={() => {
-          setIsChatOpen(false);
-          setChatInitialQuery(undefined);
-        }}
-        initialQuery={chatInitialQuery}
-      />
+      {isChatOpen && (
+        <GeminiChatbot
+          isOpen={isChatOpen}
+          onClose={() => {
+            setIsChatOpen(false);
+            setChatInitialQuery(undefined);
+          }}
+          initialQuery={chatInitialQuery}
+        />
+      )}
+      </React.Suspense>
 
       {/* Floating Chat Trigger */}
       <ChatFloatingTrigger

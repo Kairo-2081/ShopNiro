@@ -21,7 +21,6 @@
     "bcryptjs": "^3.0.3",
     "dotenv": "^17.2.3",
     "express": "^4.21.2",
-    "firebase": "^12.19.0",
     "firebase-admin": "^14.5.0",
     "groq-sdk": "^1.6.0",
     "jsonwebtoken": "^9.0.3",
@@ -34,6 +33,7 @@
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
     "react-leaflet": "^5.0.0",
+    "recharts": "^3.10.1",
     "vite": "^6.2.3"
   },
   "devDependencies": {
