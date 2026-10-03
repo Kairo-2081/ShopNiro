@@ -29,6 +29,9 @@ interface MetricEntry {
   detail: string;
   value: string;
   image?: string;
+  measure?: number;
+  progressScale?: number;
+  progress?: number;
 }
 
 interface Leaderboard {
@@ -41,6 +44,12 @@ const formatMetricDate = (value?: string) => {
   if (!value || Number.isNaN(Date.parse(value))) return 'Date unavailable';
   return new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 };
+
+const rankBadgeClasses = [
+  'bg-amber-100 text-amber-900 ring-1 ring-inset ring-amber-300 dark:bg-amber-400/15 dark:text-amber-200 dark:ring-amber-400/40',
+  'bg-slate-200 text-slate-800 ring-1 ring-inset ring-slate-300 dark:bg-zinc-300/15 dark:text-zinc-100 dark:ring-zinc-300/35',
+  'bg-orange-100 text-orange-900 ring-1 ring-inset ring-orange-300 dark:bg-orange-500/15 dark:text-orange-200 dark:ring-orange-400/35',
+];
 
 export const AdminMarketplaceMetrics: React.FC<AdminMarketplaceMetricsProps> = ({
   products,
@@ -115,6 +124,8 @@ export const AdminMarketplaceMetrics: React.FC<AdminMarketplaceMetricsProps> = (
         detail: `${product.total_reviews} reviews`,
         value: `${Number(product.average_rating).toFixed(1)} / 5`,
         image: product.image,
+        measure: Number(product.average_rating),
+        progressScale: 5,
       })),
     },
     {
@@ -126,6 +137,7 @@ export const AdminMarketplaceMetrics: React.FC<AdminMarketplaceMetricsProps> = (
         detail: product.category_name,
         value: `${Number(product.total_units_sold).toLocaleString()} sold`,
         image: product.image,
+        measure: Number(product.total_units_sold),
       })),
     },
     {
@@ -156,6 +168,8 @@ export const AdminMarketplaceMetrics: React.FC<AdminMarketplaceMetricsProps> = (
         detail: `${seller.total_reviews} product reviews`,
         value: `${Number(seller.average_rating).toFixed(1)} / 5`,
         image: seller.logo,
+        measure: Number(seller.average_rating),
+        progressScale: 5,
       })),
     },
     {
@@ -172,6 +186,7 @@ export const AdminMarketplaceMetrics: React.FC<AdminMarketplaceMetricsProps> = (
             detail: `${seller.Status} vendor`,
             value: `${units.toLocaleString()} sold`,
             image: seller.Logo,
+            measure: units,
           }] : [];
         }),
     },
@@ -207,6 +222,7 @@ export const AdminMarketplaceMetrics: React.FC<AdminMarketplaceMetricsProps> = (
           name: rider.Name,
           detail: `${rider.Total_Deliveries > 0 ? Math.round((rider.Timely_Deliveries / rider.Total_Deliveries) * 100) : 0}% on time`,
           value: `${rider.Timely_Deliveries.toLocaleString()} on time`,
+          measure: rider.Timely_Deliveries,
         })),
     },
     {
@@ -222,6 +238,7 @@ export const AdminMarketplaceMetrics: React.FC<AdminMarketplaceMetricsProps> = (
           name: rider.Name,
           detail: `${rider.Timely_Deliveries.toLocaleString()} on-time deliveries`,
           value: `${rider.Total_Deliveries.toLocaleString()} deliveries`,
+          measure: rider.Total_Deliveries,
         })),
     },
     {
@@ -237,6 +254,8 @@ export const AdminMarketplaceMetrics: React.FC<AdminMarketplaceMetricsProps> = (
           name: rider.Name,
           detail: `${rider.Total_Deliveries.toLocaleString()} deliveries`,
           value: `${Number(rider.Average_Rating).toFixed(1)} / 5`,
+          measure: Number(rider.Average_Rating),
+          progressScale: 5,
         })),
     },
   ];
@@ -246,11 +265,26 @@ export const AdminMarketplaceMetrics: React.FC<AdminMarketplaceMetricsProps> = (
     { id: 'vendors', label: 'Vendors', icon: Store },
     { id: 'riders', label: 'Riders', icon: Truck },
   ];
-  const activeLeaderboards = activeGroup === 'products'
+  const selectedLeaderboards = activeGroup === 'products'
     ? productLeaderboards
     : activeGroup === 'vendors'
       ? vendorLeaderboards
       : riderLeaderboards;
+  const activeLeaderboards = selectedLeaderboards.map((leaderboard) => {
+    const maximumMeasure = Math.max(0, ...leaderboard.entries.map((entry) => entry.measure || 0));
+    return {
+      ...leaderboard,
+      entries: leaderboard.entries.map((entry) => {
+        const scale = entry.progressScale || maximumMeasure;
+        return {
+          ...entry,
+          progress: entry.measure !== undefined && scale > 0
+            ? Math.min(100, Math.max(0, (entry.measure / scale) * 100))
+            : undefined,
+        };
+      }),
+    };
+  });
   const FallbackIcon = activeGroup === 'products' ? Package : activeGroup === 'vendors' ? Store : UserRound;
 
   return (
@@ -298,7 +332,26 @@ export const AdminMarketplaceMetrics: React.FC<AdminMarketplaceMetricsProps> = (
 
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-zinc-800 dark:bg-[#12161D]">
         {loading ? (
-          <p className="p-8 text-center text-sm text-slate-500 dark:text-zinc-400">Loading rankings...</p>
+          <div role="status" aria-label="Loading marketplace rankings" className="grid grid-cols-1 divide-y divide-slate-200 dark:divide-zinc-800 lg:grid-cols-3 lg:divide-x lg:divide-y-0">
+            {activeLeaderboards.map((leaderboard) => (
+              <section key={leaderboard.title} className="min-w-0 p-4 sm:p-5">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">{leaderboard.title}</h3>
+                <div aria-hidden="true" className="mt-4 animate-pulse space-y-3">
+                  {Array.from({ length: 4 }, (_, index) => (
+                    <div key={index} className="flex items-center gap-2.5 py-2">
+                      <span className="h-6 w-6 shrink-0 rounded-md bg-slate-200 dark:bg-zinc-800" />
+                      <span className="h-9 w-9 shrink-0 rounded-md bg-slate-200 dark:bg-zinc-800" />
+                      <span className="min-w-0 flex-1 space-y-2">
+                        <span className="block h-2.5 w-3/4 rounded bg-slate-200 dark:bg-zinc-800" />
+                        <span className="block h-2 w-1/2 rounded bg-slate-100 dark:bg-zinc-900" />
+                      </span>
+                      <span className="h-2.5 w-10 shrink-0 rounded bg-slate-200 dark:bg-zinc-800" />
+                    </div>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
         ) : (
           <div className="grid grid-cols-1 divide-y divide-slate-200 dark:divide-zinc-800 lg:grid-cols-3 lg:divide-x lg:divide-y-0">
             {activeLeaderboards.map((leaderboard) => (
@@ -313,22 +366,29 @@ export const AdminMarketplaceMetrics: React.FC<AdminMarketplaceMetricsProps> = (
                 {leaderboard.entries.length > 0 ? (
                   <ol className="divide-y divide-slate-100 dark:divide-zinc-800/80">
                     {leaderboard.entries.map((entry, index) => (
-                      <li key={entry.id} className="flex min-w-0 items-center gap-2.5 py-3 first:pt-1 last:pb-1">
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-slate-100 text-[10px] font-bold tabular-nums text-slate-600 dark:bg-[#202833] dark:text-zinc-300">
+                      <li key={entry.id} className="group relative isolate flex min-w-0 items-center gap-2.5 rounded-lg px-2 py-3 transition-colors hover:bg-slate-50 dark:hover:bg-[#181F2A]/80 first:pt-2 last:pb-2">
+                        {entry.progress !== undefined && (
+                          <span
+                            aria-hidden="true"
+                            className="pointer-events-none absolute inset-y-0 left-0 -z-10 rounded-lg bg-sky-500/[0.06] transition-[width] duration-500 dark:bg-sky-400/[0.08]"
+                            style={{ width: `${entry.progress}%` }}
+                          />
+                        )}
+                        <span className={`relative z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[10px] font-black tabular-nums shadow-xs ${rankBadgeClasses[index] || 'bg-slate-100 text-slate-600 dark:bg-[#202833] dark:text-zinc-300'}`}>
                           {index + 1}
                         </span>
                         {entry.image ? (
-                          <img src={entry.image} alt="" className="h-9 w-9 shrink-0 rounded-md border border-slate-200 object-cover dark:border-zinc-700" />
+                          <img src={entry.image} alt="" className="relative z-10 h-9 w-9 shrink-0 rounded-md border border-slate-200 object-cover dark:border-zinc-700" />
                         ) : (
-                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-500 dark:bg-[#202833] dark:text-zinc-400">
+                          <span className="relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-500 dark:bg-[#202833] dark:text-zinc-400">
                             <FallbackIcon className="h-4 w-4" />
                           </span>
                         )}
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-xs font-semibold text-slate-900 dark:text-white">{entry.name}</p>
+                        <div className="relative z-10 min-w-0 flex-1">
+                          <p className="truncate text-xs font-semibold text-slate-900 transition-colors group-hover:text-blue-600 dark:text-white dark:group-hover:text-sky-400">{entry.name}</p>
                           <p className="truncate text-[10px] text-slate-500 dark:text-zinc-400">{entry.detail}</p>
                         </div>
-                        <div className="shrink-0 text-right">
+                        <div className="relative z-10 shrink-0 text-right">
                           <p className="text-xs font-bold tabular-nums text-slate-800 dark:text-zinc-200">{entry.value}</p>
                         </div>
                       </li>

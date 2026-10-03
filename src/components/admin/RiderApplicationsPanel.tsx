@@ -122,8 +122,8 @@ export const RiderApplicationsPanel: React.FC = () => {
       </section>
 
       {selected && (
-        <div className="fixed inset-0 z-[65] flex items-center justify-center bg-black/70 p-4" onClick={(event) => { if (event.target === event.currentTarget) setSelected(null); }}>
-          <section role="dialog" aria-modal="true" aria-labelledby="rider-review-title" className="w-full max-w-xl space-y-5 rounded-2xl bg-white p-5 shadow-2xl dark:bg-[#12161D]">
+        <div className="fixed inset-0 z-[65] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm animate-in fade-in duration-150" onClick={(event) => { if (event.target === event.currentTarget) setSelected(null); }}>
+          <section role="dialog" aria-modal="true" aria-labelledby="rider-review-title" className="w-full max-w-xl space-y-5 rounded-2xl border border-sky-100 bg-white p-5 shadow-2xl ring-1 ring-white/10 animate-in fade-in slide-in-from-bottom-2 duration-200 dark:border-sky-500/20 dark:bg-[#12161D]">
             <header className="flex items-start justify-between gap-4"><div><h3 id="rider-review-title" className="text-lg font-bold text-slate-900 dark:text-white">{selected.Name}</h3><p className="text-xs text-slate-500">{selected.Email} · {selected.Number}</p></div><button type="button" onClick={() => setSelected(null)} aria-label="Close details" className="rounded-full p-2 hover:bg-slate-100 dark:hover:bg-zinc-800"><X className="h-4 w-4" /></button></header>
             <div className="max-h-[55vh] space-y-4 overflow-y-auto text-sm">
               <div><h4 className="mb-1 text-xs font-bold uppercase text-slate-500">Present address</h4><p className="text-slate-800 dark:text-zinc-200">{Object.values(selected.Present_Address || {}).filter(Boolean).join(', ') || 'Not supplied'}</p></div>

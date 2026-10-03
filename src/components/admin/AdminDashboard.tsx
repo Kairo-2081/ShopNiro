@@ -44,6 +44,13 @@ interface AdminDashboardProps {
   onOpenSellerSignup?: () => void;
 }
 
+const adminTabButtonClass = (isActive: boolean, activeClass: string) =>
+  `inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-xs font-bold transition-all duration-200 hover:-translate-y-px active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#12161D] ${
+    isActive
+      ? `${activeClass} ring-1 ring-inset ring-white/20`
+      : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-zinc-400 dark:hover:bg-[#181F2A] dark:hover:text-white'
+  }`;
+
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   sellers,
   products,
@@ -131,6 +138,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     return true;
   });
   const selectedSeller = sellers.find((seller) => seller.Seller_ID === selectedSellerId) || null;
+  const dashboardKpis = [
+    { label: 'Total Market Value', value: formatCurrency(totalMarketValue), detail: 'Current catalog stock value', accent: 'bg-sky-500' },
+    { label: 'Active Merchants', value: approvedSellers.length.toLocaleString(), detail: `${pendingSellers.length} pending · ${suspendedSellers.length} suspended`, accent: 'bg-emerald-500' },
+    { label: 'Order Throughput', value: `${orders.length.toLocaleString()} orders`, detail: 'Live fulfillment synced', accent: 'bg-blue-600' },
+    { label: 'Review Sentiment', value: `${avgSentiment.toFixed(2)} / 5.0`, detail: `Based on ${reviews.length.toLocaleString()} customer reviews`, accent: 'bg-amber-500' },
+  ];
 
   const handleSellerStatusChange = async (seller: Seller, status: SellerStatus) => {
     setUpdatingSellerId(seller.Seller_ID);
@@ -176,7 +189,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     <div className="space-y-6 pb-16 text-slate-900 dark:text-zinc-100">
       {/* Toast Feedback */}
       {feedbackMsg && (
-        <div role="status" className={`fixed top-20 right-6 z-50 text-white px-4 py-2.5 rounded-2xl shadow-xl text-xs font-semibold flex items-center gap-2 animate-in fade-in slide-in-from-top-2 duration-200 ${feedbackTone === 'error' ? 'bg-rose-600 shadow-rose-500/30' : 'bg-blue-600 shadow-blue-500/30'}`}>
+        <div role="status" className={`fixed right-4 top-20 z-50 flex items-center gap-2 rounded-xl border border-white/15 px-4 py-3 text-xs font-semibold text-white shadow-xl backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-200 sm:right-6 ${feedbackTone === 'error' ? 'bg-rose-700/95 shadow-rose-950/30' : 'bg-blue-700/95 shadow-blue-950/30'}`}>
           {feedbackTone === 'error' ? <AlertCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4 text-sky-200" />}
           <span>{feedbackMsg}</span>
         </div>
@@ -213,46 +226,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-[#12161D] border border-sky-100 dark:border-sky-500/20 rounded-3xl p-5 flex flex-col justify-between shadow-xs">
-          <p className="text-xs text-slate-500 dark:text-zinc-400 font-medium">Total Market Value</p>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white mt-2">{formatCurrency(totalMarketValue)}</p>
-          <div className="text-[11px] text-slate-500 dark:text-zinc-400 font-medium mt-2">Current catalog stock value</div>
-        </div>
-
-        <div className="bg-white dark:bg-[#12161D] border border-sky-100 dark:border-sky-500/20 rounded-3xl p-5 flex flex-col justify-between shadow-xs">
-          <p className="text-xs text-slate-500 dark:text-zinc-400 font-medium">Active Merchants</p>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white mt-2">{approvedSellers.length}</p>
-          <div className="text-[11px] text-slate-500 dark:text-zinc-400 mt-2">
-            Pending: <span className="text-amber-500 font-bold">{pendingSellers.length}</span> | Suspended: <span className="text-rose-500 font-bold">{suspendedSellers.length}</span>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-[#12161D] border border-sky-100 dark:border-sky-500/20 rounded-3xl p-5 flex flex-col justify-between shadow-xs">
-          <p className="text-xs text-slate-500 dark:text-zinc-400 font-medium">Order Throughput</p>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white mt-2">{orders.length} Orders</p>
-          <div className="text-[11px] text-blue-500 dark:text-sky-400 font-medium mt-2">Live Fulfillment Synced</div>
-        </div>
-
-        <div className="bg-white dark:bg-[#12161D] border border-sky-100 dark:border-sky-500/20 rounded-3xl p-5 flex flex-col justify-between shadow-xs">
-          <p className="text-xs text-slate-500 dark:text-zinc-400 font-medium">Review Sentiment</p>
-          <p className="text-2xl font-bold text-amber-500 mt-2 flex items-baseline gap-1">
-            {avgSentiment.toFixed(2)}
-            <span className="text-xs text-slate-400 dark:text-zinc-500 font-normal">/ 5.0</span>
-          </p>
-          <div className="text-[11px] text-slate-500 dark:text-zinc-400 mt-2">Based on {reviews.length} customer reviews</div>
-        </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {dashboardKpis.map((kpi) => (
+          <section key={kpi.label} className="group relative flex min-w-0 flex-col justify-between overflow-hidden rounded-2xl border border-sky-100 bg-white p-5 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md dark:border-sky-500/20 dark:bg-[#12161D]">
+            <span aria-hidden="true" className={`absolute inset-x-0 top-0 h-0.5 ${kpi.accent}`} />
+            <p className="text-[11px] font-semibold uppercase text-slate-500 dark:text-zinc-400">{kpi.label}</p>
+            <p className="mt-2 break-words text-2xl font-bold tabular-nums text-slate-900 dark:text-white">{kpi.value}</p>
+            <p className="mt-2 text-[11px] font-medium text-slate-500 dark:text-zinc-400">{kpi.detail}</p>
+          </section>
+        ))}
       </div>
 
       {/* Navigation Tabs */}
       <div className="flex flex-wrap gap-2 border-b border-sky-100 dark:border-zinc-800 pb-2">
         <button
           onClick={() => setAdminTab('overview')}
-          className={`px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
-            adminTab === 'overview'
-              ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25'
-              : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#181F2A]'
-          }`}
+          aria-current={adminTab === 'overview' ? 'page' : undefined}
+          className={adminTabButtonClass(adminTab === 'overview', 'bg-blue-600 text-white shadow-md shadow-blue-500/20')}
         >
           <Activity className="w-4 h-4" />
           <span>Governance Overview</span>
@@ -260,11 +250,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
         <button
           onClick={() => setAdminTab('metrics')}
-          className={`px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
-            adminTab === 'metrics'
-              ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25'
-              : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#181F2A]'
-          }`}
+          aria-current={adminTab === 'metrics' ? 'page' : undefined}
+          className={adminTabButtonClass(adminTab === 'metrics', 'bg-blue-600 text-white shadow-md shadow-blue-500/20')}
         >
           <BarChart3 className="w-4 h-4" />
           <span>Marketplace Metrics</span>
@@ -272,11 +259,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
         <button
           onClick={() => setAdminTab('sellers')}
-          className={`px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
-            adminTab === 'sellers'
-              ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25'
-              : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#181F2A]'
-          }`}
+          aria-current={adminTab === 'sellers' ? 'page' : undefined}
+          className={adminTabButtonClass(adminTab === 'sellers', 'bg-blue-600 text-white shadow-md shadow-blue-500/20')}
         >
           <Store className="w-4 h-4" />
           <span>Merchant Approvals ({sellers.length})</span>
@@ -284,11 +268,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
         <button
           onClick={() => setAdminTab('categories')}
-          className={`px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
-            adminTab === 'categories'
-              ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25'
-              : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#181F2A]'
-          }`}
+          aria-current={adminTab === 'categories' ? 'page' : undefined}
+          className={adminTabButtonClass(adminTab === 'categories', 'bg-blue-600 text-white shadow-md shadow-blue-500/20')}
         >
           <FolderTree className="w-4 h-4" />
           <span>Category Registry ({categories.length})</span>
@@ -296,11 +277,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
         <button
           onClick={() => setAdminTab('riders')}
-          className={`px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
-            adminTab === 'riders'
-              ? 'bg-emerald-700 text-white shadow-lg shadow-emerald-700/25'
-              : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#181F2A]'
-          }`}
+          aria-current={adminTab === 'riders' ? 'page' : undefined}
+          className={adminTabButtonClass(adminTab === 'riders', 'bg-emerald-700 text-white shadow-md shadow-emerald-700/20')}
         >
           <Truck className="w-4 h-4" />
           <span>Rider Hiring</span>
@@ -308,11 +286,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
         <button
           onClick={() => setAdminTab('products')}
-          className={`px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
-            adminTab === 'products'
-              ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25'
-              : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#181F2A]'
-          }`}
+          aria-current={adminTab === 'products' ? 'page' : undefined}
+          className={adminTabButtonClass(adminTab === 'products', 'bg-blue-600 text-white shadow-md shadow-blue-500/20')}
         >
           <Package className="w-4 h-4" />
           <span>Product Moderation ({products.length})</span>
@@ -320,11 +295,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
         <button
           onClick={() => setAdminTab('payments')}
-          className={`px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
-            adminTab === 'payments'
-              ? 'bg-[#E2136E] text-white shadow-lg shadow-[#E2136E]/25'
-              : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#181F2A]'
-          }`}
+          aria-current={adminTab === 'payments' ? 'page' : undefined}
+          className={adminTabButtonClass(adminTab === 'payments', 'bg-[#E2136E] text-white shadow-md shadow-[#E2136E]/20')}
         >
           <Lock className="w-4 h-4" />
           <span>Online Payments</span>
@@ -1010,7 +982,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       {selectedSeller && (
         <div
-          className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-black/70 p-4"
+          className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-black/75 p-4 backdrop-blur-sm animate-in fade-in duration-150"
           onClick={(event) => {
             if (event.target === event.currentTarget) setSelectedSellerId(null);
           }}
@@ -1019,7 +991,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             role="dialog"
             aria-modal="true"
             aria-labelledby="seller-application-title"
-            className="my-auto w-full max-w-xl overflow-hidden rounded-2xl border border-sky-100 bg-white shadow-2xl dark:border-zinc-700 dark:bg-[#12161D]"
+            className="my-auto w-full max-w-xl overflow-hidden rounded-2xl border border-sky-100 bg-white shadow-2xl ring-1 ring-white/10 animate-in fade-in slide-in-from-bottom-2 duration-200 dark:border-sky-500/20 dark:bg-[#12161D]"
           >
             <header className="flex items-start justify-between gap-4 border-b border-slate-200 p-5 dark:border-zinc-800">
               <div className="flex min-w-0 items-center gap-3">

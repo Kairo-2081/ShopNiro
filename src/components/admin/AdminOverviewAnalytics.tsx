@@ -5,13 +5,14 @@ import {
   Cell,
   ComposedChart,
   Legend,
-  Line,
   Pie,
   PieChart,
   ResponsiveContainer,
   Tooltip,
+  TooltipContentProps,
   XAxis,
   YAxis,
+  Area,
 } from 'recharts';
 import { formatBDT } from '../../lib/api';
 import { Order, OrderStatus } from '../../types';
@@ -39,6 +40,30 @@ const compactValue = (value: number) => {
   if (value >= 10_000) return `${Math.round(value / 1_000)}k`;
   if (value >= 1_000) return `${(value / 1_000).toFixed(1)}k`;
   return String(Math.round(value));
+};
+
+const AdminChartTooltip: React.FC<Partial<TooltipContentProps<number, string>>> = ({ active, payload, label }) => {
+  if (!active || !payload?.length) return null;
+
+  return (
+    <div className="space-y-1.5 rounded-xl border border-white/15 bg-[#151B23]/95 p-3 text-xs text-white shadow-[0_12px_32px_rgba(0,0,0,0.35)] backdrop-blur-md">
+      <p className="border-b border-white/10 pb-1 font-bold text-zinc-200">{label}</p>
+      {payload.map((entry, index) => {
+        const name = String(entry.name || entry.dataKey || 'Metric');
+        const value = Number(entry.value) || 0;
+        const color = typeof entry.color === 'string' ? entry.color : typeof entry.fill === 'string' ? entry.fill : '#94a3b8';
+        return (
+          <div key={`${name}-${index}`} className="flex items-center gap-2">
+            <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+            <span className="text-zinc-400">{name}</span>
+            <span className="ml-auto font-semibold tabular-nums text-white">
+              {name.toLowerCase().includes('value') ? formatBDT(value) : value.toLocaleString()}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
 };
 
 export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ orders }) => {
@@ -128,7 +153,17 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
             <div role="img" aria-label="Monthly order count and order value for the past 12 months" className="h-[280px] min-w-0 w-full overflow-hidden sm:h-[320px]">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={monthlyMetrics} margin={{ top: 8, right: 8, bottom: 4, left: -14 }}>
-                  <CartesianGrid stroke="#94a3b8" strokeOpacity={0.2} vertical={false} />
+                  <defs>
+                    <linearGradient id="admin-order-bars" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.95} />
+                      <stop offset="100%" stopColor="#0284c7" stopOpacity={0.68} />
+                    </linearGradient>
+                    <linearGradient id="admin-order-value-area" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#f59e0b" stopOpacity={0.25} />
+                      <stop offset="100%" stopColor="#f59e0b" stopOpacity={0.015} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid stroke="#94a3b8" strokeDasharray="3 5" strokeOpacity={0.16} vertical={false} />
                   <XAxis
                     dataKey="month"
                     tick={{ fill: '#64748b', fontSize: 10 }}
@@ -153,33 +188,25 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
                     axisLine={false}
                     width={42}
                   />
-                  <Tooltip
-                    formatter={(value, name) => [
-                      name === 'Order value' ? formatBDT(Number(value)) : Number(value).toLocaleString(),
-                      name,
-                    ]}
-                    contentStyle={{ borderRadius: 12, borderColor: '#334155', backgroundColor: '#151B23', color: '#f4f4f5', fontSize: 12 }}
-                    labelStyle={{ color: '#ffffff', fontWeight: 700 }}
-                    itemStyle={{ color: '#e4e4e7' }}
-                  />
+                  <Tooltip content={<AdminChartTooltip />} cursor={{ fill: 'rgba(148, 163, 184, 0.08)' }} />
                   <Legend wrapperStyle={{ fontSize: 11, paddingTop: 8 }} />
-                  <Bar
-                    yAxisId="orders"
-                    dataKey="orderCount"
-                    name="Orders"
-                    fill="#0284c7"
-                    radius={[3, 3, 0, 0]}
-                    maxBarSize={24}
-                  />
-                  <Line
+                  <Area
                     yAxisId="value"
                     type="monotone"
                     dataKey="orderValue"
                     name="Order value"
-                    stroke="#d97706"
+                    stroke="#f59e0b"
                     strokeWidth={2.5}
-                    dot={false}
-                    activeDot={{ r: 4, strokeWidth: 0 }}
+                    fill="url(#admin-order-value-area)"
+                    activeDot={{ r: 4, strokeWidth: 0, fill: '#f59e0b' }}
+                  />
+                  <Bar
+                    yAxisId="orders"
+                    dataKey="orderCount"
+                    name="Orders"
+                    fill="url(#admin-order-bars)"
+                    radius={[5, 5, 0, 0]}
+                    maxBarSize={24}
                   />
                 </ComposedChart>
               </ResponsiveContainer>
@@ -213,11 +240,7 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
                     >
                       {statusMetrics.map((entry) => <Cell key={entry.status} fill={entry.color} />)}
                     </Pie>
-                    <Tooltip
-                      formatter={(value, name) => [Number(value).toLocaleString(), name]}
-                      contentStyle={{ borderRadius: 12, borderColor: '#334155', backgroundColor: '#151B23', color: '#f4f4f5', fontSize: 12 }}
-                      itemStyle={{ color: '#e4e4e7' }}
-                    />
+                    <Tooltip content={<AdminChartTooltip />} />
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
