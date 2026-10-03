@@ -31,6 +31,7 @@ router.get('/', async (req, res) => {
       Product_Status: p.product_status as any,
       Category_ID: p.category_id,
       Seller_ID: p.seller_id,
+      Created_At: p.created_at,
     }));
 
     if (sellerId) {
@@ -83,6 +84,7 @@ router.get('/:id', async (req, res) => {
       Product_Status: p.product_status as any,
       Category_ID: p.category_id,
       Seller_ID: p.seller_id,
+      Created_At: p.created_at,
     };
     res.json(product);
   } catch (error: any) {
@@ -144,6 +146,7 @@ router.post('/', requireAuth, requireRole(['seller', 'admin']), async (req: Auth
       Product_Status: row.product_status,
       Category_ID: row.category_id,
       Seller_ID: row.seller_id,
+      Created_At: row.created_at,
       Size_Gender: sizes.length ? Size_Gender : undefined,
       Sizes: sizes,
       Size_Chart: sizeChart,
@@ -206,6 +209,7 @@ router.put('/:id', requireAuth, requireRole(['seller', 'admin']), async (req: Au
       Product_Status: row.product_status,
       Category_ID: row.category_id,
       Seller_ID: row.seller_id,
+      Created_At: row.created_at,
       Size_Gender: sizes.length ? sizeGender : undefined,
       Sizes: sizes,
       Size_Chart: sizeChart,

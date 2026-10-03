@@ -88,7 +88,12 @@ export const Storefront: React.FC<StorefrontProps> = ({
       if (sortBy === 'price-asc') return Number(a.Price) - Number(b.Price);
       if (sortBy === 'price-desc') return Number(b.Price) - Number(a.Price);
       if (sortBy === 'rating') return (ratingMap.get(b.Product_ID) || 0) - (ratingMap.get(a.Product_ID) || 0);
-      if (sortBy === 'newest') return b.Product_ID.localeCompare(a.Product_ID);
+      if (sortBy === 'newest') {
+        const dateDifference = Date.parse(b.Created_At || '') - Date.parse(a.Created_At || '');
+        return Number.isNaN(dateDifference) || dateDifference === 0
+          ? b.Product_ID.localeCompare(a.Product_ID)
+          : dateDifference;
+      }
       return 0;
     });
   }, [products, sellers, approvedSellerIds, stockFilter, maxPrice, searchQuery, categories, sortBy, ratingMap]);

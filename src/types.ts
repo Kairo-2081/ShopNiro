@@ -63,6 +63,7 @@ export interface Product {
   Product_Status: ProductStatus;
   Category_ID: string;
   Seller_ID: string;
+  Created_At?: string;
   Review_ID?: string; // FK to latest or primary review
   Size_Gender?: 'men' | 'women' | 'unisex';
   Sizes?: string[];
