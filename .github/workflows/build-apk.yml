@@ -36,15 +36,15 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Build APK with Gradle
+      - name: Build Debug APK with Gradle
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleRelease
+          ./gradlew assembleDebug
 
       - name: Upload APK to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: android/app/build/outputs/apk/release/*.apk
+          files: android/app/build/outputs/apk/debug/*.apk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
