@@ -1,6 +1,6 @@
 name: Build Android APK and Windows App
 
-'on':
+on:
   push:
     tags:
       - 'v*'
