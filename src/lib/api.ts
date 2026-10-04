@@ -17,6 +17,7 @@ import {
   RiderStatus,
   ProductBundle,
 } from '../types';
+import { apiUrl } from '../apiConfig';
 
 const TOKEN_KEY = 'marketpulse_jwt_token';
 const ANALYTICS_SESSION_KEY = 'shopniro_analytics_session';
@@ -123,7 +124,7 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const res = await fetch(url, {
+  const res = await fetch(apiUrl(url), {
     ...options,
     headers,
   });
@@ -328,7 +329,7 @@ export const api = {
     }),
   downloadRiderCv: async (id: string): Promise<Blob> => {
     const token = getAuthToken();
-    const response = await fetch(`/api/riders/applications/${encodeURIComponent(id)}/cv`, {
+    const response = await fetch(apiUrl(`/api/riders/applications/${encodeURIComponent(id)}/cv`), {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
     if (!response.ok) throw new Error('Could not download rider CV.');
@@ -337,7 +338,7 @@ export const api = {
   getRiderProfile: async (): Promise<Rider> => fetchJson<Rider>('/api/riders/me'),
   getMyRiderCv: async (): Promise<Blob> => {
     const token = getAuthToken();
-    const response = await fetch('/api/riders/me/cv', {
+    const response = await fetch(apiUrl('/api/riders/me/cv'), {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
     if (!response.ok) throw new Error('Could not open your current CV.');

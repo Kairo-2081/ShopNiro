@@ -1,6 +1,7 @@
 import React from 'react';
 import { Customer, Address } from '../../types';
 import { formatBDT } from '../../lib/api';
+import { apiUrl } from '../../apiConfig';
 import {
   X,
   ShieldCheck,
@@ -127,7 +128,7 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
 
     try {
       // Step 1: Initialize payment on backend
-      const initRes = await fetch('/api/payment/init', {
+      const initRes = await fetch(apiUrl('/api/payment/init'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -149,7 +150,7 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
       }
 
       // Step 2: Validate payment with SSLCommerz gateway
-      const valRes = await fetch('/api/payment/sslcommerz/validate', {
+      const valRes = await fetch(apiUrl('/api/payment/sslcommerz/validate'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

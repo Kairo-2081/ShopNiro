@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Customer, Address, Order } from '../../types';
 import { formatBDT } from '../../lib/api';
+import { apiUrl } from '../../apiConfig';
 import {
   ShieldCheck,
   CheckCircle2,
@@ -130,7 +131,7 @@ export const BkashGatewayPage: React.FC<BkashGatewayPageProps> = ({
     setStep('processing');
 
     try {
-      const initRes = await fetch('/api/payment/bkash/init', {
+      const initRes = await fetch(apiUrl('/api/payment/bkash/init'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -145,7 +146,7 @@ export const BkashGatewayPage: React.FC<BkashGatewayPageProps> = ({
         throw new Error(initData.error || 'Could not initialize the bKash payment.');
       }
 
-      const validateRes = await fetch('/api/payment/sslcommerz/validate', {
+      const validateRes = await fetch(apiUrl('/api/payment/sslcommerz/validate'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

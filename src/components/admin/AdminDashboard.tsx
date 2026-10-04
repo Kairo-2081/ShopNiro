@@ -1,6 +1,7 @@
 import React from 'react';
 import { Seller, Product, Order, Category, Review, SellerStatus, ProductStatus } from '../../types';
 import { formatCurrency, formatBDT, formatDate } from '../../lib/api';
+import { apiUrl } from '../../apiConfig';
 import { RiderApplicationsPanel } from './RiderApplicationsPanel';
 import { AdminMarketplaceMetrics } from './AdminMarketplaceMetrics';
 import {
@@ -88,7 +89,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const fetchTransactions = async () => {
     setLoadingTransactions(true);
     try {
-      const res = await fetch('/api/payment/transactions');
+      const res = await fetch(apiUrl('/api/payment/transactions'));
       if (res.ok) {
         const data = await res.json();
         setTransactions(data);

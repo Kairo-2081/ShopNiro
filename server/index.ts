@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import cors from 'cors';
 import express from 'express';
 import http from 'http';
 import path from 'path';
@@ -27,6 +28,18 @@ import sellerAnalyticsRoutes from './routes/analytics.routes.ts';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
+
+app.use(cors({
+  origin: [
+    'http://localhost',
+    'https://localhost',
+    'capacitor://localhost',
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'https://shopniro.onrender.com',
+  ],
+  credentials: true,
+}));
 
 // Parse incoming JSON payloads
 app.use(express.json({ limit: '8mb' }));
