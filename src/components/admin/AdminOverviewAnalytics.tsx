@@ -131,8 +131,8 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
         </p>
       </header>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
-        <section className="lg:col-span-8 rounded-3xl border border-sky-100 dark:border-sky-500/20 bg-white dark:bg-[#12161D] p-5 shadow-xs transition-all hover:shadow-md">
+      <div className="flex flex-col gap-5">
+        <section className="w-full rounded-3xl border border-sky-100 dark:border-sky-500/20 bg-white dark:bg-[#12161D] p-5 shadow-xs transition-all hover:shadow-md">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
             <div>
               <h3 className="text-sm font-bold text-slate-900 dark:text-white">Monthly Orders &amp; Volume</h3>
@@ -207,48 +207,57 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
           )}
         </section>
 
-        <section className="min-w-0 rounded-2xl border border-sky-100 dark:border-sky-500/20 bg-white dark:bg-[#12161D] p-5 shadow-xs transition-all hover:shadow-md">
+        <section className="w-full min-w-0 rounded-2xl border border-sky-100 dark:border-sky-500/20 bg-white dark:bg-[#12161D] p-5 shadow-xs transition-all hover:shadow-md">
           <div className="mb-1">
             <h3 className="text-sm font-bold text-slate-900 dark:text-white">Order Status Mix</h3>
             <p className="mt-1 text-[11px] text-slate-500 dark:text-zinc-400">Lifecycle distribution across all orders</p>
           </div>
 
-          <div className="relative h-[200px] my-2">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={statusMetrics}
-                  dataKey="value"
-                  nameKey="name"
-                  innerRadius={58}
-                  outerRadius={82}
-                  paddingAngle={4}
-                  stroke="none"
-                >
-                  {statusMetrics.map((entry) => (
-                    <Cell key={entry.status} fill={entry.color} className="transition-all duration-300 hover:opacity-80" />
-                  ))}
-                </Pie>
-                <Tooltip content={<AdminChartTooltip />} />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-2xl font-black text-slate-900 dark:text-white">{orders.length.toLocaleString()}</span>
-              <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Orders</span>
-            </div>
-          </div>
+          {statusMetrics.length > 0 ? (
+            <>
+              <div className="relative my-2 mx-auto h-[220px] w-full max-w-[260px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={statusMetrics}
+                      dataKey="value"
+                      nameKey="name"
+                      innerRadius={58}
+                      outerRadius={82}
+                      paddingAngle={4}
+                      stroke="none"
+                      isAnimationActive={true}
+                    >
+                      {statusMetrics.map((entry) => (
+                        <Cell key={entry.status} fill={entry.color} className="transition-all duration-300 hover:opacity-80" />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<AdminChartTooltip />} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                  <span className="text-2xl font-black text-slate-900 dark:text-white">{orders.length.toLocaleString()}</span>
+                  <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Orders</span>
+                </div>
+              </div>
 
-          <ul className="grid grid-cols-2 gap-2 border-t border-slate-100 dark:border-zinc-800/80 pt-3">
-            {statusMetrics.map((status) => (
-              <li key={status.status} className="flex items-center justify-between text-[11px]">
-                <span className="flex items-center gap-1.5 text-slate-600 dark:text-zinc-300 truncate">
-                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: status.color }} />
-                  <span className="truncate">{status.name}</span>
-                </span>
-                <span className="font-bold text-slate-900 dark:text-white ml-1">{status.value}</span>
-              </li>
-            ))}
-          </ul>
+              <ul className="grid grid-cols-2 gap-2 border-t border-slate-100 dark:border-zinc-800/80 pt-3">
+                {statusMetrics.map((status) => (
+                  <li key={status.status} className="flex items-center justify-between text-[11px]">
+                    <span className="flex items-center gap-1.5 text-slate-600 dark:text-zinc-300 truncate">
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: status.color }} />
+                      <span className="truncate">{status.name}</span>
+                    </span>
+                    <span className="font-bold text-slate-900 dark:text-white ml-1">{status.value}</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : (
+            <div className="my-2 flex h-[220px] items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 text-center text-[11px] text-slate-500 dark:border-zinc-700 dark:bg-slate-900/40 dark:text-zinc-400">
+              No order status data available yet.
+            </div>
+          )}
         </section>
       </div>
     </section>

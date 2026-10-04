@@ -123,7 +123,11 @@ export default function App() {
       if (auth.authenticated && auth.role && auth.entity) {
         setIsLoggedIn(true);
         setCurrentRole(auth.role);
-        setViewMode('app');
+
+        if (viewMode !== 'landing') {
+          setViewMode('app');
+        }
+
         if (auth.role === 'customer') {
           setSelectedCustomer(auth.entity as Customer);
           setSelectedSeller(null);
@@ -152,7 +156,7 @@ export default function App() {
         setSelectedSeller(null);
         setSelectedAdmin(null);
         setSelectedRider(null);
-        if (targetTab !== 'storefront') {
+        if (viewMode !== 'landing' && targetTab !== 'storefront') {
           const tabLabel = targetTab.replace('-', ' ');
           setAuthNotice(`Authentication Required: You must be authenticated before processing HTTP requests on the ${tabLabel} page.`);
           setIsLoginModalOpen(true);
@@ -165,7 +169,7 @@ export default function App() {
     } finally {
       setIsValidatingAuth(false);
     }
-  }, []);
+  }, [viewMode]);
 
   // Listen for global authentication requirement/unauthorized events
   React.useEffect(() => {
