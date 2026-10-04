@@ -68,7 +68,7 @@ export const AdminMarketplaceMetrics: React.FC<AdminMarketplaceMetricsProps> = (
         fetchTrendingProducts(5),
         fetchTopRatedProducts(5),
         fetchTopRatedSellers(5),
-        api.getRiderApplications(),
+        api.getRiderLeaderboard(),
       ]);
       if (!isMounted) return;
 
@@ -216,6 +216,7 @@ export const AdminMarketplaceMetrics: React.FC<AdminMarketplaceMetricsProps> = (
           name: rider.Name,
           detail: `${rider.Total_Deliveries > 0 ? Math.round((rider.Timely_Deliveries / rider.Total_Deliveries) * 100) : 0}% on time`,
           value: `${rider.Timely_Deliveries.toLocaleString()} on time`,
+          image: rider.Profile_Image,
           measure: rider.Timely_Deliveries,
         })),
     },
@@ -232,6 +233,7 @@ export const AdminMarketplaceMetrics: React.FC<AdminMarketplaceMetricsProps> = (
           name: rider.Name,
           detail: `${rider.Timely_Deliveries.toLocaleString()} on-time deliveries`,
           value: `${rider.Total_Deliveries.toLocaleString()} deliveries`,
+          image: rider.Profile_Image,
           measure: rider.Total_Deliveries,
         })),
     },
@@ -248,6 +250,7 @@ export const AdminMarketplaceMetrics: React.FC<AdminMarketplaceMetricsProps> = (
           name: rider.Name,
           detail: `${rider.Total_Deliveries.toLocaleString()} deliveries`,
           value: `${Number(rider.Average_Rating).toFixed(1)} / 5`,
+          image: rider.Profile_Image,
           measure: Number(rider.Average_Rating),
           progressScale: 5,
         })),

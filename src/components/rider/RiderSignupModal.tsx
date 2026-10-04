@@ -1,6 +1,7 @@
 import React from 'react';
 import { Address } from '../../types';
 import { api } from '../../lib/api';
+import { prepareProfileImage } from '../../lib/profileImage';
 import { AccountLocationPicker } from '../AccountLocationPicker';
 import { Lock, MapPin, ShieldCheck, Sparkles, Truck, UploadCloud, X } from 'lucide-react';
 
@@ -21,8 +22,8 @@ const emptyAddress = (): Address => ({
 
 const readFileAsDataUrl = (file: File): Promise<string> => new Promise((resolve, reject) => {
   const reader = new FileReader();
-  reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('Could not read this PDF.'));
-  reader.onerror = () => reject(new Error('Could not read this PDF.'));
+  reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('Could not read this file.'));
+  reader.onerror = () => reject(new Error('Could not read this file.'));
   reader.readAsDataURL(file);
 });
 
@@ -37,6 +38,9 @@ export const RiderSignupModal: React.FC<RiderSignupModalProps> = ({ isOpen, onCl
   const [phone, setPhone] = React.useState('');
   const [presentAddress, setPresentAddress] = React.useState<Address>(emptyAddress);
   const [permanentAddress, setPermanentAddress] = React.useState<Address>(emptyAddress);
+  const [profileImage, setProfileImage] = React.useState('');
+  const [profileImageFile, setProfileImageFile] = React.useState<File | null>(null);
+  const [preparingProfileImage, setPreparingProfileImage] = React.useState(false);
   const [hasCv, setHasCv] = React.useState<boolean | null>(null);
   const [cvFile, setCvFile] = React.useState<File | null>(null);
   const [cvBase64, setCvBase64] = React.useState('');
@@ -83,6 +87,25 @@ export const RiderSignupModal: React.FC<RiderSignupModalProps> = ({ isOpen, onCl
       setMissingFields(['experience', 'previousJobs', 'education']);
     } finally {
       setIsParsing(false);
+    }
+  };
+
+  const handleProfileImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] || null;
+    setProfileImageFile(file);
+    setProfileImage('');
+    if (!file) return;
+
+    setPreparingProfileImage(true);
+    try {
+      setProfileImage(await prepareProfileImage(file));
+      setError(null);
+    } catch (err: any) {
+      setError(err.message || 'Could not read this profile image.');
+      setProfileImageFile(null);
+      event.target.value = '';
+    } finally {
+      setPreparingProfileImage(false);
     }
   };
 
@@ -142,6 +165,8 @@ export const RiderSignupModal: React.FC<RiderSignupModalProps> = ({ isOpen, onCl
         Has_CV: hasCv,
         CV_Base64: hasCv ? cvBase64 : undefined,
         CV_File_Name: hasCv ? cvFile?.name : undefined,
+        Profile_Image: profileImage || undefined,
+        Profile_Image_File_Name: profileImageFile?.name,
         Experience: fromLines(experience),
         Previous_Jobs: fromLines(previousJobs),
         Education: fromLines(education),
@@ -201,6 +226,16 @@ export const RiderSignupModal: React.FC<RiderSignupModalProps> = ({ isOpen, onCl
             </div>
           </section>
 
+          <section className="space-y-3">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Profile photo</h3>
+            <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-emerald-400 bg-emerald-50/60 p-4 text-sm text-slate-700 dark:border-emerald-800 dark:bg-emerald-950/20 dark:text-zinc-200">
+              {profileImage ? <img src={profileImage} alt="Rider profile preview" className="h-14 w-14 rounded-xl border border-emerald-200 object-cover dark:border-emerald-800" /> : <UploadCloud className="h-5 w-5 shrink-0 text-emerald-700 dark:text-emerald-400" />}
+              <span className="min-w-0 flex-1">{profileImageFile ? `${profileImageFile.name} · Ready` : 'Upload a JPG or PNG image (max 2 MB)'}</span>
+              <input type="file" accept="image/jpeg,image/png" className="sr-only" onChange={(event) => void handleProfileImageChange(event)} />
+            </label>
+            <p className="text-xs text-slate-500 dark:text-zinc-400">Your photo will appear in your generated CV. You can add or change it later under My details.</p>
+          </section>
+
           {[{ title: 'Present address', value: presentAddress, set: setPresentAddress }, { title: 'Permanent address', value: permanentAddress, set: setPermanentAddress }].map((addressForm) => (
             <section key={addressForm.title} className="space-y-3">
               <h3 className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white"><MapPin className="h-4 w-4 text-emerald-700 dark:text-emerald-400" />{addressForm.title}</h3>
@@ -256,8 +291,8 @@ export const RiderSignupModal: React.FC<RiderSignupModalProps> = ({ isOpen, onCl
 
           <div className="flex flex-col-reverse justify-between gap-3 border-t border-slate-200 pt-5 dark:border-zinc-800 sm:flex-row sm:items-center">
             <p className="flex items-center gap-2 text-xs text-slate-500 dark:text-zinc-400"><ShieldCheck className="h-4 w-4 shrink-0" />ShopNiro generates and saves a formatted CV PDF from your application details.</p>
-            <button type="submit" disabled={isSubmitting || isParsing} className="rounded-lg bg-emerald-700 px-5 py-2.5 text-sm font-bold text-white hover:bg-emerald-600 disabled:opacity-50">
-              {isSubmitting ? 'Submitting application...' : 'Submit rider application'}
+            <button type="submit" disabled={isSubmitting || isParsing || preparingProfileImage} className="rounded-lg bg-emerald-700 px-5 py-2.5 text-sm font-bold text-white hover:bg-emerald-600 disabled:opacity-50">
+              {preparingProfileImage ? 'Preparing photo...' : isSubmitting ? 'Submitting application...' : 'Submit rider application'}
             </button>
           </div>
         </form>

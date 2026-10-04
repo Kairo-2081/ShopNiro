@@ -33,6 +33,20 @@ function decodePdf(value: unknown): Buffer {
   return buffer;
 }
 
+function decodeProfileImage(value: unknown): Buffer {
+  if (typeof value !== 'string') throw new Error('Upload a valid profile image.');
+  const match = /^data:(image\/(?:jpeg|png));base64,([a-zA-Z0-9+/]+=*)$/i.exec(value);
+  if (!match) throw new Error('Profile image must be a JPG or PNG file.');
+
+  const buffer = Buffer.from(match[2], 'base64');
+  const isJpeg = match[1].toLowerCase() === 'image/jpeg' && buffer.subarray(0, 3).equals(Buffer.from([0xff, 0xd8, 0xff]));
+  const isPng = match[1].toLowerCase() === 'image/png' && buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+  if (!buffer.length || buffer.length > 2 * 1024 * 1024 || (!isJpeg && !isPng)) {
+    throw new Error('Profile image must be a valid JPG or PNG under 2 MB.');
+  }
+  return buffer;
+}
+
 function parseJsonResponse(value: string): Record<string, unknown> {
   const start = value.indexOf('{');
   const end = value.lastIndexOf('}');
@@ -58,7 +72,7 @@ function addressSignature(value: unknown): string {
   ]);
 }
 
-function createRiderCvPdf(profile: { name: string; email: string; phone: string; presentAddress: Address; permanentAddress: Address; experience: string[]; previousJobs: string[]; education: string[] }): Promise<Buffer> {
+function createRiderCvPdf(profile: { name: string; email: string; phone: string; presentAddress: Address; permanentAddress: Address; experience: string[]; previousJobs: string[]; education: string[]; profileImage?: string }): Promise<Buffer> {
   return new Promise((resolvePdf, reject) => {
     const document = new PDFDocument({ size: 'A4', margin: 54, info: { Title: `${profile.name} | ShopNiro Rider CV`, Author: 'ShopNiro' } });
     const chunks: Buffer[] = [];
@@ -115,7 +129,27 @@ function createRiderCvPdf(profile: { name: string; email: string; phone: string;
       y += 9;
     };
 
-    section('Contact', [profile.email, profile.phone]);
+    if (y + 100 > 770) nextPage();
+    document.fillColor('#807653').font('Helvetica-Bold').fontSize(9).text('CONTACT', left, y, { characterSpacing: 1 });
+    y += 17;
+    document.moveTo(left, y).lineTo(right, y).lineWidth(0.7).strokeColor('#e8e6df').stroke();
+    y += 12;
+    const contactTop = y;
+    const contactWidth = profile.profileImage ? contentWidth - 94 : contentWidth;
+    document.fillColor('#37362e').font('Helvetica').fontSize(10)
+      .text(profile.email, left, contactTop, { width: contactWidth, height: 14, ellipsis: true });
+    document.text(profile.phone, left, contactTop + 18, { width: contactWidth, height: 14, ellipsis: true });
+    if (profile.profileImage) {
+      const photoSize = 68;
+      const photoX = right - photoSize;
+      document.image(decodeProfileImage(profile.profileImage), photoX, contactTop - 5, { cover: [photoSize, photoSize] });
+      document.rect(photoX, contactTop - 5, photoSize, photoSize).lineWidth(0.8).strokeColor('#d6d2c5').stroke();
+      y = contactTop + photoSize;
+    } else {
+      y = contactTop + 34;
+    }
+    y += 18;
+
     section('Present address', [addressText(profile.presentAddress)]);
     section('Permanent address', [addressText(profile.permanentAddress)]);
     section('Relevant experience', profile.experience);
@@ -130,7 +164,7 @@ const riderCvFileName = (name: string) => `${name.replace(/[^a-zA-Z0-9-_]+/g, '-
 
 async function regenerateStoredRiderCv(riderId: string) {
   const result = await query(`
-    SELECT r.name, r.number, r.present_address_json, r.permanent_address_json,
+    SELECT r.name, r.number, r.present_address_json, r.permanent_address_json, r.profile_image,
       r.experience_json, r.previous_jobs_json, r.education_json, u.email
     FROM riders r JOIN users u ON u.id = r.id WHERE r.id = $1
   `, [riderId]);
@@ -144,6 +178,7 @@ async function regenerateStoredRiderCv(riderId: string) {
     phone: String(row.number || ''),
     presentAddress: address(row.present_address_json),
     permanentAddress: address(row.permanent_address_json),
+    profileImage: row.profile_image || undefined,
     experience: cleanList(row.experience_json),
     previousJobs: cleanList(row.previous_jobs_json),
     education: cleanList(row.education_json),
@@ -152,7 +187,7 @@ async function regenerateStoredRiderCv(riderId: string) {
   return { fileName, buffer };
 }
 
-function mapRider(row: any): Rider {
+function mapRider(row: any, includeProfileImage = true): Rider {
   const points = Number(row.current_month_performance_points ?? row.performance_points);
   return {
     Rider_ID: row.id,
@@ -162,6 +197,8 @@ function mapRider(row: any): Rider {
     Number: row.number || '',
     Present_Address: row.present_address_json || {},
     Permanent_Address: row.permanent_address_json || {},
+    Profile_Image: includeProfileImage ? row.profile_image || undefined : undefined,
+    Profile_Image_File_Name: includeProfileImage ? row.profile_image_file_name || undefined : undefined,
     Experience: cleanList(row.experience_json),
     Previous_Jobs: cleanList(row.previous_jobs_json),
     Education: cleanList(row.education_json),
@@ -243,6 +280,8 @@ router.post('/apply', async (req, res) => {
     Number: phone,
     Present_Address,
     Permanent_Address,
+    Profile_Image,
+    Profile_Image_File_Name,
     Has_CV,
     CV_Base64,
     CV_File_Name,
@@ -276,6 +315,15 @@ router.post('/apply', async (req, res) => {
     }
   }
 
+  const profileImage = typeof Profile_Image === 'string' && Profile_Image.trim() ? Profile_Image.trim() : undefined;
+  if (profileImage) {
+    try {
+      decodeProfileImage(profileImage);
+    } catch (error: any) {
+      return res.status(400).json({ error: error.message });
+    }
+  }
+
   const experience = cleanList(Experience);
   const previousJobs = cleanList(Previous_Jobs);
   const education = cleanList(Education);
@@ -287,6 +335,7 @@ router.post('/apply', async (req, res) => {
       phone: String(phone).trim(),
       presentAddress: Present_Address as Address,
       permanentAddress: Permanent_Address as Address,
+      profileImage,
       experience,
       previousJobs,
       education,
@@ -318,8 +367,9 @@ router.post('/apply', async (req, res) => {
     await client.query(
       `INSERT INTO riders (
         id, name, number, status, present_address_json, permanent_address_json,
-        has_cv, cv_file_name, cv_pdf, experience_json, previous_jobs_json, education_json
-      ) VALUES ($1, $2, $3, 'pending', $4::jsonb, $5::jsonb, $6, $7, $8, $9::jsonb, $10::jsonb, $11::jsonb)`,
+        has_cv, cv_file_name, cv_pdf, profile_image, profile_image_file_name,
+        experience_json, previous_jobs_json, education_json
+      ) VALUES ($1, $2, $3, 'pending', $4::jsonb, $5::jsonb, $6, $7, $8, $9, $10, $11::jsonb, $12::jsonb, $13::jsonb)`,
       [
         riderId,
         String(Name).trim(),
@@ -329,6 +379,8 @@ router.post('/apply', async (req, res) => {
         true,
         cvFileName,
         cvBuffer,
+        profileImage || null,
+        Profile_Image_File_Name || null,
         JSON.stringify(experience),
         JSON.stringify(previousJobs),
         JSON.stringify(education),
@@ -345,6 +397,35 @@ router.post('/apply', async (req, res) => {
   }
 });
 
+router.get('/leaderboard', requireAuth, requireRole(['admin']), async (_req, res) => {
+  try {
+    const result = await query(`
+      WITH rider_scores AS (
+        SELECT r.*, u.username, u.email,
+          COALESCE(AVG(rr.rating), 0) AS average_rating
+        FROM riders r
+        JOIN users u ON u.id = r.id
+        LEFT JOIN rider_reviews rr ON rr.rider_id = r.id
+        WHERE r.status = 'approved'
+        GROUP BY r.id, u.username, u.email
+      ), top_rider_ids AS (
+        (SELECT id FROM rider_scores WHERE timely_deliveries > 0 ORDER BY timely_deliveries DESC, name LIMIT 5)
+        UNION
+        (SELECT id FROM rider_scores WHERE total_deliveries > 0 ORDER BY total_deliveries DESC, name LIMIT 5)
+        UNION
+        (SELECT id FROM rider_scores WHERE average_rating > 0 ORDER BY average_rating DESC, name LIMIT 5)
+      )
+      SELECT scores.*
+      FROM rider_scores scores
+      JOIN top_rider_ids top_ids ON top_ids.id = scores.id
+    `);
+    return res.json(result.rows.map((row) => mapRider(row)));
+  } catch (error: any) {
+    console.error('Failed to load rider leaderboard:', error);
+    return res.status(500).json({ error: 'Failed to load rider leaderboard.' });
+  }
+});
+
 router.get('/applications', requireAuth, requireRole(['admin']), async (_req, res) => {
   try {
     const result = await query(`
@@ -352,7 +433,7 @@ router.get('/applications', requireAuth, requireRole(['admin']), async (_req, re
       FROM riders r JOIN users u ON u.id = r.id
       ORDER BY CASE WHEN r.status = 'pending' THEN 0 ELSE 1 END, r.created_at DESC
     `);
-    res.json(result.rows.map(mapRider));
+    res.json(result.rows.map((row) => mapRider(row, false)));
   } catch (error: any) {
     console.error('Failed to load rider applications:', error);
     res.status(500).json({ error: 'Failed to load rider applications.' });
@@ -482,6 +563,8 @@ router.put('/me', requireAuth, requireRole(['rider']), async (req: AuthRequest, 
     Number: phone,
     Present_Address,
     Permanent_Address,
+    Profile_Image,
+    Profile_Image_File_Name,
     Experience,
     Previous_Jobs,
     Education,
@@ -503,6 +586,14 @@ router.put('/me', requireAuth, requireRole(['rider']), async (req: AuthRequest, 
   const riderId = req.user!.entityId;
   const username = String(Username).trim().toLowerCase();
   const email = String(Email).trim().toLowerCase();
+  const profileImage = typeof Profile_Image === 'string' && Profile_Image.trim() ? Profile_Image.trim() : undefined;
+  if (profileImage) {
+    try {
+      decodeProfileImage(profileImage);
+    } catch (error: any) {
+      return res.status(400).json({ error: error.message });
+    }
+  }
   const experience = cleanList(Experience);
   const previousJobs = cleanList(Previous_Jobs);
   const education = cleanList(Education);
@@ -526,6 +617,7 @@ router.put('/me', requireAuth, requireRole(['rider']), async (req: AuthRequest, 
       return res.status(404).json({ error: 'Rider profile not found.' });
     }
     const current = currentResult.rows[0];
+    const profileImageChanged = Boolean(profileImage) && profileImage !== (current.profile_image || '');
     const profileChanged =
       String(current.username || '').toLowerCase() !== username ||
       String(current.email || '').toLowerCase() !== email ||
@@ -536,8 +628,9 @@ router.put('/me', requireAuth, requireRole(['rider']), async (req: AuthRequest, 
       JSON.stringify(cleanList(current.experience_json)) !== JSON.stringify(experience) ||
       JSON.stringify(cleanList(current.previous_jobs_json)) !== JSON.stringify(previousJobs) ||
       JSON.stringify(cleanList(current.education_json)) !== JSON.stringify(education);
+    const anyProfileChanged = profileChanged || profileImageChanged;
     const passwordChanged = typeof Password === 'string' && Password.length > 0;
-    if (!profileChanged && !passwordChanged) {
+    if (!anyProfileChanged && !passwordChanged) {
       await client.query('COMMIT');
       return res.json(mapRider(current));
     }
@@ -555,13 +648,14 @@ router.put('/me', requireAuth, requireRole(['rider']), async (req: AuthRequest, 
       'UPDATE users SET username = $2, email = $3, password = COALESCE($4, password) WHERE id = $1',
       [riderId, username, email, passwordHash]
     );
-    if (profileChanged) {
+    if (anyProfileChanged) {
       const cvBuffer = await createRiderCvPdf({
         name: String(Name).trim(),
         email,
         phone: String(phone).trim(),
         presentAddress: Present_Address as Address,
         permanentAddress: Permanent_Address as Address,
+        profileImage: profileImage || current.profile_image || undefined,
         experience,
         previousJobs,
         education,
@@ -570,7 +664,8 @@ router.put('/me', requireAuth, requireRole(['rider']), async (req: AuthRequest, 
         UPDATE riders SET name = $2, number = $3, present_address_json = $4::jsonb,
           permanent_address_json = $5::jsonb, experience_json = $6::jsonb,
           previous_jobs_json = $7::jsonb, education_json = $8::jsonb,
-          has_cv = TRUE, cv_file_name = $9, cv_pdf = $10, status = 'pending',
+          has_cv = TRUE, cv_file_name = $9, cv_pdf = $10,
+          profile_image = $11, profile_image_file_name = $12, status = 'pending',
           updated_at = CURRENT_TIMESTAMP
         WHERE id = $1
       `, [
@@ -584,6 +679,8 @@ router.put('/me', requireAuth, requireRole(['rider']), async (req: AuthRequest, 
         JSON.stringify(education),
         cvFileName,
         cvBuffer,
+        profileImage || current.profile_image || null,
+        Profile_Image_File_Name || current.profile_image_file_name || null,
       ]);
     }
     const result = await client.query(`

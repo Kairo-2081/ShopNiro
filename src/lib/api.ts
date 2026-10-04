@@ -308,6 +308,8 @@ export const api = {
     Has_CV: boolean;
     CV_Base64?: string;
     CV_File_Name?: string;
+    Profile_Image?: string;
+    Profile_Image_File_Name?: string;
     Experience: string[];
     Previous_Jobs: string[];
     Education: string[];
@@ -317,6 +319,7 @@ export const api = {
     fetchJson('/api/riders/cv/parse', { method: 'POST', body: JSON.stringify({ cvBase64 }) }),
   formatRiderCv: async (data: { experience: string[]; previousJobs: string[]; education: string[] }): Promise<{ experience: string[]; previousJobs: string[]; education: string[] }> =>
     fetchJson('/api/riders/cv/format', { method: 'POST', body: JSON.stringify(data) }),
+  getRiderLeaderboard: async (): Promise<Rider[]> => fetchJson<Rider[]>('/api/riders/leaderboard'),
   getRiderApplications: async (): Promise<Rider[]> => fetchJson<Rider[]>('/api/riders/applications'),
   setRiderApplicationStatus: async (id: string, status: RiderStatus): Promise<{ Rider_ID: string; Status: RiderStatus }> =>
     fetchJson(`/api/riders/applications/${encodeURIComponent(id)}/status`, {

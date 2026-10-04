@@ -29,7 +29,7 @@ const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 
 // Parse incoming JSON payloads
-app.use(express.json({ limit: '5mb' }));
+app.use(express.json({ limit: '8mb' }));
 
 // Seed database schema and sample data on server startup if empty
 seedDatabaseIfEmpty().catch((err) => {

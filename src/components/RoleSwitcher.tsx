@@ -7,7 +7,6 @@ import {
   LogIn,
   LogOut,
   UserPlus,
-  Database,
   CheckCircle2,
   Lock,
   Truck,
@@ -78,11 +77,6 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
 
           {/* User Controls */}
           <div className="flex items-center gap-2">
-            <span className="hidden md:inline-flex items-center gap-1 text-[11px] text-slate-500 dark:text-zinc-400 mr-2">
-              <Database className="w-3 h-3 text-sky-400" />
-              Raw SQL Local Store
-            </span>
-
             <button
               onClick={onLogout}
               className="flex items-center gap-1.5 px-3 py-1 bg-rose-500/10 hover:bg-rose-600 hover:text-white text-rose-500 dark:text-rose-400 font-semibold rounded-full border border-rose-500/20 transition-all cursor-pointer"

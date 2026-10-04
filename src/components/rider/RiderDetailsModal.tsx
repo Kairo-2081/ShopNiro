@@ -1,7 +1,8 @@
 import React from 'react';
 import { Address, Rider } from '../../types';
 import { api } from '../../lib/api';
-import { FileText, Lock, Save, X } from 'lucide-react';
+import { prepareProfileImage } from '../../lib/profileImage';
+import { FileText, Image as ImageIcon, Lock, Save, X } from 'lucide-react';
 
 interface RiderDetailsModalProps {
   isOpen: boolean;
@@ -31,6 +32,9 @@ export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, ri
   const [email, setEmail] = React.useState(rider.Email);
   const [phone, setPhone] = React.useState(rider.Number);
   const [password, setPassword] = React.useState('');
+  const [profileImage, setProfileImage] = React.useState(rider.Profile_Image || '');
+  const [profileImageFile, setProfileImageFile] = React.useState<File | null>(null);
+  const [preparingProfileImage, setPreparingProfileImage] = React.useState(false);
   const [presentAddress, setPresentAddress] = React.useState<Address>(rider.Present_Address || emptyAddress());
   const [permanentAddress, setPermanentAddress] = React.useState<Address>(rider.Permanent_Address || emptyAddress());
   const [experience, setExperience] = React.useState(toLines(rider.Experience || []));
@@ -48,6 +52,9 @@ export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, ri
     setEmail(rider.Email);
     setPhone(rider.Number);
     setPassword('');
+    setProfileImage(rider.Profile_Image || '');
+    setProfileImageFile(null);
+    setPreparingProfileImage(false);
     setPresentAddress(rider.Present_Address || emptyAddress());
     setPermanentAddress(rider.Permanent_Address || emptyAddress());
     setExperience(toLines(rider.Experience || []));
@@ -64,12 +71,15 @@ export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, ri
     name.trim() !== rider.Name.trim() ||
     email.trim().toLowerCase() !== rider.Email.trim().toLowerCase() ||
     phone.trim() !== rider.Number.trim() ||
+    profileImage !== (rider.Profile_Image || '') ||
     addressKey(presentAddress) !== addressKey(rider.Present_Address || emptyAddress()) ||
     addressKey(permanentAddress) !== addressKey(rider.Permanent_Address || emptyAddress()) ||
     JSON.stringify(fromLines(experience)) !== JSON.stringify(rider.Experience || []) ||
     JSON.stringify(fromLines(previousJobs)) !== JSON.stringify(rider.Previous_Jobs || []) ||
     JSON.stringify(fromLines(education)) !== JSON.stringify(rider.Education || []);
-  const hasChanges = profileChanged || password.length > 0;
+  const profileImageChanged = profileImage !== (rider.Profile_Image || '');
+  const hasProfileChanges = profileChanged || profileImageChanged;
+  const hasChanges = hasProfileChanges || password.length > 0;
 
   const viewCv = async () => {
     const previewWindow = window.open('', '_blank');
@@ -118,6 +128,8 @@ export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, ri
         Email: email,
         Number: phone,
         Password: password || undefined,
+        Profile_Image: profileImageChanged ? profileImage : undefined,
+        Profile_Image_File_Name: profileImageChanged ? profileImageFile?.name : undefined,
         Present_Address: presentAddress,
         Permanent_Address: permanentAddress,
         Experience: fromLines(experience),
@@ -134,6 +146,23 @@ export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, ri
   };
 
   const fieldClass = 'w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-600 dark:border-zinc-700 dark:bg-[#181F2A] dark:text-white';
+  const handleProfileImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] || null;
+    setProfileImageFile(file);
+    setError(null);
+    if (!file) return;
+
+    setPreparingProfileImage(true);
+    void prepareProfileImage(file).then((dataUrl) => {
+      setProfileImage(dataUrl);
+    }).catch((err: Error) => {
+      setError(err.message || 'Could not read this profile image.');
+      setProfileImageFile(null);
+      event.target.value = '';
+    }).finally(() => {
+      setPreparingProfileImage(false);
+    });
+  };
   const addressForms = [
     { title: 'Present address', value: presentAddress, set: setPresentAddress },
     { title: 'Permanent address', value: permanentAddress, set: setPermanentAddress },
@@ -171,6 +200,16 @@ export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, ri
             </div>
           </section>
 
+          <section className="space-y-3">
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Profile photo</h3>
+            <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-emerald-400 bg-emerald-50/60 p-4 text-sm text-slate-700 dark:border-emerald-800 dark:bg-emerald-950/20 dark:text-zinc-200">
+              {profileImage ? <img src={profileImage} alt="Rider profile preview" className="h-14 w-14 rounded-xl border border-emerald-200 object-cover dark:border-emerald-800" /> : <ImageIcon className="h-5 w-5 shrink-0 text-emerald-700 dark:text-emerald-400" />}
+              <span className="min-w-0 flex-1">{profileImageFile ? `${profileImageFile.name} · Ready` : 'Upload / change profile image (JPG or PNG, max 2 MB)'}</span>
+              <input type="file" accept="image/jpeg,image/png" className="sr-only" onChange={handleProfileImageChange} />
+            </label>
+            <p className="text-xs text-slate-500 dark:text-zinc-400">Saving a new photo automatically updates the image in your generated CV.</p>
+          </section>
+
           {addressForms.map((addressForm) => (
             <section key={addressForm.title} className="space-y-3">
               <h3 className="text-sm font-bold text-slate-900 dark:text-white">{addressForm.title}</h3>
@@ -199,7 +238,7 @@ export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, ri
 
           <footer className="flex flex-col-reverse justify-end gap-2 border-t border-slate-200 pt-4 dark:border-zinc-800 sm:flex-row">
             <button type="button" onClick={onClose} className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 dark:border-zinc-700 dark:text-zinc-200">Cancel</button>
-            <button type="submit" disabled={saving} className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"><Save className="h-4 w-4" />{saving ? 'Saving details...' : 'Save details'}</button>
+            <button type="submit" disabled={saving || preparingProfileImage} className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"><Save className="h-4 w-4" />{preparingProfileImage ? 'Preparing photo...' : saving ? 'Saving details...' : 'Save details'}</button>
           </footer>
         </form>
       </section>

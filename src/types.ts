@@ -188,6 +188,8 @@ export interface Rider {
   Number: string;
   Present_Address: Address;
   Permanent_Address: Address;
+  Profile_Image?: string;
+  Profile_Image_File_Name?: string;
   Experience: string[];
   Previous_Jobs: string[];
   Education: string[];

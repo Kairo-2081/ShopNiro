@@ -65,6 +65,8 @@ CREATE TABLE IF NOT EXISTS riders (
     has_cv BOOLEAN NOT NULL DEFAULT FALSE,
     cv_file_name VARCHAR(255),
     cv_pdf BYTEA,
+    profile_image TEXT,
+    profile_image_file_name VARCHAR(255),
     experience_json JSONB NOT NULL DEFAULT '[]'::jsonb,
     previous_jobs_json JSONB NOT NULL DEFAULT '[]'::jsonb,
     education_json JSONB NOT NULL DEFAULT '[]'::jsonb,
@@ -80,6 +82,9 @@ CREATE TABLE IF NOT EXISTS riders (
     CONSTRAINT chk_riders_status CHECK (status IN ('pending', 'approved', 'rejected', 'suspended')),
     CONSTRAINT chk_riders_points CHECK (performance_points BETWEEN 0 AND 100)
 );
+
+ALTER TABLE riders ADD COLUMN IF NOT EXISTS profile_image TEXT;
+ALTER TABLE riders ADD COLUMN IF NOT EXISTS profile_image_file_name VARCHAR(255);
 
 -- ADMINS TABLE
 CREATE TABLE IF NOT EXISTS admins (
