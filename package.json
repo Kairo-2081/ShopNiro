@@ -64,7 +64,7 @@
     "tsx": "^4.21.0",
     "typescript": "~5.8.2"
   },
-  "build": {
+"build": {
     "appId": "com.shopniro.app",
     "productName": "ShopNiro",
     "publish": null,
@@ -76,7 +76,7 @@
       "electron/**/*"
     ],
     "win": {
-      "icon": "icon.ico",
+      "icon": "assets/icon.png",
       "target": [
         "nsis",
         "portable"
