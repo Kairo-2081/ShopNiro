@@ -6,7 +6,7 @@ function createWindow() {
     width: 1280,
     height: 800,
     title: 'ShopNiro',
-    icon: path.join(__dirname, '../icon.ico'),
+    icon: path.join(__dirname, '../assets/icon.png'),
     autoHideMenuBar: true,
     webPreferences: {
       nodeIntegration: false,
@@ -14,11 +14,8 @@ function createWindow() {
     },
   });
 
-  if (app.isPackaged) {
-    win.loadFile(path.join(__dirname, '../dist/index.html'));
-  } else {
-    win.loadURL('https://shopniro.onrender.com');
-  }
+  // Load live Render application directly
+  win.loadURL('https://shopniro.onrender.com');
 }
 
 app.whenReady().then(() => {
