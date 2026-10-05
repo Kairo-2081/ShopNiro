@@ -82,20 +82,14 @@ export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, ri
   const hasChanges = hasProfileChanges || password.length > 0;
 
   const viewCv = async () => {
-    const previewWindow = window.open('', '_blank');
-    if (!previewWindow) {
-      setError('Your browser blocked the CV preview. Allow pop-ups and try again.');
-      return;
-    }
     setOpeningCv(true);
     setError(null);
     try {
       const cv = await api.getMyRiderCv();
       const url = URL.createObjectURL(cv);
-      previewWindow.location.replace(url);
+      window.location.assign(url);
       window.setTimeout(() => URL.revokeObjectURL(url), 60000);
     } catch (err: any) {
-      previewWindow.close();
       setError(err.message || 'Could not open your current CV.');
     } finally {
       setOpeningCv(false);

@@ -247,6 +247,47 @@
       overflow: visible;
       border: 0;
     }
+
+    .app-shell {
+      min-height: 100dvh;
+      width: 100%;
+    }
+
+    .app-panel {
+      width: 100%;
+      max-width: 100%;
+    }
+
+    nav button,
+    .luxury-control,
+    .premium-button {
+      letter-spacing: -0.01em;
+      white-space: nowrap;
+    }
+  }
+
+  @media (max-width: 480px) {
+    body {
+      background-attachment: fixed;
+    }
+
+    header nav {
+      gap: 0.375rem;
+    }
+
+    header nav button {
+      padding-left: 0.65rem !important;
+      padding-right: 0.65rem !important;
+      padding-top: 0.45rem !important;
+      padding-bottom: 0.45rem !important;
+      font-size: 0.62rem !important;
+      line-height: 1.2 !important;
+    }
+
+    header .luxury-control {
+      padding-left: 0.5rem !important;
+      padding-right: 0.5rem !important;
+    }
   }
 }
 

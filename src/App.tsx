@@ -714,9 +714,9 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-transparent text-slate-900 dark:text-zinc-100 font-sans flex flex-col antialiased transition-colors duration-200 app-shell">
+    <div className="min-h-screen overflow-x-hidden bg-transparent text-slate-900 dark:text-zinc-100 font-sans flex flex-col antialiased transition-colors duration-200 app-shell">
       {/* Top Bar with Landing option */}
-      <div className="bg-[#171713]/80 dark:bg-[#10100f]/75 border-b border-[#d0c8a5]/15 dark:border-white/10 px-4 py-1.5 flex items-center justify-between text-xs text-slate-700 dark:text-zinc-300 backdrop-blur-xl shadow-[0_10px_30px_rgba(7,7,5,0.25)] animate-fade-up">
+      <div className="bg-[#171713]/80 dark:bg-[#10100f]/75 border-b border-[#d0c8a5]/15 dark:border-white/10 px-3 py-1.5 flex items-center justify-between text-xs text-slate-700 dark:text-zinc-300 backdrop-blur-xl shadow-[0_10px_30px_rgba(7,7,5,0.25)] animate-fade-up sm:px-4">
         <button
           onClick={() => setViewMode('landing')}
           className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-[#161C24] dark:hover:bg-[#1E2633] text-blue-600 dark:text-sky-400 font-semibold border border-sky-100 dark:border-zinc-800 transition-colors cursor-pointer shadow-2xs"
@@ -765,7 +765,7 @@ export default function App() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-16 app-panel animate-fade-up">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 pt-4 pb-16 app-panel animate-fade-up sm:px-6 lg:px-8 lg:pt-6">
         <React.Suspense fallback={<div className="flex min-h-[40vh] items-center justify-center text-sm text-slate-500 dark:text-zinc-400">Loading marketplace...</div>}>
         {/* Authentication Notice Banner if set */}
         {authNotice && !isLoginModalOpen && (

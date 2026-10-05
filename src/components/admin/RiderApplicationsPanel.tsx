@@ -69,10 +69,16 @@ export const RiderApplicationsPanel: React.FC = () => {
       link.href = url;
       link.download = rider.CV_File_Name || `${rider.Username}-cv.pdf`;
       link.rel = 'noopener';
+      link.style.display = 'none';
       document.body.appendChild(link);
-      link.click();
+      const clickEvent = new MouseEvent('click', {
+        view: window,
+        bubbles: true,
+        cancelable: true,
+      });
+      link.dispatchEvent(clickEvent);
       link.remove();
-      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+      window.setTimeout(() => URL.revokeObjectURL(url), 1500);
     } catch (error: any) {
       setNotice(error.message || 'Could not download CV.');
     }

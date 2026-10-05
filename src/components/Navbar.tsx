@@ -53,24 +53,24 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   return (
     <header className="sticky top-0 z-30 bg-[#f6f5ef]/95 dark:bg-[#10100f]/80 backdrop-blur-xl border-b border-[#80734f]/20 dark:border-white/10 shadow-[0_8px_24px_rgba(41,40,33,0.10)] dark:shadow-[0_12px_32px_rgba(6,6,4,0.25)] transition-colors duration-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex min-h-16 items-center justify-between gap-3 py-2">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+        <div className="flex min-h-16 items-center justify-between gap-2 py-2 sm:gap-3">
           {/* Logo & Brand matching Landing Page */}
-          <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => setActiveTab('storefront')}>
+          <div className="flex shrink-0 items-center gap-2 cursor-pointer sm:gap-2.5" onClick={() => setActiveTab('storefront')}>
             <img
               src={shopNiroLogo}
               alt="ShopNiro"
-              className="w-10 h-10 rounded-full object-cover border border-[#d0c8a5]/50 shadow-[0_8px_20px_rgba(169,155,114,0.24)]"
+              className="h-9 w-9 rounded-full object-cover border border-[#d0c8a5]/50 shadow-[0_8px_20px_rgba(169,155,114,0.24)] sm:h-10 sm:w-10"
             />
             <div>
-              <span className="font-display text-xl font-normal text-[#0f1f1d] dark:text-white leading-none block">
+              <span className="font-display text-lg font-normal leading-none text-[#0f1f1d] dark:text-white sm:text-xl">
                 ShopNiro
               </span>
             </div>
           </div>
 
           {/* Navigation Links according to Active Role and Login State */}
-          <nav className="flex max-w-[58vw] flex-wrap items-center justify-center gap-1.5 overflow-x-auto scrollbar-thin">
+          <nav className="flex w-full max-w-full flex-wrap items-center justify-center gap-1.5 overflow-x-auto scrollbar-thin md:max-w-[58vw]">
             {/* If NOT logged in: Guest Navigation with page-level auth validation */}
             {!isLoggedIn && (
               <>
