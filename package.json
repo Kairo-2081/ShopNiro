@@ -10,7 +10,7 @@
     "start": "node dist/server.cjs",
     "preview": "vite preview",
     "electron:dev": "electron .",
-    "electron:build": "npm run build && electron-builder --win",
+    "electron:build": "npm run build && electron-builder --win --publish never",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit"
   },
@@ -66,6 +66,7 @@
   "build": {
     "appId": "com.shopniro.app",
     "productName": "ShopNiro",
+    "publish": null,
     "directories": {
       "output": "release-windows"
     },
