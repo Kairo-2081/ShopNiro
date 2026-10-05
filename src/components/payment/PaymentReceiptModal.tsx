@@ -65,25 +65,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
     const trackingId = escapeHtml(order.Tracking_ID || 'Not assigned');
     const transactionId = escapeHtml(order.Transaction_ID || 'Not available');
     const paymentMethod = escapeHtml(method.replaceAll('_', ' '));
-
-    const printFrame = document.createElement('iframe');
-    printFrame.title = 'ShopNiro receipt print view';
-    printFrame.setAttribute('aria-hidden', 'true');
-    printFrame.style.position = 'fixed';
-    printFrame.style.width = '0';
-    printFrame.style.height = '0';
-    printFrame.style.border = '0';
-    printFrame.onload = () => {
-      const printWindow = printFrame.contentWindow;
-      if (!printWindow) {
-        printFrame.remove();
-        return;
-      }
-      printWindow.addEventListener('afterprint', () => printFrame.remove(), { once: true });
-      printWindow.focus();
-      printWindow.print();
-    };
-    printFrame.srcdoc = `<!doctype html>
+    const receiptMarkup = `<!doctype html>
       <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ShopNiro receipt ${orderId}</title>
       <style>
         @page { size: A4; margin: 16mm; }
@@ -160,7 +142,31 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
           <footer class="footer"><span>Thank you for shopping with ShopNiro.</span><span>Questions? Contact ShopNiro support.</span></footer>
         </main>
       </body></html>`;
-    document.body.appendChild(printFrame);
+
+    const printWindow = window.open('', '_blank', 'noopener,noreferrer');
+    if (!printWindow) {
+      if (typeof window.print === 'function') {
+        window.print();
+      }
+      return;
+    }
+
+    printWindow.document.open();
+    printWindow.document.write(receiptMarkup);
+    printWindow.document.close();
+
+    window.setTimeout(() => {
+      try {
+        printWindow.focus();
+        if (typeof printWindow.print === 'function') {
+          printWindow.print();
+        }
+      } catch {
+        if (typeof window.print === 'function') {
+          window.print();
+        }
+      }
+    }, 300);
   };
 
   return (

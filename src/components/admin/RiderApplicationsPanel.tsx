@@ -68,8 +68,11 @@ export const RiderApplicationsPanel: React.FC = () => {
       const link = document.createElement('a');
       link.href = url;
       link.download = rider.CV_File_Name || `${rider.Username}-cv.pdf`;
+      link.rel = 'noopener';
+      document.body.appendChild(link);
       link.click();
-      URL.revokeObjectURL(url);
+      link.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (error: any) {
       setNotice(error.message || 'Could not download CV.');
     }

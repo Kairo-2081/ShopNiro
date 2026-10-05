@@ -70,7 +70,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Navigation Links according to Active Role and Login State */}
-          <nav className="hidden md:flex max-w-[58vw] flex-wrap items-center justify-center gap-1.5">
+          <nav className="flex max-w-[58vw] flex-wrap items-center justify-center gap-1.5 overflow-x-auto scrollbar-thin">
             {/* If NOT logged in: Guest Navigation with page-level auth validation */}
             {!isLoggedIn && (
               <>
