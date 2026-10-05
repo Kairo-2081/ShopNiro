@@ -5,15 +5,15 @@
   "main": "electron/main.cjs",
   "type": "module",
   "scripts": {
-    "dev": "tsx server/index.ts",
-    "build": "vite build && esbuild server/index.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
-    "start": "node dist/server.cjs",
-    "preview": "vite preview",
-    "electron:dev": "electron .",
-    "electron:build": "npm run build && electron-builder --win --publish never",
-    "clean": "rm -rf dist server.js",
-    "lint": "tsc --noEmit"
-  },
+  "dev": "tsx server/index.ts",
+  "build": "vite build && esbuild server/index.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
+  "start": "node dist/server.cjs",
+  "preview": "vite preview",
+  "electron:dev": "electron .",
+  "electron:build": "npm run build && electron-builder --win -p never",
+  "clean": "rm -rf dist server.js",
+  "lint": "tsc --noEmit"
+},
   "dependencies": {
     "@capacitor/android": "^8.5.2",
     "@capacitor/cli": "^8.5.2",
