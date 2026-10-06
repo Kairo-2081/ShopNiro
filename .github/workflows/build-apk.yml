@@ -47,6 +47,10 @@ jobs:
           KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
           KEY_PASS: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: |
+          STORE_PASS=$(echo -n "$STORE_PASS" | tr -d '\r\n')
+          KEY_PASS=$(echo -n "$KEY_PASS" | tr -d '\r\n')
+          KEY_ALIAS=$(echo -n "$KEY_ALIAS" | tr -d '\r\n')
+
           MISSING=0
           for v in KEYSTORE_BASE64 STORE_PASS KEY_ALIAS KEY_PASS; do
             if [ -z "${!v}" ]; then
@@ -67,7 +71,7 @@ jobs:
           [ -s "$KEYSTORE_PATH" ] || { echo "::error::Decoded keystore is empty"; exit 1; }
 
           if ! OUT=$(keytool -list -keystore "$KEYSTORE_PATH" -storepass "$STORE_PASS" -alias "$KEY_ALIAS" 2>&1); then
-            echo "::error::keytool could not open the keystore or find the alias:"
+            echo "::error::keytool validation failed. Check RELEASE_STORE_PASSWORD and RELEASE_KEY_ALIAS in GitHub Secrets."
             echo "$OUT"
             exit 1
           fi
@@ -87,6 +91,10 @@ jobs:
           KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
           KEY_PASS: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: |
+          STORE_PASS=$(echo -n "$STORE_PASS" | tr -d '\r\n')
+          KEY_PASS=$(echo -n "$KEY_PASS" | tr -d '\r\n')
+          KEY_ALIAS=$(echo -n "$KEY_ALIAS" | tr -d '\r\n')
+
           BUILD_TOOLS="$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -n 1)"
           echo "Using build-tools: $BUILD_TOOLS"
 
@@ -101,8 +109,8 @@ jobs:
           "$BUILD_TOOLS/apksigner" sign \
             --ks "$KEYSTORE_PATH" \
             --ks-key-alias "$KEY_ALIAS" \
-            --ks-pass env:STORE_PASS \
-            --key-pass env:KEY_PASS \
+            --ks-pass pass:"$STORE_PASS" \
+            --key-pass pass:"$KEY_PASS" \
             --out android-release/ShopNiro.apk \
             "$RUNNER_TEMP/aligned.apk"
 
@@ -153,6 +161,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
       - name: Download release artifacts
         uses: actions/download-artifact@v4
         with:
