@@ -211,8 +211,8 @@ export const RiderSignupModal: React.FC<RiderSignupModalProps> = ({ isOpen, onCl
           <div className="flex items-center gap-3">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-success-700 text-white"><Truck className="h-5 w-5" /></span>
             <div>
-              <h2 id="rider-application-title" className="font-bold text-surface-900 dark:text-white">Delivery rider portal</h2>
-              <p className="text-xs text-surface-600 dark:text-surface-400">Apply to join ShopNiro delivery operations</p>
+              <h2 id="rider-application-title" className="font-bold text-surface-900 dark:text-white">{t('riderPortalTitle')}</h2>
+              <p className="text-xs text-surface-600 dark:text-surface-400">{t('applyJoinDelivery')}</p>
             </div>
           </div>
           <button type="button" onClick={onClose} aria-label="Close rider application" className="rounded-full p-2 text-surface-500 hover:bg-surface-100 dark:text-surface-400 dark:hover:bg-surface-800"><X className="h-5 w-5" /></button>
@@ -224,13 +224,13 @@ export const RiderSignupModal: React.FC<RiderSignupModalProps> = ({ isOpen, onCl
             onClick={() => { onClose(); onOpenLogin(); }}
             className="text-sm font-semibold text-success-800 underline decoration-success-400 underline-offset-4 dark:text-success-300"
           >
-            Already applied? Sign in to the rider portal
+            {t('alreadyAppliedSignIn')}
           </button>
 
           {error && <p role="alert" className="rounded-xl border border-danger-200 bg-danger-50 p-3 text-sm text-danger-700 dark:border-danger-900 dark:bg-danger-950/40 dark:text-danger-300">{error}</p>}
 
           <section className="space-y-3">
-            <h3 className="text-sm font-bold text-surface-900 dark:text-white">Account and contact</h3>
+            <h3 className="text-sm font-bold text-surface-900 dark:text-white">{t('accountAndContact')}</h3>
             {oauthProvider ? (
               <p className="rounded-xl border border-success-200 bg-success-50 p-3 text-xs text-success-800 dark:border-success-900 dark:bg-success-950/30 dark:text-success-200">
                 {oauthProvider === 'google' ? 'Google' : 'Facebook'} verified your email. Complete the rider application below; rider access remains pending until administrator approval.
@@ -251,13 +251,13 @@ export const RiderSignupModal: React.FC<RiderSignupModalProps> = ({ isOpen, onCl
           </section>
 
           <section className="space-y-3">
-            <h3 className="text-sm font-bold text-surface-900 dark:text-white">Profile photo</h3>
+            <h3 className="text-sm font-bold text-surface-900 dark:text-white">{t('profilePhoto')}</h3>
             <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-success-400 bg-success-50/60 p-4 text-sm text-surface-700 dark:border-success-800 dark:bg-success-950/20 dark:text-surface-200">
               {profileImage ? <img src={profileImage} alt="Rider profile preview" className="h-14 w-14 rounded-xl border border-success-200 object-cover dark:border-success-800" /> : <UploadCloud className="h-5 w-5 shrink-0 text-success-700 dark:text-success-400" />}
               <span className="min-w-0 flex-1">{profileImageFile ? `${profileImageFile.name} · Ready` : 'Upload a JPG or PNG image (max 2 MB)'}</span>
               <input type="file" accept="image/jpeg,image/png" className="sr-only" onChange={(event) => void handleProfileImageChange(event)} />
             </label>
-            <p className="text-xs text-surface-500 dark:text-surface-400">Your photo will appear in your generated CV. You can add or change it later under My details.</p>
+            <p className="text-xs text-surface-500 dark:text-surface-400">{t('profilePhotoCvNotice')}</p>
           </section>
 
           {[{ title: 'Present address', value: presentAddress, set: setPresentAddress }, { title: 'Permanent address', value: permanentAddress, set: setPermanentAddress }].map((addressForm) => (
@@ -276,8 +276,8 @@ export const RiderSignupModal: React.FC<RiderSignupModalProps> = ({ isOpen, onCl
           <section className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h3 className="text-sm font-bold text-surface-900 dark:text-white">Work and education history</h3>
-                <p className="text-xs text-surface-500 dark:text-surface-400">Your details are used for this application only.</p>
+                <h3 className="text-sm font-bold text-surface-900 dark:text-white">{t('workEducationHistory')}</h3>
+                <p className="text-xs text-surface-500 dark:text-surface-400">{t('applicationDetailsPrivacy')}</p>
               </div>
               {hasCv === false && (
                 <button type="button" onClick={handleFormat} disabled={isFormatting} className="inline-flex items-center gap-2 rounded-lg border border-success-300 px-3 py-2 text-xs font-bold text-success-800 hover:bg-success-50 disabled:opacity-50 dark:border-success-800 dark:text-success-300 dark:hover:bg-success-950/30">
@@ -286,7 +286,7 @@ export const RiderSignupModal: React.FC<RiderSignupModalProps> = ({ isOpen, onCl
               )}
             </div>
             <fieldset className="space-y-2">
-                <legend className="text-xs font-semibold text-surface-700 dark:text-surface-300">Do you have an existing CV to import?</legend>
+                <legend className="text-xs font-semibold text-surface-700 dark:text-surface-300">{t('haveExistingCv')}</legend>
               <div className="inline-flex rounded-lg border border-surface-200 bg-surface-100 p-1 dark:border-surface-700 dark:bg-surface-900">
                 {[true, false].map((choice) => (
                   <button key={String(choice)} type="button" aria-pressed={hasCv === choice} onClick={() => { setHasCv(choice); if (!choice) { setCvFile(null); setCvBase64(''); } setError(null); }} className={`rounded-md px-5 py-2 text-sm font-semibold ${hasCv === choice ? 'bg-success-700 text-white' : 'text-surface-700 dark:text-surface-300'}`}>
@@ -307,14 +307,14 @@ export const RiderSignupModal: React.FC<RiderSignupModalProps> = ({ isOpen, onCl
             {hasCv !== null && resumeFields.map((field) => (
               <div key={field.key} className="space-y-1">
                 <label className="block text-xs font-semibold text-surface-700 dark:text-surface-300">{field.title}</label>
-                {missingFields.includes(field.key) && <p className="text-xs text-warning-700 dark:text-warning-300">This information was not found in the CV. Please add it manually.</p>}
+                {missingFields.includes(field.key) && <p className="text-xs text-warning-700 dark:text-warning-300">{t('infoNotFoundManual')}</p>}
                 <textarea rows={2} value={field.value} onChange={(e) => field.set(e.target.value)} placeholder={field.placeholder} className={fieldClass} />
               </div>
             ))}
           </section>
 
           <div className="flex flex-col-reverse justify-between gap-3 border-t border-surface-200 pt-5 dark:border-surface-800 sm:flex-row sm:items-center">
-            <p className="flex items-center gap-2 text-xs text-surface-500 dark:text-surface-400"><ShieldCheck className="h-4 w-4 shrink-0" />ShopNiro generates and saves a formatted CV PDF from your application details.</p>
+            <p className="flex items-center gap-2 text-xs text-surface-500 dark:text-surface-400"><ShieldCheck className="h-4 w-4 shrink-0" />{t('shopNiroGeneratesCv')}</p>
             <button type="submit" disabled={isSubmitting || isParsing || preparingProfileImage} className="rounded-lg bg-success-700 px-5 py-2.5 text-sm font-bold text-white hover:bg-success-600 disabled:opacity-50">
               {preparingProfileImage ? 'Preparing photo...' : isSubmitting ? t('submittingApplication') : t('submitApplication')}
             </button>
