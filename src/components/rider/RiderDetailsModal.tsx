@@ -24,6 +24,7 @@ async function loadPdfJs(): Promise<typeof PdfJs> {
 type RiderCvDocument = Awaited<ReturnType<typeof PdfJs.getDocument>['promise']>;
 
 const RiderCvPreview: React.FC<{ url: string; onClose: () => void }> = ({ url, onClose }) => {
+  const { t } = useLocale();
   useEscapeKey(onClose);
   const dialogRef = useFocusTrap<HTMLElement>(true);
   const containerRef = React.useRef<HTMLDivElement>(null);
@@ -101,7 +102,7 @@ const RiderCvPreview: React.FC<{ url: string; onClose: () => void }> = ({ url, o
     <div className="fixed inset-0 z-[85] flex items-center justify-center bg-black/80 p-2 sm:p-5">
       <section ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="rider-cv-title" tabIndex={-1} className="flex max-h-[96dvh] w-full max-w-4xl flex-col overflow-hidden rounded-xl border border-surface-300 bg-white shadow-2xl dark:border-surface-700 dark:bg-[#12161D]">
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-surface-200 px-4 py-3 dark:border-surface-800">
-          <h2 id="rider-cv-title" className="font-bold text-surface-900 dark:text-white">My CV</h2>
+          <h2 id="rider-cv-title" className="font-bold text-surface-900 dark:text-white">{t('myCv')}</h2>
           <div className="flex items-center gap-2">
             <button type="button" aria-label="Previous CV page" disabled={!pdfDocument || pageNumber <= 1} onClick={() => setPageNumber((page) => Math.max(1, page - 1))} className="rounded-md p-2 text-surface-700 hover:bg-surface-100 disabled:opacity-40 dark:text-surface-200 dark:hover:bg-surface-800"><ChevronLeft className="h-5 w-5" /></button>
             <span className="min-w-16 text-center text-xs text-surface-600 dark:text-surface-300">{pdfDocument ? `${pageNumber} / ${pdfDocument.numPages}` : 'Loading'}</span>
@@ -110,7 +111,7 @@ const RiderCvPreview: React.FC<{ url: string; onClose: () => void }> = ({ url, o
           </div>
         </header>
         <div ref={containerRef} className="min-h-0 flex-1 overflow-auto bg-surface-200 p-4 dark:bg-[#080a0c]">
-          {error ? <p role="alert" className="p-6 text-center text-sm text-danger-700 dark:text-danger-300">{error}</p> : !pdfDocument ? <p role="status" className="p-6 text-center text-sm text-surface-600 dark:text-surface-300">Preparing CV preview...</p> : <canvas ref={canvasRef} aria-label={`CV page ${pageNumber}`} className="mx-auto block max-w-full shadow-lg" />}
+          {error ? <p role="alert" className="p-6 text-center text-sm text-danger-700 dark:text-danger-300">{error}</p> : !pdfDocument ? <p role="status" className="p-6 text-center text-sm text-surface-600 dark:text-surface-300">{t('preparingCvPreview')}</p> : <canvas ref={canvasRef} aria-label={`CV page ${pageNumber}`} className="mx-auto block max-w-full shadow-lg" />}
         </div>
       </section>
     </div>
@@ -303,9 +304,9 @@ export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, ri
       <section ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="rider-details-title" tabIndex={-1} className="flex max-h-[94vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-success-200 bg-white shadow-2xl dark:border-success-900 dark:bg-[#12161D]">
         <header className="flex items-center justify-between gap-4 border-b border-surface-200 bg-success-50/70 px-5 py-4 dark:border-surface-800 dark:bg-success-950/20 sm:px-7">
           <div>
-            <h2 id="rider-details-title" className="font-bold text-surface-900 dark:text-white">My details</h2>
-            <p className="mt-1 text-xs text-surface-600 dark:text-surface-400">Profile changes refresh your CV and require approval. Password changes do not.</p>
-            {required && <p role="status" className="mt-2 text-xs font-semibold text-warning-800 dark:text-warning-200">Complete and save your profile before making other changes.</p>}
+            <h2 id="rider-details-title" className="font-bold text-surface-900 dark:text-white">{t('myDetails')}</h2>
+            <p className="mt-1 text-xs text-surface-600 dark:text-surface-400">{t('profileChangesApprovalNotice')}</p>
+            {required && <p role="status" className="mt-2 text-xs font-semibold text-warning-800 dark:text-warning-200">{t('completeSaveBeforeNotice')}</p>}
           </div>
           <div className="flex items-center gap-2">
             <button type="button" onClick={() => void viewCv()} disabled={openingCv} className="inline-flex items-center gap-2 rounded-lg border border-surface-300 px-3 py-2 text-xs font-semibold text-surface-700 disabled:opacity-50 dark:border-surface-700 dark:text-surface-200"><FileText className="h-4 w-4" />{openingCv ? 'Opening...' : t('viewCv')}</button>
@@ -318,7 +319,7 @@ export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, ri
           {notice && <p role="status" className="rounded-lg border border-success-200 bg-success-50 p-3 text-sm text-success-800 dark:border-success-900 dark:bg-success-950/30 dark:text-success-200">{notice}</p>}
 
           <section className="space-y-3">
-            <h3 className="text-sm font-bold text-surface-900 dark:text-white">Account and contact</h3>
+            <h3 className="text-sm font-bold text-surface-900 dark:text-white">{t('accountAndContact')}</h3>
             <div className="grid gap-3 sm:grid-cols-2">
               <input className={fieldClass} required autoComplete="name" placeholder="Full name" value={name} onChange={(event) => setName(event.target.value)} />
               <input className={fieldClass} required autoComplete="username" placeholder="Username" value={username} onChange={(event) => setUsername(event.target.value)} />
@@ -332,7 +333,7 @@ export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, ri
           </section>
 
           <section className="space-y-3">
-            <h3 className="text-sm font-bold text-surface-900 dark:text-white">Profile photo</h3>
+            <h3 className="text-sm font-bold text-surface-900 dark:text-white">{t('profilePhoto')}</h3>
             <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-success-400 bg-success-50/60 p-4 text-sm text-surface-700 dark:border-success-800 dark:bg-success-950/20 dark:text-surface-200">
               {profileImage ? <img src={profileImage} alt="Rider profile preview" className="h-14 w-14 rounded-xl border border-success-200 object-cover dark:border-success-800" /> : <ImageIcon className="h-5 w-5 shrink-0 text-success-700 dark:text-success-400" />}
               <span className="min-w-0 flex-1">{profileImageFile ? `${profileImageFile.name} · Ready` : 'Upload / change profile image (JPG or PNG, max 2 MB)'}</span>
@@ -362,7 +363,7 @@ export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, ri
           ))}
 
           <section className="space-y-3">
-            <h3 className="text-sm font-bold text-surface-900 dark:text-white">Work and education history</h3>
+            <h3 className="text-sm font-bold text-surface-900 dark:text-white">{t('workEducationHistory')}</h3>
             {[
               { label: 'Experience', value: experience, set: setExperience },
               { label: 'Previous jobs', value: previousJobs, set: setPreviousJobs },
