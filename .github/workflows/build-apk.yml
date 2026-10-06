@@ -45,11 +45,34 @@ jobs:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           STORE_PASS: ${{ secrets.RELEASE_STORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.RELEASE_KEY_PASSWORD }}
         run: |
+          MISSING=0
+          for v in KEYSTORE_BASE64 STORE_PASS KEY_ALIAS KEY_PASS; do
+            if [ -z "${!v}" ]; then
+              echo "::error::Secret for $v is empty or missing"
+              MISSING=1
+            else
+              echo "$v is set"
+            fi
+          done
+          [ "$MISSING" = "0" ] || exit 1
+
           KEYSTORE_PATH="$RUNNER_TEMP/shopniro-release-key.jks"
-          echo "$KEYSTORE_BASE64" | tr -d '\r\n ' | base64 -d > "$KEYSTORE_PATH"
-          test -s "$KEYSTORE_PATH" || { echo "Keystore is empty - check KEYSTORE_BASE64 secret"; exit 1; }
-          keytool -list -keystore "$KEYSTORE_PATH" -storepass "$STORE_PASS" -alias "$KEY_ALIAS" > /dev/null
+          if ! echo "$KEYSTORE_BASE64" | tr -d '\r\n ' | base64 -d > "$KEYSTORE_PATH"; then
+            echo "::error::KEYSTORE_BASE64 is not valid base64"
+            exit 1
+          fi
+          echo "Decoded keystore size: $(wc -c < "$KEYSTORE_PATH") bytes"
+          [ -s "$KEYSTORE_PATH" ] || { echo "::error::Decoded keystore is empty"; exit 1; }
+
+          if ! OUT=$(keytool -list -keystore "$KEYSTORE_PATH" -storepass "$STORE_PASS" -alias "$KEY_ALIAS" 2>&1); then
+            echo "::error::keytool could not open the keystore or find the alias:"
+            echo "$OUT"
+            exit 1
+          fi
+          echo "Keystore OK, alias found"
+
           echo "KEYSTORE_PATH=$KEYSTORE_PATH" >> "$GITHUB_ENV"
 
       - name: Build Release APK (unsigned)
@@ -69,7 +92,8 @@ jobs:
 
           APK_DIR="android/app/build/outputs/apk/release"
           UNSIGNED_APK="$(find "$APK_DIR" -name '*.apk' | head -n 1)"
-          test -n "$UNSIGNED_APK" || { echo "No APK found in $APK_DIR"; exit 1; }
+          test -n "$UNSIGNED_APK" || { echo "::error::No APK found in $APK_DIR"; exit 1; }
+          echo "Found APK: $UNSIGNED_APK"
 
           mkdir -p android-release
           "$BUILD_TOOLS/zipalign" -p -f 4 "$UNSIGNED_APK" "$RUNNER_TEMP/aligned.apk"
