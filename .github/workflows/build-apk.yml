@@ -44,11 +44,7 @@ jobs:
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleRelease \
-            -Pandroid.injected.signing.store.file=shopniro-release-key.jks \
-            -Pandroid.injected.signing.store.password=${{ secrets.RELEASE_STORE_PASSWORD }} \
-            -Pandroid.injected.signing.key.alias=${{ secrets.RELEASE_KEY_ALIAS }} \
-            -Pandroid.injected.signing.key.password=${{ secrets.RELEASE_KEY_PASSWORD }}
+          ./gradlew assembleRelease -Pandroid.injected.signing.store.file=shopniro-release-key.jks -Pandroid.injected.signing.store.password="${{ secrets.RELEASE_STORE_PASSWORD }}" -Pandroid.injected.signing.key.alias="${{ secrets.RELEASE_KEY_ALIAS }}" -Pandroid.injected.signing.key.password="${{ secrets.RELEASE_KEY_PASSWORD }}"
 
       - name: Prepare APK Artifact
         run: |
