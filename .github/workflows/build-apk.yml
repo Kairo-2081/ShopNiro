@@ -38,7 +38,7 @@ jobs:
 
       - name: Decode Keystore Secret
         run: |
-          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > android/app/shopniro-release-key.jks
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | tr -d '\r\n ' | base64 -d > android/app/shopniro-release-key.jks
 
       - name: Build Signed Release APK
         run: |
