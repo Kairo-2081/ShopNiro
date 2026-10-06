@@ -46,7 +46,7 @@ interface AdminDashboardProps {
 }
 
 const adminTabButtonClass = (isActive: boolean, activeClass: string) =>
-  `inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-xs font-bold transition-all duration-200 hover:-translate-y-px active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#12161D] ${
+  `inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-5 py-2.5 text-xs font-bold transition-all duration-200 hover:-translate-y-px active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#12161D] ${
     isActive
       ? `${activeClass} ring-1 ring-inset ring-white/20`
       : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 hover:shadow-sm hover:-translate-y-0.5 dark:text-zinc-400 dark:hover:bg-[#181F2A] dark:hover:text-white'
@@ -239,7 +239,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex flex-wrap gap-2 border-b border-sky-100 dark:border-zinc-800 pb-2 shadow-sm dark:shadow-blue-950/10">
+      <div className="flex max-w-full flex-wrap gap-2 border-b border-sky-100 pb-2 shadow-sm dark:border-zinc-800 dark:shadow-blue-950/10">
         <button
           onClick={() => setAdminTab('overview')}
           aria-current={adminTab === 'overview' ? 'page' : undefined}

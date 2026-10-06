@@ -445,7 +445,7 @@ router.get('/applications/:id/cv', requireAuth, requireRole(['admin']), async (r
     const cv = await regenerateStoredRiderCv(req.params.id);
     if (!cv) return res.status(404).json({ error: 'CV not found.' });
     res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `inline; filename="${cv.fileName.replace(/[\r\n"]+/g, '')}"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${cv.fileName.replace(/[\r\n"]+/g, '')}"`);
     return res.send(cv.buffer);
   } catch (error: any) {
     console.error('Failed to fetch rider CV:', error);

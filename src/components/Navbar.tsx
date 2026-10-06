@@ -54,9 +54,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <header className="sticky top-0 z-30 bg-[#f6f5ef]/95 dark:bg-[#10100f]/80 backdrop-blur-xl border-b border-[#80734f]/20 dark:border-white/10 shadow-[0_8px_24px_rgba(41,40,33,0.10)] dark:shadow-[0_12px_32px_rgba(6,6,4,0.25)] transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-        <div className="flex min-h-16 items-center justify-between gap-2 py-2 sm:gap-3">
+        <div className="flex min-h-16 flex-wrap items-center justify-between gap-2 py-2 sm:gap-3">
           {/* Logo & Brand matching Landing Page */}
-          <div className="flex shrink-0 items-center gap-2 cursor-pointer sm:gap-2.5" onClick={() => setActiveTab('storefront')}>
+          <div className="order-1 flex shrink-0 items-center gap-2 cursor-pointer sm:gap-2.5 md:order-none" onClick={() => setActiveTab('storefront')}>
             <img
               src={shopNiroLogo}
               alt="ShopNiro"
@@ -70,7 +70,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Navigation Links according to Active Role and Login State */}
-          <nav className="flex w-full max-w-full flex-wrap items-center justify-center gap-1.5 overflow-x-auto scrollbar-thin md:max-w-[58vw]">
+          <nav className="order-3 flex w-full min-w-0 max-w-full flex-wrap items-center justify-start gap-1.5 pb-1 md:order-none md:w-auto md:max-w-[58vw] md:justify-center md:pb-0">
             {/* If NOT logged in: Guest Navigation with page-level auth validation */}
             {!isLoggedIn && (
               <>
@@ -272,7 +272,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </nav>
 
           {/* Right Actions */}
-          <div className="flex items-center gap-2">
+          <div className="order-2 flex w-full items-center justify-center gap-2 md:order-none md:w-auto md:justify-normal">
             {/* AI Assistant Button */}
             {onOpenChat && (
               <button

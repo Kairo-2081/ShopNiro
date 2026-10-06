@@ -145,7 +145,6 @@ export default function App() {
           setSelectedCustomer(null);
           setSelectedSeller(null);
           setSelectedAdmin(null);
-          setActiveTab('rider-dashboard');
         }
         setAuthNotice(null);
         return true;

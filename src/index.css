@@ -251,6 +251,8 @@
     .app-shell {
       min-height: 100dvh;
       width: 100%;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
     }
 
     .app-panel {
@@ -263,6 +265,13 @@
     .premium-button {
       letter-spacing: -0.01em;
       white-space: nowrap;
+    }
+
+    header nav button {
+      display: flex;
+      flex: 1 1 auto;
+      align-items: center;
+      justify-content: center;
     }
   }
 

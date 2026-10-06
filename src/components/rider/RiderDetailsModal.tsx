@@ -2,7 +2,100 @@ import React from 'react';
 import { Address, Rider } from '../../types';
 import { api } from '../../lib/api';
 import { prepareProfileImage } from '../../lib/profileImage';
-import { FileText, Image as ImageIcon, Lock, Save, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileText, Image as ImageIcon, Lock, Save, X } from 'lucide-react';
+import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
+import pdfWorkerUrl from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+
+type RiderCvDocument = Awaited<ReturnType<typeof pdfjsLib.getDocument>['promise']>;
+
+const RiderCvPreview: React.FC<{ url: string; onClose: () => void }> = ({ url, onClose }) => {
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const canvasRef = React.useRef<HTMLCanvasElement>(null);
+  const [pdfDocument, setPdfDocument] = React.useState<RiderCvDocument | null>(null);
+  const [pageNumber, setPageNumber] = React.useState(1);
+  const [containerWidth, setContainerWidth] = React.useState(0);
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    const loadingTask = pdfjsLib.getDocument(url);
+    let isActive = true;
+    setPdfDocument(null);
+    setPageNumber(1);
+    setError(null);
+    loadingTask.promise.then((document) => {
+      if (isActive) setPdfDocument(document);
+    }).catch(() => {
+      if (isActive) setError('Could not render this CV.');
+    });
+    return () => {
+      isActive = false;
+      void loadingTask.destroy().catch(() => undefined);
+    };
+  }, [url]);
+
+  React.useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const observer = new ResizeObserver(() => setContainerWidth(container.clientWidth));
+    observer.observe(container);
+    setContainerWidth(container.clientWidth);
+    return () => observer.disconnect();
+  }, []);
+
+  React.useEffect(() => {
+    if (!pdfDocument || !canvasRef.current || !containerWidth) return;
+    let isActive = true;
+    let renderTask: { cancel: () => void } | null = null;
+    const renderPage = async () => {
+      try {
+        const page = await pdfDocument.getPage(pageNumber);
+        if (!isActive || !canvasRef.current) return;
+        const baseViewport = page.getViewport({ scale: 1 });
+        const scale = Math.min(1.5, Math.max(0.1, (containerWidth - 32) / baseViewport.width));
+        const viewport = page.getViewport({ scale });
+        const canvas = canvasRef.current;
+        const context = canvas.getContext('2d');
+        if (!context) throw new Error('Canvas is unavailable.');
+        const outputScale = window.devicePixelRatio || 1;
+        canvas.width = Math.floor(viewport.width * outputScale);
+        canvas.height = Math.floor(viewport.height * outputScale);
+        canvas.style.width = `${Math.floor(viewport.width)}px`;
+        canvas.style.height = `${Math.floor(viewport.height)}px`;
+        context.setTransform(outputScale, 0, 0, outputScale, 0, 0);
+        renderTask = page.render({ canvasContext: context, viewport });
+        await (renderTask as ReturnType<typeof page.render>).promise;
+      } catch {
+        if (isActive) setError('Could not render this CV page.');
+      }
+    };
+    void renderPage();
+    return () => {
+      isActive = false;
+      renderTask?.cancel();
+    };
+  }, [containerWidth, pageNumber, pdfDocument]);
+
+  return (
+    <div className="fixed inset-0 z-[85] flex items-center justify-center bg-black/80 p-2 sm:p-5">
+      <section role="dialog" aria-modal="true" aria-labelledby="rider-cv-title" className="flex max-h-[96dvh] w-full max-w-4xl flex-col overflow-hidden rounded-xl border border-slate-300 bg-white shadow-2xl dark:border-zinc-700 dark:bg-[#12161D]">
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 dark:border-zinc-800">
+          <h2 id="rider-cv-title" className="font-bold text-slate-900 dark:text-white">My CV</h2>
+          <div className="flex items-center gap-2">
+            <button type="button" aria-label="Previous CV page" disabled={!pdfDocument || pageNumber <= 1} onClick={() => setPageNumber((page) => Math.max(1, page - 1))} className="rounded-md p-2 text-slate-700 hover:bg-slate-100 disabled:opacity-40 dark:text-zinc-200 dark:hover:bg-zinc-800"><ChevronLeft className="h-5 w-5" /></button>
+            <span className="min-w-16 text-center text-xs text-slate-600 dark:text-zinc-300">{pdfDocument ? `${pageNumber} / ${pdfDocument.numPages}` : 'Loading'}</span>
+            <button type="button" aria-label="Next CV page" disabled={!pdfDocument || pageNumber >= pdfDocument.numPages} onClick={() => setPageNumber((page) => Math.min(pdfDocument?.numPages || page, page + 1))} className="rounded-md p-2 text-slate-700 hover:bg-slate-100 disabled:opacity-40 dark:text-zinc-200 dark:hover:bg-zinc-800"><ChevronRight className="h-5 w-5" /></button>
+            <button type="button" onClick={onClose} aria-label="Close CV preview" className="rounded-md p-2 text-slate-500 hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-zinc-800"><X className="h-5 w-5" /></button>
+          </div>
+        </header>
+        <div ref={containerRef} className="min-h-0 flex-1 overflow-auto bg-slate-200 p-4 dark:bg-[#080a0c]">
+          {error ? <p role="alert" className="p-6 text-center text-sm text-rose-700 dark:text-rose-300">{error}</p> : !pdfDocument ? <p role="status" className="p-6 text-center text-sm text-slate-600 dark:text-zinc-300">Preparing CV preview...</p> : <canvas ref={canvasRef} aria-label={`CV page ${pageNumber}`} className="mx-auto block max-w-full shadow-lg" />}
+        </div>
+      </section>
+    </div>
+  );
+};
 
 interface RiderDetailsModalProps {
   isOpen: boolean;
@@ -42,8 +135,13 @@ export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, ri
   const [education, setEducation] = React.useState(toLines(rider.Education || []));
   const [saving, setSaving] = React.useState(false);
   const [openingCv, setOpeningCv] = React.useState(false);
+  const [cvUrl, setCvUrl] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [notice, setNotice] = React.useState<string | null>(null);
+
+  React.useEffect(() => () => {
+    if (cvUrl) URL.revokeObjectURL(cvUrl);
+  }, [cvUrl]);
 
   React.useEffect(() => {
     if (!isOpen) return;
@@ -86,9 +184,7 @@ export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, ri
     setError(null);
     try {
       const cv = await api.getMyRiderCv();
-      const url = URL.createObjectURL(cv);
-      window.location.assign(url);
-      window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+      setCvUrl(URL.createObjectURL(cv));
     } catch (err: any) {
       setError(err.message || 'Could not open your current CV.');
     } finally {
@@ -163,6 +259,7 @@ export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, ri
   ];
 
   return (
+    <>
     <div className="fixed inset-0 z-[75] flex items-center justify-center bg-black/75 p-3 backdrop-blur-sm sm:p-5">
       <section role="dialog" aria-modal="true" aria-labelledby="rider-details-title" className="flex max-h-[94vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-emerald-200 bg-white shadow-2xl dark:border-emerald-900 dark:bg-[#12161D]">
         <header className="flex items-center justify-between gap-4 border-b border-slate-200 bg-emerald-50/70 px-5 py-4 dark:border-zinc-800 dark:bg-emerald-950/20 sm:px-7">
@@ -237,5 +334,7 @@ export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, ri
         </form>
       </section>
     </div>
+    {cvUrl && <RiderCvPreview url={cvUrl} onClose={() => setCvUrl(null)} />}
+    </>
   );
 };

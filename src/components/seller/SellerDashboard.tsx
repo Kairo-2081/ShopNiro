@@ -339,10 +339,10 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
       </div>
 
       {/* Tabs Bar */}
-      <div className="flex gap-2 border-b border-sky-100 dark:border-zinc-800 pb-2">
+      <div className="flex max-w-full flex-wrap gap-2 border-b border-sky-100 pb-2 dark:border-zinc-800">
         <button
           onClick={() => setActiveTab('products')}
-          className={`px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
+          className={`shrink-0 whitespace-nowrap px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
             activeTab === 'products'
               ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25'
               : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#181F2A]'
@@ -354,7 +354,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
 
         <button
           onClick={() => setActiveTab('orders')}
-          className={`px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
+          className={`shrink-0 whitespace-nowrap px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
             activeTab === 'orders'
               ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25'
               : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#181F2A]'
@@ -366,7 +366,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
 
         <button
           onClick={() => setActiveTab('reviews')}
-          className={`px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
+          className={`shrink-0 whitespace-nowrap px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
             activeTab === 'reviews'
               ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25'
               : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#181F2A]'
@@ -378,7 +378,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
 
         <button
           onClick={() => setActiveTab('analytics')}
-          className={`px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
+          className={`shrink-0 whitespace-nowrap px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
             activeTab === 'analytics'
               ? 'bg-sky-700 text-white shadow-lg shadow-sky-700/20'
               : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#181F2A]'
@@ -390,7 +390,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
 
         <button
           onClick={() => setActiveTab('promotions')}
-          className={`px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
+          className={`shrink-0 whitespace-nowrap px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
             activeTab === 'promotions'
               ? 'bg-amber-600 text-white shadow-lg shadow-amber-500/25'
               : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#181F2A]'
@@ -402,7 +402,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
 
         <button
           onClick={() => setActiveTab('wallet')}
-          className={`px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
+          className={`shrink-0 whitespace-nowrap px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
             activeTab === 'wallet'
               ? 'bg-emerald-700 text-white shadow-lg shadow-emerald-700/25'
               : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#181F2A]'

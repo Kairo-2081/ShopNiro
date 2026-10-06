@@ -57,19 +57,19 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
 
     return (
       <div className="bg-[#eeede4]/80 dark:bg-[#171713]/85 text-slate-900 dark:text-zinc-100 px-4 py-2 text-xs border-b border-[#d0c8a5]/10 dark:border-white/10 transition-colors duration-200 backdrop-blur-xl shadow-[0_8px_24px_rgba(12,12,9,0.12)]">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+        <div className="mx-auto flex min-w-0 max-w-7xl flex-col items-start gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
           {/* Active Account Identity */}
-          <div className="flex items-center gap-3">
-            <span className={`inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full font-bold uppercase tracking-wider text-[10px] border ${roleBadgeColor}`}>
+          <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
+            <span className={`inline-flex shrink-0 items-center gap-1.5 px-3 py-0.5 rounded-full font-bold uppercase tracking-wider text-[10px] border ${roleBadgeColor}`}>
               <CheckCircle2 className="w-3 h-3" />
               {roleName}
             </span>
-            <span className="text-slate-600 dark:text-zinc-400">
+            <span className="min-w-0 break-words text-slate-600 dark:text-zinc-400">
               Authenticated as:{' '}
               <strong className="text-slate-900 dark:text-white font-semibold">
                 {currentUserEntity.Name}
               </strong>{' '}
-              <span className="text-slate-400 dark:text-zinc-500 font-mono text-[11px]">
+              <span className="break-all text-slate-400 dark:text-zinc-500 font-mono text-[11px]">
                 ({currentUserEntity.Email})
               </span>
             </span>
@@ -94,8 +94,8 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
   // If user is GUEST / NOT LOGGED IN:
   return (
     <div className="bg-[#eeede4]/80 dark:bg-[#171713] text-slate-900 dark:text-zinc-100 px-4 py-2 text-xs border-b border-[#d0c8a5]/10 dark:border-zinc-800/80 transition-colors duration-200">
-      <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
+      <div className="mx-auto flex min-w-0 max-w-7xl flex-col items-start gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
+        <div className="flex min-w-0 items-center gap-2">
           <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wider text-[10px] border border-amber-500/20">
             Guest Mode
           </span>
@@ -104,11 +104,11 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="grid w-full max-w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
           {/* Simple Login Button */}
           <button
             onClick={onOpenLogin}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-full shadow-xs transition-colors cursor-pointer"
+            className="flex min-w-0 items-center justify-center gap-1.5 px-2.5 py-1.5 text-center leading-tight bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-full shadow-xs transition-colors cursor-pointer sm:px-3.5"
           >
             <LogIn className="w-3.5 h-3.5" />
             <span>Sign In</span>
@@ -118,7 +118,7 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
           {onOpenCustomerSignup && (
             <button
               onClick={onOpenCustomerSignup}
-              className="flex items-center gap-1 px-3 py-1.5 bg-white dark:bg-[#181F2A] text-slate-700 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-zinc-700 rounded-full transition-colors cursor-pointer font-medium"
+              className="flex min-w-0 items-center justify-center gap-1 px-2.5 py-1.5 text-center leading-tight bg-white dark:bg-[#181F2A] text-slate-700 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-zinc-700 rounded-full transition-colors cursor-pointer font-medium sm:px-3"
             >
               <UserPlus className="w-3.5 h-3.5 text-sky-400" />
               <span>Customer Signup</span>
@@ -128,7 +128,7 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
           {onOpenSellerSignup && (
             <button
               onClick={onOpenSellerSignup}
-              className="flex items-center gap-1 px-3 py-1.5 bg-emerald-600/10 hover:bg-emerald-600 hover:text-white text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-full transition-colors cursor-pointer font-medium"
+              className="flex min-w-0 items-center justify-center gap-1 px-2.5 py-1.5 text-center leading-tight bg-emerald-600/10 hover:bg-emerald-600 hover:text-white text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-full transition-colors cursor-pointer font-medium sm:px-3"
             >
               <Store className="w-3.5 h-3.5" />
               <span>Become a Seller</span>
@@ -138,7 +138,7 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
           {onOpenRiderSignup && (
             <button
               onClick={onOpenRiderSignup}
-              className="flex items-center gap-1 px-3 py-1.5 bg-emerald-700/10 hover:bg-emerald-700 hover:text-white text-emerald-800 dark:text-emerald-300 border border-emerald-700/20 rounded-full transition-colors cursor-pointer font-medium"
+              className="flex min-w-0 items-center justify-center gap-1 px-2.5 py-1.5 text-center leading-tight bg-emerald-700/10 hover:bg-emerald-700 hover:text-white text-emerald-800 dark:text-emerald-300 border border-emerald-700/20 rounded-full transition-colors cursor-pointer font-medium sm:px-3"
             >
               <Truck className="w-3.5 h-3.5" />
               <span>Rider portal</span>
