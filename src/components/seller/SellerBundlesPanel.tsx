@@ -101,11 +101,11 @@ export const SellerBundlesPanel: React.FC<SellerBundlesPanelProps> = ({ products
     <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.85fr)]">
       <form onSubmit={(event) => void createBundle(event)} className="space-y-4 border-b border-surface-200 pb-6 dark:border-surface-800 xl:border-b-0 xl:border-r xl:pb-0 xl:pr-6">
         <header>
-          <h2 className="text-lg font-bold text-surface-900 dark:text-white">Create a bundle</h2>
-          <p className="mt-1 text-xs text-surface-500 dark:text-surface-400">The discount applies when every selected item is in the cart. Bundle savings stack with product vouchers.</p>
+          <h2 className="text-lg font-bold text-surface-900 dark:text-white">{t('createBundleTitle')}</h2>
+          <p className="mt-1 text-xs text-surface-500 dark:text-surface-400">{t('bundleDiscountRuleNotice')}</p>
         </header>
         {error && <p role="alert" className="rounded-lg border border-danger-200 bg-danger-50 p-3 text-xs text-danger-700 dark:border-danger-900 dark:bg-danger-950/30 dark:text-danger-300">{error}</p>}
-        <label className="block space-y-1 text-xs font-semibold text-surface-700 dark:text-surface-300">Bundle name<input required maxLength={120} value={name} onChange={(event) => setName(event.target.value)} placeholder="Home-Office Kit" className={inputClass} /></label>
+        <label className="block space-y-1 text-xs font-semibold text-surface-700 dark:text-surface-300">{t('bundleNameLabel')}<input required maxLength={120} value={name} onChange={(event) => setName(event.target.value)} placeholder="Home-Office Kit" className={inputClass} /></label>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block space-y-1 text-xs font-semibold text-surface-700 dark:text-surface-300">Extra discount (%)<input required type="number" min="0.01" max="50" step="0.01" value={discountPercent} onChange={(event) => setDiscountPercent(Number(event.target.value))} className={inputClass} /></label>
           <label className="block space-y-1 text-xs font-semibold text-surface-700 dark:text-surface-300">Offer ends (optional)<input type="datetime-local" value={endsAt} onChange={(event) => setEndsAt(event.target.value)} onFocus={(event) => { event.currentTarget.style.outline = '2px solid var(--focus-ring)'; event.currentTarget.style.outlineOffset = '3px'; }} onBlur={(event) => { event.currentTarget.style.removeProperty('outline'); event.currentTarget.style.removeProperty('outline-offset'); }} min={toLocalDateTimeInput(new Date().toISOString())} className={inputClass} /></label>
@@ -119,13 +119,13 @@ export const SellerBundlesPanel: React.FC<SellerBundlesPanelProps> = ({ products
               <span className="min-w-0 flex-1 truncate font-semibold text-surface-800 dark:text-surface-200">{product.Name}</span>
               <span className="shrink-0 tabular-nums text-surface-500">{formatCurrency(product.Price)}</span>
             </label>
-          )) : <p className="py-3 text-xs text-surface-500">Add active, in-stock products before creating bundles.</p>}
+          )) : <p className="py-3 text-xs text-surface-500">{t('addActiveStockBeforeBundle')}</p>}
         </fieldset>
         <button type="submit" disabled={isSaving || productIds.length < 2} className="inline-flex items-center gap-2 rounded-lg bg-success-700 px-4 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"><Plus className="h-4 w-4" />{isSaving ? t('processing') : t('createBundle')}</button>
       </form>
 
       <section className="space-y-3">
-        <header className="flex items-center gap-2"><Tag className="h-4 w-4 text-warning-600" /><h2 className="text-lg font-bold text-surface-900 dark:text-white">Your bundles</h2></header>
+        <header className="flex items-center gap-2"><Tag className="h-4 w-4 text-warning-600" /><h2 className="text-lg font-bold text-surface-900 dark:text-white">{t('yourBundles')}</h2></header>
         {isLoading ? <p className="py-6 text-center text-xs text-surface-500">Loading bundles…</p> : bundles.length ? bundles.map((bundle) => {
           const bundleProducts = bundle.Product_IDs.map((id) => products.find((product) => product.Product_ID === id)).filter(Boolean);
           return (
@@ -136,7 +136,7 @@ export const SellerBundlesPanel: React.FC<SellerBundlesPanelProps> = ({ products
                   <p className="mt-1 text-xs font-semibold text-success-700 dark:text-success-300">{bundle.Discount_Percent}% off together</p>
                   <p className="mt-1 text-micro text-surface-500 dark:text-surface-400">{bundleProducts.map((product) => product?.Name).join(' + ') || 'Product no longer listed'}</p>
                   {bundle.Ends_At && <p className="mt-1 text-micro text-surface-500 dark:text-surface-400">Ends {formatDate(bundle.Ends_At)}</p>}
-                  {!bundle.Active && <p className="mt-1 text-micro font-semibold text-warning-700 dark:text-warning-300">Paused</p>}
+                  {!bundle.Active && <p className="mt-1 text-micro font-semibold text-warning-700 dark:text-warning-300">{t('paused')}</p>}
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <button type="button" onClick={() => void setActive(bundle, !bundle.Active)} aria-label={`${bundle.Active ? 'Pause' : 'Activate'} ${bundle.Name}`} className="inline-flex items-center gap-1 rounded-md border border-surface-300 px-2.5 py-1.5 text-micro font-bold text-surface-700 dark:border-surface-700 dark:text-surface-200"><Check className="h-3.5 w-3.5" />{bundle.Active ? 'Pause' : 'Activate'}</button>
@@ -145,7 +145,7 @@ export const SellerBundlesPanel: React.FC<SellerBundlesPanelProps> = ({ products
               </div>
             </article>
           );
-        }) : <p className="py-8 text-center text-xs text-surface-500 dark:text-surface-300">No bundles yet.</p>}
+        }) : <p className="py-8 text-center text-xs text-surface-500 dark:text-surface-300">{t('noBundlesYet')}</p>}
       </section>
     </section>
   );
