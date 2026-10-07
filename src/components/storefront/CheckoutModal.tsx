@@ -3,6 +3,7 @@ import { Customer, CartItem, Address, Order, PaymentMethod, ProductBundle } from
 import { api, formatCurrency, formatBDT } from '../../lib/api';
 import { calculateBundlePrices } from '../../lib/bundles';
 import { describeVoucher, discountedPriceForVoucher, discountedUnitPrice, getVoucherRule, isVoucherExpired, normalizeVoucherCode } from '../../lib/vouchers';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { SSLCommerzModal, SSLCommerzPaymentSuccessData } from '../payment/SSLCommerzModal';
 import { BkashGatewayPage, BkashPaymentSuccessData } from '../payment/BkashGatewayPage';
 import {
@@ -27,6 +28,8 @@ interface CheckoutModalProps {
   currentCustomer: Customer;
   previousOrderCount: number;
   cartItems: CartItem[];
+  isLoadingCart?: boolean;
+  onNotify: (message: string, tone?: 'success' | 'error' | 'info') => void;
   onPlaceOrder: (orderData: {
     Customer_ID: string;
     Items: any[];
@@ -51,6 +54,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   currentCustomer,
   previousOrderCount,
   cartItems,
+  isLoadingCart = false,
+  onNotify,
   onPlaceOrder,
   onOrderSuccess,
 }) => {
@@ -88,18 +93,23 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [appliedVoucher, setAppliedVoucher] = React.useState('');
   const [voucherError, setVoucherError] = React.useState('');
   const [bundles, setBundles] = React.useState<ProductBundle[]>([]);
+  const [isLoadingBundles, setIsLoadingBundles] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [createdOrder, setCreatedOrder] = React.useState<Order | null>(null);
   const [verifiedPayment, setVerifiedPayment] = React.useState<SSLCommerzPaymentSuccessData | BkashPaymentSuccessData | null>(null);
   const submissionInProgressRef = React.useRef(false);
+  const dialogRef = useFocusTrap<HTMLDivElement>(isOpen);
 
   React.useEffect(() => {
     if (!isOpen) return;
     let isMounted = true;
+    setIsLoadingBundles(true);
     api.getBundles().then((result) => {
       if (isMounted) setBundles(result);
     }).catch(() => {
       if (isMounted) setBundles([]);
+    }).finally(() => {
+      if (isMounted) setIsLoadingBundles(false);
     });
     return () => { isMounted = false; };
   }, [isOpen]);
@@ -221,7 +231,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
   const validateAddress = () => {
     if (!shippingAddress.Street || !shippingAddress.City || !shippingAddress.Postal_Code) {
-      alert('Please complete all required shipping address fields.');
+      onNotify('Please complete all required shipping address fields.', 'error');
       return false;
     }
     return true;
@@ -283,11 +293,11 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   }) => {
     if (submissionInProgressRef.current || createdOrder) return;
     if (!currentCustomer.Customer_ID || cartItems.length === 0) {
-      alert('Your cart is empty or customer session is unavailable. Reopen the cart and try again.');
+      onNotify('Your cart is empty or customer session is unavailable. Reopen the cart and try again.', 'error');
       return;
     }
     if (!shippingAddress.Street.trim() || !shippingAddress.City.trim()) {
-      alert('Complete the shipping street and city before placing your order.');
+      onNotify('Complete the shipping street and city before placing your order.', 'error');
       return;
     }
 
@@ -322,7 +332,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
       setCreatedOrder(order);
     } catch (err: any) {
-      alert(err.message || 'Failed to place order');
+      onNotify(err.message || 'Failed to place order', 'error');
     } finally {
       submissionInProgressRef.current = false;
       setIsSubmitting(false);
@@ -352,29 +362,30 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
   return (
     <>
-      <div className="fixed inset-0 z-40 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-150">
-        <div className="bg-white dark:bg-[#12161D] w-full max-w-3xl rounded-3xl shadow-2xl border border-sky-100 dark:border-zinc-800 overflow-hidden max-h-[92vh] flex flex-col my-6">
+      <div className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-black/75 p-2 backdrop-blur-xs animate-in fade-in duration-150 sm:items-center sm:p-4">
+        <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="checkout-modal-title" tabIndex={-1} className="premium-surface my-2 flex max-h-[calc(100dvh-1rem)] w-full max-w-3xl flex-col overflow-hidden rounded-xl shadow-2xl sm:my-6 sm:max-h-[92vh]">
           {/* Header */}
-          <div className="px-6 py-4 border-b border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-[#161C24]/80 flex items-center justify-between">
+          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/50 px-4 py-3 dark:border-zinc-800 dark:bg-[#161C24]/80 sm:px-6 sm:py-4">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-blue-600/10 dark:bg-blue-950 flex items-center justify-center text-blue-600 dark:text-sky-400">
                 <Truck className="w-4 h-4" />
               </div>
               <div>
-                <h2 className="font-bold text-slate-900 dark:text-white text-base">Direct Checkout &amp; Payment</h2>
+                <h2 id="checkout-modal-title" className="font-bold text-slate-900 dark:text-white text-base">Direct Checkout &amp; Payment</h2>
                 <p className="text-[10px] text-slate-400">SSLCOMMERZ Secured Gateway • bKash • COD</p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+              aria-label="Close checkout"
+              className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5]"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
           {/* Modal Body */}
-          <div className="p-6 overflow-y-auto flex-1">
+          <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
             {createdOrder ? (
               /* Order Success State matching the live waypoint card with SSLCommerz bKash badge */
               <div className="text-center py-8 space-y-6 max-w-lg mx-auto animate-in zoom-in-95 duration-200">
@@ -452,7 +463,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       onOrderSuccess(createdOrder);
                       onClose();
                     }}
-                    className="flex-1 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-full text-xs shadow-lg shadow-blue-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                    className="premium-button flex-1 rounded-full py-3.5 text-xs font-bold text-white transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
                     <Package className="w-4 h-4 text-amber-300" />
                     <span>View Order Status</span>
@@ -463,7 +474,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
               /* Checkout Form */
               <form onSubmit={handleOpenPaymentOrSubmit} className="space-y-6">
                 {/* Customer Info */}
-                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#161C24] border border-slate-200 dark:border-zinc-800 flex items-center justify-between text-xs">
+                                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs dark:border-zinc-800 dark:bg-[#161C24]">
                   <div>
                     <span className="text-slate-400 dark:text-zinc-500 block font-bold text-[10px] uppercase tracking-wider">
                       Purchasing Customer
@@ -494,7 +505,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                         value={shippingAddress.House_Name}
                         onChange={(e) => setShippingAddress({ ...shippingAddress, House_Name: e.target.value })}
                         placeholder="e.g. Apt 4B or Road 11, Block D"
-                        className="w-full p-2.5 bg-white dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+                        className="luxury-input w-full p-2.5 bg-white dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40 text-slate-900 dark:text-white"
                       />
                     </div>
 
@@ -506,7 +517,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                         value={shippingAddress.Street}
                         onChange={(e) => setShippingAddress({ ...shippingAddress, Street: e.target.value, Latitude: undefined, Longitude: undefined })}
                         placeholder="e.g. Banani, Gulshan, or Dhanmondi"
-                        className="w-full p-2.5 bg-white dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+                        className="luxury-input w-full p-2.5 bg-white dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40 text-slate-900 dark:text-white"
                       />
                     </div>
 
@@ -518,7 +529,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                         value={shippingAddress.City}
                         onChange={(e) => setShippingAddress({ ...shippingAddress, City: e.target.value, Latitude: undefined, Longitude: undefined })}
                         placeholder="e.g. Dhaka or Chittagong"
-                        className="w-full p-2.5 bg-white dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+                        className="luxury-input w-full p-2.5 bg-white dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40 text-slate-900 dark:text-white"
                       />
                     </div>
 
@@ -530,13 +541,13 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                         value={shippingAddress.Postal_Code}
                         onChange={(e) => setShippingAddress({ ...shippingAddress, Postal_Code: e.target.value })}
                         placeholder="e.g. 1213"
-                        className="w-full p-2.5 bg-white dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+                        className="luxury-input w-full p-2.5 bg-white dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40 text-slate-900 dark:text-white"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <div className="flex items-center justify-between gap-3">
+                                          <div className="flex flex-wrap items-center justify-between gap-2">
                       <label htmlFor="delivery-instructions" className="block text-slate-600 dark:text-zinc-400 font-medium text-xs">Delivery Instructions</label>
                       <button type="button" onClick={() => void suggestDeliveryInstructions()} disabled={isSuggestingInstructions} className="inline-flex items-center gap-1.5 rounded-lg border border-blue-300 px-3 py-2 text-xs font-bold text-blue-700 disabled:opacity-50 dark:border-blue-900 dark:text-sky-300"><Sparkles className="h-3.5 w-3.5" />{isSuggestingInstructions ? 'Suggesting...' : 'Suggest with AI'}</button>
                     </div>
@@ -546,7 +557,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       value={additionalNotes}
                       onChange={(e) => setAdditionalNotes(e.target.value)}
                       placeholder="Add access details or preferences for your rider"
-                      className="w-full p-2.5 bg-white dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs text-slate-900 dark:text-white"
+                      className="luxury-input w-full p-2.5 bg-white dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40 text-xs text-slate-900 dark:text-white"
                     />
                     {instructionError && <p role="alert" className="text-xs text-rose-600 dark:text-rose-300">{instructionError}</p>}
                   </div>
@@ -554,12 +565,12 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
                 {/* Payment Method Selector */}
                 <div className="space-y-3 pt-2">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
                       <Lock className="w-4 h-4 text-emerald-500" />
                       Select Payment Method (SSLCOMMERZ Gateway)
                     </h3>
-                    <span className="text-[10px] font-bold text-sky-400 uppercase tracking-wider bg-sky-950/80 px-2 py-0.5 rounded-full border border-sky-800">
+                    <span className="max-w-full whitespace-normal rounded-full border border-sky-800 bg-sky-950/80 px-2 py-1 text-[10px] font-bold uppercase leading-tight text-sky-400">
                       All prices shown in Bangladeshi Taka
                     </span>
                   </div>
@@ -574,12 +585,12 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                           : 'border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#161C24] hover:border-pink-300'
                       }`}
                     >
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-2.5">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div className="flex min-w-0 items-center gap-2.5">
                           <div className="w-9 h-9 rounded-xl bg-[#E2136E] text-white font-black text-sm flex items-center justify-center shadow-xs">
                             ব
                           </div>
-                          <div>
+                          <div className="min-w-0">
                             <span className="font-black text-xs text-slate-900 dark:text-white block">
                               bKash Mobile Banking
                             </span>
@@ -609,12 +620,12 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                           : 'border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#161C24] hover:border-orange-300'
                       }`}
                     >
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-center gap-2.5">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div className="flex min-w-0 items-center gap-2.5">
                           <div className="w-9 h-9 rounded-xl bg-[#F7941D] text-white font-black text-sm flex items-center justify-center shadow-xs">
                             না
                           </div>
-                          <div>
+                          <div className="min-w-0">
                             <span className="font-bold text-xs text-slate-900 dark:text-white block">
                               Nagad Digital Payment
                             </span>
@@ -640,11 +651,11 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                           : 'border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#161C24] hover:border-purple-300'
                       }`}
                     >
-                      <div className="flex items-center gap-2.5">
+                      <div className="flex min-w-0 items-center gap-2.5">
                         <div className="w-9 h-9 rounded-xl bg-[#8C3494] text-white font-black text-xs flex items-center justify-center shadow-xs">
                           DBBL
                         </div>
-                        <div>
+                        <div className="min-w-0">
                           <span className="font-bold text-xs text-slate-900 dark:text-white block">
                             Rocket (DBBL MFS)
                           </span>
@@ -670,7 +681,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       }`}
                     >
                       <div className="flex items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shadow-xs">
+                        <div className="w-9 h-9 rounded-xl bg-[#a99b72] text-white flex items-center justify-center shadow-xs">
                           <CreditCard className="w-4 h-4" />
                         </div>
                         <div>
@@ -692,17 +703,17 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     {/* Cash on Delivery Card */}
                     <div
                       onClick={() => setPaymentMethod('cash_on_delivery')}
-                      className={`sm:col-span-2 p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-center justify-between ${
+                      className={`sm:col-span-2 p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-wrap items-center justify-between gap-3 ${
                         paymentMethod === 'cash_on_delivery'
                           ? 'border-emerald-500 bg-emerald-50/40 dark:bg-emerald-950/20 shadow-md shadow-emerald-500/10'
                           : 'border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#161C24] hover:border-emerald-300'
                       }`}
                     >
-                      <div className="flex items-center gap-2.5">
+                      <div className="flex min-w-0 items-center gap-2.5">
                         <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
                           <Banknote className="w-4 h-4" />
                         </div>
-                        <div>
+                        <div className="min-w-0">
                           <span className="font-bold text-xs text-slate-900 dark:text-white block">
                             Cash on Delivery (COD)
                           </span>
@@ -720,14 +731,15 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 </div>
 
                 {/* Order Items & Fee Summary */}
-                <div className="p-4 rounded-3xl bg-blue-50/50 dark:bg-[#161C24] border border-blue-100 dark:border-blue-900/40 space-y-3">
-                  <h4 className="font-bold text-xs uppercase tracking-wider text-blue-700 dark:text-sky-300">
-                    Order Summary ({cartItems.length} Products)
+                <div className="p-4 rounded-3xl bg-[#a99b72]/[0.07] dark:bg-[#161C24] border border-[#a99b72]/25 dark:border-[#a99b72]/20 space-y-3">
+                  <h4 className="font-bold text-xs uppercase tracking-wider text-[#80734f] dark:text-[#d0c8a5]">
+                    Order Summary ({isLoadingCart ? 'Loading cart' : `${cartItems.length} Products`})
                   </h4>
 
-                  <div className="space-y-2 rounded-xl border border-blue-100 bg-white/70 p-3 dark:border-zinc-700 dark:bg-[#12161D]">
+                  <div className="space-y-2 rounded-xl border border-[#a99b72]/20 bg-white/70 p-3 dark:border-zinc-700 dark:bg-[#12161D]">
                     <label htmlFor="checkout-voucher" className="block text-xs font-semibold text-slate-700 dark:text-zinc-300">Product voucher code</label>
-                    <div className="flex gap-2">
+                    {isLoadingBundles && <div role="status" className="flex items-center gap-2 text-[10px] text-slate-500 dark:text-zinc-400"><span className="premium-skeleton h-3 w-28 rounded-full" /><span className="sr-only">Checking bundle offers</span></div>}
+                    <div className="flex flex-wrap gap-2">
                       <input
                         id="checkout-voucher"
                         value={voucherInput}
@@ -735,10 +747,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                         onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); applyVoucher(); } }}
                         placeholder="e.g. SAVE20"
                         aria-invalid={Boolean(voucherError)}
-                        className="min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs uppercase text-slate-900 placeholder:normal-case placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-zinc-700 dark:bg-[#181F2A] dark:text-white"
+                        className="luxury-input min-w-0 flex-[1_1_8rem] rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs uppercase text-slate-900 placeholder:normal-case placeholder:text-slate-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40 dark:border-zinc-700 dark:bg-[#181F2A] dark:text-white"
                       />
-                      <button type="button" onClick={applyVoucher} className="rounded-lg bg-blue-700 px-4 py-2 text-xs font-bold text-white hover:bg-blue-600">Apply</button>
-                      {appliedVoucher && <button type="button" onClick={() => { setAppliedVoucher(''); setVoucherInput(''); setVoucherError(''); }} className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 dark:border-zinc-700 dark:text-zinc-200">Remove</button>}
+                      <button type="button" onClick={applyVoucher} className="premium-button rounded-lg px-4 py-2 text-xs font-bold text-white">Apply</button>
+                      {appliedVoucher && <button type="button" onClick={() => { setAppliedVoucher(''); setVoucherInput(''); setVoucherError(''); }} className="shrink-0 rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 dark:border-zinc-700 dark:text-zinc-200">Remove</button>}
                     </div>
                     {voucherError && <p role="alert" className="text-xs text-rose-700 dark:text-rose-300">{voucherError}</p>}
                     {appliedVoucher && <p role="status" className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">{appliedVoucher} applied: {describeVoucher(appliedVoucher)}</p>}
@@ -754,7 +766,11 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   </div>
 
                   <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-                    {cartItems.map((item) => {
+                    {isLoadingCart ? (
+                      <div role="status" aria-label="Loading checkout items" aria-busy="true" className="space-y-2 py-1">
+                        {Array.from({ length: 2 }, (_, index) => <div key={index} className="premium-skeleton h-4 w-full rounded-full" />)}
+                      </div>
+                    ) : cartItems.map((item) => {
                       const originalLinePrice = (Number(item.Product?.Price) || 0) * item.Quantity;
                       const finalLinePrice = getCartItemFinalUnitPrice(item) * item.Quantity;
                       return (
@@ -816,18 +832,18 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   </div>
                 </div>
 
-                <div className="flex items-center justify-end gap-3 pt-2">
+                <div className="flex flex-col-reverse items-stretch gap-2 border-t border-slate-200 pt-3 dark:border-zinc-800 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:border-0 sm:pt-2">
                   <button
                     type="button"
                     onClick={onClose}
-                    className="px-5 py-2.5 rounded-full text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                    className="w-full rounded-full px-5 py-3 text-center text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-zinc-800 sm:w-auto sm:py-2.5 sm:text-xs"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    disabled={isSubmitting}
-                    className={`px-6 py-3.5 text-white font-bold rounded-full text-xs shadow-lg flex items-center gap-2 transition-all active:scale-98 cursor-pointer ${
+                    disabled={isSubmitting || isLoadingCart || isLoadingBundles}
+                    className={`flex w-full min-w-0 items-center justify-center gap-2 rounded-full px-3 py-3.5 text-center text-xs font-bold leading-tight text-white shadow-lg transition-all active:scale-98 sm:w-auto sm:px-6 ${
                       paymentMethod === 'bkash'
                         ? 'bg-[#E2136E] hover:bg-[#c20f5e] shadow-[#E2136E]/30'
                         : paymentMethod === 'nagad'
@@ -836,20 +852,22 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                         ? 'bg-[#8C3494] hover:bg-[#77287e] shadow-[#8C3494]/30'
                         : paymentMethod === 'cash_on_delivery'
                         ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/30'
-                        : 'bg-blue-600 hover:bg-blue-500 shadow-blue-600/30'
+                          : 'premium-button'
                     }`}
                   >
                     {isSubmitting ? (
                       'Processing Order...'
+                    ) : isLoadingCart || isLoadingBundles ? (
+                      'Calculating order total...'
                     ) : paymentMethod === 'cash_on_delivery' ? (
                       <>
-                        <span>Confirm Order (Cash on Delivery)</span>
+                        <span className="min-w-0 break-words">Confirm Order (Cash on Delivery)</span>
                         <ArrowRight className="w-4 h-4" />
                       </>
                     ) : (
                       <>
                         <Lock className="w-4 h-4" />
-                        <span>
+                        <span className="min-w-0 break-words">
                           Pay with {paymentMethod === 'bkash' ? 'bKash' : paymentMethod.toUpperCase()} (SSLCommerz) • {formatBDT(grandTotalBDT)}
                         </span>
                         <ArrowRight className="w-4 h-4" />

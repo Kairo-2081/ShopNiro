@@ -30,6 +30,7 @@ interface SellerDashboardProps {
   categories: Category[];
   orders: Order[];
   reviews: Review[];
+  isLoading?: boolean;
   onSaveProduct: (data: Partial<Product>) => Promise<void>;
   onDeleteProduct: (productId: string) => Promise<void>;
   onUpdateProductStatus: (productId: string, status: ProductStatus) => Promise<void>;
@@ -43,6 +44,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
   categories,
   orders,
   reviews,
+  isLoading = false,
   onSaveProduct,
   onDeleteProduct,
   onUpdateProductStatus,
@@ -66,6 +68,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
     Return_Rate_30d: number | null;
   }>>([]);
   const [analyticsError, setAnalyticsError] = React.useState('');
+  const [isLoadingAnalytics, setIsLoadingAnalytics] = React.useState(false);
 
   React.useEffect(() => {
     if (activeTab !== 'wallet') return;
@@ -75,10 +78,13 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
   React.useEffect(() => {
     if (activeTab !== 'analytics') return;
     let isMounted = true;
+    setIsLoadingAnalytics(true);
     api.getSellerProductAnalytics().then((metrics) => {
       if (isMounted) setProductAnalytics(metrics);
     }).catch((error: any) => {
       if (isMounted) setAnalyticsError(error.message || 'Could not load listing analytics.');
+    }).finally(() => {
+      if (isMounted) setIsLoadingAnalytics(false);
     });
     return () => { isMounted = false; };
   }, [activeTab]);
@@ -266,7 +272,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
               className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-xs shadow-lg transition-all cursor-pointer ${
                 currentSeller.Status !== 'approved'
                   ? 'bg-slate-200 dark:bg-zinc-800 text-slate-400 dark:text-zinc-600 cursor-not-allowed'
-                  : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-500/30 transform hover:-translate-y-0.5'
+                  : 'premium-button text-white shadow-md hover:-translate-y-0.5'
               }`}
             >
               <Plus className="w-4 h-4" />
@@ -280,27 +286,27 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
 
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="p-5 rounded-3xl bg-white dark:bg-[#12161D] border border-sky-100 dark:border-sky-500/20 shadow-xs flex items-center justify-between">
+        <div className="premium-card flex items-center justify-between rounded-3xl p-5">
           <div>
             <span className="text-[11px] uppercase tracking-wider font-semibold text-slate-500 dark:text-zinc-400">
               Listed Products
             </span>
             <div className="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">
-              {sellerProducts.length}
+              {isLoading ? <span className="premium-skeleton block h-7 w-16 rounded-full" /> : sellerProducts.length}
             </div>
           </div>
-          <div className="w-11 h-11 rounded-2xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#a99b72]/10 text-[#80734f] dark:text-[#d0c8a5]">
             <Package className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="p-5 rounded-3xl bg-white dark:bg-[#12161D] border border-sky-100 dark:border-sky-500/20 shadow-xs flex items-center justify-between">
+        <div className="premium-card flex items-center justify-between rounded-3xl p-5">
           <div>
             <span className="text-[11px] uppercase tracking-wider font-semibold text-slate-500 dark:text-zinc-400">
               Total Revenue
             </span>
             <div className="text-2xl font-extrabold text-emerald-500 mt-1">
-              {formatCurrency(totalSalesRevenue)}
+              {isLoading ? <span className="premium-skeleton block h-7 w-28 rounded-full" /> : formatCurrency(totalSalesRevenue)}
             </div>
           </div>
           <div className="w-11 h-11 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
@@ -308,27 +314,27 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
           </div>
         </div>
 
-        <div className="p-5 rounded-3xl bg-white dark:bg-[#12161D] border border-sky-100 dark:border-sky-500/20 shadow-xs flex items-center justify-between">
+        <div className="premium-card flex items-center justify-between rounded-3xl p-5">
           <div>
             <span className="text-[11px] uppercase tracking-wider font-semibold text-slate-500 dark:text-zinc-400">
               Orders Received
             </span>
-            <div className="text-2xl font-extrabold text-sky-500 mt-1">
-              {sellerOrders.length}
+            <div className="mt-1 text-2xl font-extrabold text-[#77775a] dark:text-[#c0c09d]">
+              {isLoading ? <span className="premium-skeleton block h-7 w-16 rounded-full" /> : sellerOrders.length}
             </div>
           </div>
-          <div className="w-11 h-11 rounded-2xl bg-sky-500/10 text-sky-500 flex items-center justify-center">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#77775a]/10 text-[#77775a] dark:text-[#c0c09d]">
             <Truck className="w-5 h-5" />
           </div>
         </div>
 
-        <div className="p-5 rounded-3xl bg-white dark:bg-[#12161D] border border-sky-100 dark:border-sky-500/20 shadow-xs flex items-center justify-between">
+        <div className="premium-card flex items-center justify-between rounded-3xl p-5">
           <div>
             <span className="text-[11px] uppercase tracking-wider font-semibold text-slate-500 dark:text-zinc-400">
               Store Rating
             </span>
             <div className="text-2xl font-extrabold text-amber-500 mt-1 flex items-center gap-1">
-              {avgSellerRating.toFixed(1)}
+              {isLoading ? <span className="premium-skeleton block h-7 w-14 rounded-full" /> : avgSellerRating.toFixed(1)}
               <Star className="w-4 h-4 fill-amber-400" />
             </div>
           </div>
@@ -339,12 +345,12 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
       </div>
 
       {/* Tabs Bar */}
-      <div className="flex max-w-full flex-wrap gap-2 border-b border-sky-100 pb-2 dark:border-zinc-800">
+      <div className="flex max-w-full flex-wrap gap-2 border-b border-[#a99b72]/25 pb-2 dark:border-[#a99b72]/20">
         <button
           onClick={() => setActiveTab('products')}
           className={`shrink-0 whitespace-nowrap px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
             activeTab === 'products'
-              ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25'
+              ? 'premium-button text-white shadow-md'
               : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#181F2A]'
           }`}
         >
@@ -356,7 +362,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
           onClick={() => setActiveTab('orders')}
           className={`shrink-0 whitespace-nowrap px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
             activeTab === 'orders'
-              ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25'
+              ? 'premium-button text-white shadow-md'
               : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#181F2A]'
           }`}
         >
@@ -368,7 +374,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
           onClick={() => setActiveTab('reviews')}
           className={`shrink-0 whitespace-nowrap px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
             activeTab === 'reviews'
-              ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25'
+              ? 'premium-button text-white shadow-md'
               : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#181F2A]'
           }`}
         >
@@ -380,7 +386,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
           onClick={() => setActiveTab('analytics')}
           className={`shrink-0 whitespace-nowrap px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
             activeTab === 'analytics'
-              ? 'bg-sky-700 text-white shadow-lg shadow-sky-700/20'
+              ? 'premium-button text-white shadow-md'
               : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#181F2A]'
           }`}
         >
@@ -392,7 +398,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
           onClick={() => setActiveTab('promotions')}
           className={`shrink-0 whitespace-nowrap px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
             activeTab === 'promotions'
-              ? 'bg-amber-600 text-white shadow-lg shadow-amber-500/25'
+              ? 'premium-button text-white shadow-md'
               : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#181F2A]'
           }`}
         >
@@ -404,7 +410,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
           onClick={() => setActiveTab('wallet')}
           className={`shrink-0 whitespace-nowrap px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
             activeTab === 'wallet'
-              ? 'bg-emerald-700 text-white shadow-lg shadow-emerald-700/25'
+              ? 'premium-button text-white shadow-md'
               : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#181F2A]'
           }`}
         >
@@ -486,7 +492,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                                   p.Product_Status === 'active' ? 'inactive' : 'active'
                                 )
                               }
-                              className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase transition-colors cursor-pointer ${
+                              className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase transition-all duration-200 cursor-pointer hover:-translate-y-px hover:shadow-sm ${
                                 p.Product_Status === 'active'
                                   ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30'
                                   : 'bg-zinc-800 text-zinc-400 border border-zinc-700'
@@ -592,7 +598,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                           value={fulfillmentStatus}
                           onChange={(e) => onUpdateOrderStatus(order.Order_ID, e.target.value)}
                           aria-label={`Fulfillment status for order ${order.Order_ID}`}
-                          className="bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-full px-3 py-1.5 font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          className="luxury-control bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-full px-3 py-1.5 font-bold text-slate-900 dark:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5]"
                         >
                           <option value={fulfillmentStatus}>
                             {fulfillmentStatus === 'placed' ? 'Placed (Pending)' :
@@ -640,6 +646,13 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
 
       {activeTab === 'analytics' && (
         <section className="space-y-4">
+          {isLoadingAnalytics && (
+            <div role="status" aria-label="Loading seller analytics" aria-busy="true" className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="premium-skeleton h-56 rounded-2xl" />
+              <div className="premium-skeleton h-56 rounded-2xl" />
+            </div>
+          )}
+          {!isLoadingAnalytics && <>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {[
               { label: 'Net product sales', value: formatCurrency(totalSalesRevenue), note: 'Excludes cancelled and refunded orders' },
@@ -750,6 +763,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
               </tbody>
             </table>
           </section>
+          </>}
         </section>
       )}
 
@@ -771,7 +785,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                 return (
                   <div
                     key={rev.Review_ID}
-                    className="p-5 rounded-3xl bg-white dark:bg-[#12161D] border border-sky-100 dark:border-sky-500/20 space-y-3 shadow-xs text-xs"
+                    className="premium-surface p-5 rounded-xl space-y-3 shadow-xs text-xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
                   >
                     <div className="flex justify-between items-start">
                       <div>

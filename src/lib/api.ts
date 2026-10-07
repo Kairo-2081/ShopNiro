@@ -529,6 +529,16 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(params),
     }),
+  generateAIProductCopy: async (params: {
+    field: 'description' | 'warranty' | 'guarantee' | 'return-policy';
+    shopName: string;
+    productName: string;
+    categoryName?: string;
+    productFacts?: string[];
+    sourceText: string;
+    styleIndex: number;
+  }): Promise<{ copy: string }> =>
+    fetchJson('/api/ai/product-copy', { method: 'POST', body: JSON.stringify(params) }),
   generateAIReviewDraft: async (params: { productName: string; productDescription: string; sentiment: 'good' | 'bad'; notes?: string }): Promise<{ draft: string }> =>
     fetchJson('/api/ai/review-draft', { method: 'POST', body: JSON.stringify(params) }),
   generateAIRiderReviewDraft: async (params: { riderName: string; rating: number; wasTimely: boolean; notes?: string }): Promise<{ draft: string }> =>

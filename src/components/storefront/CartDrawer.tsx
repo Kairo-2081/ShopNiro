@@ -6,6 +6,7 @@ import { X, Trash2, Plus, Minus, ShoppingCart, ArrowRight, ShieldCheck } from 'l
 interface CartDrawerProps {
   isOpen: boolean;
   onClose: () => void;
+  isLoading?: boolean;
   cartItems: CartItem[];
   onUpdateQuantity: (cartId: string, quantity: number) => void;
   onRemoveItem: (cartId: string) => void;
@@ -15,6 +16,7 @@ interface CartDrawerProps {
 export const CartDrawer: React.FC<CartDrawerProps> = ({
   isOpen,
   onClose,
+  isLoading = false,
   cartItems,
   onUpdateQuantity,
   onRemoveItem,
@@ -60,7 +62,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               <button
                 key={pay}
                 type="button"
-                className="pay-pill flex-1 py-2 px-2 rounded-full border border-slate-200 dark:border-zinc-700 bg-white dark:bg-[#1C2430] text-[10px] font-bold text-slate-700 dark:text-zinc-200 hover:border-slate-300 dark:hover:border-zinc-600 transition-colors cursor-pointer"
+                className="pay-pill flex-1 py-2 px-2 rounded-full border border-slate-200 dark:border-zinc-700 bg-white dark:bg-[#1C2430] text-[10px] font-bold text-slate-700 dark:text-zinc-200 hover:border-slate-300 dark:hover:border-zinc-600 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/20"
               >
                 {pay}
               </button>
@@ -81,7 +83,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+            className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/20"
           >
             <X className="w-5 h-5" />
           </button>
@@ -89,7 +91,20 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
         {/* Item list */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
-          {cartItems.length === 0 ? (
+          {isLoading ? (
+            <div role="status" aria-label="Loading cart items" aria-busy="true" className="space-y-4">
+              {Array.from({ length: 3 }, (_, index) => (
+                <div key={index} className="flex items-center gap-3 rounded-xl border border-[#a99b72]/15 p-3.5">
+                  <div className="premium-skeleton h-16 w-16 shrink-0 rounded-xl" />
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <div className="premium-skeleton h-3 w-4/5 rounded-full" />
+                    <div className="premium-skeleton h-3 w-2/5 rounded-full" />
+                    <div className="premium-skeleton h-7 w-24 rounded-full" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : cartItems.length === 0 ? (
             <div className="text-center py-16 space-y-3">
               <div className="w-16 h-16 bg-slate-100 dark:bg-[#181F2A] rounded-2xl flex items-center justify-center mx-auto text-slate-400 dark:text-zinc-500">
                 <ShoppingCart className="w-8 h-8" />
@@ -135,7 +150,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                           type="button"
                           onClick={() => onUpdateQuantity(item.Cart_ID, item.Quantity - 1)}
                           aria-label={`Decrease ${product.Name} quantity`}
-                          className="px-2.5 py-0.5 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-600 dark:text-zinc-300 font-bold cursor-pointer"
+                          className="px-2.5 py-0.5 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-600 dark:text-zinc-300 font-bold cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/20"
                         >
                           <Minus className="w-3 h-3" />
                         </button>
@@ -147,7 +162,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                           onClick={() => onUpdateQuantity(item.Cart_ID, item.Quantity + 1)}
                           aria-label={`Increase ${product.Name} quantity`}
                           disabled={item.Quantity >= Number(product.Stock)}
-                          className="px-2.5 py-0.5 hover:bg-slate-100 dark:hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed text-slate-600 dark:text-zinc-300 font-bold cursor-pointer"
+                          className="px-2.5 py-0.5 hover:bg-slate-100 dark:hover:bg-zinc-800 disabled:opacity-40 disabled:cursor-not-allowed text-slate-600 dark:text-zinc-300 font-bold cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/20"
                         >
                           <Plus className="w-3 h-3" />
                         </button>
@@ -157,7 +172,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                         type="button"
                         onClick={() => onRemoveItem(item.Cart_ID)}
                         aria-label={`Remove ${product.Name} from cart`}
-                        className="text-slate-400 hover:text-red-500 transition-colors p-1 cursor-pointer"
+                        className="text-slate-400 hover:text-red-500 transition-colors p-1 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/20"
                         title="Remove Item"
                       >
                         <Trash2 className="w-3.5 h-3.5" />

@@ -108,7 +108,7 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
           {/* Simple Login Button */}
           <button
             onClick={onOpenLogin}
-            className="flex min-w-0 items-center justify-center gap-1.5 px-2.5 py-1.5 text-center leading-tight bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-full shadow-xs transition-colors cursor-pointer sm:px-3.5"
+            className="luxury-control premium-button flex min-w-0 items-center justify-center gap-1.5 rounded-full px-2.5 py-1.5 text-center leading-tight text-white font-bold cursor-pointer sm:px-3.5"
           >
             <LogIn className="w-3.5 h-3.5" />
             <span>Sign In</span>
@@ -118,9 +118,9 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
           {onOpenCustomerSignup && (
             <button
               onClick={onOpenCustomerSignup}
-              className="flex min-w-0 items-center justify-center gap-1 px-2.5 py-1.5 text-center leading-tight bg-white dark:bg-[#181F2A] text-slate-700 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-zinc-700 rounded-full transition-colors cursor-pointer font-medium sm:px-3"
+              className="luxury-control flex min-w-0 items-center justify-center gap-1 px-2.5 py-1.5 text-center leading-tight bg-[#d0c8a5]/10 dark:bg-[#181F2A] text-slate-700 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white border border-[#d0c8a5]/35 dark:border-zinc-700 rounded-full transition-colors cursor-pointer font-medium sm:px-3"
             >
-              <UserPlus className="w-3.5 h-3.5 text-sky-400" />
+              <UserPlus className="w-3.5 h-3.5 text-[#a99b72] dark:text-[#d0c8a5]" />
               <span>Customer Signup</span>
             </button>
           )}
@@ -128,7 +128,7 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
           {onOpenSellerSignup && (
             <button
               onClick={onOpenSellerSignup}
-              className="flex min-w-0 items-center justify-center gap-1 px-2.5 py-1.5 text-center leading-tight bg-emerald-600/10 hover:bg-emerald-600 hover:text-white text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 rounded-full transition-colors cursor-pointer font-medium sm:px-3"
+              className="luxury-control flex min-w-0 items-center justify-center gap-1 px-2.5 py-1.5 text-center leading-tight bg-[#77775a] hover:bg-[#555541] text-white border border-[#77775a]/70 rounded-full transition-colors cursor-pointer font-medium sm:px-3"
             >
               <Store className="w-3.5 h-3.5" />
               <span>Become a Seller</span>
@@ -138,7 +138,7 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
           {onOpenRiderSignup && (
             <button
               onClick={onOpenRiderSignup}
-              className="flex min-w-0 items-center justify-center gap-1 px-2.5 py-1.5 text-center leading-tight bg-emerald-700/10 hover:bg-emerald-700 hover:text-white text-emerald-800 dark:text-emerald-300 border border-emerald-700/20 rounded-full transition-colors cursor-pointer font-medium sm:px-3"
+              className="luxury-control flex min-w-0 items-center justify-center gap-1 px-2.5 py-1.5 text-center leading-tight bg-[#77775a] hover:bg-[#555541] text-white border border-[#77775a]/70 rounded-full transition-colors cursor-pointer font-medium sm:px-3"
             >
               <Truck className="w-3.5 h-3.5" />
               <span>Rider portal</span>

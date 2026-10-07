@@ -70,6 +70,75 @@ router.post('/description', async (req, res) => {
   }
 });
 
+router.post('/product-copy', requireAuth, requireRole(['seller', 'admin']), async (req: AuthRequest, res) => {
+  try {
+    requireGroqClient();
+
+    const { field, shopName, productName, categoryName, productFacts, sourceText, styleIndex } = req.body ?? {};
+    const supportedFields = ['description', 'warranty', 'guarantee', 'return-policy'];
+    if (
+      !supportedFields.includes(field) ||
+      typeof shopName !== 'string' || !shopName.trim() ||
+      typeof productName !== 'string' || !productName.trim() ||
+      (productFacts !== undefined && (!Array.isArray(productFacts) || productFacts.some((fact: unknown) => typeof fact !== 'string'))) ||
+      (sourceText !== undefined && typeof sourceText !== 'string') ||
+      !Number.isInteger(styleIndex) || styleIndex < 0 || styleIndex > 2
+    ) {
+      return res.status(400).json({ error: 'Product, copy type, and a valid writing style are required.' });
+    }
+
+    const styles = [
+      'premium editorial: refined, vivid, and carefully paced, without hype',
+      'expert retail: richly informative, organized, and specific to the supplied facts',
+      'warm luxury service: personable, assured, and thoughtfully detailed',
+    ];
+    const verifiedProductFacts = (Array.isArray(productFacts) ? productFacts : [])
+      .map((fact: string) => fact.trim().slice(0, 120))
+      .filter(Boolean)
+      .slice(0, 5);
+    const productContext = JSON.stringify({
+      shopName: shopName.trim().slice(0, 120),
+      productName: productName.trim().slice(0, 160),
+      categoryName: String(categoryName || '').trim().slice(0, 100),
+      sellerProvidedProductFacts: verifiedProductFacts,
+    });
+    const source = String(sourceText || '').trim().slice(0, 2200);
+    const prompt = source
+      ? `Elaborate and polish the seller's existing ${field} copy into finished, premium-ready writing. Preserve every fact, number, condition, and limitation exactly; do not add claims. Improve flow, transitions, clarity, and useful detail using only the provided material. Add a short heading or bullets only where they improve readability. Writing style: ${styles[styleIndex]}. Context: ${productContext}. Existing copy: ${JSON.stringify(source)}`
+      : field === 'description'
+      ? `Write a developed, polished product description of about 120-180 words. Use an inviting opening paragraph followed by useful, skimmable detail; include a short feature list only when supported by supplied facts. Do not infer or invent specifications, materials, certifications, warranty, performance, compatibility, or included items. If the supplied facts are sparse, stay accurate rather than padding with claims. Writing style: ${styles[styleIndex]}. Context: ${productContext}`
+      : field === 'return-policy'
+      ? `Create a polished, detailed, editable return-policy template of about 100-160 words. Organize it into clear sections for eligibility, item condition, how to request a return, and refund or exchange handling. Do not invent a return window, eligibility rules, exclusions, fees, or legal rights; represent every unspecified policy as a clear [seller to specify] placeholder. Writing style: ${styles[styleIndex]}. Context: ${productContext}`
+      : `Create a polished, detailed, editable ${field} terms template of about 100-160 words. Organize it into clear sections for coverage, duration, claim steps, and exclusions. Do not promise or imply confirmed coverage, duration, remedies, exclusions, or legal rights; represent every unspecified term as a clear [seller to specify] placeholder. Writing style: ${styles[styleIndex]}. Context: ${productContext}`;
+
+    const target = resolveModel('flash-lite', 'fast');
+    const response = await groq!.chat.completions.create({
+      model: target.model,
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a senior marketplace copywriter. Write polished, specific, well-structured copy with substantial useful detail and no filler. Use elegant, natural phrasing and clear headings or bullets when appropriate. Return only the copy, with no preamble or commentary. Never invent product facts or contractual terms; keep bracketed placeholders explicit and editable.',
+        },
+        { role: 'user', content: prompt },
+      ],
+      temperature: 0.65,
+      max_tokens: 800,
+    });
+    const copy = response.choices[0]?.message?.content?.trim();
+    if (!copy) return res.status(502).json({ error: 'AI could not prepare product copy. Please try again.' });
+    return res.json({ copy: copy.slice(0, 2200) });
+  } catch (error: any) {
+    console.error('ShopNiro AI product-copy error:', error);
+    const statusCode = error?.statusCode || error?.status || 500;
+    const errorMessage = statusCode === 503
+      ? 'ShopNiro AI is not configured. Add GROQ_API_KEY to the server environment and restart the server.'
+      : statusCode === 429
+      ? 'ShopNiro AI reached its current usage limit. Please try again later.'
+      : 'ShopNiro AI is temporarily unavailable. Please try again in a moment.';
+    return res.status(statusCode).json({ error: errorMessage });
+  }
+});
+
 router.post('/review-draft', requireAuth, requireRole(['customer']), async (req: AuthRequest, res) => {
   const { productName, productDescription, sentiment, notes } = req.body ?? {};
   if (

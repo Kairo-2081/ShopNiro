@@ -3,6 +3,7 @@ import { UserRole, Customer, Seller, Address } from '../types';
 import { X, LogIn, Lock, User, Eye, EyeOff, ShieldAlert, UserPlus, Store, CheckCircle, Mail, Phone, MapPin } from 'lucide-react';
 import { api } from '../lib/api';
 import { AccountLocationPicker } from './AccountLocationPicker';
+import { useFocusTrap } from '../hooks/useFocusTrap';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -46,6 +47,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const dialogRef = useFocusTrap<HTMLDivElement>(isOpen);
 
   React.useEffect(() => {
     if (isOpen && noticeMessage?.startsWith('Account created successfully.')) {
@@ -141,7 +143,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-4 animate-in fade-in duration-150">
-      <div className="bg-white dark:bg-[#12161D] border border-sky-100 dark:border-zinc-800 rounded-3xl w-full max-w-md max-h-[90vh] overflow-hidden shadow-2xl flex flex-col">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="login-modal-title" tabIndex={-1} className="premium-surface rounded-xl w-full max-w-md max-h-[90vh] overflow-hidden shadow-2xl flex flex-col">
         {/* Header */}
         <div className="p-5 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between bg-blue-50/50 dark:bg-[#161C24]/80">
           <div className="flex items-center gap-3">
@@ -149,7 +151,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               {activeTab === 'login' ? <LogIn className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />}
             </div>
             <div>
-              <h3 className="text-base font-black text-slate-900 dark:text-white">
+              <h3 id="login-modal-title" className="text-base font-black text-slate-900 dark:text-white">
                 {activeTab === 'login' ? 'Marketplace Login' : 'Create an Account'}
               </h3>
               <p className="text-xs text-slate-500 dark:text-zinc-400">
@@ -162,7 +164,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+            aria-label="Close sign in"
+            className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-zinc-800 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5]"
           >
             <X className="w-5 h-5" />
           </button>

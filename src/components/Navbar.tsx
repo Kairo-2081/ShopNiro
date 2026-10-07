@@ -320,7 +320,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {!isLoggedIn ? (
               <button
                 onClick={onOpenLogin}
-                className="luxury-control premium-button rounded-full px-4 text-white text-xs shadow-md cursor-pointer hover:-translate-y-0.5"
+                className="luxury-control premium-button rounded-full px-4 text-white text-xs shadow-md cursor-pointer hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] focus-visible:ring-offset-2 focus-visible:ring-offset-white/20"
               >
                 <LogIn className="w-3.5 h-3.5" />
                 <span>Sign In</span>
@@ -328,7 +328,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             ) : (
               <button
                 onClick={onLogout}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-rose-400 bg-rose-950/40 hover:bg-rose-900/50 border border-rose-900/60 rounded-full transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-rose-400 bg-rose-950/40 hover:bg-rose-900/50 border border-rose-900/60 rounded-full transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] focus-visible:ring-offset-2 focus-visible:ring-offset-white/20"
               >
                 <LogOut className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Log Out</span>

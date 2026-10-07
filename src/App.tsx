@@ -21,7 +21,16 @@ import { Navbar } from './components/Navbar';
 import { RoleSwitcher } from './components/RoleSwitcher';
 import { AuthenticationGuard } from './components/AuthenticationGuard';
 import { ChatFloatingTrigger } from './components/chat/ChatFloatingTrigger';
-import { LayoutGrid, Radio } from 'lucide-react';
+import { rememberFocusTarget } from './hooks/useFocusTrap';
+import { AlertCircle, CheckCircle2, Info, LayoutGrid, Radio, X } from 'lucide-react';
+
+type ToastTone = 'success' | 'error' | 'info';
+
+interface AppToast {
+  id: number;
+  message: string;
+  tone: ToastTone;
+}
 
 const LandingPage = React.lazy(() => import('./components/LandingPage').then((module) => ({ default: module.LandingPage })));
 const Storefront = React.lazy(() => import('./components/storefront/Storefront').then((module) => ({ default: module.Storefront })));
@@ -102,6 +111,18 @@ export default function App() {
   const [orders, setOrders] = React.useState<Order[]>([]);
   const [reviews, setReviews] = React.useState<Review[]>([]);
   const [admins, setAdmins] = React.useState<Admin[]>([]);
+  const [isInitialDataLoading, setIsInitialDataLoading] = React.useState(true);
+  const [isCartLoading, setIsCartLoading] = React.useState(false);
+  const [toastMessages, setToastMessages] = React.useState<AppToast[]>([]);
+  const toastSequence = React.useRef(0);
+
+  const showToast = (message: string, tone: ToastTone = 'error') => {
+    const id = ++toastSequence.current;
+    setToastMessages((current) => [...current, { id, message, tone }]);
+    window.setTimeout(() => {
+      setToastMessages((current) => current.filter((toast) => toast.id !== id));
+    }, 4200);
+  };
 
   // UI Modals
   const [isCartOpen, setIsCartOpen] = React.useState(false);
@@ -197,6 +218,25 @@ export default function App() {
     };
   }, []);
 
+  React.useEffect(() => {
+    const rememberOutsideFocus = (event: Event) => {
+      if (!(event.target instanceof Element) || event.target.closest('[role="dialog"]')) return;
+      const focusTarget = event.target.closest<HTMLElement>(
+        'button, a[href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      if (focusTarget) rememberFocusTarget(focusTarget);
+    };
+
+    document.addEventListener('focusin', rememberOutsideFocus, true);
+    document.addEventListener('pointerdown', rememberOutsideFocus, true);
+    document.addEventListener('click', rememberOutsideFocus, true);
+    return () => {
+      document.removeEventListener('focusin', rememberOutsideFocus, true);
+      document.removeEventListener('pointerdown', rememberOutsideFocus, true);
+      document.removeEventListener('click', rememberOutsideFocus, true);
+    };
+  }, []);
+
   // Check authentication on every page change before processing HTTP requests
   React.useEffect(() => {
     validateAuthForPage(activeTab);
@@ -204,6 +244,7 @@ export default function App() {
 
   // Load public storefront data and conditionally load role-authenticated resources
   const loadInitialData = React.useCallback(async () => {
+    setIsInitialDataLoading(true);
     try {
       // Public storefront data (categories, products, reviews, approved sellers)
       const [cats, sels, prods, revs] = await Promise.all([
@@ -284,6 +325,8 @@ export default function App() {
       }
     } catch (err) {
       console.error('Failed to load initial data:', err);
+    } finally {
+      setIsInitialDataLoading(false);
     }
   }, []);
 
@@ -294,12 +337,17 @@ export default function App() {
   // Load customer cart when selectedCustomer changes and is authenticated
   React.useEffect(() => {
     if (selectedCustomer && isLoggedIn) {
+      let isMounted = true;
+      setIsCartLoading(true);
       api
         .getCart(selectedCustomer.Customer_ID)
-        .then(setCart)
-        .catch((err) => console.error('Error fetching cart:', err));
+        .then((items) => { if (isMounted) setCart(items); })
+        .catch((err) => console.error('Error fetching cart:', err))
+        .finally(() => { if (isMounted) setIsCartLoading(false); });
+      return () => { isMounted = false; };
     } else {
       setCart([]);
+      setIsCartLoading(false);
     }
   }, [selectedCustomer, isLoggedIn]);
 
@@ -397,7 +445,7 @@ export default function App() {
       setCart(updatedCart);
       setIsCartOpen(true);
     } catch (err: any) {
-      alert(err.message || 'Failed to add item to cart');
+      showToast(err.message || 'Failed to add item to cart', 'error');
     }
   };
 
@@ -414,7 +462,7 @@ export default function App() {
       setSelectedProductForDetail(null);
       setIsCheckoutOpen(true);
     } catch (err: any) {
-      alert(err.message || 'Could not start checkout');
+      showToast(err.message || 'Could not start checkout', 'error');
     }
   };
 
@@ -430,7 +478,7 @@ export default function App() {
       setCart(updatedCart);
     } catch (err: any) {
       console.error('Cart quantity update error:', err);
-      alert(err.message || 'Could not update cart quantity.');
+      showToast(err.message || 'Could not update cart quantity.', 'error');
     }
   };
 
@@ -442,7 +490,7 @@ export default function App() {
       setCart(updatedCart);
     } catch (err: any) {
       console.error('Remove from cart error:', err);
-      alert(err.message || 'Could not remove this item from the cart.');
+      showToast(err.message || 'Could not remove this item from the cart.', 'error');
     }
   };
 
@@ -512,7 +560,7 @@ export default function App() {
         };
       }));
     } catch (err: any) {
-      alert(err.message || 'Failed to update profile');
+      showToast(err.message || 'Failed to update profile', 'error');
     }
   };
 
@@ -714,6 +762,25 @@ export default function App() {
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-transparent text-slate-900 dark:text-zinc-100 font-sans flex flex-col antialiased transition-colors duration-200 app-shell">
+      <div className="fixed right-4 top-20 z-[70] flex w-[min(24rem,calc(100vw-2rem))] flex-col gap-2 sm:right-6" aria-live="polite">
+        {toastMessages.map((toast) => {
+          const toneClass = toast.tone === 'error'
+            ? 'border-rose-500/25 bg-rose-500/10 text-rose-700 dark:text-rose-300'
+            : toast.tone === 'success'
+              ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300'
+              : 'border-amber-500/25 bg-amber-500/10 text-amber-800 dark:text-amber-200';
+          const Icon = toast.tone === 'error' ? AlertCircle : toast.tone === 'success' ? CheckCircle2 : Info;
+          return (
+            <div key={toast.id} role={toast.tone === 'error' ? 'alert' : 'status'} className={`premium-card flex items-start gap-3 rounded-xl border p-3.5 text-xs font-semibold shadow-xl backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-200 ${toneClass}`}>
+              <Icon className="mt-0.5 h-4 w-4 shrink-0" />
+              <span className="min-w-0 flex-1">{toast.message}</span>
+              <button type="button" onClick={() => setToastMessages((current) => current.filter((item) => item.id !== toast.id))} aria-label="Dismiss notification" className="rounded-full p-1 opacity-70 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5]">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          );
+        })}
+      </div>
       {/* Top Bar with Landing option */}
       <div className="bg-[#171713]/80 dark:bg-[#10100f]/75 border-b border-[#d0c8a5]/15 dark:border-white/10 px-3 py-1.5 flex items-center justify-between text-xs text-slate-700 dark:text-zinc-300 backdrop-blur-xl shadow-[0_10px_30px_rgba(7,7,5,0.25)] animate-fade-up sm:px-4">
         <button
@@ -789,6 +856,7 @@ export default function App() {
             categories={categories}
             sellers={sellers}
             reviews={reviews}
+            isLoading={isInitialDataLoading}
             onSelectProduct={(p) => setSelectedProductForDetail(p)}
             onAddToCart={handleAddToCart}
           />
@@ -914,6 +982,7 @@ export default function App() {
               categories={categories}
               orders={orders}
               reviews={reviews}
+              isLoading={isInitialDataLoading}
               onSaveProduct={handleSaveProduct}
               onDeleteProduct={handleDeleteProduct}
               onUpdateProductStatus={handleUpdateProductStatus}
@@ -942,6 +1011,7 @@ export default function App() {
               orders={orders}
               categories={categories}
               reviews={reviews}
+              isLoading={isInitialDataLoading}
               onUpdateSellerStatus={handleUpdateSellerStatus}
               onUpdateProductStatus={handleUpdateProductStatus}
               onCreateCategory={handleCreateCategory}
@@ -1080,6 +1150,7 @@ export default function App() {
       {selectedCustomer && isCartOpen && (
         <CartDrawer
           isOpen={isCartOpen}
+          isLoading={isCartLoading}
           onClose={() => setIsCartOpen(false)}
           cartItems={cart}
           onUpdateQuantity={handleUpdateCartQuantity}
@@ -1096,6 +1167,8 @@ export default function App() {
           currentCustomer={selectedCustomer}
           previousOrderCount={orders.filter((order) => order.Customer_ID === selectedCustomer.Customer_ID).length}
           cartItems={cart}
+          isLoadingCart={isCartLoading}
+          onNotify={showToast}
           onPlaceOrder={handlePlaceOrder}
           onOrderSuccess={() => {
             setActiveTab('orders');

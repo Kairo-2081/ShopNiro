@@ -6,6 +6,10 @@
 @theme {
   --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
   --font-display: "DM Serif Display", Georgia, serif;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 0.75rem;
+  --radius-3xl: 1.5rem;
   --color-blue-50: #f4f3ec;
   --color-blue-100: #e7e5d6;
   --color-blue-200: #d4d1bd;
@@ -374,22 +378,44 @@
   }
 
   .premium-surface {
+    background: linear-gradient(155deg, rgba(255, 255, 255, 0.97), rgba(246, 245, 239, 0.94));
+    border: 1px solid rgba(169, 155, 114, 0.2);
+    box-shadow: 0 18px 40px rgba(74, 62, 38, 0.09);
+  }
+
+  .dark .premium-surface {
     background: linear-gradient(155deg, rgba(37, 37, 30, 0.94), rgba(17, 17, 15, 0.9));
-    border: 1px solid rgba(231, 229, 214, 0.12);
+    border-color: rgba(231, 229, 214, 0.12);
     box-shadow: 0 28px 60px rgba(3, 3, 2, 0.3);
   }
 
   .premium-card {
+    background: linear-gradient(155deg, rgba(255, 255, 255, 0.98), rgba(246, 245, 239, 0.96));
+    border: 1px solid rgba(169, 155, 114, 0.24);
+    box-shadow: 0 18px 40px rgba(74, 62, 38, 0.1);
+    transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+  }
+
+  .dark .premium-card {
+    background: linear-gradient(155deg, rgba(43, 43, 34, 0.9), rgba(23, 23, 19, 0.88));
+    border-color: rgba(231, 229, 214, 0.11);
+    box-shadow: 0 18px 40px rgba(3, 3, 2, 0.24);
+  }
+
+  html:not(.dark) .premium-card-dark {
     background: linear-gradient(155deg, rgba(43, 43, 34, 0.9), rgba(23, 23, 19, 0.88));
     border: 1px solid rgba(231, 229, 214, 0.11);
     box-shadow: 0 18px 40px rgba(3, 3, 2, 0.24);
-    transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
   }
 
   .premium-card:hover {
     transform: translateY(-4px);
     box-shadow: 0 22px 44px rgba(8, 8, 7, 0.28);
     border-color: rgba(208, 200, 165, 0.25);
+  }
+
+  html:not(.dark) .premium-card:not(.premium-card-dark):hover {
+    box-shadow: 0 22px 44px rgba(74, 62, 38, 0.16);
   }
 
   .premium-button {
@@ -427,6 +453,11 @@
   .luxury-input:focus {
     border-color: rgba(169, 155, 114, 0.75);
     box-shadow: 0 0 0 3px rgba(169, 155, 114, 0.16);
+  }
+
+  :where(button, input, select, textarea, [role="button"]):focus-visible {
+    outline: 2px solid var(--shopniro-amber);
+    outline-offset: 2px;
   }
 
   .premium-button:hover {
@@ -497,6 +528,26 @@
     inset: 0;
     transform: translateX(-100%);
     animation: shimmer 1.6s ease-in-out infinite;
+  }
+
+  .premium-skeleton {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(100deg, rgba(169, 155, 114, 0.1) 20%, rgba(208, 200, 165, 0.22) 38%, rgba(169, 155, 114, 0.1) 56%);
+    background-size: 220% 100%;
+  }
+
+  .premium-skeleton::after {
+    position: absolute;
+    inset: 0;
+    content: "";
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent);
+    animation: premiumSkeletonSweep 1.8s ease-in-out infinite;
+  }
+
+  @keyframes premiumSkeletonSweep {
+    to { transform: translateX(100%); }
   }
 
   @keyframes shimmer {

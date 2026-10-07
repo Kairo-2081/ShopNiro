@@ -121,6 +121,11 @@ router.post('/', requireAuth, requireRole(['seller', 'admin']), async (req: Auth
     if (!Name || Price === undefined || !Category_ID || !Seller_ID) {
       return res.status(400).json({ error: 'Name, Price, Category, and Seller are required' });
     }
+    const listedImageCount = Array.isArray(Images)
+      ? Images.filter((value: unknown) => String(value).trim()).length
+      : 0;
+    const imageCount = listedImageCount || (String(Image || '').trim() ? 1 : 0);
+    if (imageCount < 1) return res.status(400).json({ error: 'At least one product image is required.' });
     if (String(Name).trim().length > 80) return res.status(400).json({ error: 'Product titles must be 80 characters or fewer.' });
     if (String(Description || '').trim().split(/\s+/).filter(Boolean).length > 300) {
       return res.status(400).json({ error: 'Product descriptions must be 300 words or fewer.' });

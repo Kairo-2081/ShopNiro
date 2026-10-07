@@ -19,6 +19,7 @@ import { Order, OrderStatus } from '../../types';
 
 interface AdminOverviewAnalyticsProps {
   orders: Order[];
+  isLoading?: boolean;
 }
 
 interface MonthlyMetric {
@@ -75,7 +76,18 @@ const AdminChartTooltip: React.FC<Partial<TooltipContentProps<number, string>>> 
   );
 };
 
-export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ orders }) => {
+export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ orders, isLoading = false }) => {
+  const [prefersReducedMotion, setPrefersReducedMotion] = React.useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
+
+  React.useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const updatePreference = () => setPrefersReducedMotion(mediaQuery.matches);
+    mediaQuery.addEventListener('change', updatePreference);
+    return () => mediaQuery.removeEventListener('change', updatePreference);
+  }, []);
+
   const { monthlyMetrics, statusMetrics, paymentMetrics, hasRecentOrders, trailingOrderCount, trailingOrderValue } = React.useMemo(() => {
     const now = new Date();
     const firstMonth = new Date(now.getFullYear(), now.getMonth() - 11, 1);
@@ -146,6 +158,19 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
       trailingOrderValue: monthly.reduce((sum, metric) => sum + metric.orderValue, 0),
     };
   }, [orders]);
+
+  if (isLoading) {
+    return (
+      <section aria-label="Loading platform metrics" aria-busy="true" className="space-y-4">
+        <div className="premium-skeleton h-6 w-56 rounded-full" />
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+          {Array.from({ length: 4 }, (_, index) => (
+            <div key={index} className="premium-skeleton h-[290px] rounded-2xl" />
+          ))}
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section aria-labelledby="admin-overview-analytics-title" className="space-y-4">
@@ -224,6 +249,7 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
                     strokeWidth={3}
                     fill="url(#areaAmberGradient)"
                     activeDot={{ r: 5, strokeWidth: 0, fill: '#FBBF24' }}
+                    isAnimationActive={!prefersReducedMotion}
                     animationDuration={900}
                   />
                   <Bar
@@ -233,6 +259,7 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
                     fill="url(#barBlueGradient)"
                     radius={[7, 7, 0, 0]}
                     maxBarSize={22}
+                    isAnimationActive={!prefersReducedMotion}
                     animationDuration={900}
                   />
                 </ComposedChart>
@@ -245,10 +272,10 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
           )}
         </section>
 
-        <section className="w-full min-w-0 rounded-2xl border border-sky-100 dark:border-sky-500/20 bg-white dark:bg-[#12161D] p-5 shadow-xs transition-all hover:shadow-md">
+        <section className="premium-surface w-full min-w-0 rounded-xl p-5 shadow-xs transition-all hover:shadow-md">
           <div className="mb-1">
-            <h3 className="text-sm font-bold text-white">Order Status Mix</h3>
-            <p className="mt-1 text-[11px] text-slate-300">Lifecycle distribution across all orders</p>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Order Status Mix</h3>
+            <p className="mt-1 text-[11px] text-slate-600 dark:text-zinc-300">Lifecycle distribution across all orders</p>
           </div>
 
           {statusMetrics.length > 0 ? (
@@ -265,7 +292,7 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
                       paddingAngle={4}
                       stroke="rgba(15, 23, 42, 0.75)"
                       strokeWidth={2}
-                      isAnimationActive={true}
+                      isAnimationActive={!prefersReducedMotion}
                       animationDuration={900}
                     >
                       {statusMetrics.map((entry) => (
@@ -301,14 +328,20 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
         </section>
 
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-          <section className="w-full rounded-2xl border border-sky-100 dark:border-sky-500/20 bg-white dark:bg-[#12161D] p-5 shadow-xs transition-all hover:shadow-md">
+          <section className="premium-surface w-full rounded-xl p-5 shadow-xs transition-all hover:shadow-md">
             <div className="mb-3">
-              <h3 className="text-sm font-bold text-white">Revenue by Month</h3>
-              <p className="mt-1 text-[11px] text-slate-300">Order value trend over the last 12 months</p>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">Revenue by Month</h3>
+              <p className="mt-1 text-[11px] text-slate-600 dark:text-zinc-300">Order value trend over the last 12 months</p>
             </div>
             <div className="h-[220px] w-full rounded-2xl bg-slate-950/20 p-2">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={monthlyMetrics} margin={{ top: 8, right: 8, left: -12, bottom: 4 }}>
+                  <BarChart data={monthlyMetrics} margin={{ top: 8, right: 8, left: -12, bottom: 4 }}>
+                    <defs>
+                      <linearGradient id="revenueAmberGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#D0C8A5" stopOpacity={0.95} />
+                        <stop offset="100%" stopColor="#80734F" stopOpacity={0.45} />
+                      </linearGradient>
+                    </defs>
                   <CartesianGrid stroke="#94a3b8" strokeDasharray="3 5" strokeOpacity={0.12} vertical={false} />
                   <XAxis dataKey="month" tick={{ fill: '#64748b', fontSize: 10 }} tickLine={false} axisLine={{ stroke: '#94a3b8', strokeOpacity: 0.3 }} />
                   <YAxis tickFormatter={(value: number) => compactValue(value)} tick={{ fill: '#64748b', fontSize: 10 }} tickLine={false} axisLine={false} width={42} />
@@ -316,9 +349,10 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
                   <Bar
                     dataKey="orderValue"
                     name="Order Value"
-                    fill="#60a5fa"
+                    fill="url(#revenueAmberGradient)"
                     radius={[7, 7, 0, 0]}
                     maxBarSize={28}
+                    isAnimationActive={!prefersReducedMotion}
                     animationDuration={900}
                   />
                 </BarChart>
@@ -326,10 +360,10 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
             </div>
           </section>
 
-          <section className="w-full min-w-0 rounded-2xl border border-sky-100 dark:border-sky-500/20 bg-white dark:bg-[#12161D] p-5 shadow-xs transition-all hover:shadow-md">
+          <section className="premium-surface w-full min-w-0 rounded-xl p-5 shadow-xs transition-all hover:shadow-md">
             <div className="mb-3">
-              <h3 className="text-sm font-bold text-white">Payment Method Mix</h3>
-              <p className="mt-1 text-[11px] text-slate-300">How customer orders are being paid for</p>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">Payment Method Mix</h3>
+              <p className="mt-1 text-[11px] text-slate-600 dark:text-zinc-300">How customer orders are being paid for</p>
             </div>
 
             {paymentMetrics.length > 0 ? (
@@ -346,7 +380,7 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
                         paddingAngle={3}
                         stroke="rgba(15, 23, 42, 0.75)"
                         strokeWidth={2}
-                        isAnimationActive={true}
+                        isAnimationActive={!prefersReducedMotion}
                         animationDuration={900}
                       >
                         {paymentMetrics.map((entry) => (

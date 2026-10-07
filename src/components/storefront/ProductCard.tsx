@@ -62,14 +62,24 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     setTimeout(() => setJustAdded(false), 1500);
   };
 
+  const handleSelect = () => {
+    api.trackProductEvent(product.Product_ID, 'click').catch(() => {});
+    onSelect(product);
+  };
+
   return (
     <div
       ref={cardRef}
-      onClick={() => {
-        api.trackProductEvent(product.Product_ID, 'click').catch(() => {});
-        onSelect(product);
+      role="button"
+      tabIndex={0}
+      aria-label={`View details for ${product.Name}`}
+      onClick={handleSelect}
+      onKeyDown={(event) => {
+        if (event.target !== event.currentTarget || (event.key !== 'Enter' && event.key !== ' ')) return;
+        event.preventDefault();
+        handleSelect();
       }}
-      className="product-card group relative bg-[linear-gradient(180deg,rgba(246,245,239,0.98),rgba(228,226,213,0.96))] dark:bg-[linear-gradient(180deg,#292821,#151510)] rounded-[28px] border border-[#d0c8a5]/20 dark:border-[#d0c8a5]/10 shadow-[0_18px_45px_rgba(6,6,4,0.18)] hover:shadow-[0_28px_60px_rgba(7,7,5,0.24)] hover:border-[#a99b72]/50 overflow-hidden flex flex-col cursor-pointer"
+      className="product-card group relative bg-[linear-gradient(180deg,rgba(246,245,239,0.98),rgba(228,226,213,0.96))] dark:bg-[linear-gradient(180deg,#292821,#151510)] rounded-2xl border border-[#d0c8a5]/20 dark:border-[#d0c8a5]/10 shadow-[0_18px_45px_rgba(6,6,4,0.18)] hover:shadow-[0_28px_60px_rgba(7,7,5,0.24)] hover:border-[#a99b72]/50 overflow-hidden flex flex-col cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5]"
     >
       {/* Product Image */}
       <div className="relative aspect-[4/5] w-full bg-slate-100 dark:bg-[#0C1014] overflow-hidden">
@@ -80,7 +90,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             alt={product.Name}
             onError={() => setImgError(true)}
             referrerPolicy="no-referrer"
-            className="product-card-image w-full h-full object-cover group-hover:scale-[1.035]"
+            className="product-card-image w-full h-full object-cover group-hover:scale-[1.035] group-focus-visible:scale-[1.035]"
             loading="lazy"
           />
         ) : (
@@ -134,7 +144,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               {category?.Name || 'General'}
             </span>
             {seller && (
-              <span className="flex items-center gap-1 text-slate-500 dark:text-zinc-400 font-medium text-[11px] truncate max-w-[120px]">
+              <span className="flex items-center gap-1 text-slate-500 dark:text-zinc-400 font-medium text-[11px] truncate max-w-[120px] transition-colors group-hover:text-[#80734f] dark:group-hover:text-[#d0c8a5]">
                 <Store className="w-3 h-3 text-slate-400 dark:text-zinc-500 shrink-0" />
                 <span className="truncate">{seller.Name}</span>
               </span>

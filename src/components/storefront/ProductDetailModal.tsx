@@ -4,6 +4,7 @@ import { Product, Category, Seller, Review, Customer, ProductBundle } from '../.
 import { StarRating } from '../StarRating';
 import { api, fetchRelatedProducts, formatCurrency, formatDate } from '../../lib/api';
 import { describeVoucher, discountedPriceForVoucher, getVoucherCountdownLabel, isVoucherExpired } from '../../lib/vouchers';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 import {
   X,
   ShoppingCart,
@@ -67,6 +68,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   const [visible, setVisible] = React.useState(Boolean(product));
   const [coPurchasedIds, setCoPurchasedIds] = React.useState<string[]>([]);
   const [availableBundles, setAvailableBundles] = React.useState<ProductBundle[]>([]);
+  const dialogRef = useFocusTrap<HTMLDivElement>(Boolean(product));
 
   React.useEffect(() => {
     let isMounted = true;
@@ -200,7 +202,12 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
       onClick={onClose}
     >
       <div
-        className={`relative bg-white dark:bg-[#12161D] w-full max-w-4xl rounded-3xl shadow-2xl border border-sky-100 dark:border-zinc-800 overflow-hidden my-8 max-h-[90vh] flex flex-col transition-all duration-300 ease-[cubic-bezier(.22,1,.36,1)] ${visible ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-4 scale-[0.97] opacity-0'}`}
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${product.Name} product details`}
+        tabIndex={-1}
+        className={`premium-surface relative w-full max-w-4xl rounded-xl shadow-2xl overflow-hidden my-8 max-h-[90vh] flex flex-col transition-all duration-300 ease-[cubic-bezier(.22,1,.36,1)] ${visible ? 'translate-y-0 scale-100 opacity-100' : 'translate-y-4 scale-[0.97] opacity-0'}`}
         onClick={(event) => event.stopPropagation()}
       >
         {/* Header bar */}
@@ -214,7 +221,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+            aria-label="Close product details"
+            className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-zinc-800 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5]"
           >
             <X className="w-5 h-5" />
           </button>
@@ -366,7 +374,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 {(product.Warranty_Information || product.Return_Policy) && (
                   <section className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-zinc-800 dark:bg-[#161C24]">
                     <h3 className="mb-2 text-xs font-bold text-slate-800 dark:text-zinc-200">Seller-provided policies</h3>
-                    {product.Warranty_Information && <p className="text-xs text-slate-600 dark:text-zinc-300"><strong>Warranty:</strong> {product.Warranty_Information}</p>}
+                    {product.Warranty_Information && <p className="whitespace-pre-line text-xs text-slate-600 dark:text-zinc-300"><strong>Coverage:</strong> {product.Warranty_Information}</p>}
                     {product.Return_Policy && <p className="mt-1 text-xs text-slate-600 dark:text-zinc-300"><strong>Returns:</strong> {product.Return_Policy}</p>}
                   </section>
                 )}
@@ -448,7 +456,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                     type="button"
                     disabled={isOutOfStock || isDeactivated || Boolean(product.Sizes?.length && !selectedSize)}
                     onClick={() => onBuyNow(product, quantity, selectedSize || undefined)}
-                    className="w-full rounded-full bg-blue-600 px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-600/30 transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none dark:disabled:bg-zinc-800 dark:disabled:text-zinc-600"
+                    className="w-full rounded-full bg-blue-600 px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-600/30 transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-600 disabled:shadow-none dark:disabled:bg-zinc-800 dark:disabled:text-zinc-300"
                   >
                     Buy Now · {formatCurrency(Number(product.Price) * quantity)}
                   </button>
@@ -577,7 +585,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                       value={newReviewText}
                       onChange={(e) => setNewReviewText(e.target.value)}
                       placeholder="Share your experience with this product..."
-                      className="w-full p-3 text-xs bg-white dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-zinc-100 placeholder-slate-400"
+                      className="luxury-input w-full p-3 text-xs bg-white dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40 text-slate-900 dark:text-zinc-100 placeholder-slate-400"
                     />
 
                     <div className="flex flex-wrap items-center justify-between gap-2">
@@ -632,7 +640,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 productReviews.map((rev) => (
                   <div
                     key={rev.Review_ID}
-                    className="p-4 rounded-2xl bg-white dark:bg-[#161C24] border border-slate-100 dark:border-zinc-800 space-y-2 shadow-xs"
+                    className="p-4 rounded-xl bg-white dark:bg-[#161C24] border border-slate-100 dark:border-zinc-800 space-y-2 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">

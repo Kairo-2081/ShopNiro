@@ -161,7 +161,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           {/* Atmospheric background glow */}
           <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-72 h-72 bg-white/10 rounded-full blur-3xl pointer-events-none hero-glow" />
 
-          <h2 className="text-[2.1rem] sm:text-[3rem] md:text-[4.2rem] font-normal text-white leading-[0.92] tracking-[-0.04em] max-w-5xl mx-auto whitespace-nowrap">
+          <h2 className="text-[2.1rem] sm:text-[3rem] md:text-[4.2rem] font-normal text-white leading-[0.92] tracking-[-0.04em] max-w-5xl mx-auto">
             Shop Smart. Ship Fast.
           </h2>
 
@@ -261,7 +261,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {/* Portal Card 1: Customer Hub */}
-          <div className="premium-card product-tilt rounded-2xl p-5 lg:p-6 space-y-3 flex flex-col lg:min-h-[370px]">
+          <div className="premium-card premium-card-dark product-tilt rounded-2xl p-5 lg:p-6 space-y-3 flex flex-col lg:min-h-[370px]">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-blue-600 text-white flex items-center justify-center shadow-md shadow-blue-600/40">
@@ -309,7 +309,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           {/* Portal Card 2: Merchant Studio */}
-          <div className="premium-card rounded-2xl p-5 lg:p-6 space-y-3 flex flex-col lg:min-h-[370px]">
+          <div className="premium-card premium-card-dark rounded-2xl p-5 lg:p-6 space-y-3 flex flex-col lg:min-h-[370px]">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-md shadow-emerald-600/40">
@@ -357,7 +357,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           {/* Portal Card 3: Admin Governance */}
-          <div className="premium-card rounded-2xl p-5 lg:p-6 space-y-3 flex flex-col lg:min-h-[370px]">
+          <div className="premium-card premium-card-dark rounded-2xl p-5 lg:p-6 space-y-3 flex flex-col lg:min-h-[370px]">
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-2xl bg-purple-600 text-white flex items-center justify-center shadow-md shadow-purple-600/40">
