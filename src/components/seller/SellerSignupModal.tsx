@@ -162,9 +162,9 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
             </div>
             <div>
               <h2 className="font-bold text-surface-900 dark:text-white text-base">
-                Apply for Merchant Partner
+                {t('applyMerchantPartner')}
               </h2>
-              <p className="text-xs text-surface-500 dark:text-surface-400">Join the ShopNiro verified merchant network</p>
+              <p className="text-xs text-surface-500 dark:text-surface-400">{t('joinVerifiedMerchantNetwork')}</p>
             </div>
           </div>
           <button
@@ -179,7 +179,7 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
         {/* Body */}
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4 flex-1 text-xs">
           <div className="p-3 bg-warning-500/10 border border-warning-500/20 text-warning-700 dark:text-warning-300 rounded-2xl">
-            💡 <strong>Approval Policy:</strong> Applications are registered with <strong>PENDING</strong> status until verified by Marketplace Governance.
+            💡 <strong>{t('approvalPolicyTitle')}:</strong> {t('applicationsRegisteredNotice')}
           </div>
 
           {error && (
@@ -299,9 +299,9 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
             <div>
               <label className="mb-1 block font-semibold text-surface-700 dark:text-surface-300">Payout method *</label>
               <select required value={payoutMethod} onChange={(event) => setPayoutMethod(event.target.value as 'bkash' | 'bank' | '')} className="w-full rounded-xl border border-surface-200 bg-surface-50 p-2.5 text-surface-900 focus:ring-2 focus:ring-success-500 dark:border-surface-700 dark:bg-[#181F2A] dark:text-white">
-                <option value="">Choose method</option>
+                <option value="">{t('chooseMethod')}</option>
                 <option value="bkash">bKash</option>
-                <option value="bank">Bank account</option>
+                <option value="bank">{t('bankAccount')}</option>
               </select>
             </div>
             <div>
@@ -309,7 +309,7 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
               <input required minLength={6} maxLength={100} value={payoutAccount} onChange={(event) => setPayoutAccount(event.target.value)} placeholder="Account number" className="w-full rounded-xl border border-surface-200 bg-surface-50 p-2.5 text-surface-900 focus:ring-2 focus:ring-success-500 dark:border-surface-700 dark:bg-[#181F2A] dark:text-white" />
             </div>
             <div>
-              <label className="mb-1 block font-semibold text-surface-700 dark:text-surface-300">Business registration number</label>
+              <label className="mb-1 block font-semibold text-surface-700 dark:text-surface-300">{t('businessRegNumber')}</label>
               <input maxLength={100} value={businessRegistrationNumber} onChange={(event) => setBusinessRegistrationNumber(event.target.value)} placeholder="If applicable" className="w-full rounded-xl border border-surface-200 bg-surface-50 p-2.5 text-surface-900 focus:ring-2 focus:ring-success-500 dark:border-surface-700 dark:bg-[#181F2A] dark:text-white" />
             </div>
             <div>
@@ -347,7 +347,7 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
 
           <div className="pt-2 border-t border-surface-100 dark:border-surface-800">
             <h4 className="font-semibold text-surface-900 dark:text-white mb-2 flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-success-500" /> Business Headquarters Address
+              <MapPin className="w-3.5 h-3.5 text-success-500" /> {t('businessHqAddress')}
             </h4>
             <div className="mb-3">
               <label className="block text-surface-600 dark:text-surface-400 mb-1">Location *</label>
