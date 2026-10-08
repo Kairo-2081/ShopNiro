@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import { query, mapAddress } from '../db/index.ts';
 
 function getAddressCoordinates(address: any) {
@@ -17,6 +18,13 @@ import { Customer } from '../../src/types.ts';
 import { sendWelcomeOfferEmail } from '../services/email.service.ts';
 
 const router = Router();
+const registrationRateLimit = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 8,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { error: 'Too many account creation attempts. Try again later.' },
+});
 
 /**
  * GET /api/customers
@@ -44,9 +52,12 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
  * POST /api/customers
  * Register a new customer (via schema gocart_customer_create)
  */
-router.post('/', async (req, res) => {
+router.post('/', registrationRateLimit, async (req, res) => {
   try {
     const { Name, Email, Password, Number: phoneNum, Address, Username, Marketing_Consent } = req.body;
+    if (typeof Password !== 'string' || Password.trim().length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters.' });
+    }
     const phone = typeof phoneNum === 'string' ? phoneNum.trim() : '';
     if (!phone) {
       return res.status(400).json({ error: 'A phone number is required' });
@@ -64,8 +75,7 @@ router.post('/', async (req, res) => {
     }
 
     const id = `CUST-${Date.now()}`;
-    const rawPassword = Password || 'password123';
-    const hashedPassword = await hashPassword(rawPassword);
+    const hashedPassword = await hashPassword(Password);
     const name = Name || Username || 'Customer User';
     const username = Username || cleanEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
     const addr = Address || {};

@@ -16,11 +16,19 @@ import {
   RiderDelivery,
   RiderStatus,
   ProductBundle,
+  OrderCancellationRequest,
+  StorefrontSort,
 } from '../types';
 import { apiUrl } from '../apiConfig';
 
-const TOKEN_KEY = 'marketpulse_jwt_token';
 const ANALYTICS_SESSION_KEY = 'shopniro_analytics_session';
+const PUBLIC_CATALOG_CACHE_TTL = 30_000;
+const publicCatalogCache = new Map<string, { expiresAt: number; value: unknown }>();
+let hasValidatedSession = false;
+
+if (typeof window !== 'undefined') {
+  window.localStorage.removeItem('marketpulse_jwt_token');
+}
 
 function getAnalyticsSessionId(): string {
   if (typeof window === 'undefined') return 'server-render-session';
@@ -30,23 +38,6 @@ function getAnalyticsSessionId(): string {
     window.sessionStorage.setItem(ANALYTICS_SESSION_KEY, sessionId);
   }
   return sessionId;
-}
-
-export function getAuthToken(): string | null {
-  if (typeof window === 'undefined') return null;
-  return localStorage.getItem(TOKEN_KEY);
-}
-
-export function setAuthToken(token: string): void {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem(TOKEN_KEY, token);
-  }
-}
-
-export function removeAuthToken(): void {
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem(TOKEN_KEY);
-  }
 }
 
 /**
@@ -95,24 +86,20 @@ function isPublicEndpoint(url: string, method: string = 'GET'): boolean {
   return false;
 }
 
-async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
+async function fetchJson<T>(url: string, options?: RequestInit, handleAuthErrors = true): Promise<T> {
   const method = (options?.method || 'GET').toUpperCase();
-  const token = getAuthToken();
   const isPublic = isPublicEndpoint(url, method);
+  const shouldCache = method === 'GET' && [
+    '/api/categories', '/api/products', '/api/reviews', '/api/sellers', '/api/bundles',
+  ].some((prefix) => url.split('?')[0] === prefix || url.split('?')[0].startsWith(`${prefix}/`));
+  const cacheKey = url;
 
-  // Validate authentication before processing HTTP requests that require authentication
-  if (!isPublic && !token) {
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(
-        new CustomEvent('auth:required', {
-          detail: {
-            url,
-            message: 'Authentication required. Please sign in before processing this request.',
-          },
-        })
-      );
+  if (shouldCache) {
+    const cached = publicCatalogCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) {
+      return JSON.parse(JSON.stringify(cached.value)) as T;
     }
-    throw new Error('Authentication Required: You must be logged in before processing this request.');
+    if (cached) publicCatalogCache.delete(cacheKey);
   }
 
   const headers: Record<string, string> = {
@@ -120,20 +107,18 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
     ...(options?.headers as Record<string, string> || {}),
   };
 
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
   const res = await fetch(apiUrl(url), {
     ...options,
+    credentials: 'include',
     headers,
   });
 
   if (!res.ok) {
     // If server responds with 401 Unauthorized, automatically invalidate session and alert application
-    if (res.status === 401) {
-      removeAuthToken();
-      if (typeof window !== 'undefined') {
+    if (res.status === 401 && handleAuthErrors) {
+      hasValidatedSession = false;
+      void fetch(apiUrl('/api/auth/logout'), { method: 'POST', credentials: 'include' }).catch(() => {});
+      if (typeof window !== 'undefined' && !isPublic) {
         window.dispatchEvent(
           new CustomEvent('auth:unauthorized', {
             detail: {
@@ -156,16 +141,17 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
     }
     throw new Error(errorMsg);
   }
-  return res.json();
+  const data = await res.json() as T;
+  if (shouldCache) {
+    publicCatalogCache.set(cacheKey, { expiresAt: Date.now() + PUBLIC_CATALOG_CACHE_TTL, value: data });
+  } else if (method !== 'GET') {
+    publicCatalogCache.clear();
+  }
+  return data;
 }
 
-// Full-stack API Client connected directly to Cloud SQL (PostgreSQL) with JWT Auth
+// Full-stack API client using HttpOnly cookie-backed JWT sessions
 export const api = {
-  // Token methods
-  getAuthToken,
-  setAuthToken,
-  removeAuthToken,
-
   // Database Status
   getDbStatus: async () => fetchJson<{ connected: boolean; provider: string; database: string }>('/api/db/status'),
   reverseGeocode: async (lat: number, lon: number): Promise<Address> => {
@@ -193,19 +179,50 @@ export const api = {
     }),
 
   // Products
+  getProductsPage: async (params?: {
+    sellerId?: string;
+    categoryId?: string;
+    search?: string;
+    status?: ProductStatus;
+    sort?: StorefrontSort;
+    limit?: number;
+    offset?: number;
+  }): Promise<{ items: Product[]; hasMore: boolean }> => {
+    const limit = Math.min(100, Math.max(1, params?.limit || 24));
+    const searchParams = new URLSearchParams({ limit: String(limit), offset: String(Math.max(0, params?.offset || 0)) });
+    if (params?.sellerId) searchParams.set('sellerId', params.sellerId);
+    if (params?.categoryId) searchParams.set('categoryId', params.categoryId);
+    if (params?.search) searchParams.set('search', params.search);
+    if (params?.status) searchParams.set('status', params.status);
+    if (params?.sort) searchParams.set('sort', params.sort);
+    const rows = await fetchJson<Product[]>(`/api/products?${searchParams.toString()}`);
+    return { items: rows.slice(0, limit), hasMore: rows.length > limit };
+  },
   getProducts: async (params?: {
     sellerId?: string;
     categoryId?: string;
     search?: string;
     status?: ProductStatus;
+    sort?: StorefrontSort;
   }): Promise<Product[]> => {
-    const searchParams = new URLSearchParams();
-    if (params?.sellerId) searchParams.set('sellerId', params.sellerId);
-    if (params?.categoryId) searchParams.set('categoryId', params.categoryId);
-    if (params?.search) searchParams.set('search', params.search);
-    if (params?.status) searchParams.set('status', params.status);
-    const queryString = searchParams.toString();
-    return fetchJson<Product[]>(`/api/products${queryString ? `?${queryString}` : ''}`);
+    const pageSize = 100;
+    const products: Product[] = [];
+    let offset = 0;
+    let hasMore = true;
+    while (hasMore) {
+      const page = await api.getProductsPage({ ...params, limit: pageSize, offset });
+      products.push(...page.items);
+      hasMore = page.hasMore;
+      offset += page.items.length;
+    }
+    return products;
+  },
+  getWishlist: async (): Promise<string[]> => fetchJson<string[]>('/api/wishlist'),
+  addToWishlist: async (productId: string): Promise<void> => {
+    await fetchJson(`/api/wishlist/${encodeURIComponent(productId)}`, { method: 'POST' });
+  },
+  removeFromWishlist: async (productId: string): Promise<void> => {
+    await fetchJson(`/api/wishlist/${encodeURIComponent(productId)}`, { method: 'DELETE' });
   },
 
   getProductById: async (id: string): Promise<Product> =>
@@ -328,18 +345,16 @@ export const api = {
       body: JSON.stringify({ status }),
     }),
   downloadRiderCv: async (id: string): Promise<Blob> => {
-    const token = getAuthToken();
     const response = await fetch(apiUrl(`/api/riders/applications/${encodeURIComponent(id)}/cv`), {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      credentials: 'include',
     });
     if (!response.ok) throw new Error('Could not download rider CV.');
     return response.blob();
   },
   getRiderProfile: async (): Promise<Rider> => fetchJson<Rider>('/api/riders/me'),
   getMyRiderCv: async (): Promise<Blob> => {
-    const token = getAuthToken();
     const response = await fetch(apiUrl('/api/riders/me/cv'), {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      credentials: 'include',
     });
     if (!response.ok) throw new Error('Could not open your current CV.');
     return response.blob();
@@ -398,20 +413,17 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
-  // Auth Login: Issues JWT session token
+  // Auth Login: establishes an HttpOnly cookie-backed JWT session
   login: async (
     usernameOrEmail: string,
     password: string,
     role?: UserRole
-  ): Promise<{ success: boolean; token?: string; role: UserRole; entity: any; message?: string }> => {
-    const res = await fetchJson<{ success: boolean; token?: string; role: UserRole; entity: any; message?: string }>('/api/auth/login', {
+  ): Promise<{ success: boolean; role: UserRole; entity: any; message?: string }> => {
+    const res = await fetchJson<{ success: boolean; role: UserRole; entity: any; message?: string }>('/api/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email: usernameOrEmail, password, role }),
-    });
-
-    if (res.token) {
-      setAuthToken(res.token);
-    }
+    }, false);
+    hasValidatedSession = res.success;
     return res;
   },
 
@@ -422,27 +434,25 @@ export const api = {
 
   // Validate Authentication for Page Navigation & HTTP Gatekeeping
   validateAuth: async (): Promise<{ authenticated: boolean; user?: any; role?: UserRole; entity?: any }> => {
-    const token = getAuthToken();
-    if (!token) {
-      return { authenticated: false };
-    }
     try {
-      const res = await fetchJson<{ authenticated: boolean; user?: any; role?: UserRole; entity?: any }>('/api/auth/me');
+      const res = await fetchJson<{ authenticated: boolean; user?: any; role?: UserRole; entity?: any }>('/api/auth/me', undefined, false);
+      hasValidatedSession = res.authenticated;
       return res;
     } catch {
-      removeAuthToken();
+      hasValidatedSession = false;
       return { authenticated: false };
     }
   },
 
-  // Check if currently holding token
+  // Check whether this page has validated a server session
   isAuthenticated: (): boolean => {
-    return Boolean(getAuthToken());
+    return hasValidatedSession;
   },
 
   // Logout
   logout: (): void => {
-    removeAuthToken();
+    hasValidatedSession = false;
+    void fetch(apiUrl('/api/auth/logout'), { method: 'POST', credentials: 'include' }).catch(() => {});
   },
 
   // Cart
@@ -465,12 +475,41 @@ export const api = {
     }),
 
   // Orders
-  getOrders: async (params?: { customerId?: string; sellerId?: string }): Promise<Order[]> => {
+  getOrdersPage: async (params?: { customerId?: string; sellerId?: string; limit?: number; offset?: number }): Promise<{ items: Order[]; hasMore: boolean }> => {
+    const limit = Math.min(100, Math.max(1, params?.limit || 50));
     const searchParams = new URLSearchParams();
+    searchParams.set('limit', String(limit));
+    searchParams.set('offset', String(Math.max(0, params?.offset || 0)));
     if (params?.customerId) searchParams.set('customerId', params.customerId);
     if (params?.sellerId) searchParams.set('sellerId', params.sellerId);
-    const queryString = searchParams.toString();
-    return fetchJson<Order[]>(`/api/orders${queryString ? `?${queryString}` : ''}`);
+    const rows = await fetchJson<Order[]>(`/api/orders?${searchParams.toString()}`);
+    return { items: rows.slice(0, limit), hasMore: rows.length > limit };
+  },
+  getOrders: async (params?: { customerId?: string; sellerId?: string }): Promise<Order[]> => {
+    const orders: Order[] = [];
+    let offset = 0;
+    let hasMore = true;
+    while (hasMore) {
+      const page = await api.getOrdersPage({ ...params, limit: 50, offset });
+      orders.push(...page.items);
+      hasMore = page.hasMore;
+      offset += page.items.length;
+    }
+    return orders;
+  },
+  getOrderCancellationRequests: async (): Promise<OrderCancellationRequest[]> =>
+    fetchJson<OrderCancellationRequest[]>('/api/orders/cancellation-requests'),
+  requestOrderCancellation: async (orderId: string, reason = ''): Promise<void> => {
+    await fetchJson(`/api/orders/${encodeURIComponent(orderId)}/cancellation-request`, {
+      method: 'POST',
+      body: JSON.stringify({ reason }),
+    });
+  },
+  reviewOrderCancellation: async (requestId: string, decision: 'approved' | 'rejected', refundCompleted = false): Promise<void> => {
+    await fetchJson(`/api/orders/cancellation-requests/${encodeURIComponent(requestId)}/review`, {
+      method: 'PATCH',
+      body: JSON.stringify({ decision, refundCompleted }),
+    });
   },
   createOrder: async (orderData: {
     Customer_ID: string;
@@ -497,9 +536,25 @@ export const api = {
     }),
 
   // Reviews
+  getReviewsPage: async (params?: { productId?: string; sellerId?: string; limit?: number; offset?: number }): Promise<{ items: Review[]; hasMore: boolean }> => {
+    const limit = Math.min(100, Math.max(1, params?.limit || 50));
+    const searchParams = new URLSearchParams({ limit: String(limit), offset: String(Math.max(0, params?.offset || 0)) });
+    if (params?.productId) searchParams.set('productId', params.productId);
+    if (params?.sellerId) searchParams.set('sellerId', params.sellerId);
+    const rows = await fetchJson<Review[]>(`/api/reviews?${searchParams.toString()}`);
+    return { items: rows.slice(0, limit), hasMore: rows.length > limit };
+  },
   getReviews: async (productId?: string): Promise<Review[]> => {
-    const url = productId ? `/api/reviews?productId=${encodeURIComponent(productId)}` : '/api/reviews';
-    return fetchJson<Review[]>(url);
+    const reviews: Review[] = [];
+    let offset = 0;
+    let hasMore = true;
+    while (hasMore) {
+      const page = await api.getReviewsPage({ productId, limit: 50, offset });
+      reviews.push(...page.items);
+      hasMore = page.hasMore;
+      offset += page.items.length;
+    }
+    return reviews;
   },
   createReview: async (data: {
     Product_ID: string;
@@ -621,7 +676,6 @@ export const api = {
   },
 };
 
-export const db = api;
 
 export function formatCurrency(amount: number): string {
   return formatBDT(amount);

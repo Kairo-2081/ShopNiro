@@ -134,6 +134,10 @@ router.post('/product-copy', requireAuth, requireRole(['seller', 'admin']), asyn
       ? 'ShopNiro AI is not configured. Add GROQ_API_KEY to the server environment and restart the server.'
       : statusCode === 429
       ? 'ShopNiro AI reached its current usage limit. Please try again later.'
+      : statusCode === 401
+      ? 'The AI provider rejected its credentials. Verify GROQ_API_KEY on the server.'
+      : statusCode === 400 || statusCode === 404
+      ? 'The configured AI model is unavailable. Verify GROQ_MODEL_FAST on the server.'
       : 'ShopNiro AI is temporarily unavailable. Please try again in a moment.';
     return res.status(statusCode).json({ error: errorMessage });
   }

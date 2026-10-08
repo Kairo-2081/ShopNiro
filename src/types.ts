@@ -51,6 +51,7 @@ export interface Category {
 }
 
 export type ProductStatus = 'active' | 'inactive' | 'deactivated';
+export type StorefrontSort = 'featured' | 'price-asc' | 'price-desc' | 'rating' | 'newest';
 
 export interface Product {
   Product_ID: string;
@@ -164,6 +165,19 @@ export interface Order {
   Additional_Info?: string;
   Seller_Fulfillment_ID?: string;
   Fulfillments?: OrderFulfillment[];
+}
+
+export interface OrderCancellationRequest {
+  Request_ID: string;
+  Order_ID: string;
+  Customer_ID: string;
+  Order_Status: OrderStatus;
+  Payment_Status: PaymentStatus;
+  Reason: string;
+  Status: 'pending' | 'approved' | 'rejected';
+  Requested_At: string;
+  Reviewed_At?: string;
+  Refund_Completed_At?: string;
 }
 
 export interface OrderFulfillment {

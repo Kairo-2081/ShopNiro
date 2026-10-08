@@ -1,10 +1,12 @@
 import React from 'react';
-import { Product, Category, Seller, Review, ProductBundle } from '../../types';
+import { Product, Category, Seller, Review, ProductBundle, StorefrontSort } from '../../types';
 import { ProductCard } from './ProductCard';
-import { MarketplaceTrendsTopCharts } from './MarketplaceTrendsTopCharts';
+import { Section } from '../Section';
 import { api, formatCurrency } from '../../lib/api';
 import { discountedPriceForVoucher, getVoucherCountdownLabel, isVoucherExpired } from '../../lib/vouchers';
 import { Search, SlidersHorizontal, ShoppingBag, ArrowUpDown, X, Check, Truck, Tag } from 'lucide-react';
+
+const MarketplaceTrendsTopCharts = React.lazy(() => import('./MarketplaceTrendsTopCharts').then((module) => ({ default: module.MarketplaceTrendsTopCharts })));
 
 interface StorefrontProps {
   products: Product[];
@@ -12,6 +14,12 @@ interface StorefrontProps {
   sellers: Seller[];
   reviews: Review[];
   isLoading?: boolean;
+  hasMoreProducts?: boolean;
+  isLoadingMoreProducts?: boolean;
+  onLoadMoreProducts?: () => void;
+  onSearchProducts?: (query: string) => Promise<void>;
+  wishlistProductIds?: string[];
+  onToggleWishlist?: (product: Product) => void;
   onSelectProduct: (product: Product) => void;
   onAddToCart: (product: Product, quantity?: number) => void;
 }
@@ -22,13 +30,21 @@ export const Storefront: React.FC<StorefrontProps> = ({
   sellers,
   reviews,
   isLoading = false,
+  hasMoreProducts = false,
+  isLoadingMoreProducts = false,
+  onLoadMoreProducts,
+  onSearchProducts,
+  wishlistProductIds = [],
+  onToggleWishlist,
   onSelectProduct,
   onAddToCart,
 }) => {
   const [searchQuery, setSearchQuery] = React.useState('');
+  const deferredSearchQuery = React.useDeferredValue(searchQuery);
   const [stockFilter, setStockFilter] = React.useState<'all' | 'inStock'>('all');
-  const [sortBy, setSortBy] = React.useState<'featured' | 'price-asc' | 'price-desc' | 'rating' | 'newest'>('featured');
+  const [sortBy, setSortBy] = React.useState<StorefrontSort>('featured');
   const [bundles, setBundles] = React.useState<ProductBundle[]>([]);
+  const lastAppliedSearch = React.useRef('');
 
   React.useEffect(() => {
     let isMounted = true;
@@ -39,6 +55,16 @@ export const Storefront: React.FC<StorefrontProps> = ({
     });
     return () => { isMounted = false; };
   }, []);
+
+  React.useEffect(() => {
+    const query = deferredSearchQuery.trim();
+    if (!onSearchProducts || query === lastAppliedSearch.current) return;
+    const timer = window.setTimeout(() => {
+      lastAppliedSearch.current = query;
+      void onSearchProducts(query);
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, [deferredSearchQuery, onSearchProducts]);
   
   // Calculate dynamic highest price from available products
   const maxPossiblePrice = React.useMemo(() => {
@@ -85,8 +111,8 @@ export const Storefront: React.FC<StorefrontProps> = ({
       if (stockFilter === 'inStock' && Number(p.Stock) <= 0) return false;
       if (Number(p.Price) > maxPrice) return false;
 
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
+      if (deferredSearchQuery.trim()) {
+        const q = deferredSearchQuery.toLowerCase().trim();
         const matchName = (p.Name || '').toLowerCase().includes(q);
         const matchDesc = (p.Description || '').toLowerCase().includes(q);
         const cat = categories.find((c) => c.Category_ID === p.Category_ID);
@@ -110,7 +136,7 @@ export const Storefront: React.FC<StorefrontProps> = ({
       }
       return 0;
     });
-  }, [products, sellers, approvedSellerIds, stockFilter, maxPrice, searchQuery, categories, sortBy, ratingMap]);
+  }, [products, sellers, approvedSellerIds, stockFilter, maxPrice, deferredSearchQuery, categories, sortBy, ratingMap]);
 
   const featuredDeals = products.filter((product) =>
     product.Featured_Deal && product.Voucher && !isVoucherExpired(product.Voucher_Expires_At) &&
@@ -176,7 +202,7 @@ export const Storefront: React.FC<StorefrontProps> = ({
               <span className="text-slate-600 dark:text-zinc-400 font-medium">Sort By:</span>
               <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
+                onChange={(e) => setSortBy(e.target.value as StorefrontSort)}
                 className="luxury-input bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-lg px-3 text-xs font-semibold text-slate-800 dark:text-zinc-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] cursor-pointer"
               >
                 <option value="featured">Featured / Default</option>
@@ -308,25 +334,17 @@ export const Storefront: React.FC<StorefrontProps> = ({
       )}
 
       {/* Schema-Powered Top Charts, Top Sellers, and Trending Products */}
-      <MarketplaceTrendsTopCharts
-        allProducts={products}
-        onSelectProduct={onSelectProduct}
-        onAddToCart={onAddToCart}
-      />
+      <React.Suspense fallback={<div aria-hidden="true" className="premium-skeleton h-72 rounded-2xl" />}>
+        <MarketplaceTrendsTopCharts
+          allProducts={products}
+          onSelectProduct={onSelectProduct}
+          onAddToCart={onAddToCart}
+        />
+      </React.Suspense>
 
       {/* Product Grid Header */}
-      <div className="flex items-center justify-between pt-2">
-        <div>
-          <h3 className="text-lg font-black text-slate-900 dark:text-white">
-            All Catalog Products
-          </h3>
-          <p className="text-xs text-slate-500 dark:text-zinc-400">
-            Showing {filteredProducts.length} verified listings
-          </p>
-        </div>
-      </div>
-
       {/* Product Grid */}
+      <Section title="All Catalog Products" description={`Showing ${filteredProducts.length} verified listings`} className="space-y-5 pt-2" headingAs="h3" headingClassName="text-lg font-black text-slate-900 dark:text-white">
       {isLoading ? (
         <div role="status" aria-label="Loading products" aria-busy="true" className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {Array.from({ length: 8 }, (_, index) => (
@@ -375,6 +393,8 @@ export const Storefront: React.FC<StorefrontProps> = ({
               seller={sellers.find((s) => s.Seller_ID === prod.Seller_ID)}
               reviews={reviews}
               onSelect={onSelectProduct}
+              isWishlisted={wishlistProductIds.includes(prod.Product_ID)}
+              onToggleWishlist={onToggleWishlist}
               onAddToCart={(p, e) => {
                 e.stopPropagation();
                 onAddToCart(p, 1);
@@ -383,6 +403,14 @@ export const Storefront: React.FC<StorefrontProps> = ({
           ))}
         </div>
       )}
+      {!isLoading && filteredProducts.length > 0 && hasMoreProducts && onLoadMoreProducts && (
+        <div className="flex justify-center">
+          <button type="button" onClick={onLoadMoreProducts} disabled={isLoadingMoreProducts} className="luxury-control premium-button rounded-full px-5 py-2.5 text-xs font-bold text-white disabled:opacity-60">
+            {isLoadingMoreProducts ? 'Loading products…' : 'Load more products'}
+          </button>
+        </div>
+      )}
+      </Section>
     </div>
   );
 };

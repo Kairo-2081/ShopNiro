@@ -14,7 +14,7 @@ import {
   AppTab,
   Rider,
 } from './types';
-import { api, db } from './lib/api';
+import { api } from './lib/api';
 import { shopNiroLogo } from './lib/branding';
 import { MarketplaceClosing, MarketplaceStat } from './components/MarketplaceClosing';
 import { Navbar } from './components/Navbar';
@@ -50,6 +50,7 @@ const AdminSignupModal = React.lazy(() => import('./components/admin/AdminSignup
 const LoginModal = React.lazy(() => import('./components/LoginModal').then((module) => ({ default: module.LoginModal })));
 const GeminiChatbot = React.lazy(() => import('./components/chat/GeminiChatbot').then((module) => ({ default: module.GeminiChatbot })));
 const RiderSignupModal = React.lazy(() => import('./components/rider/RiderSignupModal').then((module) => ({ default: module.RiderSignupModal })));
+const STORE_PRODUCT_PAGE_SIZE = 24;
 
 const scrollViewportToTop = () => {
   const options: ScrollToOptions = { top: 0, behavior: 'smooth' };
@@ -112,9 +113,13 @@ export default function App() {
   const [reviews, setReviews] = React.useState<Review[]>([]);
   const [admins, setAdmins] = React.useState<Admin[]>([]);
   const [isInitialDataLoading, setIsInitialDataLoading] = React.useState(true);
+  const [hasMoreStoreProducts, setHasMoreStoreProducts] = React.useState(false);
+  const [isLoadingMoreStoreProducts, setIsLoadingMoreStoreProducts] = React.useState(false);
   const [isCartLoading, setIsCartLoading] = React.useState(false);
+  const [wishlistProductIds, setWishlistProductIds] = React.useState<string[]>([]);
   const [toastMessages, setToastMessages] = React.useState<AppToast[]>([]);
   const toastSequence = React.useRef(0);
+  const catalogSearchSequence = React.useRef(0);
 
   const showToast = (message: string, tone: ToastTone = 'error') => {
     const id = ++toastSequence.current;
@@ -247,7 +252,7 @@ export default function App() {
     setIsInitialDataLoading(true);
     try {
       // Public storefront data (categories, products, reviews, approved sellers)
-      const [cats, sels, prods, revs] = await Promise.all([
+      const [cats, sels, productPage, revs] = await Promise.all([
         api.getCategories().catch((err) => {
           console.error('Error fetching categories:', err);
           return [];
@@ -256,9 +261,9 @@ export default function App() {
           console.error('Error fetching sellers:', err);
           return [];
         }),
-        api.getProducts().catch((err) => {
+        api.getProductsPage({ limit: STORE_PRODUCT_PAGE_SIZE, offset: 0 }).catch((err) => {
           console.error('Error fetching products:', err);
-          return [];
+          return { items: [], hasMore: false };
         }),
         api.getReviews().catch((err) => {
           console.error('Error fetching reviews:', err);
@@ -268,7 +273,8 @@ export default function App() {
 
       if (cats && cats.length > 0) setCategories(cats);
       if (sels && sels.length > 0) setSellers(sels);
-      if (prods && prods.length > 0) setProducts(prods);
+      setProducts(productPage.items);
+      setHasMoreStoreProducts(productPage.hasMore);
       if (revs && revs.length > 0) setReviews(revs);
 
       // Verify authentication before attempting to query protected user endpoints
@@ -278,6 +284,12 @@ export default function App() {
         setCurrentRole(auth.role);
         setViewMode('app');
         setActiveTab(auth.role === 'admin' ? 'admin-dashboard' : auth.role === 'seller' ? 'seller-dashboard' : auth.role === 'rider' ? 'rider-dashboard' : 'storefront');
+
+        if (auth.role === 'admin' || auth.role === 'seller') {
+          const allProducts = await api.getProducts();
+          setProducts(allProducts);
+          setHasMoreStoreProducts(false);
+        }
 
         if (auth.role === 'admin') {
           setSelectedAdmin(auth.entity as Admin);
@@ -330,6 +342,42 @@ export default function App() {
     }
   }, []);
 
+  const loadMoreStoreProducts = async () => {
+    if (isLoadingMoreStoreProducts || !hasMoreStoreProducts) return;
+    setIsLoadingMoreStoreProducts(true);
+    try {
+      const page = await api.getProductsPage({ limit: STORE_PRODUCT_PAGE_SIZE, offset: products.length });
+      setProducts((current) => {
+        const knownIds = new Set(current.map((product) => product.Product_ID));
+        return [...current, ...page.items.filter((product) => !knownIds.has(product.Product_ID))];
+      });
+      setHasMoreStoreProducts(page.hasMore);
+    } catch (error: any) {
+      showToast(error.message || 'Could not load more products.', 'error');
+    } finally {
+      setIsLoadingMoreStoreProducts(false);
+    }
+  };
+
+  const searchStoreProducts = React.useCallback(async (search: string) => {
+    const sequence = ++catalogSearchSequence.current;
+    try {
+      if (search) {
+        const results = await api.getProducts({ search });
+        if (sequence !== catalogSearchSequence.current) return;
+        setProducts(results);
+        setHasMoreStoreProducts(false);
+      } else {
+        const page = await api.getProductsPage({ limit: STORE_PRODUCT_PAGE_SIZE, offset: 0 });
+        if (sequence !== catalogSearchSequence.current) return;
+        setProducts(page.items);
+        setHasMoreStoreProducts(page.hasMore);
+      }
+    } catch (error: any) {
+      showToast(error.message || 'Could not search products.', 'error');
+    }
+  }, []);
+
   React.useEffect(() => {
     loadInitialData();
   }, [loadInitialData]);
@@ -350,6 +398,34 @@ export default function App() {
       setIsCartLoading(false);
     }
   }, [selectedCustomer, isLoggedIn]);
+
+  React.useEffect(() => {
+    if (!selectedCustomer || !isLoggedIn) {
+      setWishlistProductIds([]);
+      return;
+    }
+    let isMounted = true;
+    api.getWishlist().then((ids) => { if (isMounted) setWishlistProductIds(ids); }).catch(() => {});
+    return () => { isMounted = false; };
+  }, [selectedCustomer, isLoggedIn]);
+
+  const handleToggleWishlist = async (product: Product) => {
+    if (!selectedCustomer || !isLoggedIn) {
+      setIsLoginModalOpen(true);
+      return;
+    }
+    const isSaved = wishlistProductIds.includes(product.Product_ID);
+    try {
+      if (isSaved) await api.removeFromWishlist(product.Product_ID);
+      else await api.addToWishlist(product.Product_ID);
+      setWishlistProductIds((current) => isSaved
+        ? current.filter((id) => id !== product.Product_ID)
+        : [...current, product.Product_ID]);
+      showToast(isSaved ? 'Removed from your wishlist.' : 'Saved to your wishlist.', 'success');
+    } catch (error: any) {
+      showToast(error.message || 'Could not update your wishlist.', 'error');
+    }
+  };
 
   // Handle Login: by Username & Password simply!
   const handleLoginSuccess = async (role: UserRole, entity: any) => {
@@ -430,7 +506,6 @@ export default function App() {
     setCustomers([]);
     setAdmins([]);
     setAuthNotice(null);
-    loadInitialData();
   };
 
   // Cart operations
@@ -857,6 +932,12 @@ export default function App() {
             sellers={sellers}
             reviews={reviews}
             isLoading={isInitialDataLoading}
+            hasMoreProducts={hasMoreStoreProducts}
+            isLoadingMoreProducts={isLoadingMoreStoreProducts}
+            onLoadMoreProducts={() => void loadMoreStoreProducts()}
+            onSearchProducts={searchStoreProducts}
+            wishlistProductIds={wishlistProductIds}
+            onToggleWishlist={(product) => void handleToggleWishlist(product)}
             onSelectProduct={(p) => setSelectedProductForDetail(p)}
             onAddToCart={handleAddToCart}
           />

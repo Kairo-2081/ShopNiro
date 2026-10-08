@@ -1956,6 +1956,25 @@ CREATE TABLE IF NOT EXISTS auth_sessions (
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS customer_wishlist (
+    customer_id VARCHAR(64) NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+    product_id VARCHAR(64) NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (customer_id, product_id)
+);
+
+CREATE TABLE IF NOT EXISTS order_cancellation_requests (
+    id VARCHAR(64) PRIMARY KEY,
+    order_id VARCHAR(64) NOT NULL UNIQUE REFERENCES orders(id) ON DELETE CASCADE,
+    customer_id VARCHAR(64) NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+    reason VARCHAR(500) NOT NULL DEFAULT '',
+    status VARCHAR(16) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
+    requested_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    reviewed_at TIMESTAMP WITH TIME ZONE,
+    reviewed_by VARCHAR(64),
+    refund_completed_at TIMESTAMP WITH TIME ZONE
+);
+
 CREATE INDEX IF NOT EXISTS idx_auth_sessions_user ON auth_sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_auth_sessions_expiry ON auth_sessions(expires_at);
 

@@ -53,6 +53,28 @@ export async function seedDatabaseIfEmpty() {
   try {
     await ensureDatabaseSchema();
 
+    const [adminCountResult, sellerCountResult, customerCountResult] = await Promise.all([
+      query(`SELECT gocart_table_count('admins') AS count`),
+      query(`SELECT gocart_table_count('sellers') AS count`),
+      query(`SELECT gocart_table_count('customers') AS count`),
+    ]);
+    const adminCount = Number(adminCountResult.rows[0]?.count || 0);
+    const sellerCount = Number(sellerCountResult.rows[0]?.count || 0);
+    const customerCount = Number(customerCountResult.rows[0]?.count || 0);
+    const seedPasswords = {
+      admin: process.env.SHOPNIRO_SEED_ADMIN_PASSWORD,
+      seller: process.env.SHOPNIRO_SEED_SELLER_PASSWORD,
+      customer: process.env.SHOPNIRO_SEED_CUSTOMER_PASSWORD,
+    };
+    const missingSeedPasswords = [
+      adminCount === 0 && (!seedPasswords.admin || seedPasswords.admin.trim().length < 16) ? 'SHOPNIRO_SEED_ADMIN_PASSWORD' : '',
+      sellerCount === 0 && (!seedPasswords.seller || seedPasswords.seller.trim().length < 16) ? 'SHOPNIRO_SEED_SELLER_PASSWORD' : '',
+      customerCount === 0 && (!seedPasswords.customer || seedPasswords.customer.trim().length < 16) ? 'SHOPNIRO_SEED_CUSTOMER_PASSWORD' : '',
+    ].filter(Boolean);
+    if (missingSeedPasswords.length) {
+      throw new Error(`Initial account seeding requires 16+ character values for: ${missingSeedPasswords.join(', ')}.`);
+    }
+
     // 1. Categories
     const catCountRes = await query(`SELECT gocart_table_count('categories') AS count`);
     const catCount = Number(catCountRes.rows[0]?.count || 0);
@@ -65,10 +87,8 @@ export async function seedDatabaseIfEmpty() {
     }
 
     // 2. Admin
-    const adminCountRes = await query(`SELECT gocart_table_count('admins') AS count`);
-    const adminCount = Number(adminCountRes.rows[0]?.count || 0);
     if (adminCount === 0) {
-      const hashedPassword = await hashPassword(initialAdmin.Password);
+      const hashedPassword = await hashPassword(seedPasswords.admin!);
       await query(`SELECT gocart_seed_row('admins', $1::jsonb)`, [
         JSON.stringify({
           id: initialAdmin.Admin_ID,
@@ -87,11 +107,9 @@ export async function seedDatabaseIfEmpty() {
     }
 
     // 3. Sellers
-    const sellerCountRes = await query(`SELECT gocart_table_count('sellers') AS count`);
-    const sellerCount = Number(sellerCountRes.rows[0]?.count || 0);
     if (sellerCount === 0) {
       for (const seller of initialSellers) {
-        const hashedPassword = await hashPassword(seller.Password);
+        const hashedPassword = await hashPassword(seedPasswords.seller!);
         await query(`SELECT gocart_seed_row('sellers', $1::jsonb)`, [
           JSON.stringify({
             id: seller.Seller_ID,
@@ -114,11 +132,9 @@ export async function seedDatabaseIfEmpty() {
     }
 
     // 4. Customers
-    const custCountRes = await query(`SELECT gocart_table_count('customers') AS count`);
-    const custCount = Number(custCountRes.rows[0]?.count || 0);
-    if (custCount === 0) {
+    if (customerCount === 0) {
       for (const cust of initialCustomers) {
-        const hashedPassword = await hashPassword(cust.Password);
+        const hashedPassword = await hashPassword(seedPasswords.customer!);
         await query(`SELECT gocart_seed_row('customers', $1::jsonb)`, [
           JSON.stringify({
             id: cust.Customer_ID,

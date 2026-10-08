@@ -1,18 +1,26 @@
 import { Router, Response } from 'express';
+import rateLimit from 'express-rate-limit';
 import { query, mapAddress } from '../db/index.ts';
 import { hashPassword, comparePassword, isBcryptHash } from '../db/password.ts';
-import { requireAuth, generateToken, AuthRequest } from '../middleware/auth.ts';
+import { requireAuth, issueAuthCookie, clearAuthCookie, optionalAuth, AuthRequest } from '../middleware/auth.ts';
 
 const router = Router();
+const loginRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { error: 'Too many sign-in attempts. Try again in 15 minutes.' },
+});
 
 /**
  * GET /api/auth/me
- * Retrieves authenticated user identity, role, and profile entity from schema routines
+ * Optionally retrieves the current user without blocking guest storefront requests.
  */
-router.get('/me', requireAuth, async (req: AuthRequest, res: Response) => {
+router.get('/me', optionalAuth, async (req: AuthRequest, res: Response) => {
   try {
     if (!req.user) {
-      return res.status(401).json({ authenticated: false, error: 'Not authenticated' });
+      return res.json({ authenticated: false, user: null, role: null, entity: null });
     }
 
     const { role, entityId, userId } = req.user;
@@ -114,7 +122,7 @@ router.get('/me', requireAuth, async (req: AuthRequest, res: Response) => {
  * POST /api/auth/login
  * User login with bcrypt verification and JWT issuance using schema routines
  */
-router.post('/login', async (req, res) => {
+router.post('/login', loginRateLimit, async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || typeof email !== 'string' || !email.trim() || !password || typeof password !== 'string') {
@@ -144,7 +152,7 @@ router.post('/login', async (req, res) => {
       if (userRole === 'seller') {
         const sellerRes = await query(`SELECT * FROM gocart_seller_get($1)`, [entityId]);
         const s = sellerRes.rows[0] || {};
-        const token = generateToken({
+        await issueAuthCookie(res, {
           userId: userMatch.id,
           email: s.email || userMatch.email,
           username: s.username || userMatch.username,
@@ -153,7 +161,6 @@ router.post('/login', async (req, res) => {
         });
         return res.json({
           success: true,
-          token,
           role: 'seller',
           entity: {
             Seller_ID: s.id || entityId,
@@ -204,18 +211,18 @@ router.post('/login', async (req, res) => {
           Wallet_Balance: Number(rider.wallet_balance) || 0,
           Created_At: rider.created_at ? new Date(rider.created_at).toISOString() : new Date().toISOString(),
         };
-        const token = generateToken({
+        await issueAuthCookie(res, {
           userId: userMatch.id,
           email: entity.Email,
           username: entity.Username,
           role: 'rider',
           entityId,
         });
-        return res.json({ success: true, token, role: 'rider', entity });
+        return res.json({ success: true, role: 'rider', entity });
       } else if (userRole === 'admin') {
         const adminRes = await query(`SELECT * FROM gocart_admin_get($1)`, [entityId]);
         const a = adminRes.rows[0] || {};
-        const token = generateToken({
+        await issueAuthCookie(res, {
           userId: userMatch.id,
           email: a.email || userMatch.email,
           username: a.username || userMatch.username,
@@ -224,7 +231,6 @@ router.post('/login', async (req, res) => {
         });
         return res.json({
           success: true,
-          token,
           role: 'admin',
           entity: {
             Admin_ID: a.id || entityId,
@@ -239,7 +245,7 @@ router.post('/login', async (req, res) => {
         // Customer
         const custRes = await query(`SELECT * FROM gocart_customer_get($1)`, [entityId]);
         const c = custRes.rows[0] || {};
-        const token = generateToken({
+        await issueAuthCookie(res, {
           userId: userMatch.id,
           email: c.email || userMatch.email,
           username: c.username || userMatch.username,
@@ -248,7 +254,6 @@ router.post('/login', async (req, res) => {
         });
         return res.json({
           success: true,
-          token,
           role: 'customer',
           entity: {
             Customer_ID: c.id || entityId,
@@ -272,13 +277,15 @@ router.post('/login', async (req, res) => {
 /**
  * POST /api/auth/logout
  */
-router.post('/logout', requireAuth, async (req: AuthRequest, res) => {
+router.post('/logout', optionalAuth, async (req: AuthRequest, res) => {
   try {
     if (req.user?.jti) {
       await query(`SELECT gocart_session_revoke($1)`, [req.user.jti]);
     }
+    clearAuthCookie(res);
     res.json({ success: true, message: 'Logged out successfully' });
   } catch (error) {
+    clearAuthCookie(res);
     res.json({ success: true, message: 'Logged out' });
   }
 });

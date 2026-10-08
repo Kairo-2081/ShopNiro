@@ -1,9 +1,7 @@
 import React from 'react';
-import { Customer, Order, Product, RiderDelivery, Seller } from '../../types';
+import { Customer, Order, OrderCancellationRequest, Product, RiderDelivery, Seller } from '../../types';
 import { api, formatCurrency, formatBDT, formatDate } from '../../lib/api';
 import { PaymentReceiptModal } from '../payment/PaymentReceiptModal';
-import { LiveProductTrackingMap } from '../tracking/LiveProductTrackingMap';
-import { MarketplaceTrendsTopCharts } from '../storefront/MarketplaceTrendsTopCharts';
 import {
   Package,
   Truck,
@@ -20,6 +18,9 @@ import {
   Lock,
   Navigation,
 } from 'lucide-react';
+
+const LiveProductTrackingMap = React.lazy(() => import('../tracking/LiveProductTrackingMap').then((module) => ({ default: module.LiveProductTrackingMap })));
+const MarketplaceTrendsTopCharts = React.lazy(() => import('../storefront/MarketplaceTrendsTopCharts').then((module) => ({ default: module.MarketplaceTrendsTopCharts })));
 
 interface CustomerOrdersProps {
   currentCustomer: Customer;
@@ -55,6 +56,8 @@ export const CustomerOrders: React.FC<CustomerOrdersProps> = ({
   const [confirmingDeliveryId, setConfirmingDeliveryId] = React.useState<string | null>(null);
   const [reviewDraftingId, setReviewDraftingId] = React.useState<string | null>(null);
   const [reviewDraftErrors, setReviewDraftErrors] = React.useState<Record<string, string>>({});
+  const [cancellationRequests, setCancellationRequests] = React.useState<OrderCancellationRequest[]>([]);
+  const [cancellationSubmittingId, setCancellationSubmittingId] = React.useState<string | null>(null);
   const refreshOrdersRef = React.useRef(onRefreshOrders);
 
   React.useEffect(() => { refreshOrdersRef.current = onRefreshOrders; }, [onRefreshOrders]);
@@ -67,8 +70,17 @@ export const CustomerOrders: React.FC<CustomerOrdersProps> = ({
     }
   }, []);
 
+  const loadCancellationRequests = React.useCallback(async () => {
+    try {
+      setCancellationRequests(await api.getOrderCancellationRequests());
+    } catch {
+      setCancellationRequests([]);
+    }
+  }, []);
+
   React.useEffect(() => {
     void loadRiderDeliveries();
+    void loadCancellationRequests();
     const refreshOrders = () => {
       void refreshOrdersRef.current?.().catch((error: any) => {
         setDeliveryNotice(error.message || 'Could not refresh your orders.');
@@ -77,10 +89,27 @@ export const CustomerOrders: React.FC<CustomerOrdersProps> = ({
     refreshOrders();
     const refreshTimer = window.setInterval(() => {
       void loadRiderDeliveries();
+      void loadCancellationRequests();
       refreshOrders();
     }, 10000);
     return () => window.clearInterval(refreshTimer);
-  }, [loadRiderDeliveries, currentCustomer.Customer_ID]);
+  }, [loadRiderDeliveries, loadCancellationRequests, currentCustomer.Customer_ID]);
+
+  const requestCancellation = async (order: Order) => {
+    setCancellationSubmittingId(order.Order_ID);
+    setDeliveryNotice(null);
+    try {
+      await api.requestOrderCancellation(order.Order_ID);
+      await loadCancellationRequests();
+      setDeliveryNotice(order.Payment_Status === 'paid'
+        ? 'Cancellation requested. An administrator will verify the refund before finalizing it.'
+        : 'Cancellation requested. An administrator will review it shortly.');
+    } catch (error: any) {
+      setDeliveryNotice(error.message || 'Could not request cancellation.');
+    } finally {
+      setCancellationSubmittingId(null);
+    }
+  };
 
   const submitRiderReview = async (delivery: RiderDelivery & { Review_ID?: string }) => {
     setReviewSubmittingId(delivery.Delivery_ID);
@@ -278,13 +307,15 @@ export const CustomerOrders: React.FC<CustomerOrdersProps> = ({
               </button>
             </div>
             {showTopMap && (
-              <LiveProductTrackingMap
-                order={trackableOrders[0]}
-                orders={trackableOrders}
-                sellers={sellers}
-                customerAddress={currentCustomer.Address}
-                onSelectOrder={(ord) => setTrackingOrderForMap(ord)}
-              />
+              <React.Suspense fallback={<div aria-hidden="true" className="premium-skeleton h-80 rounded-2xl" />}>
+                <LiveProductTrackingMap
+                  order={trackableOrders[0]}
+                  orders={trackableOrders}
+                  sellers={sellers}
+                  customerAddress={currentCustomer.Address}
+                  onSelectOrder={(ord) => setTrackingOrderForMap(ord)}
+                />
+              </React.Suspense>
             )}
           </>
         )}
@@ -378,6 +409,19 @@ export const CustomerOrders: React.FC<CustomerOrdersProps> = ({
                 <div className="flex flex-wrap items-center gap-2 sm:gap-4">
                   {getPaymentBadge(order)}
                   {getStatusBadge(order.Status)}
+                  {(() => {
+                    const cancellationRequest = cancellationRequests.find((request) => request.Order_ID === order.Order_ID);
+                    if (cancellationRequest && cancellationRequest.Status !== 'rejected') {
+                      return <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/25 bg-amber-500/10 px-3 py-1 text-[10px] font-bold text-amber-800 dark:text-amber-200"><Clock className="h-3.5 w-3.5" />Cancellation {cancellationRequest.Status}</span>;
+                    }
+                    if (!['placed', 'processing'].includes(order.Status)) return null;
+                    return (
+                      <button type="button" onClick={() => void requestCancellation(order)} disabled={cancellationSubmittingId === order.Order_ID} className="inline-flex items-center gap-1 rounded-full border border-rose-300 px-3 py-1.5 text-[10px] font-bold text-rose-700 hover:bg-rose-50 disabled:opacity-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950/30">
+                        <AlertCircle className="h-3.5 w-3.5" />
+                        {cancellationSubmittingId === order.Order_ID ? 'Sending request…' : cancellationRequest?.Status === 'rejected' ? 'Request cancellation again' : order.Payment_Status === 'paid' ? 'Request cancellation & refund' : 'Request cancellation'}
+                      </button>
+                    );
+                  })()}
                   <div className="text-right">
                     <span className="text-[10px] text-slate-400 dark:text-zinc-500 uppercase font-bold block">Total Amount</span>
                     <span className="text-base font-black text-slate-900 dark:text-white">
@@ -509,26 +553,30 @@ export const CustomerOrders: React.FC<CustomerOrdersProps> = ({
 
       {/* Customer Portal: Live Marketplace Top Charts & Trends (from schema.sql routines) */}
       <div className="pt-6">
-        <MarketplaceTrendsTopCharts
-          onSelectProduct={onSelectProduct}
-          onAddToCart={onAddToCart}
-          allProducts={allProducts}
-        />
+        <React.Suspense fallback={<div aria-hidden="true" className="premium-skeleton h-72 rounded-2xl" />}>
+          <MarketplaceTrendsTopCharts
+            onSelectProduct={onSelectProduct}
+            onAddToCart={onAddToCart}
+            allProducts={allProducts}
+          />
+        </React.Suspense>
       </div>
 
       {/* Fullscreen delivery tracking map */}
       {trackingOrderForMap && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/80 backdrop-blur-md animate-fadeIn">
           <div className="w-full max-w-5xl">
-            <LiveProductTrackingMap
-              order={trackingOrderForMap}
-              orders={trackableOrders}
-              sellers={sellers}
-              customerAddress={currentCustomer.Address}
-              onSelectOrder={(ord) => setTrackingOrderForMap(ord)}
-              onClose={() => setTrackingOrderForMap(null)}
-              isModal={true}
-            />
+            <React.Suspense fallback={<div aria-hidden="true" className="premium-skeleton h-[70vh] rounded-2xl" />}>
+              <LiveProductTrackingMap
+                order={trackingOrderForMap}
+                orders={trackableOrders}
+                sellers={sellers}
+                customerAddress={currentCustomer.Address}
+                onSelectOrder={(ord) => setTrackingOrderForMap(ord)}
+                onClose={() => setTrackingOrderForMap(null)}
+                isModal={true}
+              />
+            </React.Suspense>
           </div>
         </div>
       )}

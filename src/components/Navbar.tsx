@@ -18,6 +18,32 @@ import {
   Truck,
 } from 'lucide-react';
 
+const mobileNavItems = (isLoggedIn: boolean, role: UserRole) => {
+  if (isLoggedIn && role === 'customer') return [
+    { tab: 'storefront' as AppTab, label: 'Shop', icon: ShoppingBag },
+    { tab: 'charts' as AppTab, label: 'Top charts', icon: Flame },
+    { tab: 'orders' as AppTab, label: 'Orders', icon: PackageCheck },
+    { tab: 'profile' as AppTab, label: 'Profile', icon: User },
+  ];
+  if (isLoggedIn && role === 'seller') return [
+    { tab: 'seller-dashboard' as AppTab, label: 'Studio', icon: Store },
+    { tab: 'storefront' as AppTab, label: 'Store preview', icon: ShoppingBag },
+  ];
+  if (isLoggedIn && role === 'admin') return [
+    { tab: 'admin-dashboard' as AppTab, label: 'Governance', icon: ShieldCheck },
+    { tab: 'storefront' as AppTab, label: 'Storefront', icon: ShoppingBag },
+  ];
+  if (isLoggedIn && role === 'rider') return [
+    { tab: 'rider-dashboard' as AppTab, label: 'Deliveries', icon: Truck },
+  ];
+  return [
+    { tab: 'storefront' as AppTab, label: 'Browse', icon: ShoppingBag },
+    { tab: 'charts' as AppTab, label: 'Top charts', icon: Flame },
+    { tab: 'orders' as AppTab, label: 'Orders', icon: PackageCheck },
+    { tab: 'profile' as AppTab, label: 'Account', icon: User },
+  ];
+};
+
 interface NavbarProps {
   isLoggedIn: boolean;
   currentRole: UserRole;
@@ -52,9 +78,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenChat,
 }) => {
   return (
-    <header className="sticky top-0 z-30 bg-[#f6f5ef]/95 dark:bg-[#10100f]/80 backdrop-blur-xl border-b border-[#80734f]/20 dark:border-white/10 shadow-[0_8px_24px_rgba(41,40,33,0.10)] dark:shadow-[0_12px_32px_rgba(6,6,4,0.25)] transition-colors duration-200">
+    <header className="relative z-30 bg-[#f6f5ef] dark:bg-[#10100f] border-b border-[#80734f]/20 dark:border-white/10 shadow-[0_8px_24px_rgba(41,40,33,0.10)] dark:shadow-[0_12px_32px_rgba(6,6,4,0.25)] transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-        <div className="flex min-h-16 flex-wrap items-center justify-between gap-2 py-2 sm:gap-3">
+        <div className="flex min-h-16 flex-wrap items-center justify-between gap-2 py-2 sm:gap-3 md:flex-nowrap">
           {/* Logo & Brand matching Landing Page */}
           <div className="order-1 flex shrink-0 items-center gap-2 cursor-pointer sm:gap-2.5 md:order-none" onClick={() => setActiveTab('storefront')}>
             <img
@@ -70,13 +96,13 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Navigation Links according to Active Role and Login State */}
-          <nav className="order-3 flex w-full min-w-0 max-w-full flex-wrap items-center justify-start gap-1.5 pb-1 md:order-none md:w-auto md:max-w-[58vw] md:justify-center md:pb-0">
+          <nav aria-label="Primary navigation" className="order-3 flex w-full min-w-0 max-w-full flex-nowrap items-center justify-start gap-1.5 overflow-x-auto pb-1 md:order-none md:flex-1 md:justify-center md:pb-0">
             {/* If NOT logged in: Guest Navigation with page-level auth validation */}
             {!isLoggedIn && (
               <>
                 <button
                   onClick={() => setActiveTab('storefront')}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                  className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                     activeTab === 'storefront'
                       ? 'premium-button text-white shadow-[0_12px_26px_rgba(235,127,45,0.34)]'
                       : 'text-slate-700 dark:text-zinc-300 hover:text-[#0f1f1d] dark:hover:text-white hover:bg-white/10 dark:hover:bg-[#181F2A]'
@@ -86,7 +112,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
                 <button
                   onClick={() => setActiveTab('charts')}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                  className={`flex shrink-0 items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                     activeTab === 'charts'
                       ? 'premium-button text-white shadow-[0_12px_26px_rgba(235,127,45,0.34)]'
                       : 'text-slate-700 dark:text-zinc-300 hover:text-[#0f1f1d] dark:hover:text-white hover:bg-white/10 dark:hover:bg-[#181F2A]'
@@ -97,7 +123,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
                 <button
                   onClick={() => setActiveTab('orders')}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                  className={`flex shrink-0 items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                     activeTab === 'orders'
                       ? 'premium-button text-white shadow-[0_12px_26px_rgba(235,127,45,0.34)]'
                       : 'text-slate-700 dark:text-zinc-300 hover:text-[#0f1f1d] dark:hover:text-white hover:bg-white/10 dark:hover:bg-[#181F2A]'
@@ -108,7 +134,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
                 <button
                   onClick={() => setActiveTab('live-tracking')}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                  className={`flex shrink-0 items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                     activeTab === 'live-tracking'
                       ? 'premium-button text-white shadow-[0_12px_26px_rgba(235,127,45,0.34)]'
                       : 'text-slate-700 dark:text-zinc-300 hover:text-[#0f1f1d] dark:hover:text-white hover:bg-white/10 dark:hover:bg-[#181F2A]'
@@ -119,7 +145,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
                 <button
                   onClick={() => setActiveTab('seller-dashboard')}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                  className={`flex shrink-0 items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                     activeTab === 'seller-dashboard'
                       ? 'bg-[#77775a] text-white shadow-[0_12px_26px_rgba(86,80,57,0.3)]'
                       : 'text-slate-700 dark:text-zinc-300 hover:text-[#0f1f1d] dark:hover:text-white hover:bg-white/10 dark:hover:bg-[#181F2A]'
@@ -130,7 +156,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
                 <button
                   onClick={() => setActiveTab('admin-dashboard')}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                  className={`flex shrink-0 items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                     activeTab === 'admin-dashboard'
                       ? 'bg-[#522750] text-white shadow-[0_12px_26px_rgba(82,39,80,0.28)]'
                       : 'text-slate-700 dark:text-zinc-300 hover:text-[#0f1f1d] dark:hover:text-white hover:bg-white/10 dark:hover:bg-[#181F2A]'
@@ -147,7 +173,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <>
                 <button
                   onClick={() => setActiveTab('storefront')}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                  className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                     activeTab === 'storefront'
                       ? 'premium-button text-white shadow-[0_12px_26px_rgba(235,127,45,0.34)]'
                       : 'text-slate-700 dark:text-zinc-300 hover:text-[#0f1f1d] dark:hover:text-white hover:bg-white/10 dark:hover:bg-[#181F2A]'
@@ -157,7 +183,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
                 <button
                   onClick={() => setActiveTab('charts')}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                  className={`flex shrink-0 items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                     activeTab === 'charts'
                       ? 'premium-button text-white shadow-[0_12px_26px_rgba(235,127,45,0.34)]'
                       : 'text-slate-700 dark:text-zinc-300 hover:text-[#0f1f1d] dark:hover:text-white hover:bg-white/10 dark:hover:bg-[#181F2A]'
@@ -168,7 +194,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
                 <button
                   onClick={() => setActiveTab('orders')}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                  className={`flex shrink-0 items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                     activeTab === 'orders'
                       ? 'premium-button text-white shadow-[0_12px_26px_rgba(235,127,45,0.34)]'
                       : 'text-slate-700 dark:text-zinc-300 hover:text-[#0f1f1d] dark:hover:text-white hover:bg-white/10 dark:hover:bg-[#181F2A]'
@@ -179,7 +205,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
                 <button
                   onClick={() => setActiveTab('live-tracking')}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                  className={`flex shrink-0 items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                     activeTab === 'live-tracking'
                       ? 'premium-button text-white shadow-[0_12px_26px_rgba(235,127,45,0.34)]'
                       : 'text-slate-700 dark:text-zinc-300 hover:text-[#0f1f1d] dark:hover:text-white hover:bg-white/10 dark:hover:bg-[#181F2A]'
@@ -190,7 +216,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </button>
                 <button
                   onClick={() => setActiveTab('profile')}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                  className={`flex shrink-0 items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                     activeTab === 'profile'
                       ? 'premium-button text-white shadow-[0_10px_25px_rgba(235,127,45,0.35)]'
                       : 'text-slate-700 dark:text-zinc-300 hover:text-[#101010] dark:hover:text-white hover:bg-white/10 dark:hover:bg-[#181F2A]'
@@ -259,7 +285,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {isLoggedIn && currentRole === 'rider' && (
               <button
                 onClick={() => setActiveTab('rider-dashboard')}
-                className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+                className={`flex shrink-0 items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                   activeTab === 'rider-dashboard'
                     ? 'bg-emerald-700 text-white shadow-[0_12px_26px_rgba(5,100,70,0.24)]'
                     : 'text-slate-700 dark:text-zinc-300 hover:text-emerald-800 dark:hover:text-white hover:bg-white/10 dark:hover:bg-[#181F2A]'
@@ -337,6 +363,17 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
       </div>
+      <nav aria-label="Mobile navigation" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-[#a99b72]/25 bg-[#f6f5ef]/95 px-2 pt-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] shadow-[0_-8px_24px_rgba(41,40,33,0.12)] backdrop-blur-xl dark:border-white/10 dark:bg-[#10100f]/95 md:hidden" style={{ gridTemplateColumns: `repeat(${mobileNavItems(isLoggedIn, currentRole).length}, minmax(0, 1fr))` }}>
+        {mobileNavItems(isLoggedIn, currentRole).map(({ tab, label, icon: Icon }) => {
+          const isActive = activeTab === tab;
+          return (
+            <button key={tab} type="button" onClick={() => setActiveTab(tab)} aria-current={isActive ? 'page' : undefined} className={`flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 py-1.5 text-[10px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] ${isActive ? 'text-[#80734f] dark:text-[#d0c8a5]' : 'text-slate-500 dark:text-zinc-400'}`}>
+              <Icon className="h-5 w-5" />
+              <span className="max-w-full truncate">{label}</span>
+            </button>
+          );
+        })}
+      </nav>
     </header>
   );
 };

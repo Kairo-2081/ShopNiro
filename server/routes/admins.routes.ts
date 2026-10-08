@@ -56,8 +56,10 @@ router.post('/', async (req, res) => {
     }
 
     const id = `ADM-${Date.now()}`;
-    const rawPassword = Password || 'admin123';
-    const hashedPassword = await hashPassword(rawPassword);
+    if (typeof Password !== 'string' || Password.trim().length < 12) {
+      return res.status(400).json({ error: 'Admin password must be at least 12 characters.' });
+    }
+    const hashedPassword = await hashPassword(Password);
     const name = Name || Username || 'Admin User';
     const username = Username || cleanEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
     const addr = Address || {};

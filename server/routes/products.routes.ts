@@ -17,9 +17,34 @@ const parseVoucherExpiry = (value: unknown): Date | null | undefined => {
  */
 router.get('/', async (req, res) => {
   try {
-    const { sellerId, categoryId, search, status } = req.query;
+    const sellerId = typeof req.query.sellerId === 'string' ? req.query.sellerId : null;
+    const categoryId = typeof req.query.categoryId === 'string' && req.query.categoryId !== 'all' ? req.query.categoryId : null;
+    const status = typeof req.query.status === 'string' ? req.query.status : null;
+    const search = typeof req.query.search === 'string' && req.query.search.trim()
+      ? `%${req.query.search.trim()}%`
+      : null;
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 100));
+    const offset = Math.max(0, Number(req.query.offset) || 0);
+    const sort = typeof req.query.sort === 'string' ? req.query.sort : 'featured';
+    const orderBy = ({
+      'price-asc': 'p.price ASC, p.id ASC',
+      'price-desc': 'p.price DESC, p.id ASC',
+      rating: `(SELECT COALESCE(AVG(review.rating), 0) FROM reviews review WHERE review.product_id = p.id) DESC, p.id ASC`,
+      newest: 'p.created_at DESC NULLS LAST, p.id DESC',
+      featured: 'p.featured_deal DESC, p.created_at DESC NULLS LAST, p.id DESC',
+    } as Record<string, string>)[sort] || 'p.featured_deal DESC, p.created_at DESC NULLS LAST, p.id DESC';
 
-    const result = await query(`SELECT * FROM gocart_products_list()`);
+    const result = await query(`
+      SELECT p.* FROM gocart_products_list() p
+      WHERE ($1::text IS NULL OR p.seller_id = $1)
+        AND ($2::text IS NULL OR p.category_id = $2)
+        AND ($3::text IS NULL OR p.product_status = $3)
+        AND ($4::text IS NULL OR p.name ILIKE $4 OR p.description ILIKE $4
+          OR EXISTS (SELECT 1 FROM categories c WHERE c.id = p.category_id AND c.name ILIKE $4)
+          OR EXISTS (SELECT 1 FROM sellers s WHERE s.id = p.seller_id AND s.name ILIKE $4))
+      ORDER BY ${orderBy}
+      LIMIT $5 OFFSET $6
+    `, [sellerId, categoryId, status, search, limit + 1, offset]);
     const rows: any[] = result.rows;
 
     let formatted: Product[] = rows.map((p) => ({
@@ -45,22 +70,6 @@ router.get('/', async (req, res) => {
       Seller_ID: p.seller_id,
       Created_At: p.created_at,
     }));
-
-    if (sellerId) {
-      formatted = formatted.filter((p) => p.Seller_ID === sellerId);
-    }
-    if (categoryId && categoryId !== 'all') {
-      formatted = formatted.filter((p) => p.Category_ID === categoryId);
-    }
-    if (status) {
-      formatted = formatted.filter((p) => p.Product_Status === status);
-    }
-    if (search && typeof search === 'string') {
-      const q = search.toLowerCase();
-      formatted = formatted.filter(
-        (p) => p.Name.toLowerCase().includes(q) || p.Description.toLowerCase().includes(q)
-      );
-    }
 
     res.json(formatted);
   } catch (error: any) {

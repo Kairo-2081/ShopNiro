@@ -25,22 +25,47 @@ import ridersRoutes from './routes/riders.routes.ts';
 import riderDeliveryRoutes from './routes/rider-delivery.routes.ts';
 import bundlesRoutes from './routes/bundles.routes.ts';
 import sellerAnalyticsRoutes from './routes/analytics.routes.ts';
+import wishlistRoutes from './routes/wishlist.routes.ts';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
+app.set('trust proxy', 1);
+const allowedOrigins = new Set([
+  'http://localhost',
+  'https://localhost',
+  'capacitor://localhost',
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://shopniro.onrender.com',
+  process.env.SHOPNIRO_PUBLIC_URL?.replace(/\/$/, ''),
+  process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined,
+  process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : undefined,
+].filter((origin): origin is string => Boolean(origin)));
 
 app.use(cors({
-  origin: [
-    'http://localhost',
-    'https://localhost',
-    'capacitor://localhost',
-    'http://localhost:5173',
-    'http://localhost:3000',
-    'https://shopniro.onrender.com',
-    'null',
-  ],
+  origin: [...allowedOrigins],
   credentials: true,
 }));
+
+app.use((req, res, next) => {
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method) || !req.headers.cookie?.includes('shopniro_session=')) {
+    return next();
+  }
+
+  let requestOrigin = req.headers.origin;
+  if (!requestOrigin && req.headers.referer) {
+    try {
+      requestOrigin = new URL(req.headers.referer).origin;
+    } catch {
+      return res.status(403).json({ error: 'Request origin is not allowed for cookie-authenticated changes.' });
+    }
+  }
+  if (!requestOrigin || !allowedOrigins.has(requestOrigin)) {
+    return res.status(403).json({ error: 'Request origin is not allowed for cookie-authenticated changes.' });
+  }
+
+  next();
+});
 
 // Parse incoming JSON payloads
 app.use(express.json({ limit: '8mb' }));
@@ -196,6 +221,7 @@ app.use('/api/cart', cartRoutes);
 app.use('/api/orders', ordersRoutes);
 app.use('/api/bundles', bundlesRoutes);
 app.use('/api/analytics', sellerAnalyticsRoutes);
+app.use('/api/wishlist', wishlistRoutes);
 app.use('/api/reviews', reviewsRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/payment', paymentRoutes);

@@ -98,6 +98,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [createdOrder, setCreatedOrder] = React.useState<Order | null>(null);
   const [verifiedPayment, setVerifiedPayment] = React.useState<SSLCommerzPaymentSuccessData | BkashPaymentSuccessData | null>(null);
   const submissionInProgressRef = React.useRef(false);
+  const toCents = (amount: number) => Math.round((Number(amount) || 0) * 100);
+  const fromCents = (amount: number) => amount / 100;
   const dialogRef = useFocusTrap<HTMLDivElement>(isOpen);
 
   React.useEffect(() => {
@@ -153,23 +155,23 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
   if (!isOpen) return null;
 
-  const subtotal = cartItems.reduce((acc, item) => {
-    const price = item.Product?.Price || 0;
-    return acc + price * item.Quantity;
-  }, 0);
+  const subtotalCents = cartItems.reduce((total, item) =>
+    total + toCents(Number(item.Product?.Price) || 0) * item.Quantity, 0);
+  const subtotal = fromCents(subtotalCents);
 
-  const voucherAdjustedSubtotal = Math.round(cartItems.reduce((total, item) => {
+  const voucherAdjustedSubtotalCents = cartItems.reduce((total, item) => {
     const product = item.Product;
     const matchesVoucher = Boolean(
       appliedVoucher && product?.Voucher &&
       normalizeVoucherCode(product.Voucher) === appliedVoucher &&
       !isVoucherExpired(product.Voucher_Expires_At)
     );
-    const price = product?.Price || 0;
+    const price = Number(product?.Price) || 0;
     const unitPrice = matchesVoucher ? discountedPriceForVoucher(price, appliedVoucher) : price;
-    return total + unitPrice * item.Quantity;
-  }, 0) * 100) / 100;
-  const voucherSavings = Math.max(0, Math.round((subtotal - voucherAdjustedSubtotal) * 100) / 100);
+    return total + toCents(unitPrice) * item.Quantity;
+  }, 0);
+  const voucherAdjustedSubtotal = fromCents(voucherAdjustedSubtotalCents);
+  const voucherSavings = fromCents(Math.max(0, subtotalCents - voucherAdjustedSubtotalCents));
   const bundlePricing = calculateBundlePrices(cartItems.map((item) => {
     const product = item.Product;
     const matchesVoucher = Boolean(product?.Voucher && appliedVoucher && normalizeVoucherCode(product.Voucher) === appliedVoucher && !isVoucherExpired(product.Voucher_Expires_At));
@@ -180,18 +182,20 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       Quantity: item.Quantity,
     };
   }), bundles);
-  const bundleAdjustedSubtotal = Math.round(cartItems.reduce((total, item) =>
-    total + (bundlePricing.unitPrices.get(item.Product_ID) ?? Number(item.Product?.Price) ?? 0) * item.Quantity, 0) * 100) / 100;
-  const bundleSavings = Math.max(0, Math.round((voucherAdjustedSubtotal - bundleAdjustedSubtotal) * 100) / 100);
-  const cartDiscountEligible = subtotal >= 500;
-  const discountedSubtotal = Math.round(cartItems.reduce((total, item) => {
+  const bundleAdjustedSubtotalCents = cartItems.reduce((total, item) =>
+    total + toCents(bundlePricing.unitPrices.get(item.Product_ID) ?? Number(item.Product?.Price) ?? 0) * item.Quantity, 0);
+  const bundleAdjustedSubtotal = fromCents(bundleAdjustedSubtotalCents);
+  const bundleSavings = fromCents(Math.max(0, voucherAdjustedSubtotalCents - bundleAdjustedSubtotalCents));
+  const cartDiscountEligible = subtotalCents >= 50000;
+  const discountedSubtotalCents = cartItems.reduce((total, item) => {
     const bundleUnitPrice = bundlePricing.unitPrices.get(item.Product_ID) ?? Number(item.Product?.Price) ?? 0;
     const finalUnitPrice = cartDiscountEligible ? discountedUnitPrice(bundleUnitPrice, 5) : bundleUnitPrice;
-    return total + finalUnitPrice * item.Quantity;
-  }, 0) * 100) / 100;
-  const cartSavings = Math.max(0, Math.round((bundleAdjustedSubtotal - discountedSubtotal) * 100) / 100);
+    return total + toCents(finalUnitPrice) * item.Quantity;
+  }, 0);
+  const discountedSubtotal = fromCents(discountedSubtotalCents);
+  const cartSavings = fromCents(Math.max(0, bundleAdjustedSubtotalCents - discountedSubtotalCents));
   const shippingFee = subtotal >= 400 ? 0 : 5.0;
-  const grandTotal = discountedSubtotal + shippingFee;
+  const grandTotal = fromCents(discountedSubtotalCents + toCents(shippingFee));
   const grandTotalBDT = grandTotal;
   const getCartItemFinalUnitPrice = (item: CartItem) => {
     const bundleUnitPrice = bundlePricing.unitPrices.get(item.Product_ID) ?? Number(item.Product?.Price) ?? 0;

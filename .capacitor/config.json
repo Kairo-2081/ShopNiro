@@ -1,0 +1,8 @@
+{
+  "appId": "com.shopniro.app",
+  "appName": "ShopNiro",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  }
+}

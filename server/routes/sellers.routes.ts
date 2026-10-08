@@ -1,10 +1,18 @@
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import { pool, query, mapAddress } from '../db/index.ts';
 import { hashPassword } from '../db/password.ts';
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth.ts';
 import { Seller } from '../../src/types.ts';
 
 const router = Router();
+const registrationRateLimit = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 5,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { error: 'Too many seller application attempts. Try again later.' },
+});
 
 /**
  * GET /api/sellers
@@ -36,11 +44,14 @@ router.get('/', async (req, res) => {
  * POST /api/sellers
  * Register new seller (via schema gocart_seller_create)
  */
-router.post('/', async (req, res) => {
+router.post('/', registrationRateLimit, async (req, res) => {
   try {
     const { Name, Email, Password, Number: phoneNum, Address, Logo, Description, Username } = req.body;
     if (!Name || !Email) {
       return res.status(400).json({ error: 'Name and Email are required' });
+    }
+    if (typeof Password !== 'string' || Password.trim().length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters.' });
     }
     const phone = typeof phoneNum === 'string' ? phoneNum.trim() : '';
     if (!phone) {
@@ -58,8 +69,7 @@ router.post('/', async (req, res) => {
     }
 
     const id = `SEL-${Date.now()}`;
-    const rawPassword = Password || 'seller123';
-    const hashedPassword = await hashPassword(rawPassword);
+    const hashedPassword = await hashPassword(Password);
     const logoUrl = Logo || 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=200&auto=format&fit=crop&q=80';
     const desc = Description || '';
     const username = Username || cleanEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '');

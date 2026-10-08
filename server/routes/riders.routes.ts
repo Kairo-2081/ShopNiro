@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import Groq from 'groq-sdk';
 import PDFDocument from 'pdfkit';
 import { createRequire } from 'node:module';
@@ -9,6 +10,13 @@ import { AuthRequest, requireAuth, requireRole } from '../middleware/auth.ts';
 import { Address, Rider } from '../../src/types.ts';
 
 const router = Router();
+const riderApplicationRateLimit = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 5,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { error: 'Too many rider application attempts. Try again later.' },
+});
 const require = createRequire(resolve(process.cwd(), 'server/routes/riders.routes.ts'));
 const pdfParse = require('pdf-parse') as (buffer: Buffer) => Promise<{ text: string; numpages: number }>;
 const groqApiKey = process.env.GROQ_API_KEY?.trim();
@@ -271,7 +279,7 @@ router.post('/cv/format', async (req, res) => {
   }
 });
 
-router.post('/apply', async (req, res) => {
+router.post('/apply', riderApplicationRateLimit, async (req, res) => {
   const {
     Username,
     Name,

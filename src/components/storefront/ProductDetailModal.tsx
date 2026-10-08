@@ -72,7 +72,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
   React.useEffect(() => {
     let isMounted = true;
-    if (!product) {
+    if (!product || allProducts.length === 0) {
       setCoPurchasedIds([]);
       return () => { isMounted = false; };
     }
@@ -80,7 +80,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
       .then((results) => { if (isMounted) setCoPurchasedIds(results.map((result) => result.product_id)); })
       .catch(() => { if (isMounted) setCoPurchasedIds([]); });
     return () => { isMounted = false; };
-  }, [product?.Product_ID]);
+  }, [allProducts.length, product?.Product_ID]);
 
   React.useEffect(() => {
     let isMounted = true;

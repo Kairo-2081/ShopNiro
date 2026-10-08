@@ -4,6 +4,7 @@ import { api, formatCurrency, formatDate } from '../../lib/api';
 import { SellerProductModal } from './SellerProductModal';
 import { SellerProfileModal } from './SellerProfileModal';
 import { SellerBundlesPanel } from './SellerBundlesPanel';
+import { Section } from '../Section';
 import { StarRating } from '../StarRating';
 import { discountedPriceForVoucher, isVoucherExpired } from '../../lib/vouchers';
 import {
@@ -20,9 +21,16 @@ import {
   Wallet,
   BarChart3,
   Tag,
+  X,
 } from 'lucide-react';
 
 const compactSellerValue = (value: number) => value >= 1000 ? `${(value / 1000).toFixed(1)}k` : String(Math.round(value));
+const sellerPriceFormatter = new Intl.NumberFormat('en-BD', {
+  style: 'currency',
+  currency: 'BDT',
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
 
 interface SellerDashboardProps {
   currentSeller: Seller;
@@ -55,6 +63,13 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
   const [isProductModalOpen, setIsProductModalOpen] = React.useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = React.useState(false);
   const [productToEdit, setProductToEdit] = React.useState<Product | null>(null);
+  const [productToDelete, setProductToDelete] = React.useState<Product | null>(null);
+  const [isDeletingProduct, setIsDeletingProduct] = React.useState(false);
+  const [deleteProductError, setDeleteProductError] = React.useState('');
+  const [restockingProductId, setRestockingProductId] = React.useState<string | null>(null);
+  const [restockQuantity, setRestockQuantity] = React.useState('');
+  const [isRestocking, setIsRestocking] = React.useState(false);
+  const [restockError, setRestockError] = React.useState('');
   const [sellerWallet, setSellerWallet] = React.useState<{ balance: number; entries: any[] } | null>(null);
   const [walletError, setWalletError] = React.useState<string | null>(null);
   const [productAnalytics, setProductAnalytics] = React.useState<Array<{
@@ -98,6 +113,39 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
 
   const sellerProductIds = new Set(sellerProducts.map((p) => p.Product_ID));
   const sellerReviews = reviews.filter((r) => sellerProductIds.has(r.Product_ID));
+
+  const confirmDeleteProduct = async () => {
+    if (!productToDelete || isDeletingProduct) return;
+    setIsDeletingProduct(true);
+    setDeleteProductError('');
+    try {
+      await onDeleteProduct(productToDelete.Product_ID);
+      setProductToDelete(null);
+    } catch (error: any) {
+      setDeleteProductError(error.message || 'Could not delete this product.');
+    } finally {
+      setIsDeletingProduct(false);
+    }
+  };
+
+  const restockProduct = async (product: Product) => {
+    const quantity = Math.floor(Number(restockQuantity));
+    if (!Number.isFinite(quantity) || quantity <= 0 || isRestocking) {
+      setRestockError('Enter a whole quantity greater than zero.');
+      return;
+    }
+    setIsRestocking(true);
+    setRestockError('');
+    try {
+      await onSaveProduct({ Product_ID: product.Product_ID, Stock: Number(product.Stock) + quantity });
+      setRestockingProductId(null);
+      setRestockQuantity('');
+    } catch (error: any) {
+      setRestockError(error.message || 'Could not update stock.');
+    } finally {
+      setIsRestocking(false);
+    }
+  };
 
   const totalSalesRevenue = billableSellerOrders.reduce((sum, order) => {
     const sellerItems = order.Items.filter((i) => i.Seller_ID === currentSeller.Seller_ID);
@@ -182,28 +230,28 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
     switch (currentSeller.Status) {
       case 'approved':
         return (
-          <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 text-emerald-800 dark:text-emerald-300 rounded-2xl flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2.5">
+          <div className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-xs text-emerald-800 dark:text-emerald-300 sm:items-center">
+            <div className="flex min-w-0 flex-1 items-start gap-2.5 sm:items-center">
               <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
-              <div>
+              <div className="min-w-0 break-words leading-relaxed">
                 <strong className="font-bold">Merchant Approved &amp; Live:</strong> Your store is active on ShopNiro marketplace.
               </div>
             </div>
-            <span className="font-mono text-[11px] font-bold uppercase bg-emerald-500 text-white px-2.5 py-1 rounded-full">
+            <span className="shrink-0 self-start rounded-full bg-emerald-500 px-2.5 py-1 font-mono text-[11px] font-bold uppercase text-white sm:self-center">
               Live Verified
             </span>
           </div>
         );
       case 'pending':
         return (
-          <div className="p-4 bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-200 rounded-2xl flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2.5">
+          <div className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 text-xs text-amber-800 dark:text-amber-200 sm:items-center">
+            <div className="flex min-w-0 flex-1 items-start gap-2.5 sm:items-center">
               <Clock className="w-5 h-5 text-amber-500 shrink-0" />
-              <div>
+              <div className="min-w-0 break-words leading-relaxed">
                 <strong className="font-bold">Awaiting Admin Verification:</strong> Your merchant profile is pending review. Product drafts can be created now.
               </div>
             </div>
-            <span className="font-mono text-[11px] font-bold uppercase bg-amber-500 text-white px-2.5 py-1 rounded-full">
+            <span className="shrink-0 self-start rounded-full bg-amber-500 px-2.5 py-1 font-mono text-[11px] font-bold uppercase text-white sm:self-center">
               Pending Review
             </span>
           </div>
@@ -211,14 +259,14 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
       case 'suspended':
       case 'rejected':
         return (
-          <div className="p-4 bg-rose-500/10 border border-rose-500/20 text-rose-800 dark:text-rose-200 rounded-2xl flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2.5">
+          <div className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4 text-xs text-rose-800 dark:text-rose-200 sm:items-center">
+            <div className="flex min-w-0 flex-1 items-start gap-2.5 sm:items-center">
               <XCircle className="w-5 h-5 text-rose-500 shrink-0" />
-              <div>
+              <div className="min-w-0 break-words leading-relaxed">
                 <strong className="font-bold">Account Restricted ({currentSeller.Status}):</strong> Your merchant account has been paused by platform administration.
               </div>
             </div>
-            <span className="font-mono text-[11px] font-bold uppercase bg-rose-600 text-white px-2.5 py-1 rounded-full">
+            <span className="shrink-0 self-start rounded-full bg-rose-600 px-2.5 py-1 font-mono text-[11px] font-bold uppercase text-white sm:self-center">
               Restricted
             </span>
           </div>
@@ -231,24 +279,24 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
       {/* Seller Store Header */}
       <div className="bg-white dark:bg-[#12161D] p-6 rounded-3xl border border-sky-100 dark:border-sky-500/20 shadow-xs space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
+          <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center sm:gap-4">
             <img
               src={currentSeller.Logo}
               alt={currentSeller.Name}
-              className="w-16 h-16 rounded-2xl object-cover border border-sky-100 dark:border-zinc-700 bg-slate-50 dark:bg-[#181F2A] shadow-sm"
+              className="h-16 w-16 shrink-0 rounded-2xl border border-sky-100 bg-slate-50 object-cover shadow-sm dark:border-zinc-700 dark:bg-[#181F2A]"
             />
-            <div>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <div className="min-w-0 flex-1">
+              <h1 className="break-words text-xl font-bold leading-tight text-slate-900 dark:text-white [overflow-wrap:anywhere] sm:text-2xl">
                 {currentSeller.Name}
               </h1>
-              <p className="text-xs text-slate-500 dark:text-zinc-400 max-w-lg mt-0.5">
+              <p className="mt-1 max-w-lg break-words text-xs leading-relaxed text-slate-500 dark:text-zinc-400 [overflow-wrap:anywhere]">
                 {currentSeller.Description}
               </p>
-              <div className="flex items-center gap-3 text-[11px] text-slate-400 dark:text-zinc-500 font-mono mt-1">
-                <span>ID: {currentSeller.Seller_ID}</span>
-                <span>•</span>
-                <span>{currentSeller.Email}</span>
-                <span>•</span>
+              <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-slate-500 dark:text-zinc-400">
+                <span className="break-all font-mono">ID: {currentSeller.Seller_ID}</span>
+                <span aria-hidden="true">•</span>
+                <span className="break-all">{currentSeller.Email}</span>
+                <span aria-hidden="true">•</span>
                 <span>Member since {formatDate(currentSeller.Created_At)}</span>
               </div>
             </div>
@@ -433,66 +481,84 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
               </p>
             </div>
           ) : (
-            <div className="bg-white dark:bg-[#12161D] rounded-3xl border border-sky-100 dark:border-sky-500/20 overflow-hidden shadow-xs">
+            <div className="premium-surface overflow-hidden rounded-xl shadow-xs">
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 dark:bg-[#181F2A] text-slate-500 dark:text-zinc-400 font-semibold uppercase tracking-wider border-b border-sky-100 dark:border-zinc-800">
+                <table className="w-full min-w-[900px] text-left text-xs">
+                  <thead className="border-b border-[#a99b72]/20 bg-[#f0eee5] font-semibold uppercase tracking-wider text-[#70674a] dark:border-[#d0c8a5]/10 dark:bg-[#201f18] dark:text-[#c9c2a1]">
                     <tr>
                       <th className="p-4">Product Details</th>
-                      <th className="p-4">Category</th>
-                      <th className="p-4">Price</th>
+                      <th className="p-4 text-right">Price</th>
                       <th className="p-4">Stock Inventory</th>
                       <th className="p-4">Voucher</th>
                       <th className="p-4">Status</th>
                       <th className="p-4 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-sky-100/60 dark:divide-zinc-800/80">
+                  <tbody className="divide-y divide-[#a99b72]/15 dark:divide-[#d0c8a5]/10">
                     {sellerProducts.map((p) => {
                       const catName = categories.find((c) => c.Category_ID === p.Category_ID)?.Name || 'General';
                       return (
-                        <tr key={p.Product_ID} className="hover:bg-slate-50 dark:hover:bg-[#181F2A]/60 transition-colors">
+                        <tr key={p.Product_ID} className="transition-colors hover:bg-[#a99b72]/[0.05] dark:hover:bg-[#d0c8a5]/[0.05]">
                           <td className="p-4">
                             <div className="flex items-center gap-3">
                               <img
                                 src={p.Image}
                                 alt={p.Name}
                                 referrerPolicy="no-referrer"
-                                className="w-12 h-12 rounded-xl object-cover bg-slate-100 border border-sky-100 dark:border-zinc-700"
+                                className="h-12 w-12 shrink-0 rounded-xl object-cover bg-slate-100 border border-[#a99b72]/20 dark:border-[#d0c8a5]/15"
                               />
-                              <div>
-                                <span className="font-bold text-slate-900 dark:text-white block">{p.Name}</span>
-                                <span className="text-[10px] text-slate-400 font-mono">ID: {p.Product_ID}</span>
+                              <div className="min-w-0">
+                                <span className="block break-words font-bold text-slate-900 dark:text-white [overflow-wrap:anywhere]">{p.Name}</span>
+                                <span className="block break-words text-[12px] text-slate-500 dark:text-zinc-400 [overflow-wrap:anywhere]">{catName}</span>
+                                <span className="block break-all text-[11px] font-mono text-slate-500 dark:text-zinc-400">ID: {p.Product_ID}</span>
                               </div>
                             </div>
                           </td>
-                          <td className="p-4 text-slate-700 dark:text-zinc-300 font-medium">{catName}</td>
-                          <td className="p-4 font-bold text-slate-900 dark:text-white">{formatCurrency(p.Price)}</td>
+                          <td className="p-4 text-right text-sm font-semibold tabular-nums text-slate-900 dark:text-white">{sellerPriceFormatter.format(Number(p.Price) || 0)}</td>
                           <td className="p-4 font-semibold">
-                            {p.Stock > 0 ? (
-                              <span className="text-emerald-500 font-medium">{p.Stock} in stock</span>
-                            ) : (
-                              <span className="text-rose-500 font-bold">Out of stock</span>
-                            )}
+                            <div className="flex min-w-32 flex-col items-start gap-1.5">
+                              {Number(p.Stock) === 0 ? (
+                                <span className="font-bold text-rose-700 dark:text-rose-300">Out of stock</span>
+                              ) : Number(p.Stock) <= 5 ? (
+                                <span className="font-bold text-amber-700 dark:text-amber-300">Low: {p.Stock} left</span>
+                              ) : (
+                                <span className="font-medium text-slate-600 dark:text-zinc-300">{p.Stock} in stock</span>
+                              )}
+                              {restockingProductId === p.Product_ID ? (
+                                <form onSubmit={(event) => { event.preventDefault(); void restockProduct(p); }} className="flex flex-wrap items-center gap-1.5">
+                                  <input type="number" min="1" step="1" required value={restockQuantity} onChange={(event) => setRestockQuantity(event.target.value)} aria-label={`Quantity to add for ${p.Name}`} placeholder="Qty" className="luxury-input h-9 min-h-9 w-20 rounded-lg px-2 text-xs tabular-nums" />
+                                  <button type="submit" disabled={isRestocking} className="rounded-lg bg-[#77775a] px-2.5 py-2 text-[11px] font-bold text-white hover:bg-[#66664c] disabled:opacity-50">{isRestocking ? 'Saving…' : 'Save'}</button>
+                                  <button type="button" onClick={() => { setRestockingProductId(null); setRestockError(''); }} aria-label={`Cancel restock for ${p.Name}`} className="grid h-9 w-9 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] dark:text-zinc-300 dark:hover:bg-zinc-800"><X className="h-4 w-4" /></button>
+                                  {restockError && <span role="alert" className="w-full text-[10px] text-rose-600 dark:text-rose-300">{restockError}</span>}
+                                </form>
+                              ) : (
+                                <button type="button" onClick={() => { setRestockError(''); setRestockQuantity(''); setRestockingProductId(p.Product_ID); }} className="rounded-md px-1.5 py-1 text-[11px] font-semibold text-[#70674a] underline decoration-[#a99b72]/40 underline-offset-2 hover:text-[#514b3d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] dark:text-[#d0c8a5]">Restock</button>
+                              )}
+                            </div>
                           </td>
                           <td className="p-4">
                             {p.Voucher ? (
-                              <span className="bg-sky-500/10 text-sky-500 border border-sky-500/20 font-mono font-bold text-[10px] px-2 py-0.5 rounded-full">
+                              <span className="inline-flex items-center gap-1 rounded-full border border-[#a99b72]/25 bg-[#a99b72]/10 px-2.5 py-1 font-mono text-xs font-bold text-[#70674a] dark:border-[#d0c8a5]/15 dark:bg-[#d0c8a5]/10 dark:text-[#d0c8a5]">
+                                <Tag className="h-3 w-3" />
                                 {p.Voucher}
                               </span>
                             ) : (
-                              <span className="text-slate-400">-</span>
+                              <span className="text-slate-400 dark:text-zinc-500">No voucher</span>
                             )}
                           </td>
                           <td className="p-4">
                             <button
+                              type="button"
+                              role="switch"
+                              aria-checked={p.Product_Status === 'active'}
+                              aria-label={`${p.Product_Status === 'active' ? 'Pause' : 'Activate'} ${p.Name}`}
                               onClick={() =>
                                 onUpdateProductStatus(
                                   p.Product_ID,
                                   p.Product_Status === 'active' ? 'inactive' : 'active'
                                 )
                               }
-                              className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase transition-all duration-200 cursor-pointer hover:-translate-y-px hover:shadow-sm ${
+                              className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase transition-all duration-200 cursor-pointer hover:-translate-y-px hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] ${
                                 p.Product_Status === 'active'
                                   ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30'
                                   : 'bg-zinc-800 text-zinc-400 border border-zinc-700'
@@ -504,21 +570,22 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                           <td className="p-4 text-right">
                             <div className="flex items-center justify-end gap-2">
                               <button
+                                type="button"
+                                aria-label={`Edit ${p.Name}`}
                                 onClick={() => {
                                   setProductToEdit(p);
                                   setIsProductModalOpen(true);
                                 }}
-                                className="p-2 text-slate-600 hover:text-blue-500 dark:text-zinc-400 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
+                                className="grid h-10 w-10 place-items-center rounded-lg text-slate-600 transition-colors hover:bg-[#a99b72]/10 hover:text-[#80734f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] dark:text-zinc-400 dark:hover:bg-[#d0c8a5]/10 dark:hover:text-[#d0c8a5]"
                                 title="Edit Product"
                               >
                                 <Edit className="w-4 h-4" />
                               </button>
                               <button
-                                onClick={() => {
-                                  onDeleteProduct(p.Product_ID);
-                                }}
-                                className="p-2 text-slate-600 hover:text-rose-500 dark:text-zinc-400 dark:hover:text-rose-400 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
-                                title="Delete Product"
+                                type="button"
+                                aria-label={`Delete ${p.Name}`}
+                                onClick={() => { setDeleteProductError(''); setProductToDelete(p); }}
+                                className="grid h-10 w-10 place-items-center rounded-lg text-slate-500 transition-colors hover:bg-rose-100 hover:text-rose-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 dark:text-zinc-400 dark:hover:bg-rose-950/50 dark:hover:text-rose-300"
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -645,7 +712,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
       )}
 
       {activeTab === 'analytics' && (
-        <section className="space-y-4">
+        <Section title="Sales Analytics" description="Sales, product performance, and pricing guidance for your store." className="space-y-4">
           {isLoadingAnalytics && (
             <div role="status" aria-label="Loading seller analytics" aria-busy="true" className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="premium-skeleton h-56 rounded-2xl" />
@@ -764,7 +831,23 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
             </table>
           </section>
           </>}
-        </section>
+        </Section>
+      )}
+
+      {productToDelete && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm" onClick={(event) => { if (event.target === event.currentTarget && !isDeletingProduct) setProductToDelete(null); }}>
+          <section role="dialog" aria-modal="true" aria-labelledby="delete-product-title" className="premium-surface w-full max-w-md space-y-4 rounded-xl p-5 shadow-2xl">
+            <div>
+              <h2 id="delete-product-title" className="text-base font-bold text-slate-900 dark:text-white">Delete {productToDelete.Name}?</h2>
+              <p className="mt-2 text-sm text-slate-600 dark:text-zinc-300">Orders already placed keep their copy.</p>
+            </div>
+            {deleteProductError && <p role="alert" className="text-xs text-rose-700 dark:text-rose-300">{deleteProductError}</p>}
+            <div className="flex justify-end gap-2">
+              <button type="button" disabled={isDeletingProduct} onClick={() => setProductToDelete(null)} className="rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800">Keep product</button>
+              <button type="button" disabled={isDeletingProduct} onClick={() => void confirmDeleteProduct()} className="rounded-full bg-rose-700 px-4 py-2 text-xs font-bold text-white hover:bg-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 disabled:opacity-50">{isDeletingProduct ? 'Deleting…' : 'Delete product'}</button>
+            </div>
+          </section>
+        </div>
       )}
 
       {/* Tab 3: Reviews */}
@@ -825,6 +908,22 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
             {!sellerWallet && !walletError && <p className="p-8 text-center text-sm text-slate-500">Loading remittances...</p>}
           </div>
         </section>
+      )}
+
+      {productToDelete && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm" onClick={(event) => { if (event.target === event.currentTarget && !isDeletingProduct) setProductToDelete(null); }}>
+          <section role="dialog" aria-modal="true" aria-labelledby="delete-product-title" className="premium-surface w-full max-w-md space-y-4 rounded-xl p-5 shadow-2xl">
+            <div>
+              <h2 id="delete-product-title" className="text-base font-bold text-slate-900 dark:text-white">Delete {productToDelete.Name}?</h2>
+              <p className="mt-2 text-sm text-slate-600 dark:text-zinc-300">Orders already placed keep their copy.</p>
+            </div>
+            {deleteProductError && <p role="alert" className="text-xs text-rose-700 dark:text-rose-300">{deleteProductError}</p>}
+            <div className="flex justify-end gap-2">
+              <button type="button" disabled={isDeletingProduct} onClick={() => setProductToDelete(null)} className="rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800">Keep product</button>
+              <button type="button" disabled={isDeletingProduct} onClick={() => void confirmDeleteProduct()} className="rounded-full bg-rose-700 px-4 py-2 text-xs font-bold text-white hover:bg-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 disabled:opacity-50">{isDeletingProduct ? 'Deleting…' : 'Delete product'}</button>
+            </div>
+          </section>
+        </div>
       )}
 
       {/* Product Create/Edit Modal */}

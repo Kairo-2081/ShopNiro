@@ -1,6 +1,7 @@
 import React from 'react';
 import { Rider } from '../../types';
 import { api } from '../../lib/api';
+import { downloadFile } from '../../lib/downloadFile';
 import { Check, Download, RefreshCw, X } from 'lucide-react';
 
 export const RiderApplicationsPanel: React.FC = () => {
@@ -64,15 +65,8 @@ export const RiderApplicationsPanel: React.FC = () => {
   const downloadCv = async (rider: Rider) => {
     try {
       const blob = await api.downloadRiderCv(rider.Rider_ID);
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = rider.CV_File_Name || `${rider.Username}-cv.pdf`;
-      link.style.display = 'none';
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.setTimeout(() => URL.revokeObjectURL(url), 10000);
+      const destination = await downloadFile(blob, rider.CV_File_Name || `${rider.Username}-cv.pdf`);
+      setNotice(destination === 'saved' ? 'CV saved to Documents. Use the Android share sheet to open or send it.' : 'CV download started.');
     } catch (error: any) {
       setNotice(error.message || 'Could not download CV.');
     }

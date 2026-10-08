@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { Admin, Address } from '../../types';
 import { AccountLocationPicker } from '../AccountLocationPicker';
-import { X, ShieldPlus, Send, KeyRound, Eye, EyeOff, Lock, User, Mail, Phone, MapPin } from 'lucide-react';
-import { ADMIN_SECURITY_KEY } from './AdminSecurityModal';
+import { X, ShieldPlus, Send, Eye, EyeOff, Lock, User, Mail, Phone, MapPin } from 'lucide-react';
 
 interface AdminSignupModalProps {
   isOpen: boolean;
@@ -24,8 +23,6 @@ export const AdminSignupModal: React.FC<AdminSignupModalProps> = ({
   const [showPasswordState, setShowPasswordState] = useState(false);
   const [number, setNumber] = useState('');
   const [hasSelectedLocation, setHasSelectedLocation] = useState(false);
-  const [securityKey, setSecurityKey] = useState('');
-  const [showKey, setShowKey] = useState(false);
   const [address, setAddress] = useState<Address>({
     House_Name: '',
     Street: '',
@@ -49,11 +46,6 @@ export const AdminSignupModal: React.FC<AdminSignupModalProps> = ({
       return;
     }
 
-    if (securityKey.trim().toUpperCase() !== ADMIN_SECURITY_KEY) {
-      setError(`Invalid Admin Security Key! System key required to register as Admin.`);
-      return;
-    }
-
     setError(null);
     setIsSubmitting(true);
 
@@ -74,7 +66,6 @@ export const AdminSignupModal: React.FC<AdminSignupModalProps> = ({
       setUsername('');
       setNumber('');
       setHasSelectedLocation(false);
-      setSecurityKey('');
       setAddress({ House_Name: '', Street: '', City: '', Postal_Code: '', Additional_Info: '' });
 
       onSuccessRegistered(newAdmin);
@@ -202,29 +193,6 @@ export const AdminSignupModal: React.FC<AdminSignupModalProps> = ({
               </div>
             </div>
 
-            <div>
-              <label className="block text-slate-700 dark:text-zinc-300 font-semibold mb-1">
-                Admin Security Key *
-              </label>
-              <div className="relative">
-                <input
-                  type={showKey ? 'text' : 'password'}
-                  required
-                  placeholder="Master key required"
-                  value={securityKey}
-                  onChange={(e) => setSecurityKey(e.target.value)}
-                  className="w-full p-2.5 pl-8 pr-9 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                />
-                <KeyRound className="w-3.5 h-3.5 text-slate-400 dark:text-zinc-500 absolute left-2.5 top-3" />
-                <button
-                  type="button"
-                  onClick={() => setShowKey(!showKey)}
-                  className="absolute right-2.5 top-3 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-300 cursor-pointer"
-                >
-                  {showKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                </button>
-              </div>
-            </div>
           </div>
 
           <div className="pt-2 border-t border-slate-100 dark:border-zinc-800">

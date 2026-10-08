@@ -13,7 +13,6 @@ export const initialSellers: Seller[] = [
     Username: 'startech',
     Name: 'Star Tech Solutions',
     Email: 'contact@startech.io',
-    Password: 'seller123',
     Number: '+8801790-124345',
     Address: {
       Street: '88 Green Way',
@@ -32,7 +31,6 @@ export const initialSellers: Seller[] = [
     Username: 'artisanhome',
     Name: 'Artisan Home Krafts',
     Email: 'hello@artisanhome.com',
-    Password: 'seller123',
     Number: '+8801891-124345',
     Address: {
       Street: '42 Craftsman Bhaban',
@@ -51,7 +49,6 @@ export const initialSellers: Seller[] = [
     Username: 'urbanthread',
     Name: 'Urban Thread Studio',
     Email: 'info@urbanthread.co',
-    Password: 'seller123',
     Number: '+8801841-124345',
     Address: {
       Street: '105 Sarobar',
@@ -73,7 +70,6 @@ export const initialCustomers: Customer[] = [
     Username: 'kairo',
     Name: 'Kairo',
     Email: 'kairo21@gmail.com',
-    Password: 'password123',
     Number: '+8801756-840340',
     Address: {
       Street: '742 Evergreen Terrace',
@@ -88,7 +84,6 @@ export const initialCustomers: Customer[] = [
     Username: 'abir',
     Name: 'Ahmad Taquie Abir',
     Email: 'abir@gmail.com',
-    Password: 'password123',
     Number: '+8801576-455432',
     Address: {
       Street: '123 Maple Street',
@@ -103,7 +98,6 @@ export const initialCustomers: Customer[] = [
     Username: 'mayel',
     Name: 'Raian Rashid Mayel',
     Email: 'raianrashidmayel@gmail.com',
-    Password: 'password123',
     Number: '+8801734-674789',
     Address: {
       Street: '456 Bak Avenue',
@@ -120,7 +114,6 @@ export const initialAdmin: Admin = {
   Username: 'admin',
   Name: 'Fahim Shahriar (Admin)',
   Email: 'admin@shopniro.com',
-  Password: 'admin123',
   Number: '+88017555-01949',
   Address: {
     Street: '1 Marketplace Way',

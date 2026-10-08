@@ -227,7 +227,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <div key={`${item.name}-${index}`} className={`brand-chip ${item.accent}`}>
                   <img
                     src={shopNiroLogo}
-                    alt="ShopNiro logo"
+                    alt=""
+                    aria-hidden="true"
                     className="brand-logo logo-float"
                   />
                   <span>{item.name}</span>

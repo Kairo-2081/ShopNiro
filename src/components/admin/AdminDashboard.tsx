@@ -1,9 +1,10 @@
 import React from 'react';
-import { Seller, Product, Order, Category, Review, SellerStatus, ProductStatus } from '../../types';
-import { formatCurrency, formatBDT, formatDate } from '../../lib/api';
+import { Seller, Product, Order, Category, Review, SellerStatus, ProductStatus, OrderCancellationRequest } from '../../types';
+import { api, formatCurrency, formatBDT, formatDate } from '../../lib/api';
 import { apiUrl } from '../../apiConfig';
 import { RiderApplicationsPanel } from './RiderApplicationsPanel';
 import { AdminMarketplaceMetrics } from './AdminMarketplaceMetrics';
+import { Section } from '../Section';
 import {
   BarChart3,
   ShieldCheck,
@@ -25,6 +26,7 @@ import {
   X,
   AlertCircle,
   Truck,
+  RotateCcw,
 } from 'lucide-react';
 
 const AdminOverviewAnalytics = React.lazy(() =>
@@ -67,7 +69,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onDeleteCategory,
   onOpenSellerSignup,
 }) => {
-  const [adminTab, setAdminTab] = React.useState<'overview' | 'metrics' | 'sellers' | 'riders' | 'categories' | 'products' | 'payments'>('overview');
+  const [adminTab, setAdminTab] = React.useState<'overview' | 'metrics' | 'sellers' | 'riders' | 'categories' | 'products' | 'payments' | 'cancellations'>('overview');
   const [newCategoryName, setNewCategoryName] = React.useState('');
   const [editingCategoryId, setEditingCategoryId] = React.useState<string | null>(null);
   const [editingCategoryName, setEditingCategoryName] = React.useState('');
@@ -81,6 +83,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [transactions, setTransactions] = React.useState<any[]>([]);
   const [loadingTransactions, setLoadingTransactions] = React.useState(false);
   const [paymentFilter, setPaymentFilter] = React.useState<string>('all');
+  const [cancellationRequests, setCancellationRequests] = React.useState<OrderCancellationRequest[]>([]);
+  const [loadingCancellations, setLoadingCancellations] = React.useState(false);
+  const [reviewingCancellationId, setReviewingCancellationId] = React.useState<string | null>(null);
+  const [confirmedRefundIds, setConfirmedRefundIds] = React.useState<string[]>([]);
   const filteredTransactions = transactions.filter((transaction) => {
     if (paymentFilter === 'all') return true;
     if (paymentFilter === 'cards') return ['visa_mastercard', 'visa', 'mastercard', 'amex'].includes(String(transaction.payment_method).toLowerCase());
@@ -108,6 +114,35 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       fetchTransactions();
     }
   }, [adminTab]);
+
+  const fetchCancellationRequests = async () => {
+    setLoadingCancellations(true);
+    try {
+      setCancellationRequests(await api.getOrderCancellationRequests());
+    } catch (error: any) {
+      showNotification(error.message || 'Could not load cancellation requests.', 'error');
+    } finally {
+      setLoadingCancellations(false);
+    }
+  };
+
+  React.useEffect(() => {
+    if (adminTab === 'cancellations') void fetchCancellationRequests();
+  }, [adminTab]);
+
+  const reviewCancellationRequest = async (request: OrderCancellationRequest, decision: 'approved' | 'rejected') => {
+    setReviewingCancellationId(request.Request_ID);
+    try {
+      await api.reviewOrderCancellation(request.Request_ID, decision, confirmedRefundIds.includes(request.Request_ID));
+      showNotification(decision === 'approved' ? 'Cancellation approved and processed.' : 'Cancellation request rejected.');
+      setConfirmedRefundIds((ids) => ids.filter((id) => id !== request.Request_ID));
+      await fetchCancellationRequests();
+    } catch (error: any) {
+      showNotification(error.message || 'Could not review cancellation request.', 'error');
+    } finally {
+      setReviewingCancellationId(null);
+    }
+  };
 
   const showNotification = (msg: string, tone: 'success' | 'error' = 'success') => {
     setFeedbackMsg(msg);
@@ -304,6 +339,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <Lock className="w-4 h-4" />
           <span>Online Payments</span>
         </button>
+
+        <button
+          onClick={() => setAdminTab('cancellations')}
+          aria-current={adminTab === 'cancellations' ? 'page' : undefined}
+          className={adminTabButtonClass(adminTab === 'cancellations')}
+        >
+          <RotateCcw className="w-4 h-4" />
+          <span>Order Cancellations</span>
+        </button>
       </div>
 
       {adminTab === 'metrics' && (
@@ -312,6 +356,45 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           sellers={sellers}
           orders={orders}
         />
+      )}
+
+      {adminTab === 'cancellations' && (
+        <Section title="Order cancellation requests" description="Paid orders require the payment-provider refund to be completed before approval." className="space-y-4" action={<button type="button" onClick={() => void fetchCancellationRequests()} disabled={loadingCancellations} className="inline-flex items-center gap-2 rounded-full border border-slate-300 px-3 py-2 text-xs font-semibold dark:border-zinc-700"><RefreshCw className={`h-3.5 w-3.5 ${loadingCancellations ? 'animate-spin' : ''}`} />Refresh</button>}>
+          {loadingCancellations ? (
+            <div role="status" aria-label="Loading cancellation requests" className="premium-skeleton h-40 rounded-2xl" />
+          ) : cancellationRequests.length === 0 ? (
+            <p className="premium-surface rounded-xl p-8 text-center text-sm text-slate-500 dark:text-zinc-400">No cancellation requests.</p>
+          ) : (
+            <div className="space-y-3">
+              {cancellationRequests.map((request) => (
+                <article key={request.Request_ID} className="premium-surface space-y-3 rounded-xl p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-bold text-slate-900 dark:text-white">Order {request.Order_ID}</p>
+                      <p className="mt-1 text-xs text-slate-500 dark:text-zinc-400">Customer {request.Customer_ID} · {request.Payment_Status} · {formatDate(request.Requested_At)}</p>
+                      {request.Reason && <p className="mt-2 text-xs text-slate-700 dark:text-zinc-300">Reason: {request.Reason}</p>}
+                    </div>
+                    <span className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase ${request.Status === 'pending' ? 'border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300' : request.Status === 'approved' ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' : 'border-rose-500/20 bg-rose-500/10 text-rose-700 dark:text-rose-300'}`}>{request.Status}</span>
+                  </div>
+                  {request.Status === 'pending' && (
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-3 dark:border-zinc-800">
+                      {request.Payment_Status === 'paid' ? (
+                        <label className="flex items-start gap-2 text-xs text-slate-700 dark:text-zinc-300">
+                          <input type="checkbox" checked={confirmedRefundIds.includes(request.Request_ID)} onChange={(event) => setConfirmedRefundIds((ids) => event.target.checked ? [...ids, request.Request_ID] : ids.filter((id) => id !== request.Request_ID))} />
+                          Refund has been completed in the payment provider
+                        </label>
+                      ) : <span className="text-xs text-slate-500 dark:text-zinc-400">No payment refund is required.</span>}
+                      <div className="flex gap-2">
+                        <button type="button" disabled={reviewingCancellationId === request.Request_ID} onClick={() => void reviewCancellationRequest(request, 'rejected')} className="rounded-full border border-slate-300 px-3 py-2 text-xs font-bold dark:border-zinc-700">Reject</button>
+                        <button type="button" disabled={reviewingCancellationId === request.Request_ID || (request.Payment_Status === 'paid' && !confirmedRefundIds.includes(request.Request_ID))} onClick={() => void reviewCancellationRequest(request, 'approved')} className="rounded-full bg-emerald-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">Approve cancellation</button>
+                      </div>
+                    </div>
+                  )}
+                </article>
+              ))}
+            </div>
+          )}
+        </Section>
       )}
 
       {/* Tab 1: Overview & Seller Approval Workflow */}

@@ -13,15 +13,18 @@ const router = Router();
 router.get('/', async (req, res) => {
   try {
     const { productId, sellerId } = req.query;
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
+    const offset = Math.max(0, Number(req.query.offset) || 0);
     let result;
     if (productId && typeof productId === 'string') {
-      result = await query(`SELECT * FROM gocart_reviews_by_product($1)`, [productId]);
+      result = await query(`SELECT * FROM gocart_reviews_by_product($1) LIMIT $2 OFFSET $3`, [productId, limit + 1, offset]);
     } else if (sellerId && typeof sellerId === 'string') {
-      result = await query(`SELECT * FROM gocart_reviews_by_seller($1)`, [sellerId]);
+      result = await query(`SELECT * FROM gocart_reviews_by_seller($1) LIMIT $2 OFFSET $3`, [sellerId, limit + 1, offset]);
     } else {
-      result = await query(`SELECT * FROM gocart_reviews_list()`);
+      result = await query(`SELECT * FROM gocart_reviews_list() LIMIT $1 OFFSET $2`, [limit + 1, offset]);
     }
 
+    const hasMore = result.rows.length > limit;
     const formatted: Review[] = result.rows.map((r: any) => ({
       Review_ID: r.id,
       Product_ID: r.product_id,
@@ -31,6 +34,7 @@ router.get('/', async (req, res) => {
       Rating: Number(r.rating),
       Created_At: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
     }));
+    res.setHeader('X-Has-More', String(hasMore));
     res.json(formatted);
   } catch (error: any) {
     console.error('Error fetching reviews:', error);

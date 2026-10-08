@@ -44,20 +44,6 @@ const serializeCoverageInformation = (warranty: string, guarantee: string) => [
   guarantee.trim() ? `Guarantee: ${guarantee.trim()}` : '',
 ].filter(Boolean).join('\n');
 
-const measureImageWidth = (url: string) => new Promise<number>((resolve, reject) => {
-  const imageElement = new window.Image();
-  const timeout = window.setTimeout(() => reject(new Error('Image validation timed out. Check the image URL and try again.')), 10000);
-  imageElement.onload = () => {
-    window.clearTimeout(timeout);
-    resolve(imageElement.naturalWidth);
-  };
-  imageElement.onerror = () => {
-    window.clearTimeout(timeout);
-    reject(new Error('An image could not be loaded. Check the URL and try again.'));
-  };
-  imageElement.src = url;
-});
-
 const measureVideoDuration = (url: string) => new Promise<number>((resolve, reject) => {
   const videoElement = document.createElement('video');
   videoElement.preload = 'metadata';
@@ -233,12 +219,6 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
     setIsSaving(true);
     setError(null);
     try {
-      const imageWidths = await Promise.all(imageUrls.map(measureImageWidth));
-      const lowResolutionIndex = imageWidths.findIndex((width) => width < 1200);
-      if (lowResolutionIndex >= 0) {
-        setError(`Image ${lowResolutionIndex + 1} must be at least 1200px wide.`);
-        return;
-      }
       if (videoUrl.trim() && await measureVideoDuration(videoUrl.trim()) > 15) {
         setError('Product videos must be 15 seconds or shorter.');
         return;
@@ -532,7 +512,7 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
               </div>
             ))}
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-[10px] text-slate-500 dark:text-zinc-400">Add 1–7 clear product views. Each image must be at least 1200 px wide.</p>
+              <p className="text-[10px] text-slate-500 dark:text-zinc-400">Add 1–7 clear product views. Use sharp images that show the item clearly.</p>
               <button type="button" disabled={[image, ...additionalImages].filter((url) => url.trim()).length >= 7} onClick={() => setAdditionalImages((current) => [...current, ''])} className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 px-3 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-emerald-800 dark:text-emerald-300"><Plus className="h-3.5 w-3.5" />Add image</button>
             </div>
           </section>

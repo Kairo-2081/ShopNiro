@@ -3,7 +3,7 @@ import { Product, Category, Seller, Review } from '../../types';
 import { StarRating } from '../StarRating';
 import { api, formatCurrency } from '../../lib/api';
 import { discountedPriceForVoucher, describeVoucher, getVoucherCountdownLabel, isVoucherExpired } from '../../lib/vouchers';
-import { ShoppingCart, Tag, Store, Eye, Lock, Check, PackageOpen } from 'lucide-react';
+import { ShoppingCart, Tag, Store, Eye, Lock, Check, PackageOpen, Heart } from 'lucide-react';
 
 interface ProductCardProps {
   product: Product;
@@ -12,6 +12,8 @@ interface ProductCardProps {
   reviews: Review[];
   onSelect: (product: Product) => void;
   onAddToCart: (product: Product, e: React.MouseEvent) => void;
+  isWishlisted?: boolean;
+  onToggleWishlist?: (product: Product) => void;
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({
@@ -21,6 +23,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   reviews,
   onSelect,
   onAddToCart,
+  isWishlisted = false,
+  onToggleWishlist,
 }) => {
   const [imgError, setImgError] = React.useState(false);
   const [justAdded, setJustAdded] = React.useState(false);
@@ -126,6 +130,18 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             </span>
           )}
         </div>
+
+        {onToggleWishlist && (
+          <button
+            type="button"
+            aria-label={isWishlisted ? `Remove ${product.Name} from wishlist` : `Save ${product.Name} to wishlist`}
+            aria-pressed={isWishlisted}
+            onClick={(event) => { event.stopPropagation(); onToggleWishlist(product); }}
+            className="absolute bottom-3 right-3 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-white/60 bg-white/90 text-rose-600 shadow-lg transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] dark:border-zinc-700 dark:bg-[#181F2A]/90 dark:text-rose-300"
+          >
+            <Heart className={`h-4 w-4 ${isWishlisted ? 'fill-current' : ''}`} />
+          </button>
+        )}
 
         {/* Hover overlay preview action */}
         <div className="absolute inset-0 bg-white/12 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-5 pointer-events-none">
