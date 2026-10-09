@@ -43,10 +43,14 @@ const request = async (
       },
     }, (response) => {
       response.on('data', (chunk) => responseBody.push(Buffer.from(chunk)));
-      response.on('end', () => resolve({
-        status: response.statusCode || 0,
-        body: responseBody.length ? JSON.parse(responseBody.join('')) : null,
-      }));
+      response.on('end', () => {
+        const text = Buffer.concat(responseBody).toString('utf8');
+        let body: any = null;
+        if (text) {
+          try { body = JSON.parse(text); } catch { body = { raw: text }; }
+        }
+        resolve({ status: response.statusCode || 0, body });
+      });
     });
     request.on('error', reject);
     request.end(body === undefined ? undefined : JSON.stringify(body));
@@ -243,7 +247,7 @@ dbTest('plaintext stored passwords are rejected with the same message as unknown
     const customerId = `CUSTOMER-${randomUUID()}`;
     const orderId = `ORD-${randomUUID()}`;
     const customer = await createCustomer(customerId);
-    assert.equal(customer.rows.length, 1);
+    assert.equal(customer.rowCount, 1);
     await createOrder(customerId, orderId);
     const cookie = await createSession('customer', customerId);
 
