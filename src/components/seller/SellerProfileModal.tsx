@@ -104,11 +104,11 @@ export const SellerProfileModal: React.FC<SellerProfileModalProps> = ({ seller, 
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-4">
       <section ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="seller-profile-title" tabIndex={-1} className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-surface-200 bg-white shadow-2xl dark:border-surface-800 dark:bg-[#12161D]">
         <header className="flex items-center justify-between border-b border-surface-200 px-5 py-4 dark:border-surface-800">
-          <div><h2 id="seller-profile-title" className="font-bold text-surface-900 dark:text-white">Edit store details</h2><p className="text-xs text-surface-500 dark:text-surface-400">Changes return the store to admin review.</p></div>
+          <div><h2 id="seller-profile-title" className="font-bold text-surface-900 dark:text-white">{t('editStoreDetails')}</h2><p className="text-xs text-surface-500 dark:text-surface-400">{t('changesReturnAdminReview')}</p></div>
           <button type="button" onClick={onClose} aria-label="Close store details" className="rounded-full p-2 text-surface-500 hover:bg-surface-100 dark:hover:bg-surface-800"><X className="h-4 w-4" /></button>
         </header>
         <form onSubmit={submit} className="space-y-4 overflow-y-auto p-5">
-          {required && <p role="status" className="rounded-lg border border-warning-200 bg-warning-50 p-3 text-sm text-warning-900 dark:border-warning-900 dark:bg-warning-950/30 dark:text-warning-200">Complete and save your business profile before making other changes.</p>}
+          {required && <p role="status" className="rounded-lg border border-warning-200 bg-warning-50 p-3 text-sm text-warning-900 dark:border-warning-900 dark:bg-warning-950/30 dark:text-warning-200">{t('completeProfileFirst')}</p>}
           {error && <p role="alert" className="rounded-lg border border-danger-200 bg-danger-50 p-3 text-sm text-danger-700 dark:border-danger-900 dark:bg-danger-950/40 dark:text-danger-300">{error}</p>}
           {requireIdentityDocument && (
             <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-dashed border-success-500 bg-success-50/60 p-4 text-sm text-surface-700 dark:border-success-800 dark:bg-success-950/20 dark:text-surface-200">
@@ -118,20 +118,20 @@ export const SellerProfileModal: React.FC<SellerProfileModalProps> = ({ seller, 
             </label>
           )}
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="space-y-1 text-xs font-semibold text-surface-700 dark:text-surface-300">Store name<input required value={name} onChange={(e) => setName(e.target.value)} className={inputClass} /></label>
+            <label className="space-y-1 text-xs font-semibold text-surface-700 dark:text-surface-300">{t('storeNameLabel')}<input required value={name} onChange={(e) => setName(e.target.value)} className={inputClass} /></label>
             <label className="space-y-1 text-xs font-semibold text-surface-700 dark:text-surface-300">Username<input required value={username} onChange={(e) => setUsername(e.target.value)} className={inputClass} /></label>
             <label className="space-y-1 text-xs font-semibold text-surface-700 dark:text-surface-300">Email<input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={inputClass} /></label>
             <label className="space-y-1 text-xs font-semibold text-surface-700 dark:text-surface-300">Phone<input required type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className={inputClass} /></label>
-            <label className="space-y-1 text-xs font-semibold text-surface-700 dark:text-surface-300 sm:col-span-2">Logo URL<input type="url" value={logo} onChange={(e) => setLogo(e.target.value)} className={inputClass} /></label>
+            <label className="space-y-1 text-xs font-semibold text-surface-700 dark:text-surface-300 sm:col-span-2">{t('logoUrlLabel')}<input type="url" value={logo} onChange={(e) => setLogo(e.target.value)} className={inputClass} /></label>
           </div>
-          <label className="block space-y-1 text-xs font-semibold text-surface-700 dark:text-surface-300">Store description<textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} className={inputClass} /></label>
+          <label className="block space-y-1 text-xs font-semibold text-surface-700 dark:text-surface-300">{t('storeDescLabel')}<textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} className={inputClass} /></label>
 
           <section className="grid gap-3 sm:grid-cols-2">
             <label className="space-y-1 text-xs font-semibold text-surface-700 dark:text-surface-300">Payout method{required ? ' *' : ''}
               <select required={required} value={payoutMethod} onChange={(event) => setPayoutMethod(event.target.value)} className={inputClass}>
-                <option value="">Not set</option>
+                <option value="">{t('notSet')}</option>
                 <option value="bkash">bKash</option>
-                <option value="bank">Bank</option>
+                <option value="bank">{t('bank')}</option>
               </select>
             </label>
             <label className="space-y-1 text-xs font-semibold text-surface-700 dark:text-surface-300">Payout account{required ? ' *' : ''}
@@ -140,21 +140,21 @@ export const SellerProfileModal: React.FC<SellerProfileModalProps> = ({ seller, 
           </section>
 
           <section className="space-y-3">
-            <h3 className="flex items-center gap-2 text-sm font-bold text-surface-900 dark:text-white"><MapPin className="h-4 w-4 text-success-700" />Business address</h3>
+            <h3 className="flex items-center gap-2 text-sm font-bold text-surface-900 dark:text-white"><MapPin className="h-4 w-4 text-success-700" />{t('businessAddress')}</h3>
             <AccountLocationPicker onAddressSelected={(selected) => {
               setHasSelectedLocation(Boolean(selected));
               setAddress(selected ? { ...address, ...selected } : { ...address, Street: '', City: '', Latitude: undefined, Longitude: undefined });
             }} />
             <div className="grid gap-3 sm:grid-cols-2">
-              <label className="space-y-1 text-xs font-semibold text-surface-700 dark:text-surface-300">Building<input required value={address.House_Name} onChange={(e) => setAddress({ ...address, House_Name: e.target.value })} className={inputClass} /></label>
-              <label className="space-y-1 text-xs font-semibold text-surface-700 dark:text-surface-300">Street<input required value={address.Street} onChange={(e) => setAddress({ ...address, Street: e.target.value })} className={inputClass} /></label>
+              <label className="space-y-1 text-xs font-semibold text-surface-700 dark:text-surface-300">{t('building')}<input required value={address.House_Name} onChange={(e) => setAddress({ ...address, House_Name: e.target.value })} className={inputClass} /></label>
+              <label className="space-y-1 text-xs font-semibold text-surface-700 dark:text-surface-300">{t('street')}<input required value={address.Street} onChange={(e) => setAddress({ ...address, Street: e.target.value })} className={inputClass} /></label>
               <label className="space-y-1 text-xs font-semibold text-surface-700 dark:text-surface-300">City<input required value={address.City} onChange={(e) => setAddress({ ...address, City: e.target.value })} className={inputClass} /></label>
               <label className="space-y-1 text-xs font-semibold text-surface-700 dark:text-surface-300">Postal code<input value={address.Postal_Code} onChange={(e) => setAddress({ ...address, Postal_Code: e.target.value })} className={inputClass} /></label>
             </div>
           </section>
 
           <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-surface-200 pt-4 dark:border-surface-800">
-            <p className="text-xs text-warning-700 dark:text-warning-300">Saving any change sets your store to pending until an admin approves it.</p>
+            <p className="text-xs text-warning-700 dark:text-warning-300">{t('saveStorePendingNotice')}</p>
             <button type="submit" disabled={isSaving} className="rounded-lg bg-success-700 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">{isSaving ? t('saving') : t('saveProfile')}</button>
           </footer>
         </form>
