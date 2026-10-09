@@ -758,7 +758,10 @@ router.patch('/:id/status', requireAuth, async (req: AuthRequest, res) => {
       return res.status(403).json({ error: 'Your role cannot update order status' });
     }
 
-    const o = result.rows[0];
+    const paymentRow = await query(
+      'SELECT payment_status, payment_method FROM orders WHERE id = $1', [id]
+    );
+    const o = { ...result.rows[0], ...paymentRow.rows[0] };
     res.json({
       Order_ID: o.id,
       Tracking_ID: o.tracking_id || '',
@@ -768,7 +771,7 @@ router.patch('/:id/status', requireAuth, async (req: AuthRequest, res) => {
       Shipping_Fee: Number(o.shipping_fee),
       Status: o.status as any,
       Payment_Status: o.payment_status || 'pending',
-      Payment_Method: o.payment_method || 'unknown',
+      Payment_Method: o.payment_method || 'cash_on_delivery',
       Shipping_Address: o.shipping_address_json ? (typeof o.shipping_address_json === 'string' ? JSON.parse(o.shipping_address_json) : o.shipping_address_json) : { Street: '', House_Name: '', City: '', Postal_Code: '' },
       Billing_Address: o.billing_address_json ? (typeof o.billing_address_json === 'string' ? JSON.parse(o.billing_address_json) : o.billing_address_json) : { Street: '', House_Name: '', City: '', Postal_Code: '' },
       Order_Placed_At: o.order_placed_at ? new Date(o.order_placed_at).toISOString() : new Date().toISOString(),

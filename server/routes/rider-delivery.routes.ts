@@ -183,7 +183,8 @@ router.post('/deliveries/:id/cod-collected', requireAuth, requireRole(['rider'])
   try {
     const result = await query(
       `UPDATE rider_deliveries SET cod_collected = TRUE
-      WHERE id = $1 AND rider_id = $2 AND status = 'on_the_way' AND cod_amount > 0
+      WHERE id = $1 AND rider_id = $2 AND status = 'on_the_way'
+        AND cod_amount > 0 AND cod_collected = FALSE
       RETURNING id`,
       [req.params.id, req.user!.entityId]
     );

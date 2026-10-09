@@ -33,7 +33,6 @@ jobs:
       SSLCOMMERZ_STORE_PASSWORD: test-store-password
       RUN_SCHEMA_ON_START: 'true'
       RUN_BACKGROUND_JOBS: 'false'
-      PAYMENT_SIMULATOR: 'true'
 
     steps:
       - name: Check out repository
@@ -49,7 +48,7 @@ jobs:
         run: npm ci
 
       - name: Initialize test database
-        run: psql "$DATABASE_URL" -f schema.sql
+        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f schema.sql
 
       - name: Lint TypeScript
         run: npm run lint
