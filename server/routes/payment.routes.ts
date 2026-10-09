@@ -334,28 +334,17 @@ router.post('/init', requireAuth, requireRole(['customer']), async (req: AuthReq
  */
 router.post('/sslcommerz/validate', requireAuth, requireRole(['customer']), async (req: AuthRequest, res) => {
   try {
-    const {
-      tran_id,
-      val_id,
-      order_id,
-      payment_method = 'bkash',
-      customer_phone,
-      card_brand,
-    } = req.body;
+    const { tran_id, val_id, order_id } = req.body;
 
     if (!tran_id || typeof tran_id !== 'string' || !/^SSLCZ-[A-Z0-9-]+$/.test(tran_id)) {
       return res.status(400).json({ error: 'A valid SSLCommerz transaction ID is required' });
     }
-    if (val_id && typeof val_id !== 'string') {
-      return res.status(400).json({ error: 'Payment validation ID must be a string' });
-    }
-    if (val_id && !/^VAL-[A-Z0-9-]+$/.test(val_id)) {
-      return res.status(400).json({ error: 'A valid SSLCommerz validation ID is required' });
+    if (typeof val_id !== 'string' || !val_id.trim()) {
+      return res.status(400).json({ error: 'A payment validation ID is required' });
     }
 
     const payment = await query(
-      `SELECT customer_id, order_id, amount, status
-       FROM payments WHERE transaction_id = $1 FOR UPDATE`,
+      `SELECT customer_id, order_id FROM payments WHERE transaction_id = $1`,
       [tran_id]
     );
     if (payment.rows.length === 0) {
@@ -364,66 +353,17 @@ router.post('/sslcommerz/validate', requireAuth, requireRole(['customer']), asyn
     if (payment.rows[0].customer_id !== req.user!.entityId) {
       return res.status(403).json({ error: 'You can only validate your own payments.' });
     }
-    if (payment.rows[0].status !== 'PENDING') {
-      return res.status(409).json({ error: 'Payment is already finalized.' });
-    }
     if (order_id && payment.rows[0].order_id !== String(order_id)) {
       return res.status(403).json({ error: 'The order does not match this payment.' });
     }
-    if (payment.rows[0].order_id) {
-      const linkedOrder = await query(
-        `SELECT payment_status FROM orders WHERE id = $1 FOR UPDATE`,
-        [payment.rows[0].order_id]
-      );
-      if (!linkedOrder.rows.length || linkedOrder.rows[0].payment_status !== 'pending') {
-        return res.status(409).json({ error: 'Order payment is already finalized.' });
-      }
-    }
-
-    const paymentAmount = Number(payment.rows[0].amount);
-    const validation = await sslcommerz.validatePayment(val_id, tran_id, paymentAmount);
-    if (!validation.ok) {
-      return res.status(402).json({
-        error: 'Payment validation failed.',
-        reason: validation.reason || 'gateway validation did not match the expected payment',
-      });
-    }
-
-    const bankTranId = validation.raw!.bank_tran_id || '';
-    const finalValId = validation.raw!.val_id || val_id;
-    const cardType = validation.raw!.card_type || `${payment_method.toUpperCase()}-Gateway`;
-    const cardBrand = card_brand || validation.raw!.card_brand || (payment_method === 'bkash' ? 'bKash' : 'SSLCommerz');
-    const cardIssuer = validation.raw!.card_issuer || (payment_method === 'bkash' ? 'bKash MFS Limited' : 'SSL Wireless');
-
-    const paymentUpdate = await query(
-      `SELECT * FROM gocart_payment_update($1, 'VALIDATED', $2, $3, $4, $5, $6)
-       WHERE status = 'PENDING'`,
-      [tran_id, bankTranId, finalValId, cardType, cardBrand, cardIssuer]
-    );
-    if (paymentUpdate.rows.length === 0) {
-      return res.status(409).json({ error: 'Payment is already finalized.' });
-    }
-
-    const linkedOrderId = paymentUpdate.rows[0].order_id;
-    if (linkedOrderId) {
-      await query(
-        `UPDATE orders SET payment_status = 'paid', payment_method = $2, transaction_id = $3
-         WHERE id = $1 AND payment_status = 'pending'`,
-        [linkedOrderId, payment_method, tran_id]
-      );
-    }
+    const finalized = await finalizeSslCommerzPayment(tran_id, val_id);
 
     res.json({
       success: true,
       status: 'VALIDATED',
       tran_id,
-      val_id: finalValId,
-      bank_tran_id: bankTranId,
-      payment_method,
-      card_brand: cardBrand,
-      card_issuer: cardIssuer,
+      order_id: finalized.orderId,
       validated_at: new Date().toISOString(),
-      order_id,
     });
   } catch (error: any) {
     if (error instanceof GatewayError) {

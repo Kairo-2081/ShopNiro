@@ -5,11 +5,11 @@
   "main": "electron/main.cjs",
   "type": "module",
   "scripts": {
-    "dev": "tsx server/index.ts",
+    "dev": "cross-env NODE_ENV=development tsx server/index.ts",
     "build": "vite build && esbuild server/index.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
     "start": "node dist/server.cjs",
     "preview": "vite preview",
-    "test": "node --import tsx --test tests/**/*.test.ts",
+    "test": "cross-env NODE_ENV=test node --import tsx --test tests/**/*.test.ts",
     "test:ci": "npm test",
     "electron:dev": "electron .",
     "electron:build": "npm run build && electron-builder --win -p never",

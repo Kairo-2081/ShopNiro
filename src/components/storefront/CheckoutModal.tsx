@@ -39,6 +39,7 @@ interface CheckoutModalProps {
     Subtotal: number;
     Shipping_Fee: number;
     Additional_Info?: string;
+    paymentMethod: 'cash_on_delivery' | 'online';
     Currency?: string;
   }) => Promise<Order>;
   onOrderSuccess: (order: Order) => void;
@@ -306,6 +307,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         Subtotal: discountedSubtotal,
         Shipping_Fee: shippingFee,
         Additional_Info: additionalNotes,
+        paymentMethod: paymentMethod === 'cash_on_delivery' ? 'cash_on_delivery' : 'online',
         Currency: 'BDT',
       });
     } catch (err: any) {

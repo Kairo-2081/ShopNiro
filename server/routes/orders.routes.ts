@@ -118,6 +118,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
       Shipping_Fee,
       Additional_Info,
     } = req.body;
+    const paymentMethod = req.body?.paymentMethod === 'cash_on_delivery' ? 'cash_on_delivery' : 'online';
     const forbiddenPaymentFields = ['Payment_Status', 'payment_status', 'Payment_Method', 'payment_method', 'Transaction_ID', 'transaction_id'];
     const suppliedForbiddenPaymentFields = forbiddenPaymentFields.filter((field) => Object.prototype.hasOwnProperty.call(req.body, field));
     if (suppliedForbiddenPaymentFields.length) {
@@ -257,7 +258,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
     );
     const recordedPromotions = [voucherCode, ...bundlePricing.appliedBundleIds.map((bundleId) => `BUNDLE:${bundleId}`), cartDiscountEligible ? 'CART5' : ''].filter(Boolean).join('+');
     await query(`
-      UPDATE orders SET subtotal = $2, items_json = $3, applied_voucher = $4 WHERE id = $1
+      UPDATE orders SET subtotal = $2, items_json = $3, applied_voucher = $4, payment_method = $5 WHERE id = $1
     `, [id, finalSubtotal, JSON.stringify(orderedItems.rows.map((item: any) => ({
       Product_ID: item.product_id_snapshot,
       Seller_ID: item.seller_id_snapshot,
@@ -266,7 +267,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
       Quantity: Number(item.quantity),
       Image: item.image || '',
       Size: item.size || undefined,
-    }))), recordedPromotions]);
+    }))), recordedPromotions, paymentMethod]);
 
     const newOrder: Order = {
       Order_ID: id,
@@ -285,7 +286,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
       Shipping_Fee: shippingFee,
       Status: 'placed',
       Payment_Status: 'pending',
-      Payment_Method: 'cash_on_delivery',
+      Payment_Method: paymentMethod,
       Transaction_ID: '',
       Applied_Voucher: recordedPromotions || undefined,
       Currency: 'BDT',
@@ -502,11 +503,12 @@ router.patch('/:id/revert-failed-payment', requireAuth, async (req: AuthRequest,
     client = await pool.connect();
     await client.query('BEGIN');
     const paymentResult = await client.query(
-      `SELECT status FROM payments WHERE order_id = $1 FOR UPDATE`,
+      `SELECT status, created_at > CURRENT_TIMESTAMP - INTERVAL '30 minutes' AS within_ipn_window
+       FROM payments WHERE order_id = $1 ORDER BY created_at DESC FOR UPDATE`,
       [req.params.id]
     );
     const orderResult = await client.query(
-      `SELECT id, customer_id, status, payment_status
+      `SELECT id, customer_id, status, payment_status, payment_method
        FROM orders WHERE id = $1 AND customer_id = $2 FOR UPDATE`,
       [req.params.id, req.user.entityId]
     );
@@ -515,9 +517,17 @@ router.patch('/:id/revert-failed-payment', requireAuth, async (req: AuthRequest,
       await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Order not found.' });
     }
+    if (order.payment_method === 'cash_on_delivery') {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'Cash-on-delivery orders cannot be reverted as failed online payments.' });
+    }
     if (order.payment_status !== 'pending' || paymentResult.rows.some((payment) => payment.status === 'VALIDATED')) {
       await client.query('ROLLBACK');
       return res.status(409).json({ error: 'This payment was already completed. The order was not returned to the cart.' });
+    }
+    if (paymentResult.rows.some((payment) => payment.status === 'PENDING' && payment.within_ipn_window)) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'Payment is still being confirmed. Please wait before restoring this order to your cart.' });
     }
     if (!['placed', 'processing'].includes(order.status)) {
       await client.query('ROLLBACK');
@@ -527,6 +537,32 @@ router.patch('/:id/revert-failed-payment', requireAuth, async (req: AuthRequest,
     const items = await client.query(
       `SELECT product_id_snapshot AS product_id, quantity, size
        FROM order_items WHERE order_id = $1 ORDER BY order_item_id`,
+      [order.id]
+    );
+
+    await client.query(
+      `SELECT product.id
+       FROM products product
+       JOIN (
+         SELECT product_id_snapshot
+         FROM order_items
+         WHERE order_id = $1
+         GROUP BY product_id_snapshot
+       ) cancelled_item ON cancelled_item.product_id_snapshot = product.id
+       ORDER BY product.id
+       FOR UPDATE OF product`,
+      [order.id]
+    );
+    await client.query(
+      `UPDATE products product
+       SET stock = product.stock + cancelled_item.quantity
+       FROM (
+         SELECT product_id_snapshot, SUM(quantity)::INTEGER AS quantity
+         FROM order_items
+         WHERE order_id = $1
+         GROUP BY product_id_snapshot
+       ) cancelled_item
+       WHERE product.id = cancelled_item.product_id_snapshot`,
       [order.id]
     );
 
@@ -569,7 +605,7 @@ router.patch('/:id/status', requireAuth, async (req: AuthRequest, res) => {
 
     const actor = req.user!;
     const accessResult = await query(
-      `SELECT o.customer_id, o.status,
+      `SELECT o.customer_id, o.status, o.payment_status, o.payment_method,
         EXISTS (
           SELECT 1 FROM order_items oi
           WHERE oi.order_id = o.id AND oi.seller_id_snapshot = $2
@@ -588,6 +624,9 @@ router.patch('/:id/status', requireAuth, async (req: AuthRequest, res) => {
     } else if (actor.role === 'seller') {
       if (!existingOrder.seller_owns_order) {
         return res.status(403).json({ error: 'You can only update orders containing your products' });
+      }
+      if (status === 'shipped' && existingOrder.payment_method !== 'cash_on_delivery' && existingOrder.payment_status !== 'paid') {
+        return res.status(409).json({ error: 'Order payment is not confirmed.' });
       }
       if (!['processing', 'shipped'].includes(status)) {
         return res.status(403).json({ error: 'Sellers may set orders to processing or shipped' });
@@ -639,6 +678,9 @@ router.patch('/:id/status', requireAuth, async (req: AuthRequest, res) => {
         result = await query(`SELECT * FROM gocart_orders_list() WHERE id = $1`, [id]);
       }
     } else if (actor.role === 'admin') {
+      if (status === 'shipped' && existingOrder.payment_method !== 'cash_on_delivery' && existingOrder.payment_status !== 'paid') {
+        return res.status(409).json({ error: 'Order payment is not confirmed.' });
+      }
       result = await query(`SELECT * FROM gocart_order_status_update($1, $2)`, [id, status]);
     } else {
       return res.status(403).json({ error: 'Your role cannot update order status' });
@@ -653,8 +695,8 @@ router.patch('/:id/status', requireAuth, async (req: AuthRequest, res) => {
       Subtotal: Number(o.subtotal),
       Shipping_Fee: Number(o.shipping_fee),
       Status: o.status as any,
-      Payment_Status: 'paid',
-      Payment_Method: 'bkash',
+      Payment_Status: o.payment_status || 'pending',
+      Payment_Method: o.payment_method || 'unknown',
       Shipping_Address: o.shipping_address_json ? (typeof o.shipping_address_json === 'string' ? JSON.parse(o.shipping_address_json) : o.shipping_address_json) : { Street: '', House_Name: '', City: '', Postal_Code: '' },
       Billing_Address: o.billing_address_json ? (typeof o.billing_address_json === 'string' ? JSON.parse(o.billing_address_json) : o.billing_address_json) : { Street: '', House_Name: '', City: '', Postal_Code: '' },
       Order_Placed_At: o.order_placed_at ? new Date(o.order_placed_at).toISOString() : new Date().toISOString(),

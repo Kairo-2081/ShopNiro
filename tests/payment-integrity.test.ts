@@ -11,10 +11,11 @@ const { generateToken, verifyToken } = await import('../server/middleware/auth.t
 const { default: ordersRoutes } = await import('../server/routes/orders.routes.ts');
 const { default: riderDeliveryRoutes } = await import('../server/routes/rider-delivery.routes.ts');
 const { default: paymentRoutes } = await import('../server/routes/payment.routes.ts');
+const { sslcommerz } = await import('../server/services/sslcommerz.service.ts');
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
-  throw new Error('DATABASE_URL is required for payment-integrity tests. Start PostgreSQL or use the CI workflow.');
+  throw new Error('DATABASE_URL for an isolated test database is required. Start PostgreSQL or use the CI workflow.');
 }
 
 const listen = (app: express.Express): Promise<Server> =>
@@ -55,13 +56,69 @@ const request = async (
   });
 };
 
-const createSession = async (role: 'customer' | 'rider', entityId: string) => {
-  const userId = `TEST-${role}-${randomUUID()}`;
+const createTestUser = async (role: 'customer' | 'seller' | 'rider', entityId: string) => {
+  await query(
+    'INSERT INTO users (id, username, email, role) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO NOTHING',
+    [entityId, entityId, `${entityId}@example.invalid`, role]
+  );
+};
+
+const createCustomer = async (customerId: string, name = 'Test Customer') => {
+  await createTestUser('customer', customerId);
+  return query('INSERT INTO customers (id, name) VALUES ($1, $2)', [customerId, name]);
+};
+
+const createSession = async (role: 'customer' | 'seller' | 'rider', entityId: string) => {
+  const userId = entityId;
   const token = generateToken({ userId, email: `${userId}@example.invalid`, username: userId, role, entityId });
   const decoded = verifyToken(token);
-  await query('INSERT INTO users (id, username, email, role) VALUES ($1, $2, $3, $4)', [userId, userId, `${userId}@example.invalid`, role]);
+  await createTestUser(role, entityId);
   await query('SELECT gocart_session_create($1, $2, $3)', [decoded.jti, userId, new Date(Date.now() + 60 * 60 * 1000).toISOString()]);
   return `shopniro_session=${encodeURIComponent(token)}`;
+};
+
+const createCheckoutFixture = async (quantity = 2, stock = 10, price = 100) => {
+  const customerId = `CUSTOMER-${randomUUID()}`;
+  const sellerId = `SELLER-${randomUUID()}`;
+  const categoryId = `CATEGORY-${randomUUID()}`;
+  const productId = `PRODUCT-${randomUUID()}`;
+  await createCustomer(customerId, 'Checkout Test Customer');
+  await createTestUser('seller', sellerId);
+  await query('INSERT INTO sellers (id, name, status) VALUES ($1, $2, $3)', [sellerId, 'Checkout Test Seller', 'approved']);
+  await query('INSERT INTO categories (id, name) VALUES ($1, $2)', [categoryId, `Checkout ${categoryId}`]);
+  await query(`
+    INSERT INTO products (id, name, image, description, price, stock, product_status, category_id, seller_id)
+    VALUES ($1, $2, $3, $4, $5, $6, 'active', $7, $8)
+  `, [productId, 'Checkout Test Product', '', '', price, stock, categoryId, sellerId]);
+  await query('INSERT INTO cart (id, customer_id, product_id, quantity, size) VALUES ($1, $2, $3, $4, $5)', [
+    `CART-${randomUUID()}`, customerId, productId, quantity, '',
+  ]);
+
+  return {
+    customerId,
+    sellerId,
+    productId,
+    quantity,
+    price,
+    customerCookie: await createSession('customer', customerId),
+    sellerCookie: await createSession('seller', sellerId),
+  };
+};
+
+const placeCartOrder = async (
+  fixture: Awaited<ReturnType<typeof createCheckoutFixture>>,
+  paymentMethod: 'cash_on_delivery' | 'online'
+) => {
+  const address = { Street: 'Test street', City: 'Dhaka', Postal_Code: '1200' };
+  const response = await request(server, '/api/orders', 'POST', {
+    Customer_ID: fixture.customerId,
+    Items: [{ Product_ID: fixture.productId, Quantity: fixture.quantity }],
+    Shipping_Address: address,
+    Billing_Address: address,
+    paymentMethod,
+  }, fixture.customerCookie);
+  assert.equal(response.status, 201, JSON.stringify(response.body));
+  return response.body;
 };
 
 const createOrder = async (customerId: string, orderId: string) => {
@@ -93,7 +150,9 @@ const createCodDelivery = async (customerId: string, orderId: string, riderId: s
   const sellerId = `SELLER-${randomUUID()}`;
   const fulfillmentId = `FUL-${randomUUID()}`;
   const deliveryId = `DLV-${randomUUID()}`;
+  await createTestUser('seller', sellerId);
   await query('INSERT INTO sellers (id, name, status) VALUES ($1, $2, $3)', [sellerId, 'Test Seller', 'approved']);
+  await createTestUser('rider', riderId);
   await query(`
     INSERT INTO seller_fulfillments (id, order_id, seller_id, items_json, subtotal, status)
     VALUES ($1, $2, $3, $4, $5, $6)
@@ -119,7 +178,7 @@ try {
   test('payment init rejects client-controlled amount and keeps the order pending', async () => {
     const customerId = `CUSTOMER-${randomUUID()}`;
     const orderId = `ORD-${randomUUID()}`;
-    const customer = await query('INSERT INTO customers (id, name) VALUES ($1, $2)', [customerId, 'Test Customer']);
+    const customer = await createCustomer(customerId);
     assert.equal(customer.rows.length, 1);
     await createOrder(customerId, orderId);
     const cookie = await createSession('customer', customerId);
@@ -134,7 +193,7 @@ try {
   test('customer status updates are denied and do not mutate the order', async () => {
     const customerId = `CUSTOMER-${randomUUID()}`;
     const orderId = `ORD-${randomUUID()}`;
-    await query('INSERT INTO customers (id, name) VALUES ($1, $2)', [customerId, 'Test Customer']);
+    await createCustomer(customerId);
     await createOrder(customerId, orderId);
     const cookie = await createSession('customer', customerId);
 
@@ -149,7 +208,7 @@ try {
     const customerId = `CUSTOMER-${randomUUID()}`;
     const orderId = `ORD-${randomUUID()}`;
     const riderId = `RIDER-${randomUUID()}`;
-    await query('INSERT INTO customers (id, name) VALUES ($1, $2)', [customerId, 'Test Customer']);
+    await createCustomer(customerId);
     await createOrder(customerId, orderId);
     const cookie = await createSession('rider', riderId);
     const { deliveryId } = await createCodDelivery(customerId, orderId, riderId);
@@ -176,7 +235,7 @@ try {
   test('the forged customer confirmation route is absent', async () => {
     const customerId = `CUSTOMER-${randomUUID()}`;
     const orderId = `ORD-${randomUUID()}`;
-    await query('INSERT INTO customers (id, name) VALUES ($1, $2)', [customerId, 'Test Customer']);
+    await createCustomer(customerId);
     await createOrder(customerId, orderId);
     const cookie = await createSession('customer', customerId);
 
@@ -186,20 +245,107 @@ try {
     assert.equal(order.rows[0].payment_status, 'pending');
   });
 
-  test('failed online payment restores the order items to the cart instead of creating a COD order', async () => {
-    const customerId = `CUSTOMER-${randomUUID()}`;
-    const orderId = `ORD-${randomUUID()}`;
-    await query('INSERT INTO customers (id, name) VALUES ($1, $2)', [customerId, 'Test Customer']);
-    await createOrder(customerId, orderId);
-    const cookie = await createSession('customer', customerId);
+  test('COD selected at checkout is persisted and creates a collectable rider amount', async () => {
+    const fixture = await createCheckoutFixture();
+    const order = await placeCartOrder(fixture, 'cash_on_delivery');
+    assert.equal(order.Payment_Method, 'cash_on_delivery');
+    assert.equal(order.Payment_Status, 'pending');
 
-    const response = await request(server, `/api/orders/${orderId}/revert-failed-payment`, 'PATCH', undefined, cookie);
-    assert.equal(response.status, 200);
-    assert.equal(response.body.success, true);
-    assert.equal(response.body.restored_to_cart, true);
+    const revert = await request(server, `/api/orders/${order.Order_ID}/revert-failed-payment`, 'PATCH', undefined, fixture.customerCookie);
+    assert.equal(revert.status, 409);
 
-    const order = await query('SELECT COUNT(*)::integer AS remaining FROM orders WHERE id = $1', [orderId]);
-    assert.equal(order.rows[0].remaining, 0);
+    const shipment = await request(server, `/api/orders/${order.Order_ID}/status`, 'PATCH', { status: 'shipped' }, fixture.sellerCookie);
+    assert.equal(shipment.status, 200, JSON.stringify(shipment.body));
+    assert.equal(shipment.body.Payment_Method, 'cash_on_delivery');
+    assert.equal(shipment.body.Payment_Status, 'pending');
+    const delivery = await query(`
+      SELECT rd.cod_amount FROM rider_deliveries rd
+      JOIN seller_fulfillments sf ON sf.id = rd.fulfillment_id
+      WHERE sf.order_id = $1
+    `, [order.Order_ID]);
+    assert.equal(delivery.rows.length, 1);
+    assert.ok(Number(delivery.rows[0].cod_amount) > 0);
+  });
+
+  test('failed online checkout rollback restores stock and cart quantity exactly', async () => {
+    const fixture = await createCheckoutFixture(3, 12, 100);
+    const order = await placeCartOrder(fixture, 'online');
+    assert.equal(order.Payment_Method, 'online');
+    const afterCheckout = await query('SELECT stock FROM products WHERE id = $1', [fixture.productId]);
+    assert.equal(Number(afterCheckout.rows[0].stock), 9);
+
+    const response = await request(server, `/api/orders/${order.Order_ID}/revert-failed-payment`, 'PATCH', undefined, fixture.customerCookie);
+    assert.equal(response.status, 200, JSON.stringify(response.body));
+    const afterRollback = await query('SELECT stock FROM products WHERE id = $1', [fixture.productId]);
+    const cart = await query('SELECT quantity FROM cart WHERE customer_id = $1 AND product_id = $2', [fixture.customerId, fixture.productId]);
+    const remainingOrder = await query('SELECT COUNT(*)::integer AS remaining FROM orders WHERE id = $1', [order.Order_ID]);
+    assert.equal(Number(afterRollback.rows[0].stock), 12);
+    assert.equal(Number(cart.rows[0].quantity), 3);
+    assert.equal(remainingOrder.rows[0].remaining, 0);
+  });
+
+  test('rollback waits while a recent payment is pending IPN confirmation', async () => {
+    const fixture = await createCheckoutFixture();
+    const order = await placeCartOrder(fixture, 'online');
+    const transactionId = `SSLCZ-${randomUUID().replaceAll('-', '').toUpperCase()}`;
+    await query(`
+      INSERT INTO payments (id, order_id, customer_id, amount, currency, gateway, payment_method, transaction_id, status)
+      VALUES ($1, $2, $3, $4, 'BDT', 'sslcommerz', 'bkash', $5, 'PENDING')
+    `, [`PAY-${randomUUID()}`, order.Order_ID, fixture.customerId, Number(order.Subtotal) + Number(order.Shipping_Fee), transactionId]);
+
+    const response = await request(server, `/api/orders/${order.Order_ID}/revert-failed-payment`, 'PATCH', undefined, fixture.customerCookie);
+    assert.equal(response.status, 409);
+    const orderStillExists = await query('SELECT payment_status FROM orders WHERE id = $1', [order.Order_ID]);
+    const stock = await query('SELECT stock FROM products WHERE id = $1', [fixture.productId]);
+    assert.equal(orderStillExists.rows[0].payment_status, 'pending');
+    assert.equal(Number(stock.rows[0].stock), 8);
+  });
+
+  test('seller cannot ship an unpaid online order', async () => {
+    const fixture = await createCheckoutFixture();
+    const order = await placeCartOrder(fixture, 'online');
+
+    const shipment = await request(server, `/api/orders/${order.Order_ID}/status`, 'PATCH', { status: 'shipped' }, fixture.sellerCookie);
+    assert.equal(shipment.status, 409);
+    assert.equal(shipment.body.error, 'Order payment is not confirmed.');
+    const fulfillment = await query('SELECT status FROM seller_fulfillments WHERE order_id = $1', [order.Order_ID]);
+    const deliveries = await query('SELECT COUNT(*)::integer AS count FROM rider_deliveries rd JOIN seller_fulfillments sf ON sf.id = rd.fulfillment_id WHERE sf.order_id = $1', [order.Order_ID]);
+    assert.equal(fulfillment.rows[0].status, 'processing');
+    assert.equal(deliveries.rows[0].count, 0);
+  });
+
+  test('/validate finalizes via the shared gateway verifier and ignores client payment method', async () => {
+    const fixture = await createCheckoutFixture();
+    const order = await placeCartOrder(fixture, 'online');
+    const transactionId = `SSLCZ-${randomUUID().replaceAll('-', '').toUpperCase()}`;
+    const validationId = `VAL-${randomUUID().replaceAll('-', '').toUpperCase()}`;
+    const amount = Number(order.Subtotal) + Number(order.Shipping_Fee);
+    await query(`
+      INSERT INTO payments (id, order_id, customer_id, amount, currency, gateway, payment_method, transaction_id, status)
+      VALUES ($1, $2, $3, $4, 'BDT', 'sslcommerz', 'bkash', $5, 'PENDING')
+    `, [`PAY-${randomUUID()}`, order.Order_ID, fixture.customerId, amount, transactionId]);
+
+    const originalValidatePayment = sslcommerz.validatePayment;
+    (sslcommerz as any).validatePayment = async (valId: string, tranId: string, expectedAmount: number) => ({
+      ok: valId === validationId && tranId === transactionId && expectedAmount === amount,
+      raw: { status: 'VALID', tran_id: transactionId, val_id: validationId, amount, currency: 'BDT', bank_tran_id: 'BANK-TEST-1', card_type: 'bKash', card_brand: 'bKash', card_issuer: 'bKash' },
+    });
+    try {
+      const response = await request(server, '/api/payment/sslcommerz/validate', 'POST', {
+        tran_id: transactionId,
+        val_id: validationId,
+        order_id: order.Order_ID,
+        payment_method: 'cash_on_delivery',
+      }, fixture.customerCookie);
+      assert.equal(response.status, 200, JSON.stringify(response.body));
+      assert.equal(response.body.order_id, order.Order_ID);
+      const finalized = await query('SELECT o.payment_status, o.payment_method, p.status FROM orders o JOIN payments p ON p.order_id = o.id WHERE o.id = $1', [order.Order_ID]);
+      assert.equal(finalized.rows[0].payment_status, 'paid');
+      assert.equal(finalized.rows[0].payment_method, 'bkash');
+      assert.equal(finalized.rows[0].status, 'VALIDATED');
+    } finally {
+      (sslcommerz as any).validatePayment = originalValidatePayment;
+    }
   });
 } finally {
   await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));

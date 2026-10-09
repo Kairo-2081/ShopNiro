@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { test } from 'node:test';
 
 const originalNodeEnv = process.env.NODE_ENV;
 const originalIpnToken = process.env.SSLCOMMERZ_IPN_TOKEN;
 
 try {
-  test('SSLCommerz falls back to a dev IPN token when no env var is set', async () => {
+  test('development uses the local IPN token only in an explicit development environment', async () => {
     process.env.NODE_ENV = 'development';
     delete process.env.SSLCOMMERZ_IPN_TOKEN;
 
@@ -14,6 +15,30 @@ try {
     assert.equal(typeof sslcommerz.getIpnToken(), 'string');
     assert.ok(sslcommerz.getIpnToken().length > 0);
     assert.equal(sslcommerz.getIpnToken(), 'dev-local-sslcommerz-ipn-token');
+  });
+
+  test('production-like startup refuses to run without an IPN token', () => {
+    const result = spawnSync(process.execPath, [
+      '--import', 'dotenv/config',
+      '--import', 'tsx',
+      '--input-type=module',
+      '-e', "await import('./server/services/sslcommerz.service.ts')",
+    ], {
+      cwd: process.cwd(),
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        NODE_ENV: 'production',
+        SSLCOMMERZ_IS_SANDBOX: 'false',
+        PAYMENT_SIMULATOR: 'false',
+        SSLCOMMERZ_STORE_ID: 'test-production-store',
+        SSLCOMMERZ_STORE_PASSWORD: 'test-production-password',
+        SSLCOMMERZ_IPN_TOKEN: '',
+      },
+    });
+
+    assert.notEqual(result.status, 0);
+    assert.match(`${result.stdout}\n${result.stderr}`, /SSLCOMMERZ_IPN_TOKEN/);
   });
 } finally {
   if (originalNodeEnv === undefined) delete process.env.NODE_ENV;

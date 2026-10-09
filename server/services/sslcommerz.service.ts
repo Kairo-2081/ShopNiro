@@ -73,15 +73,20 @@ class SSLCommerzService {
   private paymentSimulatorEnabled: boolean;
 
   constructor() {
-    this.storeId = process.env.SSLCOMMERZ_STORE_ID || 'testbox';
-    this.storePasswd = process.env.SSLCOMMERZ_STORE_PASSWORD || 'qwerty';
-    this.ipnToken = process.env.SSLCOMMERZ_IPN_TOKEN || (process.env.NODE_ENV !== 'production' ? 'dev-local-sslcommerz-ipn-token' : '');
+    const isDeveloperEnvironment = ['development', 'test'].includes(process.env.NODE_ENV || '');
+    this.storeId = process.env.SSLCOMMERZ_STORE_ID || (isDeveloperEnvironment ? 'testbox' : '');
+    this.storePasswd = process.env.SSLCOMMERZ_STORE_PASSWORD || (isDeveloperEnvironment ? 'qwerty' : '');
+    this.ipnToken = process.env.SSLCOMMERZ_IPN_TOKEN || (isDeveloperEnvironment ? 'dev-local-sslcommerz-ipn-token' : '');
     const sandboxSetting = process.env.SSLCOMMERZ_IS_SANDBOX;
     this.isSandbox = sandboxSetting === 'true';
-    this.paymentSimulatorEnabled = process.env.PAYMENT_SIMULATOR === 'true' && process.env.NODE_ENV !== 'production';
+    this.paymentSimulatorEnabled = process.env.PAYMENT_SIMULATOR === 'true' && isDeveloperEnvironment;
 
-    if (process.env.NODE_ENV === 'production') {
-      if (this.paymentSimulatorEnabled || sandboxSetting !== 'false') {
+    if (!isDeveloperEnvironment) {
+      if (!this.ipnToken) throw new Error('Production requires SSLCOMMERZ_IPN_TOKEN.');
+      if (!this.storeId || !this.storePasswd || this.storeId === 'testbox' || this.storePasswd === 'qwerty') {
+        throw new Error('Production requires valid SSLCommerz store credentials.');
+      }
+      if (process.env.PAYMENT_SIMULATOR === 'true' || sandboxSetting !== 'false') {
         throw new Error('Production requires SSLCOMMERZ_IS_SANDBOX=false and PAYMENT_SIMULATOR must not be true.');
       }
     }
