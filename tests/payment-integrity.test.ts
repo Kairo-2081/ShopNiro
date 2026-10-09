@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mock, test } from 'node:test';
+import { after, mock, test } from 'node:test';
 import express from 'express';
 import { request as httpRequest, Server } from 'node:http';
 import { randomUUID } from 'node:crypto';
@@ -186,8 +186,7 @@ app.use('/api/payment', paymentRoutes);
 app.use('/api/riders', riderDeliveryRoutes);
 const server = await listen(app);
 
-try {
-  dbTest('plaintext stored passwords are rejected with the same message as unknown accounts', async () => {
+dbTest('plaintext stored passwords are rejected with the same message as unknown accounts', async () => {
     const userId = `PLAINTEXT-${randomUUID()}`;
     const username = userId.toLowerCase();
     const email = `${username}@example.invalid`;
@@ -205,7 +204,7 @@ try {
     assert.equal(unknownLogin.body.error, plaintextLogin.body.error);
     const stored = await query('SELECT password FROM users WHERE id = $1', [userId]);
     assert.equal(stored.rows[0].password, plaintextPassword);
-  });
+});
 
   dbTest('refund queue completes approved cancellation refunds and marks the order refunded', async () => {
     const customerId = `CUSTOMER-${randomUUID()}`;
@@ -509,7 +508,10 @@ try {
     } finally {
       (sslcommerz as any).validatePayment = originalValidatePayment;
     }
-  });
-} finally {
-  await new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
-}
+});
+
+after(async () => {
+  await new Promise<void>((resolve, reject) =>
+    server.close((error) => (error ? reject(error) : resolve()))
+  );
+});
