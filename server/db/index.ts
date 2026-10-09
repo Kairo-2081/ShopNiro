@@ -55,11 +55,19 @@ export function getDatabaseProviderInfo() {
   };
 }
 
+const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
+
+function sslFor(host?: string): pg.PoolConfig['ssl'] {
+  const mode = (process.env.DATABASE_SSL || '').toLowerCase();
+  if (mode === 'false' || mode === 'disable') return false;
+  if (mode === 'true' || mode === 'require') return { rejectUnauthorized: false };
+  return host && LOCAL_HOSTS.has(host) ? false : { rejectUnauthorized: false };
+}
+
 export const createPool = () => {
   if (!global._postgresPool) {
-    const supabaseUrl = process.env.SUPABASE_DB_URL || (process.env.DATABASE_URL && process.env.DATABASE_URL.includes('supabase') ? process.env.DATABASE_URL : undefined);
-    const genericDbUrl = process.env.DATABASE_URL;
-    const connStr = supabaseUrl || genericDbUrl;
+    const connStr = process.env.SUPABASE_DB_URL || process.env.DATABASE_URL;
+    const common = { max: 10, connectionTimeoutMillis: 15000 };
 
     if (connStr) {
       const parsed = parsePostgresUrl(connStr);
@@ -71,20 +79,14 @@ export const createPool = () => {
           password: parsed.password,
           port: parsed.port,
           database: parsed.database,
-          ssl: {
-            rejectUnauthorized: false,
-          },
-          max: 10,
-          connectionTimeoutMillis: 15000,
+          ssl: sslFor(parsed.host),
+          ...common,
         });
       } else {
         global._postgresPool = new Pool({
           connectionString: connStr,
-          ssl: {
-            rejectUnauthorized: false,
-          },
-          max: 10,
-          connectionTimeoutMillis: 15000,
+          ssl: sslFor(),
+          ...common,
         });
       }
     } else if (process.env.SUPABASE_DB_HOST) {
@@ -95,11 +97,8 @@ export const createPool = () => {
         password: process.env.SUPABASE_DB_PASSWORD,
         database: process.env.SUPABASE_DB_NAME || 'postgres',
         port: Number(process.env.SUPABASE_DB_PORT) || 5432,
-        ssl: {
-          rejectUnauthorized: false,
-        },
-        max: 10,
-        connectionTimeoutMillis: 15000,
+        ssl: sslFor(process.env.SUPABASE_DB_HOST),
+        ...common,
       });
     } else {
       global._postgresPool = new Pool({
@@ -107,8 +106,8 @@ export const createPool = () => {
         user: process.env.SQL_USER,
         password: process.env.SQL_PASSWORD,
         database: process.env.SQL_DB_NAME,
-        max: 10,
-        connectionTimeoutMillis: 15000,
+        ssl: sslFor(process.env.SQL_HOST || 'localhost'),
+        ...common,
       });
     }
 

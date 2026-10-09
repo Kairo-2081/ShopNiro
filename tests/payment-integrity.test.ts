@@ -55,8 +55,9 @@ const request = async (
 
 const createTestUser = async (role: 'customer' | 'seller' | 'rider', entityId: string) => {
   await query(
-    'INSERT INTO users (id, username, email, role) VALUES ($1, $2, $3, $4) ON CONFLICT (id) DO NOTHING',
-    [entityId, entityId, `${entityId}@example.invalid`, role]
+    `INSERT INTO users (id, username, password, email, role)
+     VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING`,
+    [entityId, entityId, '!test-account-no-login', `${entityId}@example.invalid`, role]
   );
 };
 
