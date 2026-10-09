@@ -51,19 +51,64 @@ export interface SSLCommerzValidationResponse {
   error?: string;
 }
 
+export interface SSLCommerzValidationResult {
+  ok: boolean;
+  reason?: string;
+  raw?: SSLCommerzValidationResponse;
+}
+
+export class GatewayError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'GatewayError';
+  }
+}
+
 class SSLCommerzService {
   private storeId: string;
   private storePasswd: string;
+  private ipnToken: string;
   private isSandbox: boolean;
   private baseUrl: string;
+  private paymentSimulatorEnabled: boolean;
 
   constructor() {
     this.storeId = process.env.SSLCOMMERZ_STORE_ID || 'testbox';
     this.storePasswd = process.env.SSLCOMMERZ_STORE_PASSWORD || 'qwerty';
-    this.isSandbox = process.env.SSLCOMMERZ_IS_SANDBOX !== 'false';
+    this.ipnToken = process.env.SSLCOMMERZ_IPN_TOKEN || (process.env.NODE_ENV !== 'production' ? 'dev-local-sslcommerz-ipn-token' : '');
+    const sandboxSetting = process.env.SSLCOMMERZ_IS_SANDBOX;
+    this.isSandbox = sandboxSetting === 'true';
+    this.paymentSimulatorEnabled = process.env.PAYMENT_SIMULATOR === 'true' && process.env.NODE_ENV !== 'production';
+
+    if (process.env.NODE_ENV === 'production') {
+      if (this.paymentSimulatorEnabled || sandboxSetting !== 'false') {
+        throw new Error('Production requires SSLCOMMERZ_IS_SANDBOX=false and PAYMENT_SIMULATOR must not be true.');
+      }
+    }
+
     this.baseUrl = this.isSandbox
       ? 'https://sandbox.sslcommerz.com'
       : 'https://securepay.sslcommerz.com';
+  }
+
+  public getIpnToken(): string {
+    return this.ipnToken;
+  }
+
+  public isPaymentSimulatorEnabled(): boolean {
+    return this.paymentSimulatorEnabled;
+  }
+
+  private createSimulatedSession(params: SSLCommerzInitParams, hostUrl: string): SSLCommerzInitResponse {
+    const simulatorUrl = `${hostUrl}/api/payment/simulator?tran_id=${encodeURIComponent(params.tran_id)}`;
+    return {
+      status: 'SUCCESS',
+      sessionkey: `SSLCZ-SESS-${Date.now()}`,
+      GatewayPageURL: simulatorUrl,
+      DirectPaymentURLbKash: simulatorUrl,
+      isSandbox: this.isSandbox,
+      tran_id: params.tran_id,
+    };
   }
 
   public getSettings() {
@@ -71,6 +116,7 @@ class SSLCommerzService {
       storeId: this.storeId,
       isSandbox: this.isSandbox,
       gatewayUrl: this.baseUrl,
+      ipnTokenConfigured: Boolean(this.ipnToken),
     };
   }
 
@@ -78,6 +124,8 @@ class SSLCommerzService {
    * Initialize payment session with SSLCommerz
    */
   public async initPayment(params: SSLCommerzInitParams, hostUrl: string = 'http://localhost:3000'): Promise<SSLCommerzInitResponse> {
+    if (this.paymentSimulatorEnabled) return this.createSimulatedSession(params, hostUrl);
+
     const successUrl = params.success_url || `${hostUrl}/api/payment/sslcommerz/success`;
     const failUrl = params.fail_url || `${hostUrl}/api/payment/sslcommerz/fail`;
     const cancelUrl = params.cancel_url || `${hostUrl}/api/payment/sslcommerz/cancel`;
@@ -135,75 +183,79 @@ class SSLCommerzService {
         }
       }
     } catch (err: any) {
-      console.warn('SSLCommerz gateway API call warning (using integrated interactive gateway):', err.message);
+      if (this.paymentSimulatorEnabled) {
+        return this.createSimulatedSession(params, hostUrl);
+      }
+      throw new GatewayError('SSLCommerz gateway is unavailable.');
     }
 
-    // Interactive Sandbox Simulator Fallback
-    const simulatedSession = `SSLCZ-SESS-${Date.now()}`;
-    return {
-      status: 'SUCCESS',
-      sessionkey: simulatedSession,
-      GatewayPageURL: `${hostUrl}/payment/gateway?tran_id=${params.tran_id}`,
-      DirectPaymentURLbKash: `${hostUrl}/payment/bkash?tran_id=${params.tran_id}`,
-      isSandbox: this.isSandbox,
-      tran_id: params.tran_id,
-    };
+    if (this.paymentSimulatorEnabled) return this.createSimulatedSession(params, hostUrl);
+    throw new GatewayError('SSLCommerz gateway rejected the payment session.');
   }
 
   /**
-   * Validate SSLCommerz transaction using val_id or tran_id
+   * Validates a gateway transaction against its transaction ID, currency, and amount.
    */
-  public async validatePayment(val_id?: string, tran_id?: string): Promise<SSLCommerzValidationResponse> {
-    if (val_id && val_id.startsWith('VAL-')) {
+  public async validatePayment(valId: string, tranId: string, expectedBdt: number): Promise<SSLCommerzValidationResult> {
+    if (!valId) {
+      return { ok: false, reason: 'missing val_id' };
+    }
+
+    if (this.paymentSimulatorEnabled) {
+      if (valId !== `SIM-${tranId}`) return { ok: false, reason: 'invalid simulator validation ID' };
       return {
-        status: 'VALIDATED',
-        tran_id: tran_id || `SSLCZ-${Date.now()}`,
-        val_id,
-        bank_tran_id: `BANK-${Math.floor(10000000 + Math.random() * 90000000)}`,
-        card_type: 'bKash-bKash',
-        card_brand: 'bKash',
-        card_issuer: 'bKash MFS Limited',
-        currency: 'BDT',
-        tran_date: new Date().toISOString(),
+        ok: true,
+        raw: {
+          status: 'VALID',
+          tran_id: tranId,
+          val_id: valId,
+          amount: expectedBdt,
+          currency: 'BDT',
+          bank_tran_id: `SIM-BANK-${tranId}`,
+        },
       };
     }
 
-    if (val_id) {
-      try {
-        const url = `${this.baseUrl}/validator/api/validationserverAPI.php?val_id=${val_id}&store_id=${this.storeId}&store_passwd=${this.storePasswd}&v=1&format=json`;
-        const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
-        if (res.ok) {
-          const data = await res.json();
-          return {
-            status: data.status === 'VALID' || data.status === 'VALIDATED' ? 'VALIDATED' : 'FAILED',
-            tran_id: data.tran_id || tran_id || '',
-            val_id: data.val_id || val_id,
-            amount: data.amount,
-            bank_tran_id: data.bank_tran_id,
-            card_type: data.card_type,
-            card_brand: data.card_brand,
-            card_issuer: data.card_issuer,
-            currency: data.currency,
-            tran_date: data.tran_date,
-            error: data.error,
-          };
-        }
-      } catch (err: any) {
-        console.warn('SSLCommerz validation API call warning:', err.message);
-      }
+    const query = new URLSearchParams({
+      val_id: valId,
+      store_id: this.storeId,
+      store_passwd: this.storePasswd,
+      format: 'json',
+    });
+
+    let response: Response;
+    try {
+      response = await fetch(
+        `${this.baseUrl}/validator/api/validationserverAPI.php?${query.toString()}`,
+        { signal: AbortSignal.timeout(8000) }
+      );
+    } catch {
+      throw new GatewayError('SSLCommerz validator is unreachable.');
     }
 
-    // Default validated response for sandbox
+    if (!response.ok) {
+      throw new GatewayError('SSLCommerz validator is unreachable.');
+    }
+
+    let data: SSLCommerzValidationResponse;
+    try {
+      data = await response.json() as SSLCommerzValidationResponse;
+    } catch {
+      throw new GatewayError('SSLCommerz validator returned an invalid response.');
+    }
+
+    const gatewayAmount = Number(data.amount);
+    const amountMatches = Number.isFinite(gatewayAmount)
+      && gatewayAmount.toFixed(2) === expectedBdt.toFixed(2);
+    const ok = ['VALID', 'VALIDATED'].includes(data.status)
+      && data.tran_id === tranId
+      && data.currency === 'BDT'
+      && amountMatches;
+
     return {
-      status: 'VALIDATED',
-      tran_id: tran_id || `SSLCZ-TXN-${Date.now()}`,
-      val_id: val_id || `VAL-${Math.floor(10000000 + Math.random() * 90000000)}`,
-      bank_tran_id: `BKASH-TRX-${Math.floor(1000000 + Math.random() * 9000000)}`,
-      card_type: 'bKash-MFS',
-      card_brand: 'bKash',
-      card_issuer: 'bKash Bangladesh',
-      currency: 'BDT',
-      tran_date: new Date().toISOString(),
+      ok,
+      reason: ok ? undefined : 'gateway validation did not match the expected payment',
+      raw: data,
     };
   }
 }

@@ -8,6 +8,7 @@ import {
   ShieldCheck,
   CheckCircle2,
   Smartphone,
+  Package,
 } from 'lucide-react';
 
 const escapeHtml = (value: unknown): string => {
@@ -26,6 +27,7 @@ interface PaymentReceiptModalProps {
   onClose: () => void;
   order: Order;
   customer?: Customer;
+  onViewOrder?: () => void;
 }
 
 export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
@@ -33,6 +35,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
   onClose,
   order,
   customer,
+  onViewOrder,
 }) => {
   if (!isOpen) return null;
 
@@ -327,6 +330,16 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
           </div>
 
           <div className="flex gap-2">
+            {onViewOrder && (
+              <button
+                type="button"
+                onClick={onViewOrder}
+                className="px-4 py-2 rounded-full border border-slate-300 dark:border-zinc-700 text-xs font-bold text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Package className="w-3.5 h-3.5" />
+                <span>Track order</span>
+              </button>
+            )}
             <button
               onClick={handlePrint}
               className="px-4 py-2 rounded-full border border-slate-300 dark:border-zinc-700 text-xs font-bold text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 flex items-center gap-1.5 transition-colors cursor-pointer"

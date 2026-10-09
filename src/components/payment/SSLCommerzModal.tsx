@@ -16,34 +16,26 @@ import {
   HelpCircle,
 } from 'lucide-react';
 
-export interface SSLCommerzPaymentSuccessData {
-  tran_id: string;
-  val_id: string;
-  bank_tran_id: string;
-  payment_method: string;
-  amountBDT: number;
-  customer_phone: string;
-  card_brand: string;
-}
-
 interface SSLCommerzModalProps {
   isOpen: boolean;
   onClose: () => void;
+  orderId: string;
   orderTotal: number;
   customer: Customer;
   shippingAddress: Address;
   initialMethod?: 'bkash' | 'nagad' | 'rocket' | 'visa_mastercard';
-  onSuccess: (paymentData: SSLCommerzPaymentSuccessData) => void;
+  onPaymentFailure: () => Promise<boolean>;
 }
 
 export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
   isOpen,
   onClose,
+  orderId,
   orderTotal,
   customer,
   shippingAddress,
   initialMethod = 'bkash',
-  onSuccess,
+  onPaymentFailure,
 }) => {
   const [selectedChannel, setSelectedChannel] = React.useState<'bkash' | 'nagad' | 'rocket' | 'cards'>(
     initialMethod === 'visa_mastercard' ? 'cards' : initialMethod
@@ -57,6 +49,9 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
   const [agreedTerms, setAgreedTerms] = React.useState(true);
   const [timer, setTimer] = React.useState(60);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const [failureStatus, setFailureStatus] = React.useState<'restoring' | 'restored' | 'restore-failed' | null>(null);
+  const [paymentAmountBDT, setPaymentAmountBDT] = React.useState(orderTotal);
 
   // Cards Flow State
   const [cardNumber, setCardNumber] = React.useState('4242 •••• •••• 4242');
@@ -64,11 +59,10 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
   const [cardCvv, setCardCvv] = React.useState('888');
   const [cardHolder, setCardHolder] = React.useState(customer.Name);
 
-  const amountBDT = orderTotal;
-
   // Reset or initialize state
   React.useEffect(() => {
     if (isOpen) {
+      setPaymentAmountBDT(orderTotal);
       setSelectedChannel(initialMethod === 'visa_mastercard' ? 'cards' : initialMethod);
       setStep('number');
       setPhone(customer.Number || '01700000000');
@@ -76,8 +70,10 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
       setPin('');
       setErrorMsg(null);
       setTimer(60);
+      setIsSubmitting(false);
+      setFailureStatus(null);
     }
-  }, [isOpen, initialMethod, customer]);
+  }, [isOpen, initialMethod, customer, orderTotal]);
 
   // Countdown timer for OTP
   React.useEffect(() => {
@@ -92,39 +88,10 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
 
   if (!isOpen) return null;
 
-  // Handle bKash Step 1: Submit Phone Number
-  const handlePhoneSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!phone || phone.length < 11) {
-      setErrorMsg('Please enter a valid 11-digit mobile number (e.g. 017XXXXXXXX)');
-      return;
-    }
-    setErrorMsg(null);
-    setStep('otp');
-    setTimer(60);
-  };
-
-  // Handle bKash Step 2: Submit OTP
-  const handleOtpSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!otp || otp.length < 4) {
-      setErrorMsg('Please enter the 6-digit verification code sent to your phone');
-      return;
-    }
-    setErrorMsg(null);
-    setStep('pin');
-  };
-
-  // Handle bKash Step 3: Submit PIN & Finalize SSLCommerz Authorization
-  const handlePinSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!pin || pin.length < 4) {
-      setErrorMsg('Please enter your 5-digit account PIN');
-      return;
-    }
-
+  const startPayment = async () => {
     setErrorMsg(null);
     setStep('processing');
+    setIsSubmitting(true);
 
     try {
       // Step 1: Initialize payment on backend
@@ -132,9 +99,7 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          customerId: customer.Customer_ID,
-          amount: amountBDT,
-          currency: 'BDT',
+          orderId,
           customerName: customer.Name,
           customerEmail: customer.Email,
           customerPhone: phone,
@@ -145,49 +110,51 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
       });
 
       const initData = await initRes.json();
-      if (!initRes.ok || !initData.tran_id) {
+      const gatewayUrl = initData.session?.GatewayPageURL
+        || initData.session?.redirectGatewayURL
+        || initData.session?.DirectPaymentURLbKash;
+      if (!initRes.ok || !initData.tran_id || initData.session?.status !== 'SUCCESS' || typeof gatewayUrl !== 'string') {
         throw new Error(initData.error || 'Failed to initialize payment');
       }
-
-      // Step 2: Validate payment with SSLCommerz gateway
-      const valRes = await fetch(apiUrl('/api/payment/sslcommerz/validate'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tran_id: initData.tran_id,
-          payment_method: selectedChannel === 'cards' ? 'visa_mastercard' : selectedChannel,
-          customer_phone: phone,
-          card_brand: selectedChannel === 'bkash' ? 'bKash' : selectedChannel === 'nagad' ? 'Nagad' : selectedChannel === 'rocket' ? 'Rocket' : 'Visa',
-        }),
-      });
-
-      const valData = await valRes.json();
-      if (!valRes.ok) {
-        throw new Error(valData.error || 'Transaction verification declined');
+      const authoritativeAmount = Number(initData.amountBDT);
+      if (!Number.isFinite(authoritativeAmount) || authoritativeAmount <= 0) {
+        throw new Error('The server returned an invalid payment amount.');
       }
-
-      // Short delay for visual polish
-      await new Promise((r) => setTimeout(r, 900));
-
-      setStep('success');
-
-      // Notify caller after celebration
-      setTimeout(() => {
-        onSuccess({
-          tran_id: valData.tran_id,
-          val_id: valData.val_id,
-          bank_tran_id: valData.bank_tran_id,
-          payment_method: selectedChannel === 'cards' ? 'visa_mastercard' : selectedChannel,
-          amountBDT,
-          customer_phone: phone,
-          card_brand: valData.card_brand || selectedChannel.toUpperCase(),
-        });
-      }, 700);
+      setPaymentAmountBDT(authoritativeAmount);
+      const destination = new URL(gatewayUrl, window.location.href);
+      if (destination.protocol !== 'https:' && destination.origin !== window.location.origin) {
+        throw new Error('SSLCommerz returned an insecure checkout URL.');
+      }
+      window.location.assign(destination.toString());
     } catch (err: any) {
       console.error('SSLCommerz gateway error:', err);
-      setErrorMsg(err.message || 'Payment processing failed. Please try again.');
-      setStep('pin');
+      setErrorMsg(err.message || 'Could not start SSLCommerz checkout. Check the gateway settings and retry.');
+      setStep('number');
+      setFailureStatus('restoring');
+      const restored = await onPaymentFailure().catch(() => false);
+      setFailureStatus(restored ? 'restored' : 'restore-failed');
+    } finally {
+      setIsSubmitting(false);
     }
+  };
+
+  const handlePhoneSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (selectedChannel !== 'cards' && !/^01\d{9}$/.test(phone)) {
+      setErrorMsg('Enter a valid 11-digit mobile number.');
+      return;
+    }
+    void startPayment();
+  };
+
+  const handleOtpSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    setStep('pin');
+  };
+
+  const handlePinSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    void startPayment();
   };
 
   return (
@@ -226,7 +193,7 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
             </span>
             <div className="flex items-baseline gap-2">
               <span className="text-2xl font-black text-slate-900 dark:text-white">
-                {formatBDT(amountBDT)}
+                {formatBDT(paymentAmountBDT)}
               </span>
             </div>
           </div>
@@ -314,6 +281,36 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
 
         {/* Modal Dynamic Body */}
         <div className="p-6">
+          {failureStatus && (
+            <div
+              role="status"
+              className={`mb-4 flex items-center gap-2 rounded-2xl border p-3 text-xs ${
+                failureStatus === 'restored'
+                  ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                  : failureStatus === 'restore-failed'
+                  ? 'border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                  : 'border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-400'
+              }`}
+            >
+              {failureStatus === 'restored' ? (
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+              ) : (
+                <AlertCircle className="h-4 w-4 shrink-0" />
+              )}
+              <span>
+                {failureStatus === 'restoring'
+                  ? 'Payment failed. Restoring your items to the cart...'
+                  : failureStatus === 'restored'
+                  ? 'Payment failed. Your items have been restored to your cart.'
+                  : 'Payment failed, and your cart could not be restored. Please contact support before retrying.'}
+              </span>
+            </div>
+          )}
+          {failureStatus === 'restored' && (
+            <button type="button" onClick={onClose} className="mb-4 w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-bold text-white hover:bg-slate-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white">
+              Return to checkout
+            </button>
+          )}
           {errorMsg && (
             <div className="mb-4 p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-500 text-xs flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
@@ -338,7 +335,7 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
 
                 <div className="text-right">
                   <span className="text-[10px] font-bold text-pink-200 uppercase block">Amount</span>
-                  <span className="text-base font-black">{formatBDT(amountBDT)}</span>
+                  <span className="text-base font-black">{formatBDT(paymentAmountBDT)}</span>
                 </div>
               </div>
 
@@ -389,7 +386,7 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
                         className="mt-0.5 rounded text-[#E2136E] focus:ring-[#E2136E]"
                       />
                       <span>
-                        I agree to the <strong className="text-slate-800 dark:text-zinc-200">bKash Merchant terms &amp; conditions</strong> and authorize SSLCommerz to charge {formatBDT(amountBDT)}.
+                        I agree to the <strong className="text-slate-800 dark:text-zinc-200">bKash Merchant terms &amp; conditions</strong> and authorize SSLCommerz to charge {formatBDT(paymentAmountBDT)}.
                       </span>
                     </label>
                   </div>
@@ -404,10 +401,10 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
                     </button>
                     <button
                       type="submit"
-                      disabled={!agreedTerms || phone.length < 11}
+                      disabled={!agreedTerms || phone.length < 11 || isSubmitting || failureStatus === 'restored'}
                       className="w-2/3 py-3 bg-[#E2136E] hover:bg-[#c20f5e] disabled:opacity-50 text-white font-bold rounded-full text-xs shadow-lg shadow-[#E2136E]/30 flex items-center justify-center gap-2 transition-all cursor-pointer"
                     >
-                      <span>Proceed to Verification</span>
+                      <span>Continue to SSLCommerz</span>
                       <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>
@@ -529,11 +526,11 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
                     </button>
                     <button
                       type="submit"
-                      disabled={pin.length < 4}
+                      disabled={pin.length < 4 || isSubmitting}
                       className="w-2/3 py-3 bg-[#E2136E] hover:bg-[#c20f5e] disabled:opacity-50 text-white font-bold rounded-full text-xs shadow-lg shadow-[#E2136E]/30 flex items-center justify-center gap-2 transition-all cursor-pointer"
                     >
                       <Lock className="w-4 h-4" />
-                      <span>Confirm &amp; Pay {formatBDT(amountBDT)}</span>
+                      <span>Confirm &amp; Pay {formatBDT(paymentAmountBDT)}</span>
                     </button>
                   </div>
                 </form>
@@ -553,7 +550,7 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
                   <h3 className="font-black text-sm">{selectedChannel.toUpperCase()} Mobile Banking</h3>
                   <p className="text-[11px] opacity-80">SSLCommerz Digital MFS Integration</p>
                 </div>
-                <div className="text-right font-black text-base">{formatBDT(amountBDT)}</div>
+                <div className="text-right font-black text-base">{formatBDT(paymentAmountBDT)}</div>
               </div>
 
               <div>
@@ -569,28 +566,16 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
                 />
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1.5">
-                  Account PIN
-                </label>
-                <input
-                  type="password"
-                  value={pin}
-                  onChange={(e) => setPin(e.target.value)}
-                  placeholder="••••"
-                  className="w-full px-4 py-3 bg-white dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-2xl text-slate-900 dark:text-white font-mono text-sm"
-                />
-              </div>
-
               <button
                 type="button"
-                onClick={handlePinSubmit}
-                className={`w-full py-3.5 text-white font-bold rounded-full text-xs shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2 ${
+                    onClick={() => void startPayment()}
+                disabled={isSubmitting || failureStatus === 'restored'}
+                className={`w-full py-3.5 text-white font-bold rounded-full text-xs shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 ${
                   selectedChannel === 'nagad' ? 'bg-[#F7941D] hover:bg-[#df8213]' : 'bg-[#8C3494] hover:bg-[#77287e]'
                 }`}
               >
                 <Lock className="w-4 h-4" />
-                <span>Authorize {formatBDT(amountBDT)} via {selectedChannel.toUpperCase()}</span>
+                <span>Authorize {formatBDT(paymentAmountBDT)} via {selectedChannel.toUpperCase()}</span>
               </button>
             </div>
           )}
@@ -606,57 +591,21 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
                     <p className="text-[11px] opacity-80">Visa, Mastercard, Amex, UnionPay</p>
                   </div>
                 </div>
-                <span className="font-black text-base">{formatBDT(amountBDT)}</span>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">Card Number</label>
-                <input
-                  type="text"
-                  value={cardNumber}
-                  onChange={(e) => setCardNumber(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-white dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl text-xs font-mono text-slate-900 dark:text-white"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">Expiry Date</label>
-                  <input
-                    type="text"
-                    value={cardExpiry}
-                    onChange={(e) => setCardExpiry(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-white dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl text-xs font-mono text-slate-900 dark:text-white"
-                  />
+                <span className="font-black text-base">{formatBDT(paymentAmountBDT)}</span>
                 </div>
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">CVV / CVC</label>
-                  <input
-                    type="password"
-                    value={cardCvv}
-                    onChange={(e) => setCardCvv(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-white dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl text-xs font-mono text-slate-900 dark:text-white"
-                  />
-                </div>
-              </div>
 
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">Cardholder Name</label>
-                <input
-                  type="text"
-                  value={cardHolder}
-                  onChange={(e) => setCardHolder(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-white dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl text-xs text-slate-900 dark:text-white"
-                />
-              </div>
+              <p className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 dark:border-zinc-800 dark:bg-[#181F2A] dark:text-zinc-300">
+                Card details are entered securely on the SSLCommerz checkout page and are never collected here.
+              </p>
 
               <button
                 type="button"
-                onClick={handlePinSubmit}
-                className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-full text-xs shadow-lg shadow-blue-600/30 transition-all cursor-pointer flex items-center justify-center gap-2"
+                onClick={() => void startPayment()}
+                disabled={isSubmitting || failureStatus === 'restored'}
+                className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-full text-xs shadow-lg shadow-blue-600/30 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 <Lock className="w-4 h-4" />
-                <span>Pay {formatBDT(amountBDT)} via SSLCommerz Card Gateway</span>
+                <span>Pay {formatBDT(paymentAmountBDT)} via SSLCommerz Card Gateway</span>
               </button>
             </div>
           )}
@@ -668,9 +617,9 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
                 <Lock className="w-6 h-6 text-[#E2136E]" />
               </div>
               <div>
-                <h4 className="font-black text-lg text-slate-900 dark:text-white">Connecting with SSLCommerz</h4>
+                <h4 className="font-black text-lg text-slate-900 dark:text-white">Opening secure checkout</h4>
                 <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
-                  Verifying transaction token &amp; bKash authorization with server...
+                  You’ll complete payment on SSLCommerz and return here for your receipt.
                 </p>
               </div>
             </div>

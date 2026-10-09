@@ -2,7 +2,7 @@ import { Router, Response } from 'express';
 import rateLimit from 'express-rate-limit';
 import { query, mapAddress } from '../db/index.ts';
 import { hashPassword, comparePassword, isBcryptHash } from '../db/password.ts';
-import { requireAuth, issueAuthCookie, clearAuthCookie, optionalAuth, AuthRequest } from '../middleware/auth.ts';
+import { requireAuth, issueAuthCookie, clearAuthCookie, optionalAuth, AUTH_COOKIE_NAME, AuthRequest } from '../middleware/auth.ts';
 
 const router = Router();
 const loginRateLimit = rateLimit({
@@ -19,8 +19,11 @@ const loginRateLimit = rateLimit({
  */
 router.get('/me', optionalAuth, async (req: AuthRequest, res: Response) => {
   try {
+    const hasSessionCookie = req.headers.cookie?.includes(`${AUTH_COOKIE_NAME}=`) || false;
     if (!req.user) {
-      return res.json({ authenticated: false, user: null, role: null, entity: null });
+      return hasSessionCookie
+        ? res.status(401).json({ error: 'Session is expired or revoked. Please sign in again.' })
+        : res.json({ authenticated: false, user: null, role: null, entity: null });
     }
 
     const { role, entityId, userId } = req.user;
@@ -283,10 +286,10 @@ router.post('/logout', optionalAuth, async (req: AuthRequest, res) => {
       await query(`SELECT gocart_session_revoke($1)`, [req.user.jti]);
     }
     clearAuthCookie(res);
-    res.json({ success: true, message: 'Logged out successfully' });
+    return res.json({ success: true, message: 'Logged out successfully' });
   } catch (error) {
     clearAuthCookie(res);
-    res.json({ success: true, message: 'Logged out' });
+    return res.status(500).json({ error: 'Could not close the session.' });
   }
 });
 

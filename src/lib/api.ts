@@ -519,15 +519,17 @@ export const api = {
     Subtotal: number;
     Shipping_Fee: number;
     Additional_Info?: string;
-    Payment_Status?: string;
-    Payment_Method?: string;
-    Transaction_ID?: string;
-    Payment_ID?: string;
     Currency?: string;
   }): Promise<Order> =>
     fetchJson<Order>('/api/orders', {
       method: 'POST',
       body: JSON.stringify(orderData),
+    }),
+  getOrder: async (orderId: string): Promise<Order> =>
+    fetchJson<Order>(`/api/orders/${encodeURIComponent(orderId)}`),
+  revertFailedOnlinePayment: async (orderId: string): Promise<{ success: boolean; order_id: string; restored_to_cart: boolean }> =>
+    fetchJson<{ success: boolean; order_id: string; restored_to_cart: boolean }>(`/api/orders/${encodeURIComponent(orderId)}/revert-failed-payment`, {
+      method: 'PATCH',
     }),
   updateOrderStatus: async (orderId: string, Status: OrderStatus | string): Promise<Order> =>
     fetchJson<Order>(`/api/orders/${encodeURIComponent(orderId)}/status`, {

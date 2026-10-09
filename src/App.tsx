@@ -38,6 +38,7 @@ const MarketplaceTrendsTopCharts = React.lazy(() => import('./components/storefr
 const ProductDetailModal = React.lazy(() => import('./components/storefront/ProductDetailModal').then((module) => ({ default: module.ProductDetailModal })));
 const CartDrawer = React.lazy(() => import('./components/storefront/CartDrawer').then((module) => ({ default: module.CartDrawer })));
 const CheckoutModal = React.lazy(() => import('./components/storefront/CheckoutModal').then((module) => ({ default: module.CheckoutModal })));
+const PaymentReceiptModal = React.lazy(() => import('./components/payment/PaymentReceiptModal').then((module) => ({ default: module.PaymentReceiptModal })));
 const CustomerOrders = React.lazy(() => import('./components/customer/CustomerOrders').then((module) => ({ default: module.CustomerOrders })));
 const CustomerProfile = React.lazy(() => import('./components/customer/CustomerProfile').then((module) => ({ default: module.CustomerProfile })));
 const AdminDashboard = React.lazy(() => import('./components/admin/AdminDashboard').then((module) => ({ default: module.AdminDashboard })));
@@ -140,6 +141,8 @@ export default function App() {
   const [isLoginModalOpen, setIsLoginModalOpen] = React.useState(false);
   const [authNotice, setAuthNotice] = React.useState<string | null>(null);
   const [isValidatingAuth, setIsValidatingAuth] = React.useState<boolean>(false);
+  const [paymentReceiptOrder, setPaymentReceiptOrder] = React.useState<Order | null>(null);
+  const paymentReturnHandledRef = React.useRef(false);
 
   // Authenticate and validate on every page before processing page requests
   const validateAuthForPage = React.useCallback(async (targetTab: string) => {
@@ -398,6 +401,68 @@ export default function App() {
       setIsCartLoading(false);
     }
   }, [selectedCustomer, isLoggedIn]);
+
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const paymentStatus = params.get('sslcommerz');
+    const orderId = params.get('orderId');
+    if (!paymentStatus || !orderId || !selectedCustomer || !isLoggedIn || paymentReturnHandledRef.current) return;
+
+    paymentReturnHandledRef.current = true;
+    window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.hash}`);
+    setViewMode('app');
+    setIsCheckoutOpen(false);
+    setIsCartOpen(false);
+
+    const openReturnedOrder = async () => {
+      setActiveTab('orders');
+      try {
+        const order = await api.getOrder(orderId);
+        setOrders((current) => [order, ...current.filter((existing) => existing.Order_ID !== order.Order_ID)]);
+        if (order.Payment_Status === 'paid') {
+          setPaymentReceiptOrder(order);
+          showToast('Payment complete. Your receipt is ready; tracking is available in My Orders.', 'success');
+        } else {
+          showToast('SSLCommerz returned your order, but payment verification is still pending. Your order has been kept safe.', 'info');
+        }
+      } catch (error: any) {
+        showToast(error.message || 'We could not load your returned order. Check My Orders for its latest status.', 'error');
+      }
+    };
+
+    if (paymentStatus === 'success' || paymentStatus === 'verification') {
+      void openReturnedOrder();
+      return;
+    }
+
+    if (paymentStatus === 'failed' || paymentStatus === 'cancelled') {
+      void (async () => {
+        try {
+          await api.revertFailedOnlinePayment(orderId);
+          const [updatedCart, updatedProducts] = await Promise.all([
+            api.getCart(selectedCustomer.Customer_ID),
+            api.getProducts(),
+          ]);
+          setCart(updatedCart);
+          setProducts(updatedProducts);
+          setActiveTab('storefront');
+          setIsCartOpen(true);
+          showToast(paymentStatus === 'cancelled' ? 'Payment cancelled. Your items are back in your cart.' : 'Payment failed. Your items are back in your cart.', 'info');
+        } catch (error: any) {
+          const completedOrder = await api.getOrder(orderId).catch(() => null);
+          if (completedOrder?.Payment_Status === 'paid') {
+            setOrders((current) => [completedOrder, ...current.filter((existing) => existing.Order_ID !== completedOrder.Order_ID)]);
+            setPaymentReceiptOrder(completedOrder);
+            setActiveTab('orders');
+            showToast('Payment complete. Your order is safe; the receipt is ready and tracking is available in My Orders.', 'success');
+            return;
+          }
+          setActiveTab('orders');
+          showToast(error.message || 'Payment did not complete, but cart restoration could not be confirmed. Contact support before retrying.', 'error');
+        }
+      })();
+    }
+  }, [isLoggedIn, selectedCustomer]);
 
   React.useEffect(() => {
     if (!selectedCustomer || !isLoggedIn) {
@@ -1249,12 +1314,36 @@ export default function App() {
           previousOrderCount={orders.filter((order) => order.Customer_ID === selectedCustomer.Customer_ID).length}
           cartItems={cart}
           isLoadingCart={isCartLoading}
+          onRefreshCart={async () => {
+            const [updatedCart, updatedProducts] = await Promise.all([
+              api.getCart(selectedCustomer.Customer_ID),
+              api.getProducts(),
+            ]);
+            setCart(updatedCart);
+            setProducts(updatedProducts);
+          }}
           onNotify={showToast}
           onPlaceOrder={handlePlaceOrder}
           onOrderSuccess={() => {
             setActiveTab('orders');
           }}
         />
+      )}
+
+      {paymentReceiptOrder && selectedCustomer && (
+        <React.Suspense fallback={<div role="status" className="fixed inset-0 z-[60] grid place-items-center bg-black/70 text-sm text-white">Loading receipt…</div>}>
+          <PaymentReceiptModal
+            isOpen={Boolean(paymentReceiptOrder)}
+            onClose={() => setPaymentReceiptOrder(null)}
+            order={paymentReceiptOrder}
+            customer={selectedCustomer}
+            onViewOrder={() => {
+              setPaymentReceiptOrder(null);
+              setActiveTab('orders');
+              setViewMode('app');
+            }}
+          />
+        </React.Suspense>
       )}
 
       {/* Customer Signup Modal */}

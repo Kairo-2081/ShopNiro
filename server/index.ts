@@ -7,6 +7,7 @@ import { createServer as createViteServer } from 'vite';
 import { query, getDatabaseProviderInfo } from './db/index.ts';
 import { seedDatabaseIfEmpty } from './db/seed.ts';
 import { errorHandler } from './middleware/errorHandler.ts';
+import { requireAuth, requireRole } from './middleware/auth.ts';
 
 // Route handlers
 import authRoutes from './routes/auth.routes.ts';
@@ -48,6 +49,7 @@ app.use(cors({
 }));
 
 app.use((req, res, next) => {
+  if (/^\/api\/payment\/sslcommerz\/(success|fail|cancel|ipn)$/.test(req.path)) return next();
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method) || !req.headers.cookie?.includes('shopniro_session=')) {
     return next();
   }
@@ -69,6 +71,7 @@ app.use((req, res, next) => {
 
 // Parse incoming JSON payloads
 app.use(express.json({ limit: '8mb' }));
+app.use(express.urlencoded({ extended: false, limit: '8mb' }));
 
 // Seed database schema and sample data on server startup if empty
 seedDatabaseIfEmpty().catch((err) => {
@@ -76,7 +79,7 @@ seedDatabaseIfEmpty().catch((err) => {
 });
 
 // Database Health & Connectivity Status Endpoint
-app.get('/api/db/status', async (req, res) => {
+app.get('/api/db/status', requireAuth, requireRole(['admin']), async (req, res) => {
   const providerInfo = getDatabaseProviderInfo();
   try {
     const result = await query(`SELECT * FROM gocart_database_status()`);
@@ -102,7 +105,7 @@ app.get('/api/db/status', async (req, res) => {
 });
 
 // Admin Analytics & Management (Calling schema.sql stored routines)
-app.get('/api/stats', async (req, res) => {
+app.get('/api/stats', requireAuth, requireRole(['admin']), async (req, res) => {
   try {
     const statsRes = await query(`SELECT * FROM gocart_admin_dashboard_stats()`);
     const row = statsRes.rows[0] || {};
@@ -123,7 +126,7 @@ app.get('/api/stats', async (req, res) => {
   }
 });
 
-app.get('/api/admin/users', async (req, res) => {
+app.get('/api/admin/users', requireAuth, requireRole(['admin']), async (req, res) => {
   try {
     const result = await query(`SELECT * FROM gocart_admins_users_list()`);
     res.json(result.rows);
@@ -201,7 +204,7 @@ app.get('/api/analytics/related-products', async (req, res) => {
   }
 });
 
-app.post('/api/reset-seed', async (req, res) => {
+app.post('/api/reset-seed', requireAuth, requireRole(['admin']), async (req, res) => {
   try {
     await seedDatabaseIfEmpty();
     res.json({ success: true, message: 'Database seed completed.' });

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { randomInt, randomUUID } from 'node:crypto';
 import type { PoolClient } from 'pg';
 import { pool, query } from '../db/index.ts';
-import { requireAuth, AuthRequest } from '../middleware/auth.ts';
+import { requireAuth, requireRole, AuthRequest } from '../middleware/auth.ts';
 import { Order, ProductBundle } from '../../src/types.ts';
 import { discountedPriceForVoucher, discountedUnitPrice, getVoucherRule, isVoucherExpired, normalizeVoucherCode } from '../../src/lib/vouchers.ts';
 import { calculateBundlePrices } from '../../src/lib/bundles.ts';
@@ -117,12 +117,17 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
       Subtotal,
       Shipping_Fee,
       Additional_Info,
-      Payment_Status = 'paid',
-      Payment_Method = 'bkash',
-      Transaction_ID = '',
     } = req.body;
+    const forbiddenPaymentFields = ['Payment_Status', 'payment_status', 'Payment_Method', 'payment_method', 'Transaction_ID', 'transaction_id'];
+    const suppliedForbiddenPaymentFields = forbiddenPaymentFields.filter((field) => Object.prototype.hasOwnProperty.call(req.body, field));
+    if (suppliedForbiddenPaymentFields.length) {
+      return res.status(400).json({ error: `Order payment state fields are server-controlled: ${suppliedForbiddenPaymentFields.join(', ')}` });
+    }
     if (!Customer_ID || !Items || !Items.length || !Shipping_Address) {
       return res.status(400).json({ error: 'Customer_ID, Items, and Shipping Address are required' });
+    }
+    if (Customer_ID !== req.user!.entityId) {
+      return res.status(403).json({ error: 'You can only place orders for your own account.' });
     }
 
     const trackNum1 = Math.floor(1000 + Math.random() * 9000);
@@ -263,17 +268,6 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
       Size: item.size || undefined,
     }))), recordedPromotions]);
 
-    await query(
-      'UPDATE orders SET payment_status = $2, payment_method = $3, transaction_id = $4 WHERE id = $1',
-      [id, Payment_Status, Payment_Method, Transaction_ID || null]
-    );
-    if (Transaction_ID && Payment_Method !== 'cash_on_delivery') {
-      await query(
-        'UPDATE payments SET order_id = $2 WHERE transaction_id = $1',
-        [Transaction_ID, id]
-      );
-    }
-
     const newOrder: Order = {
       Order_ID: id,
       Tracking_ID,
@@ -290,9 +284,9 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
       Subtotal: finalSubtotal,
       Shipping_Fee: shippingFee,
       Status: 'placed',
-      Payment_Status,
-      Payment_Method,
-      Transaction_ID: Transaction_ID || Tracking_ID,
+      Payment_Status: 'pending',
+      Payment_Method: 'cash_on_delivery',
+      Transaction_ID: '',
       Applied_Voucher: recordedPromotions || undefined,
       Currency: 'BDT',
       Shipping_Address,
@@ -306,6 +300,73 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
     console.error('Error placing order:', error);
     const status = error.message?.startsWith('Checkout Failed:') ? 409 : 500;
     res.status(status).json({ error: error.message || 'Failed to place order' });
+  }
+});
+
+router.get('/cancellation-requests', requireAuth, async (req: AuthRequest, res) => {
+  if (!['customer', 'admin'].includes(req.user!.role)) return res.status(403).json({ error: 'You cannot view cancellation requests.' });
+  try {
+    const result = await query(
+      `SELECT request.id, request.order_id, request.customer_id, order_record.status AS order_status,
+        order_record.payment_status, request.reason, request.status, request.requested_at,
+        request.reviewed_at, request.refund_completed_at
+       FROM order_cancellation_requests request
+       JOIN orders order_record ON order_record.id = request.order_id
+       WHERE ($1::varchar IS NULL OR request.customer_id = $1)
+       ORDER BY request.requested_at DESC`,
+      [req.user!.role === 'customer' ? req.user!.entityId : null]
+    );
+    res.json(result.rows.map((row) => ({
+      Request_ID: row.id,
+      Order_ID: row.order_id,
+      Customer_ID: row.customer_id,
+      Order_Status: row.order_status,
+      Payment_Status: row.payment_status,
+      Reason: row.reason,
+      Status: row.status,
+      Requested_At: new Date(row.requested_at).toISOString(),
+      Reviewed_At: row.reviewed_at ? new Date(row.reviewed_at).toISOString() : undefined,
+      Refund_Completed_At: row.refund_completed_at ? new Date(row.refund_completed_at).toISOString() : undefined,
+    })));
+  } catch (error: any) {
+    console.error('Could not list cancellation requests:', error);
+    res.status(500).json({ error: 'Could not load cancellation requests.' });
+  }
+});
+
+router.get('/:id', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const result = await query(
+      `SELECT o.id, o.customer_id, o.status, o.payment_status, o.payment_method,
+          o.transaction_id, o.subtotal, o.shipping_fee, o.tracking_id, o.items_json,
+          o.shipping_address_json, o.billing_address_json, o.applied_voucher,
+          o.order_placed_at, o.additional_info
+       FROM orders o WHERE o.id = $1 AND o.customer_id = $2`,
+      [req.params.id, req.user!.entityId]
+    );
+    if (!result.rows.length) return res.status(404).json({ error: 'Order not found.' });
+    const order = result.rows[0];
+    res.json({
+      Order_ID: order.id,
+      Tracking_ID: order.tracking_id || '',
+      Customer_ID: order.customer_id,
+      Items: typeof order.items_json === 'string' ? JSON.parse(order.items_json) : (order.items_json || []),
+      Subtotal: Number(order.subtotal),
+      Shipping_Fee: Number(order.shipping_fee),
+      Status: order.status,
+      Payment_Status: order.payment_status || 'pending',
+      Payment_Method: order.payment_method || 'cash_on_delivery',
+      Transaction_ID: order.transaction_id || '',
+      Applied_Voucher: order.applied_voucher || undefined,
+      Currency: 'BDT',
+      Shipping_Address: order.shipping_address_json ? (typeof order.shipping_address_json === 'string' ? JSON.parse(order.shipping_address_json) : order.shipping_address_json) : {},
+      Billing_Address: order.billing_address_json ? (typeof order.billing_address_json === 'string' ? JSON.parse(order.billing_address_json) : order.billing_address_json) : {},
+      Order_Placed_At: order.order_placed_at ? new Date(order.order_placed_at).toISOString() : new Date().toISOString(),
+      Additional_Info: order.additional_info || '',
+    });
+  } catch (error: any) {
+    console.error('Error fetching order:', error);
+    res.status(500).json({ error: 'Failed to fetch order.' });
   }
 });
 
@@ -340,37 +401,6 @@ router.post('/:id/cancellation-request', requireAuth, async (req: AuthRequest, r
   } catch (error: any) {
     console.error('Could not request order cancellation:', error);
     res.status(500).json({ error: 'Could not submit your cancellation request.' });
-  }
-});
-
-router.get('/cancellation-requests', requireAuth, async (req: AuthRequest, res) => {
-  if (!['customer', 'admin'].includes(req.user!.role)) return res.status(403).json({ error: 'You cannot view cancellation requests.' });
-  try {
-    const result = await query(
-      `SELECT request.id, request.order_id, request.customer_id, order_record.status AS order_status,
-        order_record.payment_status, request.reason, request.status, request.requested_at,
-        request.reviewed_at, request.refund_completed_at
-       FROM order_cancellation_requests request
-       JOIN orders order_record ON order_record.id = request.order_id
-       WHERE ($1::varchar IS NULL OR request.customer_id = $1)
-       ORDER BY request.requested_at DESC`,
-      [req.user!.role === 'customer' ? req.user!.entityId : null]
-    );
-    res.json(result.rows.map((row) => ({
-      Request_ID: row.id,
-      Order_ID: row.order_id,
-      Customer_ID: row.customer_id,
-      Order_Status: row.order_status,
-      Payment_Status: row.payment_status,
-      Reason: row.reason,
-      Status: row.status,
-      Requested_At: new Date(row.requested_at).toISOString(),
-      Reviewed_At: row.reviewed_at ? new Date(row.reviewed_at).toISOString() : undefined,
-      Refund_Completed_At: row.refund_completed_at ? new Date(row.refund_completed_at).toISOString() : undefined,
-    })));
-  } catch (error: any) {
-    console.error('Could not list cancellation requests:', error);
-    res.status(500).json({ error: 'Could not load cancellation requests.' });
   }
 });
 
@@ -411,6 +441,31 @@ router.patch('/cancellation-requests/:requestId/review', requireAuth, async (req
     }
     if (decision === 'approved') {
       await client.query('SELECT * FROM gocart_order_status_update($1, $2)', [request.order_id, 'cancelled']);
+      await client.query(
+        `SELECT product.id
+         FROM products product
+         JOIN (
+           SELECT product_id_snapshot
+           FROM order_items
+           WHERE order_id = $1
+           GROUP BY product_id_snapshot
+         ) cancelled_item ON cancelled_item.product_id_snapshot = product.id
+         ORDER BY product.id
+         FOR UPDATE OF product`,
+        [request.order_id]
+      );
+      await client.query(
+        `UPDATE products product
+         SET stock = product.stock + cancelled_item.quantity
+         FROM (
+           SELECT product_id_snapshot, SUM(quantity)::INTEGER AS quantity
+           FROM order_items
+           WHERE order_id = $1
+           GROUP BY product_id_snapshot
+         ) cancelled_item
+         WHERE product.id = cancelled_item.product_id_snapshot`,
+        [request.order_id]
+      );
       if (request.payment_status === 'paid') {
         await client.query("UPDATE orders SET payment_status = 'refunded' WHERE id = $1", [request.order_id]);
         await client.query("UPDATE payments SET status = 'REFUNDED', updated_at = CURRENT_TIMESTAMP WHERE order_id = $1", [request.order_id]);
@@ -437,6 +492,73 @@ router.patch('/cancellation-requests/:requestId/review', requireAuth, async (req
  * PATCH /api/orders/:id/status
  * Updates order status (via schema gocart_order_status_update)
  */
+router.patch('/:id/revert-failed-payment', requireAuth, async (req: AuthRequest, res) => {
+  let client: PoolClient | undefined;
+  try {
+    if (req.user?.role !== 'customer') {
+      return res.status(403).json({ error: 'Only customers can revert a failed online payment.' });
+    }
+
+    client = await pool.connect();
+    await client.query('BEGIN');
+    const paymentResult = await client.query(
+      `SELECT status FROM payments WHERE order_id = $1 FOR UPDATE`,
+      [req.params.id]
+    );
+    const orderResult = await client.query(
+      `SELECT id, customer_id, status, payment_status
+       FROM orders WHERE id = $1 AND customer_id = $2 FOR UPDATE`,
+      [req.params.id, req.user.entityId]
+    );
+    const order = orderResult.rows[0];
+    if (!order) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Order not found.' });
+    }
+    if (order.payment_status !== 'pending' || paymentResult.rows.some((payment) => payment.status === 'VALIDATED')) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'This payment was already completed. The order was not returned to the cart.' });
+    }
+    if (!['placed', 'processing'].includes(order.status)) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'This order can no longer be restored to the cart.' });
+    }
+
+    const items = await client.query(
+      `SELECT product_id_snapshot AS product_id, quantity, size
+       FROM order_items WHERE order_id = $1 ORDER BY order_item_id`,
+      [order.id]
+    );
+
+    for (const item of items.rows) {
+      const existing = await client.query(`SELECT * FROM gocart_cart_existing($1, $2, $3)`, [req.user.entityId, item.product_id, item.size || '']);
+      if (existing.rows.length > 0) {
+        const currentItem: any = existing.rows[0];
+        await client.query(`SELECT * FROM gocart_cart_update($1, $2, $3)`, [currentItem.id, Number(currentItem.quantity) + Number(item.quantity), req.user.entityId]);
+      } else {
+        const cartId = `CART-${randomUUID()}`;
+        await client.query(`SELECT * FROM gocart_cart_create($1, $2, $3, $4, $5)`, [cartId, req.user.entityId, item.product_id, Number(item.quantity), item.size || '']);
+      }
+    }
+
+    await client.query(`DELETE FROM payments WHERE order_id = $1`, [order.id]);
+    await client.query(`DELETE FROM orders WHERE id = $1 AND customer_id = $2`, [order.id, req.user.entityId]);
+    await client.query('COMMIT');
+
+    res.json({
+      success: true,
+      order_id: order.id,
+      restored_to_cart: true,
+    });
+  } catch (error: any) {
+    if (client) await client.query('ROLLBACK').catch(() => {});
+    console.error('Could not restore failed online payment order to cart:', error);
+    res.status(500).json({ error: 'Could not restore your cart items.' });
+  } finally {
+    client?.release();
+  }
+});
+
 router.patch('/:id/status', requireAuth, async (req: AuthRequest, res) => {
   try {
     const { id } = req.params;

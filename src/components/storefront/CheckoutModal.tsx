@@ -4,8 +4,7 @@ import { api, formatCurrency, formatBDT } from '../../lib/api';
 import { calculateBundlePrices } from '../../lib/bundles';
 import { describeVoucher, discountedPriceForVoucher, discountedUnitPrice, getVoucherRule, isVoucherExpired, normalizeVoucherCode } from '../../lib/vouchers';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
-import { SSLCommerzModal, SSLCommerzPaymentSuccessData } from '../payment/SSLCommerzModal';
-import { BkashGatewayPage, BkashPaymentSuccessData } from '../payment/BkashGatewayPage';
+import { SSLCommerzModal } from '../payment/SSLCommerzModal';
 import {
   X,
   CheckCircle2,
@@ -29,6 +28,7 @@ interface CheckoutModalProps {
   previousOrderCount: number;
   cartItems: CartItem[];
   isLoadingCart?: boolean;
+  onRefreshCart: () => Promise<void>;
   onNotify: (message: string, tone?: 'success' | 'error' | 'info') => void;
   onPlaceOrder: (orderData: {
     Customer_ID: string;
@@ -39,10 +39,6 @@ interface CheckoutModalProps {
     Subtotal: number;
     Shipping_Fee: number;
     Additional_Info?: string;
-    Payment_Status?: string;
-    Payment_Method?: string;
-    Transaction_ID?: string;
-    Payment_ID?: string;
     Currency?: string;
   }) => Promise<Order>;
   onOrderSuccess: (order: Order) => void;
@@ -55,6 +51,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   previousOrderCount,
   cartItems,
   isLoadingCart = false,
+  onRefreshCart,
   onNotify,
   onPlaceOrder,
   onOrderSuccess,
@@ -84,8 +81,6 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     'bkash' | 'nagad' | 'rocket' | 'visa_mastercard' | 'cash_on_delivery'
   >('bkash');
   const [isSSLModalOpen, setIsSSLModalOpen] = React.useState(false);
-  const [isRedirectingToBkash, setIsRedirectingToBkash] = React.useState(false);
-  const [isBkashGatewayOpen, setIsBkashGatewayOpen] = React.useState(false);
   const [additionalNotes, setAdditionalNotes] = React.useState(currentCustomer.Address?.Additional_Info || '');
   const [isSuggestingInstructions, setIsSuggestingInstructions] = React.useState(false);
   const [instructionError, setInstructionError] = React.useState('');
@@ -96,7 +91,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [isLoadingBundles, setIsLoadingBundles] = React.useState(false);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [createdOrder, setCreatedOrder] = React.useState<Order | null>(null);
-  const [verifiedPayment, setVerifiedPayment] = React.useState<SSLCommerzPaymentSuccessData | BkashPaymentSuccessData | null>(null);
+  const [pendingOrderId, setPendingOrderId] = React.useState('');
+  const [pendingOrderTotal, setPendingOrderTotal] = React.useState(0);
   const submissionInProgressRef = React.useRef(false);
   const toCents = (amount: number) => Math.round((Number(amount) || 0) * 100);
   const fromCents = (amount: number) => amount / 100;
@@ -119,7 +115,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   React.useEffect(() => {
     if (!isOpen) {
       setCreatedOrder(null);
-      setVerifiedPayment(null);
+      setPendingOrderId('');
+      setPendingOrderTotal(0);
       setIsSubmitting(false);
       setVoucherInput('');
       setAppliedVoucher('');
@@ -194,7 +191,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   }, 0);
   const discountedSubtotal = fromCents(discountedSubtotalCents);
   const cartSavings = fromCents(Math.max(0, bundleAdjustedSubtotalCents - discountedSubtotalCents));
-  const shippingFee = subtotal >= 400 ? 0 : 5.0;
+  const shippingFee = subtotal === 0 || subtotal >= 400 ? 0 : 5.0;
   const grandTotal = fromCents(discountedSubtotalCents + toCents(shippingFee));
   const grandTotalBDT = grandTotal;
   const getCartItemFinalUnitPrice = (item: CartItem) => {
@@ -241,60 +238,42 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     return true;
   };
 
-  const handleOpenPaymentOrSubmit = (e: React.FormEvent) => {
+  const handleOpenPaymentOrSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateAddress()) return;
 
+    const order = await createPendingOrder();
+    if (!order) return;
+    setPendingOrderId(order.Order_ID);
+    setPendingOrderTotal(Number(order.Subtotal) + Number(order.Shipping_Fee));
+
     if (paymentMethod === 'cash_on_delivery') {
-      // Direct Cash on Delivery submission
-      handleDirectOrderSubmission({
-        Payment_Status: 'pending',
-        Payment_Method: 'cash_on_delivery',
-        Transaction_ID: `COD-${Date.now()}`,
-      });
-    } else if (paymentMethod === 'bkash') {
-      // Direct bKash Gateway Redirection
-      setIsRedirectingToBkash(true);
-      setTimeout(() => {
-        setIsRedirectingToBkash(false);
-        setIsBkashGatewayOpen(true);
-      }, 1000);
-    } else {
-      // Open SSLCommerz Gateway Modal for Nagad, Rocket, or Cards
-      setIsSSLModalOpen(true);
+      setCreatedOrder(order);
+      onOrderSuccess(order);
+      return;
+    }
+
+    setIsSSLModalOpen(true);
+  };
+
+  const handlePaymentFailure = async (): Promise<boolean> => {
+    if (!pendingOrderId) return false;
+    try {
+      await api.revertFailedOnlinePayment(pendingOrderId);
+      try {
+        await onRefreshCart();
+      } catch (refreshError) {
+        console.error('Failed to refresh cart after payment rollback:', refreshError);
+        onNotify('Payment was not completed and your items were restored. Refresh your cart before trying again.', 'info');
+      }
+      return true;
+    } catch (err: any) {
+      console.error('Failed payment rollback failed:', err);
+      return false;
     }
   };
 
-  const handleBkashSuccess = async (paymentData: BkashPaymentSuccessData) => {
-    setIsBkashGatewayOpen(false);
-    setVerifiedPayment(paymentData);
-
-    await handleDirectOrderSubmission({
-      Payment_Status: 'paid',
-      Payment_Method: 'bkash',
-      Transaction_ID: paymentData.tran_id,
-      Payment_ID: paymentData.val_id,
-    });
-  };
-
-  const handleSSLPaymentSuccess = async (paymentData: SSLCommerzPaymentSuccessData) => {
-    setIsSSLModalOpen(false);
-    setVerifiedPayment(paymentData);
-
-    await handleDirectOrderSubmission({
-      Payment_Status: 'paid',
-      Payment_Method: paymentData.payment_method,
-      Transaction_ID: paymentData.tran_id,
-      Payment_ID: paymentData.val_id,
-    });
-  };
-
-  const handleDirectOrderSubmission = async (paymentOverrides: {
-    Payment_Status: string;
-    Payment_Method: string;
-    Transaction_ID: string;
-    Payment_ID?: string;
-  }) => {
+  const createPendingOrder = async () => {
     if (submissionInProgressRef.current || createdOrder) return;
     if (!currentCustomer.Customer_ID || cartItems.length === 0) {
       onNotify('Your cart is empty or customer session is unavailable. Reopen the cart and try again.', 'error');
@@ -318,7 +297,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         Size: item.Size,
       }));
 
-      const order = await onPlaceOrder({
+      return await onPlaceOrder({
         Customer_ID: currentCustomer.Customer_ID,
         Items: orderItems,
         Applied_Voucher: [appliedVoucher, ...bundlePricing.appliedBundleIds.map((bundleId) => `BUNDLE:${bundleId}`), cartSavings > 0 ? 'CART5' : ''].filter(Boolean).join('+') || undefined,
@@ -327,14 +306,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         Subtotal: discountedSubtotal,
         Shipping_Fee: shippingFee,
         Additional_Info: additionalNotes,
-        Payment_Status: paymentOverrides.Payment_Status,
-        Payment_Method: paymentOverrides.Payment_Method,
-        Transaction_ID: paymentOverrides.Transaction_ID,
-        Payment_ID: paymentOverrides.Payment_ID || '',
         Currency: 'BDT',
       });
-
-      setCreatedOrder(order);
     } catch (err: any) {
       onNotify(err.message || 'Failed to place order', 'error');
     } finally {
@@ -398,9 +371,9 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 </div>
 
                 <div>
-                  <h3 className="text-2xl font-black text-slate-900 dark:text-white">Order Registered &amp; Confirmed!</h3>
+                  <h3 className="text-2xl font-black text-slate-900 dark:text-white">Order Placed</h3>
                   <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
-                    Thank you, <strong className="text-slate-800 dark:text-zinc-200">{currentCustomer.Name}</strong>. Your payment and package dispatch have been logged.
+                    Thank you, <strong className="text-slate-800 dark:text-zinc-200">{currentCustomer.Name}</strong>. Your order is pending until the authorized payment or delivery lifecycle is completed.
                   </p>
                 </div>
 
@@ -425,7 +398,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   <div className="flex justify-between">
                     <span className="text-slate-500 dark:text-zinc-400">Channel / Gateway:</span>
                     <span className="font-bold text-slate-800 dark:text-zinc-200">
-                      {createdOrder.Payment_Method?.toUpperCase()} (SSLCommerz)
+                      {createdOrder.Payment_Method?.toUpperCase()} · {createdOrder.Payment_Status === 'paid' ? 'SSLCommerz' : 'Awaiting authorized collection'}
                     </span>
                   </div>
 
@@ -846,7 +819,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   </button>
                   <button
                     type="submit"
-                    disabled={isSubmitting || isLoadingCart || isLoadingBundles}
+                    disabled={isSubmitting || isLoadingCart || isLoadingBundles || cartItems.length === 0}
                     className={`flex w-full min-w-0 items-center justify-center gap-2 rounded-full px-3 py-3.5 text-center text-xs font-bold leading-tight text-white shadow-lg transition-all active:scale-98 sm:w-auto sm:px-6 ${
                       paymentMethod === 'bkash'
                         ? 'bg-[#E2136E] hover:bg-[#c20f5e] shadow-[#E2136E]/30'
@@ -863,6 +836,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       'Processing Order...'
                     ) : isLoadingCart || isLoadingBundles ? (
                       'Calculating order total...'
+                    ) : cartItems.length === 0 ? (
+                      'Your cart is empty'
                     ) : paymentMethod === 'cash_on_delivery' ? (
                       <>
                         <span className="min-w-0 break-words">Confirm Order (Cash on Delivery)</span>
@@ -885,50 +860,16 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         </div>
       </div>
 
-      {/* bKash Gateway Direct Redirection Modal */}
-      <BkashGatewayPage
-        isOpen={isBkashGatewayOpen}
-        onClose={() => setIsBkashGatewayOpen(false)}
-        orderTotal={grandTotal}
-        customer={currentCustomer}
-        shippingAddress={shippingAddress}
-        onSuccess={handleBkashSuccess}
-      />
-
-      {/* bKash Redirection Transition Overlay */}
-      {isRedirectingToBkash && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
-          <div className="w-full max-w-sm bg-white dark:bg-[#12161D] rounded-3xl p-6 text-center space-y-4 border border-pink-200 dark:border-pink-900/60 shadow-2xl">
-            <div className="w-16 h-16 rounded-3xl bg-[#E2136E] text-white flex items-center justify-center mx-auto shadow-lg shadow-pink-600/30 text-3xl font-black">
-              b
-            </div>
-            <div>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-pink-50 dark:bg-pink-950/60 text-[#E2136E] text-[10px] font-bold tracking-wider uppercase mb-1">
-                <Lock className="w-3 h-3" /> Secure Redirect
-              </div>
-              <h3 className="text-lg font-black text-slate-900 dark:text-white">Redirecting to bKash...</h3>
-              <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
-                Transferring you securely to the official bKash Payment Gateway for{' '}
-                <strong className="text-slate-800 dark:text-white">{formatBDT(grandTotalBDT)}</strong>.
-              </p>
-            </div>
-            <div className="flex items-center justify-center gap-2 text-xs text-[#E2136E] font-semibold py-2">
-              <span className="w-4 h-4 rounded-full border-2 border-[#E2136E] border-t-transparent animate-spin" />
-              <span>Initiating SSLCommerz bKash Session...</span>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* SSLCommerz Gateway Modal */}
       <SSLCommerzModal
         isOpen={isSSLModalOpen}
-        onClose={() => setIsSSLModalOpen(false)}
-        orderTotal={grandTotal}
+        orderId={pendingOrderId}
+        orderTotal={pendingOrderTotal}
         customer={currentCustomer}
         shippingAddress={shippingAddress}
         initialMethod={paymentMethod === 'cash_on_delivery' ? 'bkash' : paymentMethod}
-        onSuccess={handleSSLPaymentSuccess}
+        onPaymentFailure={handlePaymentFailure}
+        onClose={() => setIsSSLModalOpen(false)}
       />
     </>
   );

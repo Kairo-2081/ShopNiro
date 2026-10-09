@@ -17,7 +17,9 @@ import {
   CreditCard,
   Lock,
   Navigation,
+  X,
 } from 'lucide-react';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 const LiveProductTrackingMap = React.lazy(() => import('../tracking/LiveProductTrackingMap').then((module) => ({ default: module.LiveProductTrackingMap })));
 const MarketplaceTrendsTopCharts = React.lazy(() => import('../storefront/MarketplaceTrendsTopCharts').then((module) => ({ default: module.MarketplaceTrendsTopCharts })));
@@ -31,6 +33,10 @@ interface CustomerOrdersProps {
   onAddToCart?: (product: Product, quantity?: number) => void;
   onRefreshOrders?: () => Promise<void>;
 }
+
+type CancellationDialog =
+  | { kind: 'form'; order: Order }
+  | { kind: 'notice'; title: string; message: string; tone: 'success' | 'info' | 'error' };
 
 export const CustomerOrders: React.FC<CustomerOrdersProps> = ({
   currentCustomer,
@@ -58,6 +64,11 @@ export const CustomerOrders: React.FC<CustomerOrdersProps> = ({
   const [reviewDraftErrors, setReviewDraftErrors] = React.useState<Record<string, string>>({});
   const [cancellationRequests, setCancellationRequests] = React.useState<OrderCancellationRequest[]>([]);
   const [cancellationSubmittingId, setCancellationSubmittingId] = React.useState<string | null>(null);
+  const [cancellationDialog, setCancellationDialog] = React.useState<CancellationDialog | null>(null);
+  const [cancellationReason, setCancellationReason] = React.useState('Not desired product');
+  const [cancellationOtherReason, setCancellationOtherReason] = React.useState('');
+  const [cancellationFormError, setCancellationFormError] = React.useState('');
+  const cancellationDialogRef = useFocusTrap<HTMLDivElement>(Boolean(cancellationDialog));
   const refreshOrdersRef = React.useRef(onRefreshOrders);
 
   React.useEffect(() => { refreshOrdersRef.current = onRefreshOrders; }, [onRefreshOrders]);
@@ -95,17 +106,58 @@ export const CustomerOrders: React.FC<CustomerOrdersProps> = ({
     return () => window.clearInterval(refreshTimer);
   }, [loadRiderDeliveries, loadCancellationRequests, currentCustomer.Customer_ID]);
 
-  const requestCancellation = async (order: Order) => {
+  const openCancellationDialog = (order: Order) => {
+    setCancellationReason('Not desired product');
+    setCancellationOtherReason('');
+    setCancellationFormError('');
+    setCancellationDialog({ kind: 'form', order });
+  };
+
+  const showCancellationAlreadySent = () => {
+    setCancellationDialog({
+      kind: 'notice',
+      title: 'Request already sent',
+      message: 'A cancellation request for this order is already under review. Please wait for the administrator’s decision.',
+      tone: 'info',
+    });
+  };
+
+  const requestCancellation = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (cancellationDialog?.kind !== 'form') return;
+    const order = cancellationDialog.order;
+    const otherReason = cancellationOtherReason.trim();
+    if (cancellationReason === 'Other' && !otherReason) {
+      setCancellationFormError('Please tell us why you want to cancel.');
+      return;
+    }
+
+    const reason = cancellationReason === 'Other' ? `Other: ${otherReason}` : cancellationReason;
     setCancellationSubmittingId(order.Order_ID);
-    setDeliveryNotice(null);
+    setCancellationFormError('');
     try {
-      await api.requestOrderCancellation(order.Order_ID);
+      await api.requestOrderCancellation(order.Order_ID, reason);
       await loadCancellationRequests();
-      setDeliveryNotice(order.Payment_Status === 'paid'
-        ? 'Cancellation requested. An administrator will verify the refund before finalizing it.'
-        : 'Cancellation requested. An administrator will review it shortly.');
+      setCancellationDialog({
+        kind: 'notice',
+        title: 'Cancellation request sent',
+        message: order.Payment_Status === 'paid'
+          ? 'Your request has been sent. An administrator will review the cancellation and any refund.'
+          : 'Your request has been sent. An administrator will review it shortly.',
+        tone: 'success',
+      });
     } catch (error: any) {
-      setDeliveryNotice(error.message || 'Could not request cancellation.');
+      if (String(error.message || '').toLowerCase().includes('already open')) {
+        await loadCancellationRequests();
+        showCancellationAlreadySent();
+      } else {
+        setCancellationDialog({
+          kind: 'notice',
+          title: 'Request not sent',
+          message: error.message || 'Could not send your cancellation request. Please try again.',
+          tone: 'error',
+        });
+      }
     } finally {
       setCancellationSubmittingId(null);
     }
@@ -411,12 +463,15 @@ export const CustomerOrders: React.FC<CustomerOrdersProps> = ({
                   {getStatusBadge(order.Status)}
                   {(() => {
                     const cancellationRequest = cancellationRequests.find((request) => request.Order_ID === order.Order_ID);
+                    if (cancellationRequest?.Status === 'pending') {
+                      return <button type="button" onClick={showCancellationAlreadySent} className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/25 bg-amber-500/10 px-3 py-1 text-[10px] font-bold text-amber-800 dark:text-amber-200"><Clock className="h-3.5 w-3.5" />Cancellation pending</button>;
+                    }
                     if (cancellationRequest && cancellationRequest.Status !== 'rejected') {
                       return <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/25 bg-amber-500/10 px-3 py-1 text-[10px] font-bold text-amber-800 dark:text-amber-200"><Clock className="h-3.5 w-3.5" />Cancellation {cancellationRequest.Status}</span>;
                     }
                     if (!['placed', 'processing'].includes(order.Status)) return null;
                     return (
-                      <button type="button" onClick={() => void requestCancellation(order)} disabled={cancellationSubmittingId === order.Order_ID} className="inline-flex items-center gap-1 rounded-full border border-rose-300 px-3 py-1.5 text-[10px] font-bold text-rose-700 hover:bg-rose-50 disabled:opacity-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950/30">
+                      <button type="button" onClick={() => openCancellationDialog(order)} disabled={cancellationSubmittingId === order.Order_ID} className="inline-flex items-center gap-1 rounded-full border border-rose-300 px-3 py-1.5 text-[10px] font-bold text-rose-700 hover:bg-rose-50 disabled:opacity-50 dark:border-rose-900 dark:text-rose-300 dark:hover:bg-rose-950/30">
                         <AlertCircle className="h-3.5 w-3.5" />
                         {cancellationSubmittingId === order.Order_ID ? 'Sending request…' : cancellationRequest?.Status === 'rejected' ? 'Request cancellation again' : order.Payment_Status === 'paid' ? 'Request cancellation & refund' : 'Request cancellation'}
                       </button>
@@ -577,6 +632,71 @@ export const CustomerOrders: React.FC<CustomerOrdersProps> = ({
                 isModal={true}
               />
             </React.Suspense>
+          </div>
+        </div>
+      )}
+
+      {cancellationDialog && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-3 backdrop-blur-sm sm:p-5">
+          <div
+            ref={cancellationDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="cancellation-dialog-title"
+            tabIndex={-1}
+            onKeyDown={(event) => { if (event.key === 'Escape' && !cancellationSubmittingId) setCancellationDialog(null); }}
+            className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl outline-none dark:border-zinc-700 dark:bg-[#12161D] sm:p-6"
+          >
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <h2 id="cancellation-dialog-title" className="text-lg font-bold text-slate-900 dark:text-white">
+                  {cancellationDialog.kind === 'form' ? 'Request order cancellation' : cancellationDialog.title}
+                </h2>
+                {cancellationDialog.kind === 'form' && (
+                  <p className="mt-1 text-sm text-slate-600 dark:text-zinc-400">Choose a reason so the seller and administrator can review your request.</p>
+                )}
+              </div>
+              <button type="button" onClick={() => setCancellationDialog(null)} disabled={Boolean(cancellationSubmittingId)} aria-label="Close cancellation dialog" className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 disabled:opacity-50 dark:text-zinc-400 dark:hover:bg-zinc-800">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {cancellationDialog.kind === 'form' ? (
+              <form onSubmit={(event) => void requestCancellation(event)} className="space-y-4">
+                <fieldset className="space-y-2">
+                  <legend className="mb-2 text-sm font-semibold text-slate-800 dark:text-zinc-200">Reason for cancellation</legend>
+                  {['Not desired product', 'Wrong location', 'Wrong choice', 'Other'].map((reason) => (
+                    <label key={reason} className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800/70">
+                      <input type="radio" name="cancellation-reason" value={reason} checked={cancellationReason === reason} onChange={() => { setCancellationReason(reason); setCancellationFormError(''); }} className="accent-rose-600" />
+                      {reason}
+                    </label>
+                  ))}
+                </fieldset>
+                {cancellationReason === 'Other' && (
+                  <label className="block text-sm font-medium text-slate-700 dark:text-zinc-300">
+                    Tell us more
+                    <textarea value={cancellationOtherReason} onChange={(event) => { setCancellationOtherReason(event.target.value); setCancellationFormError(''); }} maxLength={493} rows={3} placeholder="Write your reason" className="mt-1.5 w-full resize-y rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:ring-2 focus:ring-rose-500 dark:border-zinc-700 dark:bg-[#181F2A] dark:text-white" />
+                    <span className="mt-1 block text-right text-xs text-slate-500 dark:text-zinc-400">{cancellationOtherReason.length}/493</span>
+                  </label>
+                )}
+                {cancellationFormError && <p role="alert" className="text-sm font-medium text-rose-700 dark:text-rose-300">{cancellationFormError}</p>}
+                <div className="flex justify-end gap-2 border-t border-slate-200 pt-4 dark:border-zinc-800">
+                  <button type="button" onClick={() => setCancellationDialog(null)} disabled={Boolean(cancellationSubmittingId)} className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50 dark:text-zinc-300 dark:hover:bg-zinc-800">Keep order</button>
+                  <button type="submit" disabled={cancellationSubmittingId === cancellationDialog.order.Order_ID} className="rounded-lg bg-rose-700 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-800 disabled:cursor-wait disabled:opacity-60 dark:bg-rose-600 dark:hover:bg-rose-500">
+                    {cancellationSubmittingId === cancellationDialog.order.Order_ID ? 'Sending…' : 'Send request'}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div>
+                <p role={cancellationDialog.tone === 'error' ? 'alert' : 'status'} className={`text-sm ${cancellationDialog.tone === 'error' ? 'text-rose-700 dark:text-rose-300' : 'text-slate-700 dark:text-zinc-300'}`}>
+                  {cancellationDialog.message}
+                </p>
+                <div className="mt-5 flex justify-end border-t border-slate-200 pt-4 dark:border-zinc-800">
+                  <button type="button" autoFocus onClick={() => setCancellationDialog(null)} className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white">Close</button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

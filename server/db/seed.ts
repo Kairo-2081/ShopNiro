@@ -66,14 +66,14 @@ export async function seedDatabaseIfEmpty() {
       seller: process.env.SHOPNIRO_SEED_SELLER_PASSWORD,
       customer: process.env.SHOPNIRO_SEED_CUSTOMER_PASSWORD,
     };
-    const missingSeedPasswords = [
-      adminCount === 0 && (!seedPasswords.admin || seedPasswords.admin.trim().length < 16) ? 'SHOPNIRO_SEED_ADMIN_PASSWORD' : '',
-      sellerCount === 0 && (!seedPasswords.seller || seedPasswords.seller.trim().length < 16) ? 'SHOPNIRO_SEED_SELLER_PASSWORD' : '',
-      customerCount === 0 && (!seedPasswords.customer || seedPasswords.customer.trim().length < 16) ? 'SHOPNIRO_SEED_CUSTOMER_PASSWORD' : '',
-    ].filter(Boolean);
-    if (missingSeedPasswords.length) {
-      throw new Error(`Initial account seeding requires 16+ character values for: ${missingSeedPasswords.join(', ')}.`);
-    }
+    const requireStrongSeedPassword = (name: string, value: string | undefined) => {
+      if (!value || value.trim().length < 16) {
+        throw new Error(`${name} must be at least 16 characters.`);
+      }
+    };
+    if (adminCount === 0) requireStrongSeedPassword('SHOPNIRO_SEED_ADMIN_PASSWORD', seedPasswords.admin);
+    if (sellerCount === 0) requireStrongSeedPassword('SHOPNIRO_SEED_SELLER_PASSWORD', seedPasswords.seller);
+    if (customerCount === 0) requireStrongSeedPassword('SHOPNIRO_SEED_CUSTOMER_PASSWORD', seedPasswords.customer);
 
     // 1. Categories
     const catCountRes = await query(`SELECT gocart_table_count('categories') AS count`);
