@@ -10,6 +10,22 @@ import { calculateBundlePrices } from '../../src/lib/bundles.ts';
 
 const router = Router();
 
+export const expirePendingOrders = async (maxMinutes = 15) => {
+  const result = await query(`
+    UPDATE orders
+    SET status = 'expired', payment_status = 'failed', updated_at = CURRENT_TIMESTAMP
+    WHERE status = 'placed'
+      AND payment_status = 'pending'
+      AND order_placed_at < NOW() - ($1 * INTERVAL '1 minute')
+    RETURNING id
+  `, [maxMinutes]);
+
+  return {
+    expired: result.rowCount ?? 0,
+    orderIds: result.rows.map((row) => String(row.id)),
+  };
+};
+
 /**
  * GET /api/orders
  * Retrieve orders (via schema gocart_orders_list)

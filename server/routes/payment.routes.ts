@@ -273,6 +273,10 @@ router.get('/methods', async (req, res) => {
 });
 
 router.post('/refunds/process', async (req, res) => {
+  if (process.env.RUN_BACKGROUND_JOBS !== 'true') {
+    return res.status(503).json({ error: 'Refund processing is disabled.' });
+  }
+
   const configuredSecret = process.env.CRON_SECRET || '';
   const receivedSecret = typeof req.headers['x-cron-secret'] === 'string' ? req.headers['x-cron-secret'] : '';
   const configuredBuffer = Buffer.from(configuredSecret);

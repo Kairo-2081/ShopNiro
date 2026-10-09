@@ -10,6 +10,7 @@ import { query } from './db/index.ts';
 import { ensureDatabaseSchema, seedDatabaseIfEmpty } from './db/seed.ts';
 import { errorHandler } from './middleware/errorHandler.ts';
 import { requireAuth, requireRole, optionalAuth, AuthRequest } from './middleware/auth.ts';
+import { enforcePublicApiPolicy } from './middleware/publicRoutes.ts';
 
 // Route handlers
 import authRoutes from './routes/auth.routes.ts';
@@ -19,7 +20,7 @@ import customersRoutes from './routes/customers.routes.ts';
 import adminsRoutes from './routes/admins.routes.ts';
 import productsRoutes from './routes/products.routes.ts';
 import cartRoutes from './routes/cart.routes.ts';
-import ordersRoutes from './routes/orders.routes.ts';
+import ordersRoutes, { expirePendingOrders } from './routes/orders.routes.ts';
 import reviewsRoutes from './routes/reviews.routes.ts';
 import aiRoutes from './routes/ai.routes.ts';
 import paymentRoutes, { startRefundProcessor } from './routes/payment.routes.ts';
@@ -65,6 +66,7 @@ app.use(cors({
   credentials: true,
 }));
 app.use('/api', apiRateLimit);
+app.use('/api', enforcePublicApiPolicy);
 app.use('/api/ai', optionalAuth, aiRateLimit);
 app.use('/api/maps', optionalAuth, mapsRateLimit);
 
@@ -240,7 +242,10 @@ app.use(errorHandler);
 // Vite Frontend Middleware Integration
 async function startServer() {
   try {
-    await ensureDatabaseSchema();
+    const shouldRunSchemaOnStart = process.env.RUN_SCHEMA_ON_START === 'true';
+    if (shouldRunSchemaOnStart) {
+      await ensureDatabaseSchema();
+    }
     if (process.env.SEED_ON_START === 'true' && process.env.NODE_ENV !== 'production') {
       await seedDatabaseIfEmpty();
     }
@@ -302,7 +307,10 @@ async function startServer() {
     });
 
   try {
-    startRefundProcessor();
+    if (process.env.RUN_BACKGROUND_JOBS === 'true') {
+      await expirePendingOrders();
+      startRefundProcessor();
+    }
     const actualPort = await listenOnAvailablePort(PORT);
     console.log(`ShopNiro E-Commerce Server running on http://localhost:${actualPort}`);
   } catch (error) {

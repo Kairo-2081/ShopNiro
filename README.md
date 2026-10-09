@@ -17,7 +17,7 @@ ShopNiro is a multi-vendor marketplace where customers shop, pay with bKash or S
 
    When seeding a fresh database, configure `SHOPNIRO_SEED_ADMIN_PASSWORD`, `SHOPNIRO_SEED_SELLER_PASSWORD`, and `SHOPNIRO_SEED_CUSTOMER_PASSWORD` with unique values of at least 16 characters. These values are hashed before insertion and are never checked into source. Existing databases with those account tables populated do not need these seed variables.
 
-   Startup seeding is disabled by default. Set `SEED_ON_START=true` only for an explicitly selected non-production development database. Production never seeds on boot.
+   Startup seeding is disabled by default. Set `SEED_ON_START=true` only for an explicitly selected non-production development database. Production never seeds on boot. Similarly, schema bootstrapping is disabled unless `RUN_SCHEMA_ON_START=true`, and background refund / expiry jobs are disabled unless `RUN_BACKGROUND_JOBS=true`. Use them only in explicitly selected non-production or internal job environments with `CRON_SECRET` configured.
 
 Optional welcome-offer email delivery: customers can opt in to one NEW20 welcome email during registration. Configure `RESEND_API_KEY`, `SHOPNIRO_FROM_EMAIL` (a verified Resend sender), and `SHOPNIRO_PUBLIC_URL` in the server environment. Without all three values, account creation still succeeds and no email is sent.
 

@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: postgres
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
+      JWT_SECRET: test-jwt-secret-1234567890abcdef
+      CRON_SECRET: test-cron-secret-1234567890abcdef
+      SSLCOMMERZ_IPN_TOKEN: test-ipn-token-1234567890abcdef
+      SSLCOMMERZ_STORE_ID: test-store-id
+      SSLCOMMERZ_STORE_PASSWORD: test-store-password
+      RUN_SCHEMA_ON_START: 'true'
+      RUN_BACKGROUND_JOBS: 'false'
+      PAYMENT_SIMULATOR: 'true'
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Initialize test database
+        run: psql "$DATABASE_URL" -f schema.sql
+
+      - name: Lint TypeScript
+        run: npm run lint
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build bundle
+        run: npm run build

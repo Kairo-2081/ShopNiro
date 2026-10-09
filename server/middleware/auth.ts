@@ -4,7 +4,10 @@ import { randomUUID } from 'node:crypto';
 import { query } from '../db/index.ts';
 import { UserRole } from '../../src/types.ts';
 
-const JWT_SECRET = process.env.JWT_SECRET;
+const developmentFallbackSecret = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test'
+  ? 'shopniro-dev-test-jwt-secret-at-least-32-chars'
+  : undefined;
+const JWT_SECRET = process.env.JWT_SECRET || developmentFallbackSecret;
 if (!JWT_SECRET || JWT_SECRET.length < 32) {
   throw new Error('JWT_SECRET must be configured with at least 32 characters.');
 }
