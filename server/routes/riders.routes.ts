@@ -2,6 +2,7 @@ import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import Groq from 'groq-sdk';
 import PDFDocument from 'pdfkit';
+import { randomUUID } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { pool, query } from '../db/index.ts';
@@ -10,6 +11,17 @@ import { AuthRequest, requireAuth, requireRole } from '../middleware/auth.ts';
 import { Address, Rider } from '../../src/types.ts';
 
 const router = Router();
+const createApplicationReviewAudit = async (accountType: 'seller' | 'rider', accountId: string, adminId: string, decision: 'approved' | 'rejected', reason: string) => {
+  await query(
+    `INSERT INTO application_review_audit (id, account_type, account_id, admin_id, decision, reason)
+     VALUES ($1, $2, $3, $4, $5, $6)`,
+    [`APPREV-${randomUUID()}`, accountType, accountId, adminId, decision, reason]
+  );
+};
+const sanitizeReviewReason = (value: unknown) => {
+  const text = typeof value === 'string' ? value.trim().slice(0, 2000) : '';
+  return text;
+};
 const riderApplicationRateLimit = rateLimit({
   windowMs: 60 * 60 * 1000,
   limit: 5,
@@ -434,13 +446,17 @@ router.get('/leaderboard', requireAuth, requireRole(['admin']), async (_req, res
   }
 });
 
-router.get('/applications', requireAuth, requireRole(['admin']), async (_req, res) => {
+router.get('/applications', requireAuth, requireRole(['admin']), async (req, res) => {
   try {
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
+    const offset = Math.max(0, Number(req.query.offset) || 0);
     const result = await query(`
       SELECT r.*, u.username, u.email
       FROM riders r JOIN users u ON u.id = r.id
-      ORDER BY CASE WHEN r.status = 'pending' THEN 0 ELSE 1 END, r.created_at DESC
-    `);
+      ORDER BY CASE WHEN r.status = 'pending' THEN 0 ELSE 1 END, r.created_at DESC, r.id DESC
+      LIMIT $1 OFFSET $2
+    `, [limit + 1, offset]);
+    res.setHeader('X-Has-More', String(result.rows.length > limit));
     res.json(result.rows.map((row) => mapRider(row, false)));
   } catch (error: any) {
     console.error('Failed to load rider applications:', error);
@@ -461,17 +477,29 @@ router.get('/applications/:id/cv', requireAuth, requireRole(['admin']), async (r
   }
 });
 
-router.patch('/applications/:id/status', requireAuth, requireRole(['admin']), async (req, res) => {
-  const { status } = req.body ?? {};
+router.patch('/applications/:id/status', requireAuth, requireRole(['admin']), async (req: AuthRequest, res) => {
+  const { status, reason } = req.body ?? {};
+  const reviewReason = sanitizeReviewReason(reason);
   if (!['approved', 'rejected', 'suspended'].includes(status)) {
     return res.status(400).json({ error: 'Choose approved, rejected, or suspended.' });
   }
+  if (status === 'rejected' && !reviewReason) {
+    return res.status(400).json({ error: 'A rejection reason is required.' });
+  }
   try {
+    const applicant = await query('SELECT id, status, has_cv FROM riders WHERE id = $1', [req.params.id]);
+    if (!applicant.rows.length) return res.status(404).json({ error: 'Rider application not found.' });
+    if (status === 'approved' && !applicant.rows[0].has_cv) {
+      return res.status(400).json({ error: 'Rider CV is required before approval.' });
+    }
+
     const result = await query(
       'UPDATE riders SET status = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING id, status',
       [req.params.id, status]
     );
-    if (!result.rows.length) return res.status(404).json({ error: 'Rider application not found.' });
+    if (status === 'approved' || status === 'rejected') {
+      await createApplicationReviewAudit('rider', req.params.id, req.user!.entityId, status, reviewReason || 'Approved after administrative review.');
+    }
     return res.json({ Rider_ID: result.rows[0].id, Status: result.rows[0].status });
   } catch (error: any) {
     console.error('Failed to update rider application:', error);

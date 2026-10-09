@@ -41,6 +41,7 @@ const CheckoutModal = React.lazy(() => import('./components/storefront/CheckoutM
 const PaymentReceiptModal = React.lazy(() => import('./components/payment/PaymentReceiptModal').then((module) => ({ default: module.PaymentReceiptModal })));
 const CustomerOrders = React.lazy(() => import('./components/customer/CustomerOrders').then((module) => ({ default: module.CustomerOrders })));
 const CustomerProfile = React.lazy(() => import('./components/customer/CustomerProfile').then((module) => ({ default: module.CustomerProfile })));
+const SupportPage = React.lazy(() => import('./components/support/SupportPage').then((module) => ({ default: module.SupportPage })));
 const AdminDashboard = React.lazy(() => import('./components/admin/AdminDashboard').then((module) => ({ default: module.AdminDashboard })));
 const SellerDashboard = React.lazy(() => import('./components/seller/SellerDashboard').then((module) => ({ default: module.SellerDashboard })));
 const LiveProductTrackingMap = React.lazy(() => import('./components/tracking/LiveProductTrackingMap').then((module) => ({ default: module.LiveProductTrackingMap })));
@@ -184,7 +185,7 @@ export default function App() {
         setSelectedSeller(null);
         setSelectedAdmin(null);
         setSelectedRider(null);
-        if (viewMode !== 'landing' && targetTab !== 'storefront') {
+        if (viewMode !== 'landing' && !['storefront', 'support'].includes(targetTab)) {
           const tabLabel = targetTab.replace('-', ' ');
           setAuthNotice(`Authentication Required: You must be authenticated before processing HTTP requests on the ${tabLabel} page.`);
           setIsLoginModalOpen(true);
@@ -742,8 +743,8 @@ export default function App() {
   };
 
   // Admin Seller Governance
-  const handleUpdateSellerStatus = async (sellerId: string, status: SellerStatus) => {
-    await api.updateSellerStatus(sellerId, status);
+  const handleUpdateSellerStatus = async (sellerId: string, status: SellerStatus, reason?: string) => {
+    await api.updateSellerStatus(sellerId, status, reason);
     const updatedSellers = await api.getSellers();
     setSellers(updatedSellers);
     if (selectedSeller && selectedSeller.Seller_ID === sellerId) {
@@ -988,6 +989,9 @@ export default function App() {
             </button>
           </div>
         )}
+
+        {/* Storefront Tab */}
+        {activeTab === 'support' && <SupportPage currentCustomer={selectedCustomer} />}
 
         {/* Storefront Tab */}
         {activeTab === 'storefront' && (

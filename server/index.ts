@@ -1,13 +1,15 @@
 import 'dotenv/config';
 import cors from 'cors';
 import express from 'express';
+import helmet from 'helmet';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import http from 'http';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
-import { query, getDatabaseProviderInfo } from './db/index.ts';
-import { seedDatabaseIfEmpty } from './db/seed.ts';
+import { query } from './db/index.ts';
+import { ensureDatabaseSchema, seedDatabaseIfEmpty } from './db/seed.ts';
 import { errorHandler } from './middleware/errorHandler.ts';
-import { requireAuth, requireRole } from './middleware/auth.ts';
+import { requireAuth, requireRole, optionalAuth, AuthRequest } from './middleware/auth.ts';
 
 // Route handlers
 import authRoutes from './routes/auth.routes.ts';
@@ -20,33 +22,51 @@ import cartRoutes from './routes/cart.routes.ts';
 import ordersRoutes from './routes/orders.routes.ts';
 import reviewsRoutes from './routes/reviews.routes.ts';
 import aiRoutes from './routes/ai.routes.ts';
-import paymentRoutes from './routes/payment.routes.ts';
+import paymentRoutes, { startRefundProcessor } from './routes/payment.routes.ts';
 import mapsRoutes from './routes/maps.routes.ts';
 import ridersRoutes from './routes/riders.routes.ts';
 import riderDeliveryRoutes from './routes/rider-delivery.routes.ts';
 import bundlesRoutes from './routes/bundles.routes.ts';
 import sellerAnalyticsRoutes from './routes/analytics.routes.ts';
 import wishlistRoutes from './routes/wishlist.routes.ts';
+import supportRoutes from './routes/support.routes.ts';
 
 const app = express();
 const PORT = Number(process.env.PORT) || 3000;
 app.set('trust proxy', 1);
+const isProduction = process.env.NODE_ENV === 'production';
+const keyedRateLimit = (req: express.Request) => (req as AuthRequest).user?.userId || ipKeyGenerator(req.ip || '');
+const apiRateLimit = rateLimit({
+  windowMs: 60_000,
+  limit: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => /^\/api\/payment\/sslcommerz\/(ipn|success|fail|cancel)$/.test(req.originalUrl.split('?')[0]),
+});
+const aiRateLimit = rateLimit({ windowMs: 60_000, limit: 10, keyGenerator: keyedRateLimit, standardHeaders: true, legacyHeaders: false });
+const mapsRateLimit = rateLimit({ windowMs: 60_000, limit: 30, keyGenerator: keyedRateLimit, standardHeaders: true, legacyHeaders: false });
 const allowedOrigins = new Set([
-  'http://localhost',
-  'https://localhost',
-  'capacitor://localhost',
-  'http://localhost:5173',
-  'http://localhost:3000',
+  ...(!isProduction ? [
+    'http://localhost',
+    'https://localhost',
+    'capacitor://localhost',
+    'http://localhost:5173',
+    'http://localhost:3000',
+  ] : []),
   'https://shopniro.onrender.com',
   process.env.SHOPNIRO_PUBLIC_URL?.replace(/\/$/, ''),
   process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined,
   process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : undefined,
 ].filter((origin): origin is string => Boolean(origin)));
 
+app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({
   origin: [...allowedOrigins],
   credentials: true,
 }));
+app.use('/api', apiRateLimit);
+app.use('/api/ai', optionalAuth, aiRateLimit);
+app.use('/api/maps', optionalAuth, mapsRateLimit);
 
 app.use((req, res, next) => {
   if (/^\/api\/payment\/sslcommerz\/(success|fail|cancel|ipn)$/.test(req.path)) return next();
@@ -69,38 +89,22 @@ app.use((req, res, next) => {
   next();
 });
 
-// Parse incoming JSON payloads
-app.use(express.json({ limit: '8mb' }));
-app.use(express.urlencoded({ extended: false, limit: '8mb' }));
-
-// Seed database schema and sample data on server startup if empty
-seedDatabaseIfEmpty().catch((err) => {
-  console.error('Database seeding check failed on startup:', err);
-});
+// Keep larger JSON allowances isolated to APIs that accept inline media.
+const mediaJsonParser = express.json({ limit: '8mb' });
+app.use('/api/products', mediaJsonParser);
+app.use('/api/sellers', mediaJsonParser);
+app.use('/api/riders', mediaJsonParser);
+app.use(express.json({ limit: '100kb' }));
+app.use(express.urlencoded({ extended: false, limit: '100kb' }));
 
 // Database Health & Connectivity Status Endpoint
 app.get('/api/db/status', requireAuth, requireRole(['admin']), async (req, res) => {
-  const providerInfo = getDatabaseProviderInfo();
   try {
-    const result = await query(`SELECT * FROM gocart_database_status()`);
-    res.json({
-      connected: true,
-      provider: providerInfo.provider,
-      isSupabase: providerInfo.isSupabase,
-      database: result.rows[0]?.db_name || providerInfo.database,
-      host: providerInfo.host,
-      status: 'Connected & Healthy',
-      queryTest: result.rows[0] || null,
-    });
+    await query('SELECT 1');
+    res.json({ connected: true });
   } catch (error: any) {
     console.error('Database Connection Error:', error);
-    res.status(500).json({
-      connected: false,
-      provider: providerInfo.provider,
-      isSupabase: providerInfo.isSupabase,
-      database: providerInfo.database,
-      error: error.message || 'Database connection error',
-    });
+    res.status(500).json({ connected: false });
   }
 });
 
@@ -128,7 +132,13 @@ app.get('/api/stats', requireAuth, requireRole(['admin']), async (req, res) => {
 
 app.get('/api/admin/users', requireAuth, requireRole(['admin']), async (req, res) => {
   try {
-    const result = await query(`SELECT * FROM gocart_admins_users_list()`);
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
+    const offset = Math.max(0, Number(req.query.offset) || 0);
+    const result = await query(`
+      SELECT id, username, email, role, id AS entity_id, created_at
+      FROM users ORDER BY created_at DESC, id DESC LIMIT $1 OFFSET $2
+    `, [limit + 1, offset]);
+    res.setHeader('X-Has-More', String(result.rows.length > limit));
     res.json(result.rows);
   } catch (error: any) {
     res.status(500).json({ error: 'Failed to fetch users' });
@@ -204,15 +214,6 @@ app.get('/api/analytics/related-products', async (req, res) => {
   }
 });
 
-app.post('/api/reset-seed', requireAuth, requireRole(['admin']), async (req, res) => {
-  try {
-    await seedDatabaseIfEmpty();
-    res.json({ success: true, message: 'Database seed completed.' });
-  } catch (error: any) {
-    res.status(500).json({ error: 'Failed to reset seed' });
-  }
-});
-
 // Mount Modular Route Handlers
 app.use('/api/auth', authRoutes);
 app.use('/api/categories', categoriesRoutes);
@@ -225,6 +226,7 @@ app.use('/api/orders', ordersRoutes);
 app.use('/api/bundles', bundlesRoutes);
 app.use('/api/analytics', sellerAnalyticsRoutes);
 app.use('/api/wishlist', wishlistRoutes);
+app.use('/api/support', supportRoutes);
 app.use('/api/reviews', reviewsRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/payment', paymentRoutes);
@@ -237,6 +239,17 @@ app.use(errorHandler);
 
 // Vite Frontend Middleware Integration
 async function startServer() {
+  try {
+    await ensureDatabaseSchema();
+    if (process.env.SEED_ON_START === 'true' && process.env.NODE_ENV !== 'production') {
+      await seedDatabaseIfEmpty();
+    }
+  } catch (error) {
+    console.error('Database initialization failed; server was not started:', error);
+    process.exitCode = 1;
+    return;
+  }
+
   const httpServer = http.createServer(app);
 
   if (process.env.NODE_ENV !== 'production') {
@@ -289,6 +302,7 @@ async function startServer() {
     });
 
   try {
+    startRefundProcessor();
     const actualPort = await listenOnAvailablePort(PORT);
     console.log(`ShopNiro E-Commerce Server running on http://localhost:${actualPort}`);
   } catch (error) {

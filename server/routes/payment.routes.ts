@@ -1,10 +1,18 @@
 import { timingSafeEqual } from 'node:crypto';
 import { Router } from 'express';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { pool, query } from '../db/index.ts';
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth.ts';
 import { GatewayError, sslcommerz } from '../services/sslcommerz.service.ts';
 
 const router = Router();
+const paymentInitRateLimit = rateLimit({
+  windowMs: 60_000,
+  limit: 5,
+  keyGenerator: (req) => (req as AuthRequest).user?.userId || ipKeyGenerator(req.ip || ''),
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 const simulatorProfiles: Record<string, { name: string; accountLabel: string; account: string; codeLabel: string; code: string; securityLabel: string; security: string }> = {
   bkash: { name: 'bKash', accountLabel: 'Demo bKash number', account: '01700000000', codeLabel: 'Demo OTP', code: '123456', securityLabel: 'Demo PIN', security: '12345' },
@@ -92,6 +100,104 @@ const orderIdForTransaction = async (tranId: unknown): Promise<string | undefine
   return result.rows[0]?.order_id ? String(result.rows[0].order_id) : undefined;
 };
 
+export const processRefundQueue = async () => {
+  const result = await query(`
+    SELECT refund.id, refund.order_id, refund.payment_id, refund.amount, refund.status,
+      refund.gateway_ref, payment.bank_tran_id, payment.transaction_id
+    FROM refunds refund
+    LEFT JOIN payments payment ON payment.id = refund.payment_id
+    WHERE refund.method = 'sslcommerz' AND refund.status IN ('requested', 'submitted')
+    ORDER BY refund.created_at ASC
+    LIMIT 50
+  `);
+  const summary = { initiated: 0, completed: 0, failed: 0, pending: 0 };
+
+  for (const refund of result.rows) {
+    try {
+      if (refund.status === 'requested') {
+        if (!refund.bank_tran_id) {
+          await query("UPDATE refunds SET status = 'failed', last_error = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND status = 'requested'", [refund.id, 'Verified bank transaction ID is unavailable.']);
+          summary.failed += 1;
+          continue;
+        }
+        const initiated = await sslcommerz.initiateRefund({
+          bankTranId: refund.bank_tran_id,
+          refundTransId: `RF-${String(refund.id).replace(/[^A-Za-z0-9]/g, '').slice(-24)}`,
+          amount: Number(refund.amount),
+          remarks: `ShopNiro cancellation refund for order ${refund.order_id}`,
+          referenceId: String(refund.order_id),
+        });
+        await query(
+          `UPDATE refunds SET status = 'submitted', gateway_ref = $2, last_error = NULL,
+            updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND status = 'requested'`,
+          [refund.id, initiated.refund_ref_id]
+        );
+        summary.initiated += 1;
+        continue;
+      }
+
+      if (!refund.gateway_ref) {
+        await query("UPDATE refunds SET status = 'failed', last_error = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND status = 'submitted'", [refund.id, 'Refund reference is missing.']);
+        summary.failed += 1;
+        continue;
+      }
+      const status = await sslcommerz.getRefundStatus(refund.gateway_ref);
+      if (status.status === 'refunded') {
+        const client = await pool.connect();
+        try {
+          await client.query('BEGIN');
+          const locked = await client.query('SELECT order_id, payment_id, status FROM refunds WHERE id = $1 FOR UPDATE', [refund.id]);
+          if (locked.rows[0]?.status === 'submitted') {
+            await client.query("UPDATE refunds SET status = 'completed', last_error = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $1", [refund.id]);
+            await client.query("UPDATE orders SET payment_status = 'refunded' WHERE id = $1", [locked.rows[0].order_id]);
+            if (locked.rows[0].payment_id) {
+              await client.query("UPDATE payments SET status = 'REFUNDED', updated_at = CURRENT_TIMESTAMP WHERE id = $1", [locked.rows[0].payment_id]);
+            }
+            await client.query('UPDATE order_cancellation_requests SET refund_completed_at = COALESCE(refund_completed_at, CURRENT_TIMESTAMP) WHERE order_id = $1 AND status = \'approved\'', [locked.rows[0].order_id]);
+            summary.completed += 1;
+          } else {
+            summary.pending += 1;
+          }
+          await client.query('COMMIT');
+        } catch (error) {
+          await client.query('ROLLBACK').catch(() => {});
+          throw error;
+        } finally {
+          client.release();
+        }
+      } else if (status.status === 'failed' || status.status === 'cancelled') {
+        await query("UPDATE refunds SET status = 'failed', last_error = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND status = 'submitted'", [refund.id, status.errorReason || `Gateway refund status: ${status.status}`]);
+        summary.failed += 1;
+      } else {
+        summary.pending += 1;
+      }
+    } catch (error: any) {
+      await query('UPDATE refunds SET last_error = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1', [refund.id, error.message || 'Refund processing failed.']).catch(() => {});
+      summary.pending += 1;
+    }
+  }
+  return summary;
+};
+
+export const startRefundProcessor = (intervalMs = 60_000) => {
+  const globalKey = '__shopniro_refund_processor__';
+  const existing = (globalThis as typeof globalThis & Record<string, any>)[globalKey];
+  if (existing) return existing;
+
+  const timer = setInterval(() => {
+    void processRefundQueue().catch((error) => {
+      console.error('Background refund reconciliation failed:', error);
+    });
+  }, intervalMs);
+
+  (globalThis as typeof globalThis & Record<string, any>)[globalKey] = timer;
+  void processRefundQueue().catch((error) => {
+    console.error('Initial refund reconciliation failed:', error);
+  });
+
+  return timer;
+};
+
 /**
  * GET /api/payment/methods
  * Returns available payment methods, SSLCommerz gateway status, and exchange rates
@@ -166,6 +272,23 @@ router.get('/methods', async (req, res) => {
   });
 });
 
+router.post('/refunds/process', async (req, res) => {
+  const configuredSecret = process.env.CRON_SECRET || '';
+  const receivedSecret = typeof req.headers['x-cron-secret'] === 'string' ? req.headers['x-cron-secret'] : '';
+  const configuredBuffer = Buffer.from(configuredSecret);
+  const receivedBuffer = Buffer.from(receivedSecret);
+  if (!configuredSecret) return res.status(503).json({ error: 'Refund processing is not configured.' });
+  if (configuredBuffer.length !== receivedBuffer.length || !timingSafeEqual(configuredBuffer, receivedBuffer)) {
+    return res.status(401).json({ error: 'Unauthorized refund processor.' });
+  }
+  try {
+    return res.json(await processRefundQueue());
+  } catch (error) {
+    console.error('Refund processor failed:', error);
+    return res.status(500).json({ error: 'Refund processing failed.' });
+  }
+});
+
 /**
  * POST /api/payment/init
  * Initializes an SSLCommerz payment session for an order (via schema gocart_payment_create)
@@ -229,7 +352,7 @@ router.post('/simulator/complete', async (req, res) => {
   }
 });
 
-router.post('/init', requireAuth, requireRole(['customer']), async (req: AuthRequest, res) => {
+router.post('/init', requireAuth, requireRole(['customer']), paymentInitRateLimit, async (req: AuthRequest, res) => {
   try {
     const {
       orderId,

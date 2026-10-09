@@ -16,6 +16,7 @@ import {
   Radio,
   Flame,
   Truck,
+  LifeBuoy,
 } from 'lucide-react';
 
 const mobileNavItems = (isLoggedIn: boolean, role: UserRole) => {
@@ -24,23 +25,28 @@ const mobileNavItems = (isLoggedIn: boolean, role: UserRole) => {
     { tab: 'charts' as AppTab, label: 'Top charts', icon: Flame },
     { tab: 'orders' as AppTab, label: 'Orders', icon: PackageCheck },
     { tab: 'profile' as AppTab, label: 'Profile', icon: User },
+    { tab: 'support' as AppTab, label: 'Support', icon: LifeBuoy },
   ];
   if (isLoggedIn && role === 'seller') return [
     { tab: 'seller-dashboard' as AppTab, label: 'Studio', icon: Store },
     { tab: 'storefront' as AppTab, label: 'Store preview', icon: ShoppingBag },
+    { tab: 'support' as AppTab, label: 'Support', icon: LifeBuoy },
   ];
   if (isLoggedIn && role === 'admin') return [
     { tab: 'admin-dashboard' as AppTab, label: 'Governance', icon: ShieldCheck },
     { tab: 'storefront' as AppTab, label: 'Storefront', icon: ShoppingBag },
+    { tab: 'support' as AppTab, label: 'Support', icon: LifeBuoy },
   ];
   if (isLoggedIn && role === 'rider') return [
     { tab: 'rider-dashboard' as AppTab, label: 'Deliveries', icon: Truck },
+    { tab: 'support' as AppTab, label: 'Support', icon: LifeBuoy },
   ];
   return [
     { tab: 'storefront' as AppTab, label: 'Browse', icon: ShoppingBag },
     { tab: 'charts' as AppTab, label: 'Top charts', icon: Flame },
     { tab: 'orders' as AppTab, label: 'Orders', icon: PackageCheck },
     { tab: 'profile' as AppTab, label: 'Account', icon: User },
+    { tab: 'support' as AppTab, label: 'Support', icon: LifeBuoy },
   ];
 };
 
@@ -295,6 +301,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                 Rider deliveries
               </button>
             )}
+            <button
+              type="button"
+              onClick={() => setActiveTab('support')}
+              aria-current={activeTab === 'support' ? 'page' : undefined}
+              className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors ${activeTab === 'support' ? 'bg-slate-900 text-white dark:bg-zinc-100 dark:text-zinc-900' : 'text-slate-700 hover:bg-white/60 dark:text-zinc-300 dark:hover:bg-zinc-800'}`}
+            >
+              <LifeBuoy className="h-3.5 w-3.5" />Support
+            </button>
           </nav>
 
           {/* Right Actions */}

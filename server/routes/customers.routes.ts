@@ -32,7 +32,9 @@ const registrationRateLimit = rateLimit({
  */
 router.get('/', requireAuth, async (req: AuthRequest, res) => {
   try {
-    const result = await query(`SELECT * FROM gocart_customers_list()`);
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
+    const offset = Math.max(0, Number(req.query.offset) || 0);
+    const result = await query('SELECT * FROM customer_profiles ORDER BY created_at DESC, id DESC LIMIT $1 OFFSET $2', [limit + 1, offset]);
     const formatted: Customer[] = result.rows.map((c: any) => ({
       Customer_ID: c.id,
       Username: c.username || '',
@@ -41,6 +43,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
       Number: c.number || '',
       Address: mapAddress(c),
     }));
+    res.setHeader('X-Has-More', String(result.rows.length > limit));
     return res.json(formatted);
   } catch (error: any) {
     console.error('Error fetching customers:', error);

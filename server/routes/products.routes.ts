@@ -23,7 +23,7 @@ router.get('/', async (req, res) => {
     const search = typeof req.query.search === 'string' && req.query.search.trim()
       ? `%${req.query.search.trim()}%`
       : null;
-    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 100));
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
     const offset = Math.max(0, Number(req.query.offset) || 0);
     const sort = typeof req.query.sort === 'string' ? req.query.sort : 'featured';
     const orderBy = ({
@@ -35,7 +35,7 @@ router.get('/', async (req, res) => {
     } as Record<string, string>)[sort] || 'p.featured_deal DESC, p.created_at DESC NULLS LAST, p.id DESC';
 
     const result = await query(`
-      SELECT p.* FROM gocart_products_list() p
+      SELECT p.* FROM products p
       WHERE ($1::text IS NULL OR p.seller_id = $1)
         AND ($2::text IS NULL OR p.category_id = $2)
         AND ($3::text IS NULL OR p.product_status = $3)
@@ -71,6 +71,7 @@ router.get('/', async (req, res) => {
       Created_At: p.created_at,
     }));
 
+    res.setHeader('X-Has-More', String(result.rows.length > limit));
     res.json(formatted);
   } catch (error: any) {
     console.error('Error fetching products:', error);

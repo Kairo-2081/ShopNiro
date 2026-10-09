@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import rateLimit from 'express-rate-limit';
 import { query, mapAddress } from '../db/index.ts';
-import { hashPassword, comparePassword, isBcryptHash } from '../db/password.ts';
+import { hashPassword, comparePassword, needsPasswordRehash } from '../db/password.ts';
 import { requireAuth, issueAuthCookie, clearAuthCookie, optionalAuth, AUTH_COOKIE_NAME, AuthRequest } from '../middleware/auth.ts';
 
 const router = Router();
@@ -12,6 +12,33 @@ const loginRateLimit = rateLimit({
   legacyHeaders: false,
   message: { error: 'Too many sign-in attempts. Try again in 15 minutes.' },
 });
+const loginFailures = new Map<string, { count: number; windowStartedAt: number; lockedUntil: number }>();
+const loginFailureWindowMs = 15 * 60 * 1000;
+const maxLoginFailures = 5;
+const invalidCredentialsMessage = 'Invalid username/email or password.';
+
+const isLoginLocked = (identifier: string, now: number) => {
+  const state = loginFailures.get(identifier);
+  if (!state) return false;
+  if (state.lockedUntil > now) return true;
+  if (now - state.windowStartedAt >= loginFailureWindowMs || state.lockedUntil > 0) {
+    loginFailures.delete(identifier);
+  }
+  return false;
+};
+
+const recordLoginFailure = (identifier: string, now: number) => {
+  for (const [key, state] of loginFailures) {
+    if (now - state.windowStartedAt >= loginFailureWindowMs && state.lockedUntil <= now) loginFailures.delete(key);
+  }
+  let state = loginFailures.get(identifier);
+  if (!state || now - state.windowStartedAt >= loginFailureWindowMs) {
+    state = { count: 0, windowStartedAt: now, lockedUntil: 0 };
+  }
+  state.count += 1;
+  if (state.count >= maxLoginFailures) state.lockedUntil = now + loginFailureWindowMs;
+  loginFailures.set(identifier, state);
+};
 
 /**
  * GET /api/auth/me
@@ -133,6 +160,10 @@ router.post('/login', loginRateLimit, async (req, res) => {
     }
 
     const cleanInput = email.trim();
+    const normalizedIdentifier = cleanInput.toLowerCase();
+    if (isLoginLocked(normalizedIdentifier, Date.now())) {
+      return res.status(401).json({ error: invalidCredentialsMessage });
+    }
     const userRes = await query(`SELECT * FROM gocart_auth_user_lookup($1, $2)`, [cleanInput, cleanInput]);
 
     if (userRes.rows.length > 0) {
@@ -140,11 +171,12 @@ router.post('/login', loginRateLimit, async (req, res) => {
       const isMatch = await comparePassword(password, userMatch.password);
 
       if (!isMatch) {
-        return res.status(401).json({ error: 'Incorrect password for this account. Please try again.' });
+        recordLoginFailure(normalizedIdentifier, Date.now());
+        return res.status(401).json({ error: invalidCredentialsMessage });
       }
 
-      // Upgrade plain text password if needed via gocart_auth_password_update
-      if (userMatch.password && !isBcryptHash(userMatch.password)) {
+      loginFailures.delete(normalizedIdentifier);
+      if (needsPasswordRehash(userMatch.password)) {
         const newHash = await hashPassword(password);
         await query(`SELECT gocart_auth_password_update('user', $1, $2)`, [userMatch.id, newHash]);
       }
@@ -270,7 +302,8 @@ router.post('/login', loginRateLimit, async (req, res) => {
       }
     }
 
-    return res.status(401).json({ error: 'No account found with this username or email.' });
+    recordLoginFailure(normalizedIdentifier, Date.now());
+    return res.status(401).json({ error: invalidCredentialsMessage });
   } catch (error: any) {
     console.error('Error during login:', error);
     res.status(500).json({ error: 'Authentication failed due to server error' });

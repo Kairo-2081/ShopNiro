@@ -4,6 +4,7 @@ import type { PoolClient } from 'pg';
 import { pool, query } from '../db/index.ts';
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth.ts';
 import { Order, ProductBundle } from '../../src/types.ts';
+import { processRefundQueue } from './payment.routes.ts';
 import { discountedPriceForVoucher, discountedUnitPrice, getVoucherRule, isVoucherExpired, normalizeVoucherCode } from '../../src/lib/vouchers.ts';
 import { calculateBundlePrices } from '../../src/lib/bundles.ts';
 
@@ -32,13 +33,29 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
     const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
     const offset = Math.max(0, Number(req.query.offset) || 0);
     const result = await query(`
-      SELECT order_record.* FROM gocart_orders_list() order_record
-      WHERE ($1::varchar IS NULL OR order_record.customer_id = $1)
+      SELECT o.id, o.tracking_id, o.customer_id,
+        COALESCE((
+          SELECT json_agg(json_build_object(
+            'Product_ID', item.product_id_snapshot,
+            'Name', item.product_name,
+            'Price', item.unit_price,
+            'Quantity', item.quantity,
+            'Image', COALESCE(item.image, ''),
+            'Size', NULLIF(item.size, ''),
+            'Seller_ID', item.seller_id_snapshot
+          ) ORDER BY item.order_item_id)::TEXT
+          FROM order_items item WHERE item.order_id = o.id
+        ), o.items_json, '[]') AS items_json,
+        o.subtotal, o.shipping_fee, o.status, o.payment_status, o.payment_method,
+        o.transaction_id, o.applied_voucher, o.shipping_address_json,
+        o.billing_address_json, o.additional_info, o.order_placed_at
+      FROM orders o
+      WHERE ($1::varchar IS NULL OR o.customer_id = $1)
         AND ($2::varchar IS NULL OR EXISTS (
           SELECT 1 FROM order_items item
-          WHERE item.order_id = order_record.id AND item.seller_id_snapshot = $2
+          WHERE item.order_id = o.id AND item.seller_id_snapshot = $2
         ))
-      ORDER BY order_record.order_placed_at DESC, order_record.id DESC
+      ORDER BY o.order_placed_at DESC, o.id DESC
       LIMIT $3 OFFSET $4
     `, [customerId, sellerId, limit + 1, offset]);
     const hasMore = result.rows.length > limit;
@@ -307,15 +324,20 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
 router.get('/cancellation-requests', requireAuth, async (req: AuthRequest, res) => {
   if (!['customer', 'admin'].includes(req.user!.role)) return res.status(403).json({ error: 'You cannot view cancellation requests.' });
   try {
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
+    const offset = Math.max(0, Number(req.query.offset) || 0);
     const result = await query(
       `SELECT request.id, request.order_id, request.customer_id, order_record.status AS order_status,
-        order_record.payment_status, request.reason, request.status, request.requested_at,
+        order_record.payment_status, order_record.payment_method, request.reason, request.status, request.requested_at,
+        refund.status AS refund_status,
         request.reviewed_at, request.refund_completed_at
        FROM order_cancellation_requests request
        JOIN orders order_record ON order_record.id = request.order_id
+       LEFT JOIN refunds refund ON refund.order_id = request.order_id
        WHERE ($1::varchar IS NULL OR request.customer_id = $1)
-       ORDER BY request.requested_at DESC`,
-      [req.user!.role === 'customer' ? req.user!.entityId : null]
+      ORDER BY request.requested_at DESC, request.id DESC
+      LIMIT $2 OFFSET $3`,
+          [req.user!.role === 'customer' ? req.user!.entityId : null, limit + 1, offset]
     );
     res.json(result.rows.map((row) => ({
       Request_ID: row.id,
@@ -323,8 +345,10 @@ router.get('/cancellation-requests', requireAuth, async (req: AuthRequest, res) 
       Customer_ID: row.customer_id,
       Order_Status: row.order_status,
       Payment_Status: row.payment_status,
+      Payment_Method: row.payment_method,
       Reason: row.reason,
       Status: row.status,
+      Refund_Status: row.refund_status || null,
       Requested_At: new Date(row.requested_at).toISOString(),
       Reviewed_At: row.reviewed_at ? new Date(row.reviewed_at).toISOString() : undefined,
       Refund_Completed_At: row.refund_completed_at ? new Date(row.refund_completed_at).toISOString() : undefined,
@@ -416,7 +440,8 @@ router.patch('/cancellation-requests/:requestId/review', requireAuth, async (req
     await client.query('BEGIN');
     const result = await client.query(
       `SELECT request.id, request.order_id, request.status AS request_status,
-        order_record.status AS order_status, order_record.payment_status
+        order_record.status AS order_status, order_record.payment_status,
+        order_record.payment_method, order_record.subtotal, order_record.shipping_fee
        FROM order_cancellation_requests request
        JOIN orders order_record ON order_record.id = request.order_id
        WHERE request.id = $1 FOR UPDATE OF request, order_record`,
@@ -431,10 +456,10 @@ router.patch('/cancellation-requests/:requestId/review', requireAuth, async (req
       await client.query('ROLLBACK');
       return res.status(409).json({ error: 'This cancellation request has already been reviewed.' });
     }
-    const refundCompleted = req.body?.refundCompleted === true;
-    if (decision === 'approved' && request.payment_status === 'paid' && !refundCompleted) {
+    const cashReturned = req.body?.cashReturned === true;
+    if (decision === 'approved' && request.payment_status === 'paid' && request.payment_method === 'cash_on_delivery' && !cashReturned) {
       await client.query('ROLLBACK');
-      return res.status(400).json({ error: 'Complete the refund with the payment provider before approving this paid order.' });
+      return res.status(400).json({ error: 'Record the manual cash return before approving this paid COD order.' });
     }
     if (decision === 'approved' && !['placed', 'processing'].includes(request.order_status)) {
       await client.query('ROLLBACK');
@@ -468,17 +493,48 @@ router.patch('/cancellation-requests/:requestId/review', requireAuth, async (req
         [request.order_id]
       );
       if (request.payment_status === 'paid') {
-        await client.query("UPDATE orders SET payment_status = 'refunded' WHERE id = $1", [request.order_id]);
-        await client.query("UPDATE payments SET status = 'REFUNDED', updated_at = CURRENT_TIMESTAMP WHERE order_id = $1", [request.order_id]);
+        const payment = await client.query(
+          `SELECT id FROM payments WHERE order_id = $1 AND status = 'VALIDATED' ORDER BY created_at DESC LIMIT 1 FOR UPDATE`,
+          [request.order_id]
+        );
+        if (request.payment_method === 'cash_on_delivery') {
+          await client.query(
+            `INSERT INTO refunds (id, order_id, amount, method, status, gateway_ref, processed_by)
+             VALUES ($1, $2, $3, 'manual_cash', 'completed', 'manual-cash-return', $4)
+             ON CONFLICT (order_id) DO NOTHING`,
+            [`REF-${randomUUID()}`, request.order_id, Number(request.subtotal) + Number(request.shipping_fee), req.user!.entityId]
+          );
+          await client.query("UPDATE orders SET payment_status = 'refunded' WHERE id = $1", [request.order_id]);
+          await client.query("UPDATE payments SET status = 'REFUNDED', updated_at = CURRENT_TIMESTAMP WHERE order_id = $1", [request.order_id]);
+        } else {
+          if (!payment.rows.length) {
+            await client.query('ROLLBACK');
+            return res.status(409).json({ error: 'A verified gateway payment record is required before a refund can be requested.' });
+          }
+          await client.query(
+            `INSERT INTO refunds (id, order_id, payment_id, amount, method, status)
+             VALUES ($1, $2, $3, $4, 'sslcommerz', 'requested')
+             ON CONFLICT (order_id) DO NOTHING`,
+            [`REF-${randomUUID()}`, request.order_id, payment.rows[0].id, Number(request.subtotal) + Number(request.shipping_fee)]
+          );
+        }
       }
     }
     await client.query(
       `UPDATE order_cancellation_requests SET status = $2, reviewed_at = CURRENT_TIMESTAMP,
-        reviewed_by = $3, refund_completed_at = CASE WHEN $4 THEN CURRENT_TIMESTAMP ELSE NULL END
+        reviewed_by = $3, refund_completed_at = CASE WHEN $4 THEN CURRENT_TIMESTAMP ELSE refund_completed_at END
        WHERE id = $1`,
-      [req.params.requestId, decision, req.user!.entityId, refundCompleted]
+      [req.params.requestId, decision, req.user!.entityId,
+        decision === 'approved' && request.payment_status === 'paid' && request.payment_method === 'cash_on_delivery' && cashReturned]
     );
     await client.query('COMMIT');
+
+    if (decision === 'approved') {
+      void processRefundQueue().catch((error) => {
+        console.error('Refund reconciliation failed after approval:', error);
+      });
+    }
+
     res.json({ success: true, status: decision });
   } catch (error: any) {
     if (client) await client.query('ROLLBACK').catch(() => {});

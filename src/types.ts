@@ -173,11 +173,26 @@ export interface OrderCancellationRequest {
   Customer_ID: string;
   Order_Status: OrderStatus;
   Payment_Status: PaymentStatus;
+  Payment_Method: string;
   Reason: string;
   Status: 'pending' | 'approved' | 'rejected';
+  Refund_Status?: 'requested' | 'submitted' | 'completed' | 'failed' | null;
   Requested_At: string;
   Reviewed_At?: string;
   Refund_Completed_At?: string;
+}
+
+export interface SupportRequest {
+  Request_ID: string;
+  Name: string;
+  Email: string;
+  Subject: string;
+  Message: string;
+  Status: 'open' | 'in_progress' | 'resolved';
+  Admin_Notes: string;
+  Created_At: string;
+  Updated_At: string;
+  Resolved_At?: string;
 }
 
 export interface OrderFulfillment {
@@ -272,7 +287,8 @@ export type AppTab =
   | 'seller-dashboard'
   | 'admin-dashboard'
   | 'rider-dashboard'
-  | 'live-tracking';
+  | 'live-tracking'
+  | 'support';
 
 export type UserRole = 'customer' | 'seller' | 'admin' | 'rider';
 

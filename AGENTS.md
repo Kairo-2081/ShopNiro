@@ -15,8 +15,10 @@
 
 ## Environment and runtime expectations
 - `JWT_SECRET` is required for app-issued JWT auth. It must be set in a local `.env` or host environment and be strong enough (minimum 32 chars).
-- The server expects a PostgreSQL-compatible database connection and performs schema/seed initialization automatically when tables are empty.
+- The server expects a PostgreSQL-compatible database connection. Boot seeding is disabled unless `SEED_ON_START=true` in a non-production environment.
 - Do not hard-code secrets or commit local `.env` values.
+- `NODE_ENV` must be explicit. Only `development` and `test` may use simulator defaults; all other environments require production SSLCommerz credentials and `CRON_SECRET`.
+- Integration tests require an isolated `DATABASE_URL`; do not point them at shared Supabase or production data.
 
 ## Architecture and conventions
 - `server/index.ts` boots Express, mounts the API routes, and serves the Vite app during local development.
@@ -25,6 +27,9 @@
 - Follow the existing patterns in nearby files before introducing new abstractions or new API layers.
 - Route naming follows the established `*.routes.ts` pattern and is mounted centrally in `server/index.ts`.
 - Auth and authorization are enforced server-side; changes to protected routes should preserve current cookie/JWT and role checks.
+- `server/middleware/auth.ts` is the canonical auth/JWT implementation. Frontend code must not import server auth modules.
+- Payment/refund/stock/wallet mutations must be transactional and idempotent when callbacks can be replayed.
+- Paged APIs cap `limit` at 100 (default 50) and return array pages with `X-Has-More` metadata.
 
 ## Safe workflow for AI coding agents
 - Prefer small, targeted edits that match existing module structure.
@@ -36,3 +41,5 @@
 ## Relevant docs
 - [README.md](README.md)
 - [schema.sql](schema.sql)
+- [docs/database-design.md](docs/database-design.md)
+- [docs/payouts.md](docs/payouts.md)

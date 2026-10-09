@@ -17,11 +17,16 @@ router.get('/', async (req, res) => {
     const offset = Math.max(0, Number(req.query.offset) || 0);
     let result;
     if (productId && typeof productId === 'string') {
-      result = await query(`SELECT * FROM gocart_reviews_by_product($1) LIMIT $2 OFFSET $3`, [productId, limit + 1, offset]);
+      result = await query('SELECT * FROM reviews WHERE product_id = $1 ORDER BY created_at DESC, id DESC LIMIT $2 OFFSET $3', [productId, limit + 1, offset]);
     } else if (sellerId && typeof sellerId === 'string') {
-      result = await query(`SELECT * FROM gocart_reviews_by_seller($1) LIMIT $2 OFFSET $3`, [sellerId, limit + 1, offset]);
+      result = await query(`
+        SELECT review.* FROM reviews review
+        JOIN products product ON product.id = review.product_id
+        WHERE product.seller_id = $1
+        ORDER BY review.created_at DESC, review.id DESC LIMIT $2 OFFSET $3
+      `, [sellerId, limit + 1, offset]);
     } else {
-      result = await query(`SELECT * FROM gocart_reviews_list() LIMIT $1 OFFSET $2`, [limit + 1, offset]);
+      result = await query('SELECT * FROM reviews ORDER BY created_at DESC, id DESC LIMIT $1 OFFSET $2', [limit + 1, offset]);
     }
 
     const hasMore = result.rows.length > limit;

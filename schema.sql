@@ -53,6 +53,20 @@ CREATE TABLE IF NOT EXISTS sellers (
 
 ALTER TABLE sellers ADD COLUMN IF NOT EXISTS address_latitude DOUBLE PRECISION;
 ALTER TABLE sellers ADD COLUMN IF NOT EXISTS address_longitude DOUBLE PRECISION;
+ALTER TABLE sellers ADD COLUMN IF NOT EXISTS business_registration_number VARCHAR(100) NOT NULL DEFAULT '';
+ALTER TABLE sellers ADD COLUMN IF NOT EXISTS payout_method VARCHAR(32) NOT NULL DEFAULT '';
+ALTER TABLE sellers ADD COLUMN IF NOT EXISTS payout_account VARCHAR(255) NOT NULL DEFAULT '';
+
+CREATE TABLE IF NOT EXISTS seller_verification_documents (
+    id VARCHAR(64) PRIMARY KEY,
+    seller_id VARCHAR(64) NOT NULL REFERENCES sellers(id) ON DELETE CASCADE,
+    document_type VARCHAR(32) NOT NULL CHECK (document_type IN ('identity', 'business_registration')),
+    file_name VARCHAR(255) NOT NULL,
+    mime_type VARCHAR(100) NOT NULL,
+    document_data BYTEA NOT NULL,
+    uploaded_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (seller_id, document_type)
+);
 
 -- DELIVERY RIDERS. Applicants remain pending until an admin approves their account.
 CREATE TABLE IF NOT EXISTS riders (
@@ -85,6 +99,29 @@ CREATE TABLE IF NOT EXISTS riders (
 
 ALTER TABLE riders ADD COLUMN IF NOT EXISTS profile_image TEXT;
 ALTER TABLE riders ADD COLUMN IF NOT EXISTS profile_image_file_name VARCHAR(255);
+
+CREATE TABLE IF NOT EXISTS rider_verification_documents (
+    id VARCHAR(64) PRIMARY KEY,
+    rider_id VARCHAR(64) NOT NULL REFERENCES riders(id) ON DELETE CASCADE,
+    document_type VARCHAR(24) NOT NULL CHECK (document_type IN ('identity', 'license')),
+    file_name VARCHAR(255) NOT NULL,
+    mime_type VARCHAR(100) NOT NULL,
+    document_data BYTEA NOT NULL,
+    uploaded_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (rider_id, document_type)
+);
+
+CREATE TABLE IF NOT EXISTS application_review_audit (
+    id VARCHAR(64) PRIMARY KEY,
+    account_type VARCHAR(16) NOT NULL CHECK (account_type IN ('seller', 'rider')),
+    account_id VARCHAR(64) NOT NULL,
+    admin_id VARCHAR(64) NOT NULL REFERENCES users(id),
+    decision VARCHAR(16) NOT NULL CHECK (decision IN ('approved', 'rejected')),
+    reason TEXT NOT NULL DEFAULT '',
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_application_review_account ON application_review_audit(account_type, account_id, created_at DESC);
 
 -- ADMINS TABLE
 CREATE TABLE IF NOT EXISTS admins (
@@ -576,6 +613,21 @@ CREATE TABLE IF NOT EXISTS payments (
 ALTER TABLE payments
     ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
+CREATE TABLE IF NOT EXISTS refunds (
+    id VARCHAR(64) PRIMARY KEY,
+    order_id VARCHAR(64) NOT NULL UNIQUE REFERENCES orders(id),
+    payment_id VARCHAR(64) REFERENCES payments(id),
+    amount NUMERIC(10, 2) NOT NULL CHECK (amount > 0),
+    method VARCHAR(24) NOT NULL CHECK (method IN ('sslcommerz', 'manual_cash')),
+    status VARCHAR(16) NOT NULL DEFAULT 'requested'
+        CHECK (status IN ('requested', 'submitted', 'completed', 'failed')),
+    gateway_ref VARCHAR(100),
+    processed_by VARCHAR(64) REFERENCES users(id),
+    last_error TEXT,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Upgrade old deployments: copy profile credentials into users, then remove duplicate columns.
 DO $$
 BEGIN
@@ -763,19 +815,27 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_users_email_lower ON users(LOWER(email));
 CREATE UNIQUE INDEX IF NOT EXISTS uq_categories_name_lower ON categories(LOWER(name));
 CREATE INDEX IF NOT EXISTS idx_products_category ON products(category_id);
 CREATE INDEX IF NOT EXISTS idx_products_seller ON products(seller_id);
+CREATE INDEX IF NOT EXISTS idx_products_seller_status ON products(seller_id, product_status);
 CREATE INDEX IF NOT EXISTS idx_products_status ON products(product_status);
 CREATE INDEX IF NOT EXISTS idx_orders_customer ON orders(customer_id);
+CREATE INDEX IF NOT EXISTS idx_orders_customer_placed ON orders(customer_id, order_placed_at DESC);
+CREATE INDEX IF NOT EXISTS idx_orders_placed ON orders(order_placed_at DESC, id DESC);
 CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
 CREATE INDEX IF NOT EXISTS idx_reviews_product ON reviews(product_id);
 CREATE INDEX IF NOT EXISTS idx_reviews_customer ON reviews(customer_id);
+CREATE INDEX IF NOT EXISTS idx_reviews_created ON reviews(created_at DESC, id DESC);
+CREATE INDEX IF NOT EXISTS idx_reviews_product_created ON reviews(product_id, created_at DESC, id DESC);
 CREATE INDEX IF NOT EXISTS idx_cart_customer ON cart(customer_id);
 CREATE INDEX IF NOT EXISTS idx_order_items_order ON order_items(order_id);
+CREATE INDEX IF NOT EXISTS idx_order_items_order_seller ON order_items(order_id, seller_id_snapshot);
 CREATE INDEX IF NOT EXISTS idx_order_items_product ON order_items(product_id);
 CREATE INDEX IF NOT EXISTS idx_order_items_seller ON order_items(seller_id);
 CREATE INDEX IF NOT EXISTS idx_order_items_product_snapshot ON order_items(product_id_snapshot);
 CREATE INDEX IF NOT EXISTS idx_order_items_seller_snapshot ON order_items(seller_id_snapshot);
 CREATE INDEX IF NOT EXISTS idx_payments_order ON payments(order_id);
+CREATE INDEX IF NOT EXISTS idx_payments_pending ON payments(created_at) WHERE status = 'PENDING';
 CREATE INDEX IF NOT EXISTS idx_payments_transaction ON payments(transaction_id);
+CREATE INDEX IF NOT EXISTS idx_riders_status_created ON riders(status, created_at DESC, id DESC);
 
 -- 4. FOREIGN KEY & DATA CONSTRAINTS
 
@@ -1940,12 +2000,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_passwords_list()
-RETURNS TABLE(account_type TEXT, id VARCHAR, password TEXT)
-LANGUAGE SQL STABLE
-AS $$
-    SELECT role::TEXT, id, password FROM users;
-$$;
+DROP FUNCTION IF EXISTS gocart_passwords_list();
 
 -- Persist issued JWT IDs so sessions can be invalidated immediately on logout.
 CREATE TABLE IF NOT EXISTS auth_sessions (
@@ -1974,6 +2029,23 @@ CREATE TABLE IF NOT EXISTS order_cancellation_requests (
     reviewed_by VARCHAR(64),
     refund_completed_at TIMESTAMP WITH TIME ZONE
 );
+
+CREATE INDEX IF NOT EXISTS idx_cancellation_requests_requested ON order_cancellation_requests(requested_at DESC, id DESC);
+
+CREATE TABLE IF NOT EXISTS support_requests (
+    id VARCHAR(64) PRIMARY KEY,
+    name VARCHAR(160) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    subject VARCHAR(160) NOT NULL,
+    message TEXT NOT NULL,
+    status VARCHAR(20) NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'resolved')),
+    admin_notes TEXT NOT NULL DEFAULT '',
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    resolved_at TIMESTAMP WITH TIME ZONE
+);
+
+CREATE INDEX IF NOT EXISTS idx_support_requests_status_created ON support_requests(status, created_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_auth_sessions_user ON auth_sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_auth_sessions_expiry ON auth_sessions(expires_at);

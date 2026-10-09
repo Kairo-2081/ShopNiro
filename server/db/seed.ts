@@ -17,33 +17,32 @@ import {
  * All database related things are defined exclusively in schema.sql.
  */
 export async function ensureDatabaseSchema() {
-  try {
-    const schemaPath = path.join(process.cwd(), 'schema.sql');
-    if (fs.existsSync(schemaPath)) {
-      const schemaSql = fs.readFileSync(schemaPath, 'utf8');
-      await pool.query(schemaSql);
-      console.log('✓ Executed schema.sql successfully (tables, views, triggers, and routines verified)');
-    }
-  } catch (err: any) {
-    console.error('Error applying schema.sql:', err.message || err);
+  const schemaPath = path.join(process.cwd(), 'schema.sql');
+  if (!fs.existsSync(schemaPath)) {
+    throw new Error(`Database schema file not found: ${schemaPath}`);
   }
+
+  const schemaSql = fs.readFileSync(schemaPath, 'utf8');
+  await pool.query(schemaSql);
+  console.log('Executed schema.sql successfully (tables, views, triggers, and routines verified)');
 }
 
 /**
  * Migrate plain-text passwords to bcrypt hashes using the schema routine
  */
 export async function migrateExistingPasswordsToBcrypt() {
-  try {
-    const result = await query(`SELECT * FROM gocart_passwords_list()`);
-    for (const u of result.rows) {
-      if (u.password && !isBcryptHash(u.password)) {
-        const hashed = await hashPassword(u.password);
-        await query(`SELECT gocart_auth_password_update($1, $2, $3)`, [u.account_type, u.id, hashed]);
-      }
-    }
-  } catch (err: any) {
-    // If users table is empty or function not yet ready
+  const result = await query('SELECT id, password FROM users');
+  let migratedCount = 0;
+  for (const user of result.rows) {
+    if (typeof user.password !== 'string' || isBcryptHash(user.password)) continue;
+    const hashedPassword = await hashPassword(user.password);
+    const update = await query(
+      'UPDATE users SET password = $2 WHERE id = $1 AND password = $3',
+      [user.id, hashedPassword, user.password]
+    );
+    migratedCount += update.rowCount || 0;
   }
+  return migratedCount;
 }
 
 /**
@@ -214,8 +213,6 @@ export async function seedDatabaseIfEmpty() {
         ]);
       }
     }
-
-    await migrateExistingPasswordsToBcrypt();
   } catch (err) {
     console.error('Database seeding failed:', err);
   }

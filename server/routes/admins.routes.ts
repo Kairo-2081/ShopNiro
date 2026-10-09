@@ -16,7 +16,9 @@ router.use(requireRole(['admin']));
  */
 router.get('/', async (req, res) => {
   try {
-    const result = await query(`SELECT * FROM gocart_admins_list()`);
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
+    const offset = Math.max(0, Number(req.query.offset) || 0);
+    const result = await query('SELECT * FROM admin_profiles ORDER BY created_at ASC, id ASC LIMIT $1 OFFSET $2', [limit + 1, offset]);
     const formatted: Admin[] = result.rows.map((a: any) => ({
       Admin_ID: a.id,
       Username: a.username || '',
@@ -25,6 +27,7 @@ router.get('/', async (req, res) => {
       Number: a.number || '',
       Address: mapAddress(a),
     }));
+    res.setHeader('X-Has-More', String(result.rows.length > limit));
     return res.json(formatted);
   } catch (error: any) {
     console.error('Error fetching admins:', error);
@@ -101,7 +104,13 @@ router.post('/', async (req, res) => {
  */
 router.get('/users', async (req, res) => {
   try {
-    const result = await query(`SELECT * FROM gocart_admins_users_list()`);
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
+    const offset = Math.max(0, Number(req.query.offset) || 0);
+    const result = await query(`
+      SELECT id, username, email, role, id AS entity_id, created_at
+      FROM users ORDER BY created_at DESC, id DESC LIMIT $1 OFFSET $2
+    `, [limit + 1, offset]);
+    res.setHeader('X-Has-More', String(result.rows.length > limit));
     res.json(result.rows);
   } catch (error: any) {
     console.error('Error fetching admin users:', error);

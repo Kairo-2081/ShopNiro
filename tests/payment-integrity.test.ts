@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
+import { mock, test } from 'node:test';
 import express from 'express';
 import { request as httpRequest, Server } from 'node:http';
 import { randomUUID } from 'node:crypto';
@@ -9,8 +9,9 @@ process.env.JWT_SECRET ??= 'test-payment-integrity-secret-at-least-32-characters
 
 const { generateToken, verifyToken } = await import('../server/middleware/auth.ts');
 const { default: ordersRoutes } = await import('../server/routes/orders.routes.ts');
+const { default: authRoutes } = await import('../server/routes/auth.routes.ts');
 const { default: riderDeliveryRoutes } = await import('../server/routes/rider-delivery.routes.ts');
-const { default: paymentRoutes } = await import('../server/routes/payment.routes.ts');
+const { default: paymentRoutes, processRefundQueue } = await import('../server/routes/payment.routes.ts');
 const { sslcommerz } = await import('../server/services/sslcommerz.service.ts');
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -121,6 +122,19 @@ const placeCartOrder = async (
   return response.body;
 };
 
+const createOnlinePayment = async () => {
+  const fixture = await createCheckoutFixture();
+  const order = await placeCartOrder(fixture, 'online');
+  const transactionId = `SSLCZ-${randomUUID().replaceAll('-', '').toUpperCase()}`;
+  const validationId = `VAL-${randomUUID().replaceAll('-', '').toUpperCase()}`;
+  const amount = Number(order.Subtotal) + Number(order.Shipping_Fee);
+  await query(`
+    INSERT INTO payments (id, order_id, customer_id, amount, currency, gateway, payment_method, transaction_id, status)
+    VALUES ($1, $2, $3, $4, 'BDT', 'sslcommerz', 'bkash', $5, 'PENDING')
+  `, [`PAY-${randomUUID()}`, order.Order_ID, fixture.customerId, amount, transactionId]);
+  return { fixture, order, transactionId, validationId, amount };
+};
+
 const createOrder = async (customerId: string, orderId: string) => {
   await query(`
     INSERT INTO orders (
@@ -169,12 +183,66 @@ const createCodDelivery = async (customerId: string, orderId: string, riderId: s
 
 const app = express();
 app.use(express.json());
+app.use('/api/auth', authRoutes);
 app.use('/api/orders', ordersRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/riders', riderDeliveryRoutes);
 const server = await listen(app);
 
 try {
+  test('plaintext stored passwords are rejected with the same message as unknown accounts', async () => {
+    const userId = `PLAINTEXT-${randomUUID()}`;
+    const username = userId.toLowerCase();
+    const email = `${username}@example.invalid`;
+    const plaintextPassword = 'legacy-plaintext-password';
+    await query(
+      'INSERT INTO users (id, username, email, password, role) VALUES ($1, $2, $3, $4, $5)',
+      [userId, username, email, plaintextPassword, 'customer']
+    );
+
+    const plaintextLogin = await request(server, '/api/auth/login', 'POST', { email, password: plaintextPassword });
+    const unknownLogin = await request(server, '/api/auth/login', 'POST', { email: `missing-${username}`, password: plaintextPassword });
+    assert.equal(plaintextLogin.status, 401);
+    assert.equal(unknownLogin.status, 401);
+    assert.equal(plaintextLogin.body.error, 'Invalid username/email or password.');
+    assert.equal(unknownLogin.body.error, plaintextLogin.body.error);
+    const stored = await query('SELECT password FROM users WHERE id = $1', [userId]);
+    assert.equal(stored.rows[0].password, plaintextPassword);
+  });
+
+  test('refund queue completes approved cancellation refunds and marks the order refunded', async () => {
+    const customerId = `CUSTOMER-${randomUUID()}`;
+    const orderId = `ORD-${randomUUID()}`;
+    const paymentId = `PAY-${randomUUID()}`;
+    const refundId = `REF-${randomUUID()}`;
+    const gatewayRef = `GREF-${randomUUID()}`;
+    await createCustomer(customerId);
+    await createOrder(customerId, orderId);
+    await query(`
+      INSERT INTO payments (id, order_id, customer_id, amount, currency, gateway, payment_method, transaction_id, status)
+      VALUES ($1, $2, $3, $4, 'BDT', 'sslcommerz', 'bkash', $5, 'VALIDATED')
+    `, [paymentId, orderId, customerId, 100, `SSLCZ-${randomUUID().replaceAll('-', '').toUpperCase()}`]);
+    await query(`
+      INSERT INTO refunds (id, order_id, payment_id, amount, method, gateway_ref, status)
+      VALUES ($1, $2, $3, $4, 'sslcommerz', $5, 'submitted')
+    `, [refundId, orderId, paymentId, 100, gatewayRef]);
+    await query(`
+      INSERT INTO order_cancellation_requests (id, order_id, customer_id, reason, status, requested_at, reviewed_at, reviewed_by)
+      VALUES ($1, $2, $3, $4, 'approved', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP, $5)
+    `, [`CANCEL-${randomUUID()}`, orderId, customerId, 'Test refund reconciliation', 'ADMIN-TEST']);
+
+    const getRefundStatus = mock.method(sslcommerz, 'getRefundStatus', async () => ({ status: 'refunded' }));
+    const result = await processRefundQueue();
+    assert.equal(result.completed, 1);
+    const order = await query('SELECT payment_status FROM orders WHERE id = $1', [orderId]);
+    const payment = await query('SELECT status FROM payments WHERE id = $1', [paymentId]);
+    const refund = await query('SELECT status FROM refunds WHERE id = $1', [refundId]);
+    assert.equal(order.rows[0].payment_status, 'refunded');
+    assert.equal(payment.rows[0].status, 'REFUNDED');
+    assert.equal(refund.rows[0].status, 'completed');
+    getRefundStatus.mock.restore();
+  });
+
   test('payment init rejects client-controlled amount and keeps the order pending', async () => {
     const customerId = `CUSTOMER-${randomUUID()}`;
     const orderId = `ORD-${randomUUID()}`;
@@ -188,6 +256,104 @@ try {
     const order = await query('SELECT payment_status, payment_method FROM orders WHERE id = $1', [orderId]);
     assert.equal(order.rows[0].payment_status, 'pending');
     assert.equal(order.rows[0].payment_method, 'cash_on_delivery');
+  });
+
+  test('the sixth payment initialization attempt in one minute is rate limited', async () => {
+    const customerId = `CUSTOMER-${randomUUID()}`;
+    const orderId = `ORD-${randomUUID()}`;
+    await createCustomer(customerId);
+    await createOrder(customerId, orderId);
+    const cookie = await createSession('customer', customerId);
+
+    const responses = [];
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      responses.push(await request(server, '/api/payment/init', 'POST', { orderId, amount: 1 }, cookie));
+    }
+    assert.deepEqual(responses.slice(0, 5).map((response) => response.status), [400, 400, 400, 400, 400]);
+    assert.equal(responses[5].status, 429);
+  });
+
+  test('invalid SSLCommerz validation response leaves the payment pending', async (t) => {
+    const { fixture, order, transactionId, validationId } = await createOnlinePayment();
+    t.mock.method(globalThis, 'fetch', async () => new Response(JSON.stringify({
+      status: 'INVALID_TRANSACTION',
+      tran_id: transactionId,
+      val_id: validationId,
+      amount: '100.00',
+      currency: 'BDT',
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+    const response = await request(server, '/api/payment/sslcommerz/validate', 'POST', {
+      tran_id: transactionId,
+      val_id: validationId,
+    }, fixture.customerCookie);
+    assert.equal(response.status, 402);
+    const payment = await query('SELECT status FROM payments WHERE transaction_id = $1', [transactionId]);
+    assert.equal(payment.rows[0].status, 'PENDING');
+    const storedOrder = await query('SELECT payment_status FROM orders WHERE id = $1', [order.Order_ID]);
+    assert.equal(storedOrder.rows[0].payment_status, 'pending');
+  });
+
+  test('SSLCommerz validator timeout leaves the payment pending', async (t) => {
+    const { fixture, order, transactionId, validationId } = await createOnlinePayment();
+    t.mock.method(globalThis, 'fetch', async () => { throw new DOMException('timeout', 'TimeoutError'); });
+
+    const response = await request(server, '/api/payment/sslcommerz/validate', 'POST', {
+      tran_id: transactionId,
+      val_id: validationId,
+    }, fixture.customerCookie);
+    assert.equal(response.status, 402);
+    const payment = await query('SELECT status FROM payments WHERE transaction_id = $1', [transactionId]);
+    assert.equal(payment.rows[0].status, 'PENDING');
+    const storedOrder = await query('SELECT payment_status FROM orders WHERE id = $1', [order.Order_ID]);
+    assert.equal(storedOrder.rows[0].payment_status, 'pending');
+  });
+
+  test('SSLCommerz amount mismatch leaves the payment pending', async (t) => {
+    const { fixture, order, transactionId, validationId } = await createOnlinePayment();
+    t.mock.method(globalThis, 'fetch', async () => new Response(JSON.stringify({
+      status: 'VALID',
+      tran_id: transactionId,
+      val_id: validationId,
+      amount: '1.00',
+      currency: 'BDT',
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+    const response = await request(server, '/api/payment/sslcommerz/validate', 'POST', {
+      tran_id: transactionId,
+      val_id: validationId,
+    }, fixture.customerCookie);
+    assert.equal(response.status, 402);
+    const payment = await query('SELECT status FROM payments WHERE transaction_id = $1', [transactionId]);
+    assert.equal(payment.rows[0].status, 'PENDING');
+    const storedOrder = await query('SELECT payment_status FROM orders WHERE id = $1', [order.Order_ID]);
+    assert.equal(storedOrder.rows[0].payment_status, 'pending');
+  });
+
+  test('verified SSLCommerz payment is finalized once and replay is idempotent', async (t) => {
+    const { fixture, order, transactionId, validationId, amount } = await createOnlinePayment();
+    const fetchMock = t.mock.method(globalThis, 'fetch', async () => new Response(JSON.stringify({
+      status: 'VALID',
+      tran_id: transactionId,
+      val_id: validationId,
+      amount: amount.toFixed(2),
+      currency: 'BDT',
+      bank_tran_id: 'BANK-TEST-1',
+      card_type: 'MOBILE BANKING',
+      card_brand: 'bKash',
+      card_issuer: 'bKash',
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+    const body = { tran_id: transactionId, val_id: validationId, payment_method: 'cash_on_delivery' };
+    const first = await request(server, '/api/payment/sslcommerz/validate', 'POST', body, fixture.customerCookie);
+    const second = await request(server, '/api/payment/sslcommerz/validate', 'POST', body, fixture.customerCookie);
+    assert.equal(first.status, 200, JSON.stringify(first.body));
+    assert.equal(second.status, 200, JSON.stringify(second.body));
+    assert.equal(fetchMock.mock.callCount(), 1);
+    const finalized = await query('SELECT o.payment_status, o.payment_method, p.status FROM orders o JOIN payments p ON p.order_id = o.id WHERE o.id = $1', [order.Order_ID]);
+    assert.equal(finalized.rows[0].payment_status, 'paid');
+    assert.equal(finalized.rows[0].payment_method, 'bkash');
+    assert.equal(finalized.rows[0].status, 'VALIDATED');
   });
 
   test('customer status updates are denied and do not mutate the order', async () => {

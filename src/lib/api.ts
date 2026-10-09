@@ -18,6 +18,7 @@ import {
   ProductBundle,
   OrderCancellationRequest,
   StorefrontSort,
+  SupportRequest,
 } from '../types';
 import { apiUrl } from '../apiConfig';
 
@@ -150,6 +151,19 @@ async function fetchJson<T>(url: string, options?: RequestInit, handleAuthErrors
   return data;
 }
 
+async function fetchAllPages<T>(path: string): Promise<T[]> {
+  const pageSize = 100;
+  const items: T[] = [];
+  let offset = 0;
+  while (true) {
+    const params = new URLSearchParams({ limit: String(pageSize), offset: String(offset) });
+    const page = await fetchJson<T[]>(`${path}?${params.toString()}`);
+    items.push(...page.slice(0, pageSize));
+    if (page.length <= pageSize) return items;
+    offset += pageSize;
+  }
+}
+
 // Full-stack API client using HttpOnly cookie-backed JWT sessions
 export const api = {
   // Database Status
@@ -259,7 +273,7 @@ export const api = {
     }),
 
   // Customers
-  getCustomers: async (): Promise<Customer[]> => fetchJson<Customer[]>('/api/customers'),
+  getCustomers: async (): Promise<Customer[]> => fetchAllPages<Customer>('/api/customers'),
   createCustomer: async (customerData: Partial<Customer> & { Password?: string }): Promise<Customer> =>
     fetchJson<Customer>('/api/customers', {
       method: 'POST',
@@ -272,16 +286,16 @@ export const api = {
     }),
 
   // Sellers
-  getSellers: async (): Promise<Seller[]> => fetchJson<Seller[]>('/api/sellers'),
+  getSellers: async (): Promise<Seller[]> => fetchAllPages<Seller>('/api/sellers'),
   createSeller: async (sellerData: Partial<Seller> & { Password?: string }): Promise<Seller> =>
     fetchJson<Seller>('/api/sellers', {
       method: 'POST',
       body: JSON.stringify(sellerData),
     }),
-  updateSellerStatus: async (id: string, status: SellerStatus): Promise<Seller> =>
+  updateSellerStatus: async (id: string, status: SellerStatus, reason?: string): Promise<Seller> =>
     fetchJson<Seller>(`/api/sellers/${encodeURIComponent(id)}/status`, {
       method: 'PATCH',
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status, reason }),
     }),
   updateSellerProfile: async (updates: Partial<Seller>): Promise<Seller> =>
     fetchJson<Seller>('/api/sellers/me/profile', {
@@ -338,11 +352,11 @@ export const api = {
   formatRiderCv: async (data: { experience: string[]; previousJobs: string[]; education: string[] }): Promise<{ experience: string[]; previousJobs: string[]; education: string[] }> =>
     fetchJson('/api/riders/cv/format', { method: 'POST', body: JSON.stringify(data) }),
   getRiderLeaderboard: async (): Promise<Rider[]> => fetchJson<Rider[]>('/api/riders/leaderboard'),
-  getRiderApplications: async (): Promise<Rider[]> => fetchJson<Rider[]>('/api/riders/applications'),
-  setRiderApplicationStatus: async (id: string, status: RiderStatus): Promise<{ Rider_ID: string; Status: RiderStatus }> =>
+  getRiderApplications: async (): Promise<Rider[]> => fetchAllPages<Rider>('/api/riders/applications'),
+  setRiderApplicationStatus: async (id: string, status: RiderStatus, reason?: string): Promise<{ Rider_ID: string; Status: RiderStatus }> =>
     fetchJson(`/api/riders/applications/${encodeURIComponent(id)}/status`, {
       method: 'PATCH',
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status, reason }),
     }),
   downloadRiderCv: async (id: string): Promise<Blob> => {
     const response = await fetch(apiUrl(`/api/riders/applications/${encodeURIComponent(id)}/cv`), {
@@ -406,7 +420,7 @@ export const api = {
     }),
 
   // Admins
-  getAdmins: async (): Promise<Admin[]> => fetchJson<Admin[]>('/api/admins'),
+  getAdmins: async (): Promise<Admin[]> => fetchAllPages<Admin>('/api/admins'),
   createAdmin: async (data: Partial<Admin> & { Username?: string }): Promise<Admin> =>
     fetchJson<Admin>('/api/admins', {
       method: 'POST',
@@ -498,17 +512,26 @@ export const api = {
     return orders;
   },
   getOrderCancellationRequests: async (): Promise<OrderCancellationRequest[]> =>
-    fetchJson<OrderCancellationRequest[]>('/api/orders/cancellation-requests'),
+    fetchAllPages<OrderCancellationRequest>('/api/orders/cancellation-requests'),
+  submitSupportRequest: async (request: Pick<SupportRequest, 'Name' | 'Email' | 'Subject' | 'Message'>): Promise<{ success: boolean; Request_ID: string }> =>
+    fetchJson('/api/support/requests', { method: 'POST', body: JSON.stringify(request) }),
+  getSupportRequests: async (): Promise<SupportRequest[]> => fetchAllPages<SupportRequest>('/api/support/requests'),
+  updateSupportRequestStatus: async (id: string, status: SupportRequest['Status'], adminNotes = ''): Promise<void> => {
+    await fetchJson(`/api/support/requests/${encodeURIComponent(id)}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status, adminNotes }),
+    });
+  },
   requestOrderCancellation: async (orderId: string, reason = ''): Promise<void> => {
     await fetchJson(`/api/orders/${encodeURIComponent(orderId)}/cancellation-request`, {
       method: 'POST',
       body: JSON.stringify({ reason }),
     });
   },
-  reviewOrderCancellation: async (requestId: string, decision: 'approved' | 'rejected', refundCompleted = false): Promise<void> => {
+  reviewOrderCancellation: async (requestId: string, decision: 'approved' | 'rejected', cashReturned = false): Promise<void> => {
     await fetchJson(`/api/orders/cancellation-requests/${encodeURIComponent(requestId)}/review`, {
       method: 'PATCH',
-      body: JSON.stringify({ decision, refundCompleted }),
+      body: JSON.stringify({ decision, cashReturned }),
     });
   },
   createOrder: async (orderData: {

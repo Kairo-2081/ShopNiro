@@ -1,5 +1,9 @@
 name: Payment Integrity
 
+concurrency:
+  group: payment-integrity-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 on:
   pull_request:
   push:
@@ -56,3 +60,14 @@ jobs:
 
       - name: Type Check
         run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Audit Dependencies
+        run: npm audit --audit-level=high
+
+      - name: Scan Secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

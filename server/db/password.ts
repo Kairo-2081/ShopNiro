@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 
-const SALT_ROUNDS = 10;
+const SALT_ROUNDS = 12;
 
 /**
  * Checks if a string is already a valid bcrypt hash
@@ -8,6 +8,10 @@ const SALT_ROUNDS = 10;
 export function isBcryptHash(str: string): boolean {
   if (!str || typeof str !== 'string') return false;
   return /^\$2[aby]\$[0-9]{2}\$[./A-Za-z0-9]{53}$/.test(str);
+}
+
+export function needsPasswordRehash(storedPasswordHash: string): boolean {
+  return isBcryptHash(storedPasswordHash) && bcrypt.getRounds(storedPasswordHash) < SALT_ROUNDS;
 }
 
 /**
@@ -25,18 +29,13 @@ export async function hashPassword(plainTextPassword: string): Promise<string> {
 }
 
 /**
- * Compares a plaintext password against a stored password (hashed or legacy plaintext)
+ * Compares a plaintext password against a bcrypt hash.
  */
 export async function comparePassword(plainTextPassword: string, storedPasswordHashOrPlain: string): Promise<boolean> {
   if (!plainTextPassword || !storedPasswordHashOrPlain) {
     return false;
   }
 
-  // If the stored string is a valid bcrypt hash, compare using bcrypt
-  if (isBcryptHash(storedPasswordHashOrPlain)) {
-    return await bcrypt.compare(plainTextPassword, storedPasswordHashOrPlain);
-  }
-
-  // Fallback for legacy plain text passwords during migration
-  return plainTextPassword === storedPasswordHashOrPlain;
+  if (!isBcryptHash(storedPasswordHashOrPlain)) return false;
+  return bcrypt.compare(plainTextPassword, storedPasswordHashOrPlain);
 }

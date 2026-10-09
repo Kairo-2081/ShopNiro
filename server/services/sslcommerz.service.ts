@@ -57,6 +57,13 @@ export interface SSLCommerzValidationResult {
   raw?: SSLCommerzValidationResponse;
 }
 
+export interface SSLCommerzRefundResult {
+  APIConnect: string;
+  status?: string;
+  refund_ref_id?: string;
+  errorReason?: string;
+}
+
 export class GatewayError extends Error {
   constructor(message: string) {
     super(message);
@@ -262,6 +269,77 @@ class SSLCommerzService {
       reason: ok ? undefined : 'gateway validation did not match the expected payment',
       raw: data,
     };
+  }
+
+  public async initiateRefund(params: {
+    bankTranId: string;
+    refundTransId: string;
+    amount: number;
+    remarks: string;
+    referenceId: string;
+  }): Promise<SSLCommerzRefundResult> {
+    if (this.paymentSimulatorEnabled) {
+      return { APIConnect: 'DONE', status: 'success', refund_ref_id: `SIM-REF-${params.refundTransId}` };
+    }
+    const query = new URLSearchParams({
+      bank_tran_id: params.bankTranId,
+      refund_trans_id: params.refundTransId,
+      refund_amount: params.amount.toFixed(2),
+      refund_remarks: params.remarks.slice(0, 255),
+      refe_id: params.referenceId,
+      store_id: this.storeId,
+      store_passwd: this.storePasswd,
+      format: 'json',
+    });
+    let response: Response;
+    try {
+      response = await fetch(`${this.baseUrl}/validator/api/merchantTransIDvalidationAPI.php?${query.toString()}`, {
+        signal: AbortSignal.timeout(15000),
+      });
+    } catch {
+      throw new GatewayError('SSLCommerz refund service is unreachable.');
+    }
+    if (!response.ok) throw new GatewayError('SSLCommerz refund service is unavailable.');
+    let result: SSLCommerzRefundResult;
+    try {
+      result = await response.json() as SSLCommerzRefundResult;
+    } catch {
+      throw new GatewayError('SSLCommerz refund service returned an invalid response.');
+    }
+    if (result.APIConnect !== 'DONE' || !['success', 'processing'].includes(String(result.status))) {
+      throw new GatewayError(result.errorReason || 'SSLCommerz did not accept the refund request.');
+    }
+    if (!result.refund_ref_id) throw new GatewayError('SSLCommerz did not return a refund reference.');
+    return result;
+  }
+
+  public async getRefundStatus(refundRefId: string): Promise<SSLCommerzRefundResult> {
+    if (this.paymentSimulatorEnabled) {
+      return { APIConnect: 'DONE', status: 'refunded', refund_ref_id: refundRefId };
+    }
+    const query = new URLSearchParams({
+      refund_ref_id: refundRefId,
+      store_id: this.storeId,
+      store_passwd: this.storePasswd,
+      format: 'json',
+    });
+    let response: Response;
+    try {
+      response = await fetch(`${this.baseUrl}/validator/api/merchantTransIDvalidationAPI.php?${query.toString()}`, {
+        signal: AbortSignal.timeout(15000),
+      });
+    } catch {
+      throw new GatewayError('SSLCommerz refund status service is unreachable.');
+    }
+    if (!response.ok) throw new GatewayError('SSLCommerz refund status service is unavailable.');
+    let result: SSLCommerzRefundResult;
+    try {
+      result = await response.json() as SSLCommerzRefundResult;
+    } catch {
+      throw new GatewayError('SSLCommerz refund status service returned an invalid response.');
+    }
+    if (result.APIConnect !== 'DONE') throw new GatewayError(result.errorReason || 'SSLCommerz could not verify refund status.');
+    return result;
   }
 }
 

@@ -51,7 +51,10 @@ export const RiderApplicationsPanel: React.FC = () => {
     setBusyId(rider.Rider_ID);
     setNotice(null);
     try {
-      await api.setRiderApplicationStatus(rider.Rider_ID, status);
+      const reason = status === 'rejected'
+        ? 'Application rejected after administrative review.'
+        : 'Application approved after administrative review.';
+      await api.setRiderApplicationStatus(rider.Rider_ID, status, reason);
       setNotice(`${rider.Name}'s application ${status}.`);
       setSelected(null);
       await loadApplications();
