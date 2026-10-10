@@ -1219,7 +1219,7 @@ BEGIN
         WHERE order_id = expired_order.id;
 
         UPDATE orders
-        SET status = 'cancelled', payment_status = 'expired', updated_at = now()
+        SET status = 'cancelled', payment_status = 'expired'
         WHERE id = expired_order.id;
 
         expired_count := expired_count + 1;
