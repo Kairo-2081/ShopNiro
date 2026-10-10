@@ -23,7 +23,7 @@ Optional welcome-offer email delivery: customers can opt in to one NEW20 welcome
 
 Support requests are stored in PostgreSQL and optionally emailed through Resend. Configure `SHOPNIRO_SUPPORT_EMAIL` (default public contact: `shopnirosupport@gmail.com`) with `RESEND_API_KEY` and `SHOPNIRO_FROM_EMAIL` to receive notifications.
 
-4. Production configuration requires `JWT_SECRET` (at least 32 characters), `DATABASE_URL`, `CRON_SECRET`, `SSLCOMMERZ_STORE_ID`, `SSLCOMMERZ_STORE_PASSWORD`, `SSLCOMMERZ_IPN_TOKEN`, and `SSLCOMMERZ_IS_SANDBOX=false`. `PAYMENT_SIMULATOR=true` works only when `NODE_ENV` is explicitly `development` or `test`. Rotate any credential that has appeared in source control or git history; deleting it from current files is not sufficient.
+4. Production configuration requires `JWT_SECRET` (at least 32 characters), `DATABASE_URL`, `CRON_SECRET`, `SSLCOMMERZ_STORE_ID`, `SSLCOMMERZ_STORE_PASSWORD`, `SSLCOMMERZ_IPN_TOKEN`, and `SSLCOMMERZ_IS_SANDBOX=false`. `PAYMENT_SIMULATOR=true` works only when `NODE_ENV` is explicitly `development` or `test`. Rotate any credential that has appeared in source control or git history; deleting it from current files is not sufficient. For a demo with no real money, set `PAYMENT_MODE=sandbox-demo` and `SSLCOMMERZ_IS_SANDBOX=true` with sandbox credentials; this mode never reaches the live gateway and must be removed before going live.
 
 5. For existing databases, migrate password hashes once per database before deploying strict bcrypt-only login: set `DATABASE_URL` to that database and run `npm run migrate:passwords`. Check `SELECT count(*) FROM users WHERE password NOT LIKE '$2%';` returns `0`. Never run migrations against a database unless you have selected and backed it up intentionally.
 

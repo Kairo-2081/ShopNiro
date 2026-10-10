@@ -88,13 +88,27 @@ class SSLCommerzService {
     this.isSandbox = sandboxSetting === 'true';
     this.paymentSimulatorEnabled = process.env.PAYMENT_SIMULATOR === 'true' && isDeveloperEnvironment;
 
+    const sandboxDemo = process.env.PAYMENT_MODE === 'sandbox-demo';
     if (!isDeveloperEnvironment) {
       if (!this.ipnToken) throw new Error('Production requires SSLCOMMERZ_IPN_TOKEN.');
-      if (!this.storeId || !this.storePasswd || this.storeId === 'testbox' || this.storePasswd === 'qwerty') {
+      if (!this.storeId || !this.storePasswd) {
         throw new Error('Production requires valid SSLCommerz store credentials.');
       }
-      if (process.env.PAYMENT_SIMULATOR === 'true' || sandboxSetting !== 'false') {
-        throw new Error('Production requires SSLCOMMERZ_IS_SANDBOX=false and PAYMENT_SIMULATOR must not be true.');
+      if (process.env.PAYMENT_SIMULATOR === 'true') {
+        throw new Error('PAYMENT_SIMULATOR must not be true outside development.');
+      }
+      if (sandboxDemo) {
+        if (sandboxSetting !== 'true') {
+          throw new Error('PAYMENT_MODE=sandbox-demo requires SSLCOMMERZ_IS_SANDBOX=true.');
+        }
+        console.warn('[payments] SANDBOX DEMO MODE: no real money moves. Do not use for live customers.');
+      } else {
+        if (this.storeId === 'testbox' || this.storePasswd === 'qwerty') {
+          throw new Error('Production requires valid SSLCommerz store credentials.');
+        }
+        if (sandboxSetting !== 'false') {
+          throw new Error('Production requires SSLCOMMERZ_IS_SANDBOX=false.');
+        }
       }
     }
 
