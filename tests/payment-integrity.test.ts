@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { after, mock, test } from 'node:test';
+import { after, mock, test, type TestContext } from 'node:test';
 import express from 'express';
 import { request as httpRequest, Server } from 'node:http';
 import { randomUUID } from 'node:crypto';
@@ -7,7 +7,10 @@ import { pool, query } from '../server/db/index.ts';
 
 process.env.JWT_SECRET ??= 'test-payment-integrity-secret-at-least-32-characters';
 if (process.env.CI && !process.env.DATABASE_URL) throw new Error('DATABASE_URL required in CI');
-const dbTest = process.env.DATABASE_URL ? test : test.skip;
+const dbTest = (name: string, fn: (context: TestContext) => void | Promise<void>) =>
+  process.env.DATABASE_URL
+    ? test(name, { timeout: 30_000 }, fn)
+    : test.skip(name, fn);
 
 const { generateToken, verifyToken } = await import('../server/middleware/auth.ts');
 const { default: ordersRoutes } = await import('../server/routes/orders.routes.ts');

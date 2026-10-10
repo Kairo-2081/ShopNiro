@@ -63,6 +63,9 @@ app.use(cors({
   origin: [...allowedOrigins],
   credentials: true,
 }));
+app.get('/api/health', (_req, res) => {
+  res.json({ ok: true, status: 'ok' });
+});
 app.use('/api', apiRateLimit);
 app.use('/api', enforcePublicApiPolicy);
 app.use('/api/ai', optionalAuth, aiRateLimit);
