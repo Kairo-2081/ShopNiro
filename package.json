@@ -29,7 +29,7 @@
     "@types/pg": "^8.20.3",
     "@vercel/analytics": "^2.0.1",
     "@vis.gl/react-google-maps": "^1.7.5",
-    "@vitejs/plugin-react": "^5.0.4",
+    "@vitejs/plugin-react": "^6.1.2",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "dotenv": "^17.2.3",
