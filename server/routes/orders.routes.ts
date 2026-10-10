@@ -10,22 +10,6 @@ import { calculateBundlePrices } from '../../src/lib/bundles.ts';
 
 const router = Router();
 
-export const expirePendingOrders = async (maxMinutes = 15) => {
-  const result = await query(`
-    UPDATE orders
-    SET status = 'expired', payment_status = 'failed', updated_at = CURRENT_TIMESTAMP
-    WHERE status = 'placed'
-      AND payment_status = 'pending'
-      AND order_placed_at < NOW() - ($1 * INTERVAL '1 minute')
-    RETURNING id
-  `, [maxMinutes]);
-
-  return {
-    expired: result.rowCount ?? 0,
-    orderIds: result.rows.map((row) => String(row.id)),
-  };
-};
-
 /**
  * GET /api/orders
  * Retrieve orders (via schema gocart_orders_list)
@@ -128,7 +112,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
     }
 
     res.setHeader('X-Has-More', String(hasMore));
-    res.json(formatted);
+    res.json(formatted.slice(0, limit));
   } catch (error: any) {
     console.error('Error fetching orders:', error);
     res.status(500).json({ error: 'Failed to fetch orders' });
@@ -242,71 +226,85 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
       return { product_id: product.id, unit_price: unitPrice };
     });
 
-    // Checkout uses the database procedure to validate stock and create per-seller fulfillment rows.
-    await query(`CALL process_checkout($1, $2, $3, $4, $5, $6, $7)`, [
-      id,
-      Tracking_ID,
-      Customer_ID,
-      shippingFee,
-      shipAddrJson,
-      billAddrJson,
-      addInfo,
-    ]);
-
-    await query(`
-      UPDATE order_items oi
-      SET unit_price = pricing.unit_price
-      FROM jsonb_to_recordset($2::jsonb) AS pricing(product_id VARCHAR, unit_price NUMERIC)
-      WHERE oi.order_id = $1 AND oi.product_id_snapshot = pricing.product_id
-    `, [id, JSON.stringify(pricingRows)]);
-
-    await query(`
-      UPDATE seller_fulfillments sf SET
-        subtotal = COALESCE((
-          SELECT SUM(oi.unit_price * oi.quantity) FROM order_items oi
-          WHERE oi.order_id = sf.order_id AND oi.seller_id_snapshot = sf.seller_id
-        ), 0),
-        items_json = COALESCE((
-          SELECT jsonb_agg(jsonb_build_object(
-            'Product_ID', oi.product_id_snapshot,
-            'Name', oi.product_name,
-            'Price', oi.unit_price,
-            'Quantity', oi.quantity,
-            'Image', COALESCE(oi.image, ''),
-            'Size', NULLIF(oi.size, ''),
-            'Seller_ID', oi.seller_id_snapshot
-          ) ORDER BY oi.order_item_id)
-          FROM order_items oi
-          WHERE oi.order_id = sf.order_id AND oi.seller_id_snapshot = sf.seller_id
-        ), '[]'::jsonb)
-      WHERE sf.order_id = $1
-    `, [id]);
-    const orderedItems = await query(`
-      SELECT product_id_snapshot, seller_id_snapshot, product_name, unit_price, quantity, image, size
-      FROM order_items WHERE order_id = $1 ORDER BY order_item_id
-    `, [id]);
-    const finalSubtotal = orderedItems.rows.reduce(
-      (total: number, item: any) => total + Number(item.unit_price) * Number(item.quantity),
-      0
-    );
     const recordedPromotions = [voucherCode, ...bundlePricing.appliedBundleIds.map((bundleId) => `BUNDLE:${bundleId}`), cartDiscountEligible ? 'CART5' : ''].filter(Boolean).join('+');
-    await query(`
-      UPDATE orders SET subtotal = $2, items_json = $3, applied_voucher = $4, payment_method = $5 WHERE id = $1
-    `, [id, finalSubtotal, JSON.stringify(orderedItems.rows.map((item: any) => ({
-      Product_ID: item.product_id_snapshot,
-      Seller_ID: item.seller_id_snapshot,
-      Name: item.product_name,
-      Price: Number(item.unit_price),
-      Quantity: Number(item.quantity),
-      Image: item.image || '',
-      Size: item.size || undefined,
-    }))), recordedPromotions, paymentMethod]);
+    const client = await pool.connect();
+    let orderedItems: any[] = [];
+    let finalSubtotal = 0;
+    try {
+      await client.query('BEGIN');
+      await client.query(`CALL process_checkout($1, $2, $3, $4, $5, $6, $7)`, [
+        id,
+        Tracking_ID,
+        Customer_ID,
+        shippingFee,
+        shipAddrJson,
+        billAddrJson,
+        addInfo,
+      ]);
+
+      await client.query(`
+        UPDATE order_items oi
+        SET unit_price = pricing.unit_price
+        FROM jsonb_to_recordset($2::jsonb) AS pricing(product_id VARCHAR, unit_price NUMERIC)
+        WHERE oi.order_id = $1 AND oi.product_id_snapshot = pricing.product_id
+      `, [id, JSON.stringify(pricingRows)]);
+
+      await client.query(`
+        UPDATE seller_fulfillments sf SET
+          subtotal = COALESCE((
+            SELECT SUM(oi.unit_price * oi.quantity) FROM order_items oi
+            WHERE oi.order_id = sf.order_id AND oi.seller_id_snapshot = sf.seller_id
+          ), 0),
+          items_json = COALESCE((
+            SELECT jsonb_agg(jsonb_build_object(
+              'Product_ID', oi.product_id_snapshot,
+              'Name', oi.product_name,
+              'Price', oi.unit_price,
+              'Quantity', oi.quantity,
+              'Image', COALESCE(oi.image, ''),
+              'Size', NULLIF(oi.size, ''),
+              'Seller_ID', oi.seller_id_snapshot
+            ) ORDER BY oi.order_item_id)
+            FROM order_items oi
+            WHERE oi.order_id = sf.order_id AND oi.seller_id_snapshot = sf.seller_id
+          ), '[]'::jsonb)
+        WHERE sf.order_id = $1
+      `, [id]);
+      const itemsResult = await client.query(`
+        SELECT product_id_snapshot, seller_id_snapshot, product_name, unit_price, quantity, image, size
+        FROM order_items WHERE order_id = $1 ORDER BY order_item_id
+      `, [id]);
+      orderedItems = itemsResult.rows;
+      finalSubtotal = orderedItems.reduce(
+        (total: number, item: any) => total + Number(item.unit_price) * Number(item.quantity),
+        0
+      );
+      await client.query(`
+        UPDATE orders SET subtotal = $2, items_json = $3, applied_voucher = $4, payment_method = $5 WHERE id = $1
+      `, [id, finalSubtotal, JSON.stringify(orderedItems.map((item: any) => ({
+        Product_ID: item.product_id_snapshot,
+        Seller_ID: item.seller_id_snapshot,
+        Name: item.product_name,
+        Price: Number(item.unit_price),
+        Quantity: Number(item.quantity),
+        Image: item.image || '',
+        Size: item.size || undefined,
+      }))), recordedPromotions, paymentMethod]);
+      await client.query('COMMIT');
+    } catch (error: any) {
+      await client.query('ROLLBACK').catch(() => {});
+      console.error('Error placing order:', error);
+      const status = error.message?.startsWith('Checkout Failed:') ? 409 : 500;
+      return res.status(status).json({ error: error.message || 'Failed to place order' });
+    } finally {
+      client.release();
+    }
 
     const newOrder: Order = {
       Order_ID: id,
       Tracking_ID,
       Customer_ID,
-      Items: orderedItems.rows.map((item: any) => ({
+      Items: orderedItems.map((item: any) => ({
         Product_ID: item.product_id_snapshot,
         Seller_ID: item.seller_id_snapshot,
         Name: item.product_name,
@@ -355,7 +353,8 @@ router.get('/cancellation-requests', requireAuth, async (req: AuthRequest, res) 
       LIMIT $2 OFFSET $3`,
           [req.user!.role === 'customer' ? req.user!.entityId : null, limit + 1, offset]
     );
-    res.json(result.rows.map((row) => ({
+            res.setHeader('X-Has-More', String(result.rows.length > limit));
+            res.json(result.rows.slice(0, limit).map((row) => ({
       Request_ID: row.id,
       Order_ID: row.order_id,
       Customer_ID: row.customer_id,

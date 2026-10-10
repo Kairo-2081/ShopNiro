@@ -56,6 +56,17 @@ ALTER TABLE sellers ADD COLUMN IF NOT EXISTS address_longitude DOUBLE PRECISION;
 ALTER TABLE sellers ADD COLUMN IF NOT EXISTS business_registration_number VARCHAR(100) NOT NULL DEFAULT '';
 ALTER TABLE sellers ADD COLUMN IF NOT EXISTS payout_method VARCHAR(32) NOT NULL DEFAULT '';
 ALTER TABLE sellers ADD COLUMN IF NOT EXISTS payout_account VARCHAR(255) NOT NULL DEFAULT '';
+ALTER TABLE sellers ADD COLUMN IF NOT EXISTS identity_verified BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE sellers ADD COLUMN IF NOT EXISTS documents_reviewed BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE sellers ADD COLUMN IF NOT EXISTS payout_verified BOOLEAN NOT NULL DEFAULT FALSE;
+
+CREATE TABLE IF NOT EXISTS seller_documents (
+    id VARCHAR(64) PRIMARY KEY,
+    seller_id VARCHAR(64) NOT NULL REFERENCES sellers(id) ON DELETE CASCADE,
+    doc_type VARCHAR(32) NOT NULL CHECK (doc_type IN ('national_id', 'trade_license', 'bank_statement')),
+    storage_path TEXT NOT NULL,
+    uploaded_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 
 CREATE TABLE IF NOT EXISTS seller_verification_documents (
     id VARCHAR(64) PRIMARY KEY,
@@ -367,6 +378,30 @@ CREATE TABLE IF NOT EXISTS seller_wallet_entries (
     CONSTRAINT uq_seller_wallet_reference UNIQUE (seller_id, entry_type, reference_id)
 );
 
+ALTER TABLE seller_wallet_entries ADD COLUMN IF NOT EXISTS available_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE seller_wallet_entries DROP CONSTRAINT IF EXISTS chk_seller_wallet_entry_type;
+ALTER TABLE seller_wallet_entries ADD CONSTRAINT chk_seller_wallet_entry_type
+    CHECK (entry_type IN ('sale', 'commission', 'cod_received', 'refund_clawback', 'payout', 'adjustment'));
+CREATE INDEX IF NOT EXISTS idx_seller_wallet_available ON seller_wallet_entries(seller_id, available_at);
+
+CREATE OR REPLACE FUNCTION platform_commission(p_subtotal NUMERIC) RETURNS NUMERIC
+LANGUAGE SQL IMMUTABLE AS $$
+    SELECT ROUND(p_subtotal * 0.15, 2);
+$$;
+
+CREATE TABLE IF NOT EXISTS seller_payouts (
+    id VARCHAR(64) PRIMARY KEY,
+    seller_id VARCHAR(64) NOT NULL REFERENCES sellers(id),
+    amount NUMERIC(12, 2) NOT NULL CHECK (amount > 0),
+    method VARCHAR(32) NOT NULL,
+    account VARCHAR(255) NOT NULL,
+    status VARCHAR(16) NOT NULL DEFAULT 'requested' CHECK (status IN ('requested', 'paid', 'rejected')),
+    external_reference VARCHAR(100),
+    requested_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    processed_by VARCHAR(64) REFERENCES users(id),
+    processed_at TIMESTAMP WITH TIME ZONE
+);
+
 CREATE TABLE IF NOT EXISTS rider_withdrawals (
     id VARCHAR(64) PRIMARY KEY,
     rider_id VARCHAR(64) NOT NULL REFERENCES riders(id) ON DELETE CASCADE,
@@ -510,16 +545,6 @@ WHERE rd.status = 'delivered' AND rd.cod_collected AND rd.cod_amount > 0
                 AND entry.entry_type IN ('salary_debit', 'cod_remittance', 'cod_salary_debit')
     )
 ON CONFLICT (rider_id, entry_type, reference_id) DO NOTHING;
-
-INSERT INTO seller_wallet_entries (id, seller_id, entry_type, amount, reference_id, description)
-SELECT 'VCO-' || RIGHT(sf.id, 24), sf.seller_id, 'cod_received', rd.cod_amount, rd.id,
-        'Cash-on-delivery remittance for order ' || sf.order_id
-FROM rider_deliveries rd
-JOIN seller_fulfillments sf ON sf.id = rd.fulfillment_id
-JOIN orders o ON o.id = sf.order_id
-WHERE rd.status = 'delivered' AND rd.cod_collected AND rd.cod_amount > 0
-    AND o.payment_method = 'cash_on_delivery'
-ON CONFLICT (seller_id, entry_type, reference_id) DO NOTHING;
 
 WITH monthly_totals AS (
         SELECT rd.rider_id, date_trunc('month', rd.delivered_at)::date AS month_start,
@@ -1153,6 +1178,57 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION expire_pending_online_orders(p_minutes INT DEFAULT 30) RETURNS INT
+LANGUAGE plpgsql AS $$
+DECLARE
+    expired_order RECORD;
+    expired_count INT := 0;
+BEGIN
+    FOR expired_order IN
+        SELECT o.id
+        FROM orders o
+        WHERE o.payment_method = 'online'
+          AND o.payment_status = 'pending'
+          AND o.status = 'placed'
+          AND o.order_placed_at < now() - make_interval(mins => p_minutes)
+          AND NOT EXISTS (
+              SELECT 1
+              FROM payments p
+              WHERE p.order_id = o.id
+                AND (p.status = 'VALIDATED' OR p.created_at > now() - make_interval(mins => p_minutes))
+          )
+        ORDER BY o.order_placed_at, o.id
+        FOR UPDATE OF o SKIP LOCKED
+    LOOP
+        UPDATE products product
+        SET stock = product.stock + item_totals.quantity
+        FROM (
+            SELECT product_id_snapshot, SUM(quantity)::INTEGER AS quantity
+            FROM order_items
+            WHERE order_id = expired_order.id
+            GROUP BY product_id_snapshot
+        ) item_totals
+        WHERE product.id = item_totals.product_id_snapshot;
+
+        UPDATE payments
+        SET status = 'EXPIRED', updated_at = now()
+        WHERE order_id = expired_order.id AND status = 'PENDING';
+
+        UPDATE seller_fulfillments
+        SET status = 'cancelled'
+        WHERE order_id = expired_order.id;
+
+        UPDATE orders
+        SET status = 'cancelled', payment_status = 'expired', updated_at = now()
+        WHERE id = expired_order.id;
+
+        expired_count := expired_count + 1;
+    END LOOP;
+
+    RETURN expired_count;
+END;
+$$;
+
 DROP VIEW IF EXISTS admin_profiles CASCADE;
 DROP VIEW IF EXISTS seller_profiles CASCADE;
 DROP VIEW IF EXISTS customer_profiles CASCADE;
@@ -1247,7 +1323,8 @@ CREATE OR REPLACE VIEW seller_profiles AS
 SELECT s.id, u.username, s.name, u.email, s.number, s.logo, s.description, s.status,
        s.address_house_name, s.address_street, s.address_city,
     s.address_postal_code, s.address_additional_info,
-    s.address_latitude, s.address_longitude, s.created_at
+    s.address_latitude, s.address_longitude, s.created_at,
+    s.identity_verified, s.documents_reviewed, s.payout_verified, s.payout_method, s.payout_account
 FROM sellers s JOIN users u ON u.id = s.id AND u.role = 'seller';
 
 CREATE OR REPLACE VIEW admin_profiles AS

@@ -10,14 +10,14 @@ ShopNiro is a multi-vendor marketplace where customers shop, pay with bKash or S
 
    Configure `SHOPNIRO_PUBLIC_URL` to the exact public frontend origin when it differs from the built-in ShopNiro origin. Vercel deployments also use `VERCEL_URL` / `VERCEL_PROJECT_PRODUCTION_URL` when present. `AUTH_COOKIE_SAME_SITE` can be set to `lax`, `strict`, or `none`; production defaults to `none` for split frontend/API origins and always sets `Secure`. Use `lax` when frontend and API share a site.
 
-   API requests are checked by centralized authentication middleware before body parsing or route handlers. Login and customer/seller registration are guest-accessible; other API routes require an active session, with role and ownership checks applied by their handlers. Admin accounts are created by an authenticated admin. The frontend/static assets remain accessible so visitors can reach sign-in.
+   Every `/api` route requires a session unless it is listed in `server/middleware/publicRoutes.ts`. `tests/route-policy.test.ts` enforces this. Public endpoints that perform privileged work, such as cron jobs, enforce their own shared-secret checks. Admin accounts are created by an authenticated admin. The frontend/static assets remain accessible so visitors can reach sign-in.
 
 3. Run the app:
    `npm run dev`
 
    When seeding a fresh database, configure `SHOPNIRO_SEED_ADMIN_PASSWORD`, `SHOPNIRO_SEED_SELLER_PASSWORD`, and `SHOPNIRO_SEED_CUSTOMER_PASSWORD` with unique values of at least 16 characters. These values are hashed before insertion and are never checked into source. Existing databases with those account tables populated do not need these seed variables.
 
-   Startup seeding is disabled by default. Set `SEED_ON_START=true` only for an explicitly selected non-production development database. Production never seeds on boot. Similarly, schema bootstrapping is disabled unless `RUN_SCHEMA_ON_START=true`, and background refund / expiry jobs are disabled unless `RUN_BACKGROUND_JOBS=true`. Use them only in explicitly selected non-production or internal job environments with `CRON_SECRET` configured.
+   Startup seeding is disabled by default. Set `SEED_ON_START=true` only for an explicitly selected non-production development database. Production never seeds on boot. Schema bootstrapping is disabled unless `RUN_SCHEMA_ON_START=true`. The optional in-process refund worker is controlled by `RUN_IN_PROCESS_JOBS`; order expiry and the normal refund queue are scheduled externally.
 
 Optional welcome-offer email delivery: customers can opt in to one NEW20 welcome email during registration. Configure `RESEND_API_KEY`, `SHOPNIRO_FROM_EMAIL` (a verified Resend sender), and `SHOPNIRO_PUBLIC_URL` in the server environment. Without all three values, account creation still succeeds and no email is sent.
 
@@ -32,3 +32,9 @@ Support requests are stored in PostgreSQL and optionally emailed through Resend.
 7. Database relationships, keys, normalization, and operational rules are documented in [docs/database-design.md](docs/database-design.md). Seller commission, holds, payout cadence, and COD remittance policy are in [docs/payouts.md](docs/payouts.md). PostgreSQL DDL and routines are in `schema.sql`; boot seeding runs only when explicitly enabled in non-production.
 
 See [README-DEPLOY.md](README-DEPLOY.md) for Render/Vercel environment configuration and deployment checks.
+
+## Scheduled jobs
+
+The GitHub Actions `Scheduled jobs` workflow calls `/api/cron/expire-orders` and `/api/cron/refunds` every five minutes using `Authorization: Bearer $CRON_SECRET`. Configure the repository Actions secrets `APP_URL` and `CRON_SECRET`; `APP_URL` is the deployed API origin. Vercel's daily cron continues to call `/api/riders/payroll/settle` with the same bearer secret. Scheduled execution can be delayed, so use a host-provided cron or external scheduler where tighter timing is required.
+
+Seller identity documents are stored in a private Supabase Storage bucket. Configure `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and optionally `SUPABASE_SELLER_DOCUMENTS_BUCKET` on the API host. Create the bucket as private before accepting seller applications. Existing BLOB documents can be migrated with `npx tsx scripts/migrate-seller-documents-to-storage.ts`; run it only against the selected backed-up database after configuring storage.

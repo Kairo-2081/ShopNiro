@@ -4,7 +4,8 @@ import type { PoolClient } from 'pg';
 import rateLimit from 'express-rate-limit';
 import { pool, query, mapAddress } from '../db/index.ts';
 import { hashPassword } from '../db/password.ts';
-import { requireAuth, requireRole, AuthRequest } from '../middleware/auth.ts';
+import { requireAuth, requireRole, optionalAuth, AuthRequest } from '../middleware/auth.ts';
+import { createSellerDocumentSignedUrl, deleteSellerDocument, uploadSellerDocument } from '../services/sellerDocuments.service.ts';
 import { Seller } from '../../src/types.ts';
 
 const router = Router();
@@ -45,17 +46,23 @@ const registrationRateLimit = rateLimit({
  * GET /api/sellers
  * Returns list of all sellers (via schema gocart_sellers_list)
  */
-router.get('/', async (req, res) => {
+router.get('/', optionalAuth, async (req: AuthRequest, res) => {
   try {
     const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
     const offset = Math.max(0, Number(req.query.offset) || 0);
     const result = await query('SELECT * FROM seller_profiles ORDER BY created_at DESC, id DESC LIMIT $1 OFFSET $2', [limit + 1, offset]);
-    const formatted: Seller[] = result.rows.map((s: any) => ({
+    const formatted: Array<Omit<Seller, 'Email' | 'Number'> & Partial<Pick<Seller, 'Email' | 'Number'>>> = result.rows.map((s: any) => ({
       Seller_ID: s.id,
       Username: s.username || '',
       Name: s.name,
-      Email: s.email || '',
-      Number: s.number || '',
+      ...(req.user?.role === 'admin' ? { Email: s.email || '', Number: s.number || '' } : {}),
+      ...(req.user?.role === 'admin' ? {
+        Identity_Verified: Boolean(s.identity_verified),
+        Documents_Reviewed: Boolean(s.documents_reviewed),
+        Payout_Verified: Boolean(s.payout_verified),
+        Payout_Method: s.payout_method || '',
+        Payout_Account: s.payout_account || '',
+      } : {}),
       Address: mapAddress(s),
       Logo: s.logo || '',
       Description: s.description || '',
@@ -63,7 +70,7 @@ router.get('/', async (req, res) => {
       Created_At: s.created_at ? new Date(s.created_at).toISOString() : new Date().toISOString(),
     }));
     res.setHeader('X-Has-More', String(result.rows.length > limit));
-    res.json(formatted);
+    res.json(formatted.slice(0, limit));
   } catch (error: any) {
     console.error('Error fetching sellers:', error);
     res.status(500).json({ error: 'Failed to fetch sellers' });
@@ -76,6 +83,7 @@ router.get('/', async (req, res) => {
  */
 router.post('/', registrationRateLimit, async (req, res) => {
   let client: PoolClient | undefined;
+  let identityStoragePath: string | undefined;
   try {
     const { Name, Email, Password, Number: phoneNum, Address, Logo, Description, Username,
       Business_Registration_Number, Payout_Method, Payout_Account, Identity_Document, Identity_Document_File_Name } = req.body;
@@ -124,6 +132,7 @@ router.post('/', registrationRateLimit, async (req, res) => {
     const postalCode = addr.Postal_Code || '';
     const addInfo = addr.Additional_Info || '';
 
+    identityStoragePath = await uploadSellerDocument(id, 'national_id', identityDocument.buffer, identityDocument.mimeType);
     client = await pool.connect();
     await client.query('BEGIN');
     const result = await client.query(
@@ -137,9 +146,9 @@ router.post('/', registrationRateLimit, async (req, res) => {
         typeof Business_Registration_Number === 'string' ? Business_Registration_Number.trim().slice(0, 100) : '', payoutMethod, payoutAccount]
     );
     await client.query(
-      `INSERT INTO seller_verification_documents (id, seller_id, document_type, file_name, mime_type, document_data)
-       VALUES ($1, $2, 'identity', $3, $4, $5)`,
-      [`SID-${randomUUID()}`, id, typeof Identity_Document_File_Name === 'string' ? Identity_Document_File_Name.slice(0, 255) : 'identity-document', identityDocument.mimeType, identityDocument.buffer]
+      `INSERT INTO seller_documents (id, seller_id, doc_type, storage_path)
+       VALUES ($1, $2, 'national_id', $3)`,
+      [`SDOC-${randomUUID()}`, id, identityStoragePath]
     );
     await client.query('COMMIT');
 
@@ -168,8 +177,9 @@ router.post('/', registrationRateLimit, async (req, res) => {
     res.status(201).json(newSeller);
   } catch (error: any) {
     if (client) await client.query('ROLLBACK').catch(() => {});
+    if (identityStoragePath) await deleteSellerDocument(identityStoragePath);
     console.error('Error creating seller:', error);
-    res.status(500).json({ error: error.message || 'Failed to create seller' });
+    res.status(error?.statusCode || 500).json({ error: error.message || 'Failed to create seller' });
   } finally {
     client?.release();
   }
@@ -178,23 +188,22 @@ router.post('/', registrationRateLimit, async (req, res) => {
 router.get('/applications/:id/identity-document', requireAuth, requireRole(['admin']), async (req, res) => {
   try {
     const result = await query(
-      `SELECT file_name, mime_type, document_data FROM seller_verification_documents
-       WHERE seller_id = $1 AND document_type = 'identity'`,
+      `SELECT storage_path FROM seller_documents
+       WHERE seller_id = $1 AND doc_type = 'national_id'
+       ORDER BY uploaded_at DESC LIMIT 1`,
       [req.params.id]
     );
     if (!result.rows.length) return res.status(404).json({ error: 'Seller identity document not found.' });
-    const document = result.rows[0];
-    res.setHeader('Content-Type', document.mime_type);
-    res.setHeader('Content-Disposition', `attachment; filename="${String(document.file_name).replace(/[\r\n"]+/g, '')}"`);
-    return res.send(document.document_data);
+    const url = await createSellerDocumentSignedUrl(result.rows[0].storage_path);
+    return res.json({ url, expiresInSeconds: 300 });
   } catch (error) {
     console.error('Could not fetch seller identity document:', error);
-    return res.status(500).json({ error: 'Could not fetch seller identity document.' });
+    return res.status((error as any)?.statusCode || 500).json({ error: 'Could not fetch seller identity document.' });
   }
 });
 
 router.put('/me/profile', requireAuth, requireRole(['seller']), async (req: AuthRequest, res) => {
-  const { Name, Username, Email, Number: phone, Logo, Description, Address } = req.body ?? {};
+  const { Name, Username, Email, Number: phone, Logo, Description, Address, Payout_Method, Payout_Account } = req.body ?? {};
   if (![Name, Username, Email, phone].every((value) => typeof value === 'string' && value.trim())) {
     return res.status(400).json({ error: 'Store name, username, email, and phone number are required.' });
   }
@@ -220,6 +229,17 @@ router.put('/me/profile', requireAuth, requireRole(['seller']), async (req: Auth
       return res.status(404).json({ error: 'Seller profile not found.' });
     }
     const current = currentResult.rows[0];
+    const payoutMethod = Payout_Method === undefined ? current.payout_method || '' : Payout_Method;
+    const payoutAccount = Payout_Account === undefined ? current.payout_account || '' : String(Payout_Account).trim();
+    if (!['', 'bank', 'bkash'].includes(payoutMethod) || payoutAccount.length > 100) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Choose a valid payout method and account.' });
+    }
+    if ((Payout_Method !== undefined || Payout_Account !== undefined) && Boolean(payoutMethod) !== Boolean(payoutAccount)) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Payout method and payout account must be provided together.' });
+    }
+    const payoutChanged = payoutMethod !== (current.payout_method || '') || payoutAccount !== (current.payout_account || '');
     const changed = [
       [current.name, String(Name).trim()],
       [current.username, username],
@@ -234,7 +254,7 @@ router.put('/me/profile', requireAuth, requireRole(['seller']), async (req: Auth
       [current.address_additional_info || '', String(Address.Additional_Info || '')],
       [Number(current.address_latitude), Number(Address.Latitude)],
       [Number(current.address_longitude), Number(Address.Longitude)],
-    ].some(([before, after]) => before !== after);
+    ].some(([before, after]) => before !== after) || payoutChanged;
     const duplicate = await client.query(
       'SELECT 1 FROM users WHERE id <> $1 AND (lower(username) = $2 OR lower(email) = $3) LIMIT 1',
       [sellerId, username, email]
@@ -249,7 +269,9 @@ router.put('/me/profile', requireAuth, requireRole(['seller']), async (req: Auth
         address_house_name = $6, address_street = $7, address_city = $8,
         address_postal_code = $9, address_additional_info = $10,
         address_latitude = $11, address_longitude = $12,
-        status = CASE WHEN $13 THEN 'pending' ELSE status END
+        payout_method = $13, payout_account = $14,
+        payout_verified = CASE WHEN $15 THEN FALSE ELSE payout_verified END,
+        status = CASE WHEN $16 THEN 'pending' ELSE status END
       WHERE id = $1
     `, [
       sellerId,
@@ -264,6 +286,9 @@ router.put('/me/profile', requireAuth, requireRole(['seller']), async (req: Auth
       String(Address.Additional_Info || ''),
       Number(Address.Latitude),
       Number(Address.Longitude),
+      payoutMethod,
+      payoutAccount,
+      payoutChanged,
       changed,
     ]);
     await client.query('COMMIT');
@@ -280,6 +305,9 @@ router.put('/me/profile', requireAuth, requireRole(['seller']), async (req: Auth
       Logo: seller.logo || '',
       Description: seller.description || '',
       Status: seller.status,
+      Payout_Method: seller.payout_method || payoutMethod,
+      Payout_Account: seller.payout_account || payoutAccount,
+      Payout_Verified: Boolean(seller.payout_verified),
       Created_At: seller.created_at ? new Date(seller.created_at).toISOString() : new Date().toISOString(),
     });
   } catch (error: any) {
@@ -295,18 +323,78 @@ router.put('/me/profile', requireAuth, requireRole(['seller']), async (req: Auth
 router.get('/me/wallet', requireAuth, requireRole(['seller']), async (req: AuthRequest, res) => {
   try {
     const result = await query(
-      `SELECT id, entry_type, amount, reference_id, description, created_at
-      FROM seller_wallet_entries WHERE seller_id = $1 ORDER BY created_at DESC LIMIT 100`,
+      `SELECT id, entry_type, amount, reference_id, description, available_at, created_at
+      FROM seller_wallet_entries WHERE seller_id = $1 ORDER BY created_at DESC, id DESC LIMIT 100`,
       [req.user!.entityId]
     );
     const total = await query(
-      `SELECT COALESCE(SUM(amount), 0) AS balance FROM seller_wallet_entries WHERE seller_id = $1`,
+      `SELECT COALESCE(SUM(amount) FILTER (WHERE available_at <= CURRENT_TIMESTAMP), 0) AS available,
+        COALESCE(SUM(amount) FILTER (WHERE available_at > CURRENT_TIMESTAMP), 0) AS pending
+       FROM seller_wallet_entries WHERE seller_id = $1`,
       [req.user!.entityId]
     );
-    return res.json({ balance: Number(total.rows[0]?.balance) || 0, entries: result.rows });
+    const payout = await query('SELECT payout_verified FROM sellers WHERE id = $1', [req.user!.entityId]);
+    return res.json({
+      available: Number(total.rows[0]?.available) || 0,
+      pending: Number(total.rows[0]?.pending) || 0,
+      payoutVerified: Boolean(payout.rows[0]?.payout_verified),
+      entries: result.rows,
+    });
   } catch (error: any) {
     console.error('Could not load seller wallet:', error);
     return res.status(500).json({ error: 'Could not load seller COD remittances.' });
+  }
+});
+
+router.post('/me/payouts', requireAuth, requireRole(['seller']), async (req: AuthRequest, res) => {
+  const amount = Number(req.body?.amount);
+  if (!Number.isFinite(amount) || amount <= 0) return res.status(400).json({ error: 'Payout amount must be greater than zero.' });
+
+  const client = await pool.connect();
+  try {
+    const sellerId = req.user!.entityId;
+    await client.query('BEGIN');
+    const sellerResult = await client.query(
+      'SELECT payout_verified, payout_method, payout_account FROM sellers WHERE id = $1 FOR UPDATE',
+      [sellerId]
+    );
+    const seller = sellerResult.rows[0];
+    if (!seller) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ error: 'Seller not found.' });
+    }
+    if (!seller.payout_verified) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'An admin must verify your payout account before requesting a payout.' });
+    }
+    const balanceResult = await client.query(`
+      SELECT COALESCE(SUM(amount), 0) AS available
+      FROM seller_wallet_entries WHERE seller_id = $1 AND available_at <= CURRENT_TIMESTAMP
+    `, [sellerId]);
+    const available = Number(balanceResult.rows[0]?.available) || 0;
+    if (amount > available) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'Payout amount exceeds your available balance.' });
+    }
+
+    const payoutId = `POUT-${randomUUID()}`;
+    await client.query(`
+      INSERT INTO seller_payouts (id, seller_id, amount, method, account)
+      VALUES ($1, $2, $3, $4, $5)
+    `, [payoutId, sellerId, amount, seller.payout_method, seller.payout_account]);
+    await client.query(`
+      INSERT INTO seller_wallet_entries (id, seller_id, entry_type, amount, reference_id, description, available_at)
+      VALUES ($1, $2, 'payout', $3, $4, $5, now())
+      ON CONFLICT (seller_id, entry_type, reference_id) DO NOTHING
+    `, [`POUT-ENTRY-${randomUUID()}`, sellerId, -amount, payoutId, `Payout request ${payoutId}`]);
+    await client.query('COMMIT');
+    return res.status(201).json({ success: true, payoutId, amount, status: 'requested' });
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error('Could not request seller payout:', error);
+    return res.status(500).json({ error: 'Could not request seller payout.' });
+  } finally {
+    client.release();
   }
 });
 
@@ -317,13 +405,16 @@ router.get('/me/wallet', requireAuth, requireRole(['seller']), async (req: AuthR
 router.patch('/:id/status', requireAuth, requireRole(['admin']), async (req: AuthRequest, res) => {
   try {
     const { id } = req.params;
-    const { status, reason } = req.body ?? {};
+    const { status, reason, identityVerified, documentsReviewed, payoutVerified } = req.body ?? {};
     const reviewReason = sanitizeReviewReason(reason);
     if (!status || !['pending', 'approved', 'rejected', 'suspended'].includes(status)) {
       return res.status(400).json({ error: 'Valid status is required' });
     }
     if (status === 'rejected' && !reviewReason) {
       return res.status(400).json({ error: 'A rejection reason is required.' });
+    }
+    if (status === 'approved' && [identityVerified, documentsReviewed, payoutVerified].some((value) => value !== true)) {
+      return res.status(400).json({ error: 'Confirm identity, document review, and payout verification before approval.' });
     }
 
     const sellerRow = await query('SELECT id, status FROM sellers WHERE id = $1', [id]);
@@ -332,15 +423,21 @@ router.patch('/:id/status', requireAuth, requireRole(['admin']), async (req: Aut
     }
     if (status === 'approved') {
       const verification = await query(
-        `SELECT 1 FROM seller_verification_documents WHERE seller_id = $1 AND document_type = 'identity' LIMIT 1`,
+        `SELECT 1 FROM seller_documents WHERE seller_id = $1 LIMIT 1`,
         [id]
       );
       if (!verification.rows.length) {
-        return res.status(400).json({ error: 'Seller identity verification is required before approval.' });
+        return res.status(400).json({ error: 'Seller verification documents are required before approval.' });
       }
     }
 
-    await query('UPDATE sellers SET status = $1 WHERE id = $2', [status, id]);
+    await query(`
+      UPDATE sellers SET status = $1,
+        identity_verified = CASE WHEN $1 = 'approved' THEN $2 ELSE identity_verified END,
+        documents_reviewed = CASE WHEN $1 = 'approved' THEN $3 ELSE documents_reviewed END,
+        payout_verified = CASE WHEN $1 = 'approved' THEN $4 ELSE payout_verified END
+      WHERE id = $5
+    `, [status, identityVerified === true, documentsReviewed === true, payoutVerified === true, id]);
     if (status === 'approved' || status === 'rejected') {
       await createApplicationReviewAudit('seller', id, req.user!.entityId, status, reviewReason || 'Approved after administrative review.');
     }

@@ -3,14 +3,19 @@ import { after, mock, test } from 'node:test';
 import express from 'express';
 import { request as httpRequest, Server } from 'node:http';
 import { randomUUID } from 'node:crypto';
-import { query } from '../server/db/index.ts';
+import { pool, query } from '../server/db/index.ts';
 
 process.env.JWT_SECRET ??= 'test-payment-integrity-secret-at-least-32-characters';
+if (process.env.CI && !process.env.DATABASE_URL) throw new Error('DATABASE_URL required in CI');
 const dbTest = process.env.DATABASE_URL ? test : test.skip;
 
 const { generateToken, verifyToken } = await import('../server/middleware/auth.ts');
 const { default: ordersRoutes } = await import('../server/routes/orders.routes.ts');
 const { default: authRoutes } = await import('../server/routes/auth.routes.ts');
+const { default: cartRoutes } = await import('../server/routes/cart.routes.ts');
+const { default: adminsRoutes } = await import('../server/routes/admins.routes.ts');
+const { default: sellersRoutes } = await import('../server/routes/sellers.routes.ts');
+const { default: payoutsRoutes } = await import('../server/routes/payouts.routes.ts');
 const { default: riderDeliveryRoutes } = await import('../server/routes/rider-delivery.routes.ts');
 const { default: paymentRoutes, processRefundQueue } = await import('../server/routes/payment.routes.ts');
 const { sslcommerz } = await import('../server/services/sslcommerz.service.ts');
@@ -57,7 +62,7 @@ const request = async (
   });
 };
 
-const createTestUser = async (role: 'customer' | 'seller' | 'rider', entityId: string) => {
+const createTestUser = async (role: 'customer' | 'seller' | 'rider' | 'admin', entityId: string) => {
   await query(
     `INSERT INTO users (id, username, password, email, role)
      VALUES ($1, $2, $3, $4, $5) ON CONFLICT (id) DO NOTHING`,
@@ -70,7 +75,7 @@ const createCustomer = async (customerId: string, name = 'Test Customer') => {
   return query('INSERT INTO customers (id, name) VALUES ($1, $2)', [customerId, name]);
 };
 
-const createSession = async (role: 'customer' | 'seller' | 'rider', entityId: string) => {
+const createSession = async (role: 'customer' | 'seller' | 'rider' | 'admin', entityId: string) => {
   const userId = entityId;
   const token = generateToken({ userId, email: `${userId}@example.invalid`, username: userId, role, entityId });
   const decoded = verifyToken(token);
@@ -179,12 +184,16 @@ const createCodDelivery = async (customerId: string, orderId: string, riderId: s
     INSERT INTO rider_deliveries (id, fulfillment_id, rider_id, status, confirmation_code, cod_amount)
     VALUES ($1, $2, $3, $4, $5, $6)
   `, [deliveryId, fulfillmentId, riderId, 'on_the_way', '123456', 100]);
-  return { deliveryId, orderId };
+  return { deliveryId, orderId, fulfillmentId, sellerId };
 };
 
 const app = express();
 app.use(express.json());
 app.use('/api/auth', authRoutes);
+app.use('/api/admins', adminsRoutes);
+app.use('/api/sellers', sellersRoutes);
+app.use('/api/payouts', payoutsRoutes);
+app.use('/api/cart', cartRoutes);
 app.use('/api/orders', ordersRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/riders', riderDeliveryRoutes);
@@ -218,6 +227,19 @@ dbTest('plaintext stored passwords are rejected with the same message as unknown
     const gatewayRef = `GREF-${randomUUID()}`;
     await createCustomer(customerId);
     await createOrder(customerId, orderId);
+    const sellerId = `SELLER-${randomUUID()}`;
+    const fulfillmentId = `FUL-${randomUUID()}`;
+    await createTestUser('seller', sellerId);
+    await query('INSERT INTO sellers (id, name, status) VALUES ($1, $2, $3)', [sellerId, 'Refund Ledger Seller', 'approved']);
+    await query(`
+      INSERT INTO seller_fulfillments (id, order_id, seller_id, items_json, subtotal, status)
+      VALUES ($1, $2, $3, '[]'::jsonb, 100, 'delivered')
+    `, [fulfillmentId, orderId, sellerId]);
+    await query(`
+      INSERT INTO seller_wallet_entries (id, seller_id, entry_type, amount, reference_id, description)
+      VALUES ($1, $2, 'sale', 100, $3, 'Delivered seller subtotal'),
+        ($4, $2, 'commission', -15, $3, 'Platform commission')
+    `, [`SALE-${randomUUID()}`, sellerId, fulfillmentId, `COMM-${randomUUID()}`]);
     await query(`
       INSERT INTO payments (id, order_id, customer_id, amount, currency, gateway, payment_method, transaction_id, status)
       VALUES ($1, $2, $3, $4, 'BDT', 'sslcommerz', 'bkash', $5, 'VALIDATED')
@@ -237,9 +259,11 @@ dbTest('plaintext stored passwords are rejected with the same message as unknown
     const order = await query('SELECT payment_status FROM orders WHERE id = $1', [orderId]);
     const payment = await query('SELECT status FROM payments WHERE id = $1', [paymentId]);
     const refund = await query('SELECT status FROM refunds WHERE id = $1', [refundId]);
+    const clawback = await query("SELECT amount FROM seller_wallet_entries WHERE seller_id = $1 AND entry_type = 'refund_clawback' AND reference_id = $2", [sellerId, fulfillmentId]);
     assert.equal(order.rows[0].payment_status, 'refunded');
     assert.equal(payment.rows[0].status, 'REFUNDED');
     assert.equal(refund.rows[0].status, 'completed');
+    assert.equal(Number(clawback.rows[0].amount), -85);
     getRefundStatus.mock.restore();
   });
 
@@ -256,6 +280,69 @@ dbTest('plaintext stored passwords are rejected with the same message as unknown
     const order = await query('SELECT payment_status, payment_method FROM orders WHERE id = $1', [orderId]);
     assert.equal(order.rows[0].payment_status, 'pending');
     assert.equal(order.rows[0].payment_method, 'cash_on_delivery');
+  });
+
+  dbTest('payment init rejects an expired order', async () => {
+    const customerId = `CUSTOMER-${randomUUID()}`;
+    const orderId = `ORD-${randomUUID()}`;
+    await createCustomer(customerId);
+    await createOrder(customerId, orderId);
+    await query("UPDATE orders SET status = 'cancelled', payment_status = 'expired' WHERE id = $1", [orderId]);
+    const cookie = await createSession('customer', customerId);
+
+    const response = await request(server, '/api/payment/init', 'POST', { orderId }, cookie);
+    assert.equal(response.status, 409);
+    assert.equal(response.body.error, 'This order is no longer eligible for payment.');
+  });
+
+  dbTest('expiry restores old unpaid online stock and leaves protected orders untouched', async () => {
+    const expirable = await createCheckoutFixture(2, 10);
+    const expirableOrder = await placeCartOrder(expirable, 'online');
+    await query("UPDATE orders SET order_placed_at = now() - interval '40 minutes' WHERE id = $1", [expirableOrder.Order_ID]);
+
+    const cod = await createCheckoutFixture(2, 10);
+    const codOrder = await placeCartOrder(cod, 'cash_on_delivery');
+    await query("UPDATE orders SET order_placed_at = now() - interval '40 minutes' WHERE id = $1", [codOrder.Order_ID]);
+
+    const recent = await createCheckoutFixture(2, 10);
+    const recentOrder = await placeCartOrder(recent, 'online');
+    await query("UPDATE orders SET order_placed_at = now() - interval '40 minutes' WHERE id = $1", [recentOrder.Order_ID]);
+    await query(`
+      INSERT INTO payments (id, order_id, customer_id, amount, currency, gateway, payment_method, transaction_id, status)
+      VALUES ($1, $2, $3, $4, 'BDT', 'sslcommerz', 'bkash', $5, 'PENDING')
+    `, [`PAY-${randomUUID()}`, recentOrder.Order_ID, recent.customerId, 200, `SSLCZ-${randomUUID().replaceAll('-', '').toUpperCase()}`]);
+
+    const validated = await createCheckoutFixture(2, 10);
+    const validatedOrder = await placeCartOrder(validated, 'online');
+    await query("UPDATE orders SET order_placed_at = now() - interval '40 minutes' WHERE id = $1", [validatedOrder.Order_ID]);
+    await query(`
+      INSERT INTO payments (id, order_id, customer_id, amount, currency, gateway, payment_method, transaction_id, status)
+      VALUES ($1, $2, $3, $4, 'BDT', 'sslcommerz', 'bkash', $5, 'VALIDATED')
+    `, [`PAY-${randomUUID()}`, validatedOrder.Order_ID, validated.customerId, 200, `SSLCZ-${randomUUID().replaceAll('-', '').toUpperCase()}`]);
+
+    const firstRun = await query('SELECT expire_pending_online_orders(30) AS expired');
+    assert.equal(Number(firstRun.rows[0].expired), 1);
+
+    const expired = await query('SELECT status, payment_status FROM orders WHERE id = $1', [expirableOrder.Order_ID]);
+    const fulfillment = await query('SELECT status FROM seller_fulfillments WHERE order_id = $1', [expirableOrder.Order_ID]);
+    const restoredStock = await query('SELECT stock FROM products WHERE id = $1', [expirable.productId]);
+    assert.equal(expired.rows[0].status, 'cancelled');
+    assert.equal(expired.rows[0].payment_status, 'expired');
+    assert.equal(fulfillment.rows[0].status, 'cancelled');
+    assert.equal(Number(restoredStock.rows[0].stock), 10);
+
+    for (const [fixture, order] of [[cod, codOrder], [recent, recentOrder], [validated, validatedOrder]] as const) {
+      const unchangedOrder = await query('SELECT status, payment_status FROM orders WHERE id = $1', [order.Order_ID]);
+      const unchangedStock = await query('SELECT stock FROM products WHERE id = $1', [fixture.productId]);
+      assert.equal(unchangedOrder.rows[0].status, 'placed');
+      assert.equal(unchangedOrder.rows[0].payment_status, 'pending');
+      assert.equal(Number(unchangedStock.rows[0].stock), 8);
+    }
+
+    const secondRun = await query('SELECT expire_pending_online_orders(30) AS expired');
+    const stockAfterReplay = await query('SELECT stock FROM products WHERE id = $1', [expirable.productId]);
+    assert.equal(Number(secondRun.rows[0].expired), 0);
+    assert.equal(Number(stockAfterReplay.rows[0].stock), 10);
   });
 
   dbTest('the sixth payment initialization attempt in one minute is rate limited', async () => {
@@ -377,7 +464,7 @@ dbTest('plaintext stored passwords are rejected with the same message as unknown
     await createCustomer(customerId);
     await createOrder(customerId, orderId);
     const cookie = await createSession('rider', riderId);
-    const { deliveryId } = await createCodDelivery(customerId, orderId, riderId);
+    const { deliveryId, sellerId, fulfillmentId } = await createCodDelivery(customerId, orderId, riderId);
 
     const firstCollection = await request(server, `/api/riders/deliveries/${deliveryId}/cod-collected`, 'POST', undefined, cookie);
     assert.equal(firstCollection.status, 200);
@@ -396,6 +483,82 @@ dbTest('plaintext stored passwords are rejected with the same message as unknown
     assert.equal(paidOrder.rows[0].status, 'delivered');
     assert.equal(paidOrder.rows[0].payment_status, 'paid');
     assert.equal(paidOrder.rows[0].payment_method, 'cash_on_delivery');
+
+    const sellerEntries = await query('SELECT entry_type, amount, reference_id, available_at FROM seller_wallet_entries WHERE seller_id = $1 ORDER BY entry_type', [sellerId]);
+    assert.equal(sellerEntries.rows.length, 2);
+    assert.equal(sellerEntries.rows[0].entry_type, 'cod_received');
+    assert.equal(Number(sellerEntries.rows[0].amount), 100);
+    assert.equal(sellerEntries.rows[1].entry_type, 'commission');
+    assert.equal(Number(sellerEntries.rows[1].amount), -15);
+    assert.ok(new Date(sellerEntries.rows[0].available_at).getTime() > Date.now());
+    assert.ok(sellerEntries.rows.every((entry) => entry.reference_id === fulfillmentId));
+
+    const replay = await request(server, `/api/riders/deliveries/${deliveryId}/complete`, 'POST', { code: '123456' }, customerCookie);
+    assert.equal(replay.status, 409);
+    const sellerCookie = await createSession('seller', sellerId);
+    const wallet = await request(server, '/api/sellers/me/wallet', 'GET', undefined, sellerCookie);
+    const ledgerTotal = await query('SELECT COALESCE(SUM(amount), 0) AS total FROM seller_wallet_entries WHERE seller_id = $1', [sellerId]);
+    assert.equal(wallet.status, 200);
+    assert.equal(Number(wallet.body.available) + Number(wallet.body.pending), Number(ledgerTotal.rows[0].total));
+    assert.equal(Number(wallet.body.pending), 85);
+  });
+
+  dbTest('payouts cannot exceed available funds or spend funds still on hold', async () => {
+    const sellerId = `seller-${randomUUID()}`;
+    await createTestUser('seller', sellerId);
+    await query(`
+      INSERT INTO sellers (id, name, status, payout_method, payout_account, payout_verified)
+      VALUES ($1, 'Payout Test Seller', 'approved', 'bank', 'BANK-TEST-ACCOUNT', TRUE)
+    `, [sellerId]);
+    await query(`
+      INSERT INTO seller_wallet_entries (id, seller_id, entry_type, amount, reference_id, available_at)
+      VALUES ($1, $2, 'sale', 50, $3, now()), ($4, $2, 'sale', 75, $5, now() + interval '7 days')
+    `, [`SALE-${randomUUID()}`, sellerId, `FUL-${randomUUID()}`, `SALE-${randomUUID()}`, `FUL-${randomUUID()}`]);
+    const cookie = await createSession('seller', sellerId);
+
+    const overAvailable = await request(server, '/api/sellers/me/payouts', 'POST', { amount: 50.01 }, cookie);
+    assert.equal(overAvailable.status, 409);
+    const availablePayout = await request(server, '/api/sellers/me/payouts', 'POST', { amount: 50 }, cookie);
+    assert.equal(availablePayout.status, 201, JSON.stringify(availablePayout.body));
+
+    const wallet = await request(server, '/api/sellers/me/wallet', 'GET', undefined, cookie);
+    const ledgerTotal = await query('SELECT COALESCE(SUM(amount), 0) AS total FROM seller_wallet_entries WHERE seller_id = $1', [sellerId]);
+    assert.equal(Number(wallet.body.available) + Number(wallet.body.pending), Number(ledgerTotal.rows[0].total));
+    assert.equal(Number(wallet.body.available), 0);
+    assert.equal(Number(wallet.body.pending), 75);
+  });
+
+  dbTest('payouts require verification and rejection restores the ledger balance', async () => {
+    const sellerId = `seller-${randomUUID()}`;
+    await createTestUser('seller', sellerId);
+    await query(`
+      INSERT INTO sellers (id, name, status, payout_method, payout_account, payout_verified)
+      VALUES ($1, 'Verification Test Seller', 'approved', 'bkash', '01700000000', FALSE)
+    `, [sellerId]);
+    await query(`
+      INSERT INTO seller_wallet_entries (id, seller_id, entry_type, amount, reference_id, available_at)
+      VALUES ($1, $2, 'sale', 100, $3, now())
+    `, [`SALE-${randomUUID()}`, sellerId, `FUL-${randomUUID()}`]);
+    const sellerCookie = await createSession('seller', sellerId);
+    const unverified = await request(server, '/api/sellers/me/payouts', 'POST', { amount: 50 }, sellerCookie);
+    assert.equal(unverified.status, 409);
+
+    await query('UPDATE sellers SET payout_verified = TRUE WHERE id = $1', [sellerId]);
+    const payout = await request(server, '/api/sellers/me/payouts', 'POST', { amount: 50 }, sellerCookie);
+    assert.equal(payout.status, 201, JSON.stringify(payout.body));
+    const adminId = `admin-${randomUUID()}`;
+    await createTestUser('admin', adminId);
+    const adminCookie = await createSession('admin', adminId);
+    const rejected = await request(server, `/api/payouts/${payout.body.payoutId}/reject`, 'PATCH', {}, adminCookie);
+    assert.equal(rejected.status, 200);
+
+    const wallet = await query(`
+      SELECT COALESCE(SUM(amount) FILTER (WHERE available_at <= now()), 0) AS available
+      FROM seller_wallet_entries WHERE seller_id = $1
+    `, [sellerId]);
+    const payoutRow = await query('SELECT status FROM seller_payouts WHERE id = $1', [payout.body.payoutId]);
+    assert.equal(Number(wallet.rows[0].available), 100);
+    assert.equal(payoutRow.rows[0].status, 'rejected');
   });
 
   dbTest('the forged customer confirmation route is absent', async () => {
@@ -450,6 +613,40 @@ dbTest('plaintext stored passwords are rejected with the same message as unknown
     assert.equal(remainingOrder.rows[0].remaining, 0);
   });
 
+  dbTest('checkout rolls back order, stock, and cart when a follow-up write fails', async () => {
+    const fixture = await createCheckoutFixture(1, 1, 100);
+    const realConnect = pool.connect.bind(pool);
+    const client = await realConnect();
+    const realQuery = client.query.bind(client);
+    (client as any).query = (sql: unknown, ...args: unknown[]) => String(sql).includes('UPDATE seller_fulfillments')
+      ? Promise.reject(new Error('checkout rollback test failure'))
+      : realQuery(sql as string, ...(args as [any]));
+
+    const connectMock = mock.method(pool, 'connect', async () => client as any);
+    let response: Awaited<ReturnType<typeof request>>;
+    try {
+      response = await request(server, '/api/orders', 'POST', {
+        Customer_ID: fixture.customerId,
+        Items: [{ Product_ID: fixture.productId, Quantity: fixture.quantity }],
+        Shipping_Address: { Street: 'Test street', City: 'Dhaka', Postal_Code: '1200' },
+        Billing_Address: { Street: 'Test street', City: 'Dhaka', Postal_Code: '1200' },
+        paymentMethod: 'online',
+      }, fixture.customerCookie);
+    } finally {
+      connectMock.mock.restore();
+    }
+
+    assert.equal(response!.status, 500);
+    const orders = await query('SELECT COUNT(*)::integer AS count FROM orders WHERE customer_id = $1', [fixture.customerId]);
+    const stock = await query('SELECT stock FROM products WHERE id = $1', [fixture.productId]);
+    const cart = await query('SELECT quantity FROM cart WHERE customer_id = $1 AND product_id = $2', [fixture.customerId, fixture.productId]);
+    const fulfillments = await query('SELECT COUNT(*)::integer AS count FROM seller_fulfillments WHERE order_id IN (SELECT id FROM orders WHERE customer_id = $1)', [fixture.customerId]);
+    assert.equal(orders.rows[0].count, 0);
+    assert.equal(Number(stock.rows[0].stock), 1);
+    assert.equal(Number(cart.rows[0].quantity), 1);
+    assert.equal(fulfillments.rows[0].count, 0);
+  });
+
   dbTest('rollback waits while a recent payment is pending IPN confirmation', async () => {
     const fixture = await createCheckoutFixture();
     const order = await placeCartOrder(fixture, 'online');
@@ -478,6 +675,142 @@ dbTest('plaintext stored passwords are rejected with the same message as unknown
     const deliveries = await query('SELECT COUNT(*)::integer AS count FROM rider_deliveries rd JOIN seller_fulfillments sf ON sf.id = rd.fulfillment_id WHERE sf.order_id = $1', [order.Order_ID]);
     assert.equal(fulfillment.rows[0].status, 'processing');
     assert.equal(deliveries.rows[0].count, 0);
+  });
+
+  dbTest('role matrix denies cross-role access', async () => {
+    const customerId = `CUSTOMER-${randomUUID()}`;
+    const sellerId = `SELLER-${randomUUID()}`;
+    const riderId = `RIDER-${randomUUID()}`;
+    const adminId = `ADMIN-${randomUUID()}`;
+    await createCustomer(customerId);
+    await createTestUser('seller', sellerId);
+    await createTestUser('rider', riderId);
+    await createTestUser('admin', adminId);
+    const sessions = await Promise.all([
+      createSession('customer', customerId),
+      createSession('seller', sellerId),
+      createSession('rider', riderId),
+      createSession('admin', adminId),
+    ]);
+    const cases = [
+      { role: 'customer', cookie: sessions[0], path: '/api/riders/wallet' },
+      { role: 'customer', cookie: sessions[0], path: '/api/admins' },
+      { role: 'seller', cookie: sessions[1], path: '/api/cart' },
+      { role: 'rider', cookie: sessions[2], path: '/api/orders' },
+      { role: 'admin', cookie: sessions[3], path: '/api/cart' },
+    ];
+
+    for (const entry of cases) {
+      const response = await request(server, entry.path, 'GET', undefined, entry.cookie);
+      assert.equal(response.status, 403, `${entry.role} ${entry.path} returned ${response.status}`);
+    }
+  });
+
+  dbTest('customers cannot read or mutate another customer order', async () => {
+    const ownerId = `CUSTOMER-${randomUUID()}`;
+    const otherId = `CUSTOMER-${randomUUID()}`;
+    const orderId = `ORD-${randomUUID()}`;
+    await createCustomer(ownerId);
+    await createCustomer(otherId);
+    await createOrder(ownerId, orderId);
+    const otherCookie = await createSession('customer', otherId);
+
+    const detail = await request(server, `/api/orders/${orderId}`, 'GET', undefined, otherCookie);
+    const revert = await request(server, `/api/orders/${orderId}/revert-failed-payment`, 'PATCH', undefined, otherCookie);
+    const cancellation = await request(server, `/api/orders/${orderId}/cancellation-request`, 'POST', { reason: 'test' }, otherCookie);
+    const list = await request(server, '/api/orders', 'GET', undefined, otherCookie);
+    const transactions = await request(server, '/api/payment/transactions', 'GET', undefined, otherCookie);
+
+    assert.equal(detail.status, 404);
+    assert.equal(revert.status, 404);
+    assert.equal(cancellation.status, 404);
+    assert.equal(list.status, 200);
+    assert.equal(list.body.some((order: any) => order.Order_ID === orderId), false);
+    assert.equal(transactions.status, 403);
+  });
+
+  dbTest('seller approval requires the verification checklist', async () => {
+    const adminId = `admin-${randomUUID()}`;
+    await createTestUser('admin', adminId);
+    const cookie = await createSession('admin', adminId);
+    const response = await request(server, '/api/sellers/SELLER-CHECKLIST-TEST/status', 'PATCH', {
+      status: 'approved',
+      reason: 'Review attempted without checklist confirmations',
+    }, cookie);
+
+    assert.equal(response.status, 400);
+    assert.match(response.body.error, /identity, document review, and payout verification/i);
+  });
+
+  dbTest('changing seller payout account clears payout verification', async () => {
+    const sellerId = `seller-${randomUUID()}`;
+    await createTestUser('seller', sellerId);
+    await query(`
+      INSERT INTO sellers (
+        id, name, number, status, address_street, address_city,
+        address_latitude, address_longitude, payout_method, payout_account, payout_verified
+      ) VALUES ($1, 'Payout Test Seller', '01700000000', 'approved', 'Test street', 'Dhaka',
+        23.8103, 90.4125, 'bank', 'OLD-ACCOUNT-123', TRUE)
+    `, [sellerId]);
+    const cookie = await createSession('seller', sellerId);
+
+    const response = await request(server, '/api/sellers/me/profile', 'PUT', {
+      Name: 'Payout Test Seller',
+      Username: sellerId,
+      Email: `${sellerId}@example.invalid`,
+      Number: '01700000000',
+      Logo: '',
+      Description: '',
+      Address: { Street: 'Test street', City: 'Dhaka', Latitude: 23.8103, Longitude: 90.4125 },
+      Payout_Method: 'bank',
+      Payout_Account: 'NEW-ACCOUNT-456',
+    }, cookie);
+    assert.equal(response.status, 200, JSON.stringify(response.body));
+    const result = await query('SELECT payout_account, payout_verified FROM sellers WHERE id = $1', [sellerId]);
+    assert.equal(result.rows[0].payout_account, 'NEW-ACCOUNT-456');
+    assert.equal(result.rows[0].payout_verified, false);
+  });
+
+  dbTest('concurrent checkouts cannot sell the last unit twice', async () => {
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      const firstCustomerId = `CUSTOMER-${randomUUID()}`;
+      const secondCustomerId = `CUSTOMER-${randomUUID()}`;
+      const sellerId = `SELLER-${randomUUID()}`;
+      const categoryId = `CATEGORY-${randomUUID()}`;
+      const productId = `PRODUCT-${randomUUID()}`;
+      await createCustomer(firstCustomerId);
+      await createCustomer(secondCustomerId);
+      await createTestUser('seller', sellerId);
+      await query('INSERT INTO sellers (id, name, status) VALUES ($1, $2, $3)', [sellerId, 'Race Test Seller', 'approved']);
+      await query('INSERT INTO categories (id, name) VALUES ($1, $2)', [categoryId, `Race ${categoryId}`]);
+      await query(`
+        INSERT INTO products (id, name, image, description, price, stock, product_status, category_id, seller_id)
+        VALUES ($1, $2, '', '', 100, 1, 'active', $3, $4)
+      `, [productId, 'Last Unit Test Product', categoryId, sellerId]);
+      await query(`
+        INSERT INTO cart (id, customer_id, product_id, quantity, size)
+        VALUES ($1, $2, $3, 1, ''), ($4, $5, $3, 1, '')
+      `, [`CART-${randomUUID()}`, firstCustomerId, productId, `CART-${randomUUID()}`, secondCustomerId]);
+      const [firstCookie, secondCookie] = await Promise.all([
+        createSession('customer', firstCustomerId),
+        createSession('customer', secondCustomerId),
+      ]);
+      const placeOrder = (customerId: string, cookie: string) => request(server, '/api/orders', 'POST', {
+        Customer_ID: customerId,
+        Items: [{ Product_ID: productId, Quantity: 1 }],
+        Shipping_Address: { Street: 'Test street', City: 'Dhaka', Postal_Code: '1200' },
+        Billing_Address: { Street: 'Test street', City: 'Dhaka', Postal_Code: '1200' },
+        paymentMethod: 'cash_on_delivery',
+      }, cookie);
+      const responses = await Promise.all([
+        placeOrder(firstCustomerId, firstCookie),
+        placeOrder(secondCustomerId, secondCookie),
+      ]);
+
+      assert.deepEqual(responses.map((response) => response.status).sort(), [201, 409]);
+      const stock = await query('SELECT stock FROM products WHERE id = $1', [productId]);
+      assert.equal(Number(stock.rows[0].stock), 0);
+    }
   });
 
   dbTest('/validate finalizes via the shared gateway verifier and ignores client payment method', async () => {
