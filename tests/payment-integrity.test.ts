@@ -618,9 +618,14 @@ dbTest('plaintext stored passwords are rejected with the same message as unknown
     const realConnect = pool.connect.bind(pool);
     const client = await realConnect();
     const realQuery = client.query.bind(client);
+    const realRelease = client.release.bind(client);
     (client as any).query = (sql: unknown, ...args: unknown[]) => String(sql).includes('UPDATE seller_fulfillments')
       ? Promise.reject(new Error('checkout rollback test failure'))
       : realQuery(sql as string, ...(args as [any]));
+    (client as any).release = () => {
+      (client as any).query = realQuery;
+      realRelease();
+    };
 
     const connectMock = mock.method(pool, 'connect', async () => client as any);
     let response: Awaited<ReturnType<typeof request>>;
