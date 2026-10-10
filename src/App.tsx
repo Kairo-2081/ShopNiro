@@ -743,8 +743,13 @@ export default function App() {
   };
 
   // Admin Seller Governance
-  const handleUpdateSellerStatus = async (sellerId: string, status: SellerStatus, reason?: string) => {
-    await api.updateSellerStatus(sellerId, status, reason);
+  const handleUpdateSellerStatus = async (
+    sellerId: string,
+    status: SellerStatus,
+    reason?: string,
+    checklist?: { identityVerified: boolean; documentsReviewed: boolean; payoutVerified: boolean }
+  ) => {
+    await api.updateSellerStatus(sellerId, status, reason, checklist);
     const updatedSellers = await api.getSellers();
     setSellers(updatedSellers);
     if (selectedSeller && selectedSeller.Seller_ID === sellerId) {

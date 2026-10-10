@@ -44,7 +44,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
       Address: mapAddress(c),
     }));
     res.setHeader('X-Has-More', String(result.rows.length > limit));
-    return res.json(formatted);
+    return res.json(formatted.slice(0, limit));
   } catch (error: any) {
     console.error('Error fetching customers:', error);
     res.status(500).json({ error: 'Failed to fetch customers' });

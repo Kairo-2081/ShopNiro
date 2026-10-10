@@ -1,7 +1,8 @@
 import { Router } from 'express';
-import { randomInt, timingSafeEqual } from 'node:crypto';
+import { randomInt } from 'node:crypto';
 import { AuthRequest, requireAuth, requireRole } from '../middleware/auth.ts';
 import { pool, query } from '../db/index.ts';
+import { requireCronSecret } from '../middleware/cronAuth.ts';
 
 const router = Router();
 
@@ -202,7 +203,7 @@ router.post('/deliveries/:id/complete', requireAuth, requireRole(['customer']), 
     const code = String(req.body?.code || '').trim();
     await client.query('BEGIN');
     const deliveryResult = await client.query(`
-      SELECT rd.*, sf.order_id, sf.seller_id, o.customer_id
+      SELECT rd.*, sf.order_id, sf.seller_id, sf.subtotal, o.customer_id, o.payment_method
       FROM rider_deliveries rd
       JOIN seller_fulfillments sf ON sf.id = rd.fulfillment_id
       JOIN orders o ON o.id = sf.order_id
@@ -332,12 +333,20 @@ router.post('/deliveries/:id/complete', requireAuth, requireRole(['customer']), 
         VALUES ($1, $2, 'cod_salary_debit', $3, $4, $5)
         ON CONFLICT (rider_id, entry_type, reference_id) DO NOTHING
       `, [`REM-${req.params.id}`, riderId, -codAmount, req.params.id, `COD deducted from monthly salary and remitted to seller for order ${delivery.order_id}`]);
-      await client.query(`
-        INSERT INTO seller_wallet_entries (id, seller_id, entry_type, amount, reference_id, description)
-        VALUES ($1, $2, 'cod_received', $3, $4, $5)
-        ON CONFLICT (seller_id, entry_type, reference_id) DO NOTHING
-      `, [`VCO-${delivery.fulfillment_id.slice(-24)}`, delivery.seller_id, codAmount, req.params.id, `Cash-on-delivery remittance for order ${delivery.order_id}`]);
     }
+
+    const sellerCreditType = delivery.payment_method === 'cash_on_delivery' ? 'cod_received' : 'sale';
+    const sellerSubtotal = Number(delivery.subtotal) || 0;
+    await client.query(`
+      INSERT INTO seller_wallet_entries (id, seller_id, entry_type, amount, reference_id, description, available_at)
+      VALUES ($1, $2, $3, $4, $5, $6, now() + interval '7 days')
+      ON CONFLICT (seller_id, entry_type, reference_id) DO NOTHING
+    `, [`SAL-${delivery.fulfillment_id.slice(-24)}`, delivery.seller_id, sellerCreditType, sellerSubtotal, delivery.fulfillment_id, `Delivered ${delivery.order_id}`]);
+    await client.query(`
+      INSERT INTO seller_wallet_entries (id, seller_id, entry_type, amount, reference_id, description, available_at)
+      VALUES ($1, $2, 'commission', -platform_commission($3), $4, $5, now() + interval '7 days')
+      ON CONFLICT (seller_id, entry_type, reference_id) DO NOTHING
+    `, [`COM-${delivery.fulfillment_id.slice(-24)}`, delivery.seller_id, sellerSubtotal, delivery.fulfillment_id, `Commission ${delivery.order_id}`]);
 
     await client.query('COMMIT');
     return res.json({ success: true, wasTimely, performancePoints: points, monthlySalary: salary });
@@ -352,6 +361,8 @@ router.post('/deliveries/:id/complete', requireAuth, requireRole(['customer']), 
 
 router.get('/customer-deliveries', requireAuth, requireRole(['customer']), async (req: AuthRequest, res) => {
   try {
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
+    const offset = Math.max(0, Number(req.query.offset) || 0);
     const result = await query(`
       SELECT rd.id AS delivery_id, rd.status AS delivery_status,
         rd.cod_amount, rd.cod_collected, sf.order_id, sf.id AS fulfillment_id,
@@ -365,9 +376,11 @@ router.get('/customer-deliveries', requireAuth, requireRole(['customer']), async
       LEFT JOIN riders r ON r.id = rd.rider_id
       LEFT JOIN rider_reviews rv ON rv.delivery_id = rd.id
       WHERE o.customer_id = $1
-      ORDER BY rd.created_at DESC
-    `, [req.user!.entityId]);
-    return res.json(result.rows.map((row: any) => ({
+      ORDER BY rd.created_at DESC, rd.id DESC
+      LIMIT $2 OFFSET $3
+    `, [req.user!.entityId, limit + 1, offset]);
+    res.setHeader('X-Has-More', String(result.rows.length > limit));
+    return res.json(result.rows.slice(0, limit).map((row: any) => ({
       Delivery_ID: row.delivery_id,
       Order_ID: row.order_id,
       Seller_Fulfillment_ID: row.fulfillment_id,
@@ -515,16 +528,7 @@ router.get('/wallet', requireAuth, requireRole(['rider']), requireApprovedRider,
   }
 });
 
-router.get('/payroll/settle', async (req, res) => {
-  const expectedSecret = process.env.CRON_SECRET;
-  const providedSecret = req.headers.authorization?.replace(/^Bearer\s+/i, '') || '';
-  if (!expectedSecret || !providedSecret) return res.status(403).json({ error: 'Payroll settlement is not authorized.' });
-  const expectedBuffer = Buffer.from(expectedSecret);
-  const providedBuffer = Buffer.from(providedSecret);
-  if (expectedBuffer.length !== providedBuffer.length || !timingSafeEqual(expectedBuffer, providedBuffer)) {
-    return res.status(403).json({ error: 'Payroll settlement is not authorized.' });
-  }
-
+router.get('/payroll/settle', requireCronSecret, async (_req, res) => {
   try {
     const result = await query(`
       WITH credited AS (
@@ -600,15 +604,18 @@ router.post('/wallet/withdrawals', requireAuth, requireRole(['rider']), requireA
   }
 });
 
-router.get('/wallet/withdrawals', requireAuth, requireRole(['admin']), async (_req, res) => {
+router.get('/wallet/withdrawals', requireAuth, requireRole(['admin']), async (req, res) => {
   try {
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
+    const offset = Math.max(0, Number(req.query.offset) || 0);
     const result = await query(`
       SELECT w.id, w.rider_id, r.name AS rider_name, w.amount, w.payout_method,
         w.payout_account, w.status, w.requested_at
       FROM rider_withdrawals w JOIN riders r ON r.id = w.rider_id
-      WHERE w.status = 'pending' ORDER BY w.requested_at ASC
-    `);
-    return res.json(result.rows);
+      WHERE w.status = 'pending' ORDER BY w.requested_at ASC, w.id ASC LIMIT $1 OFFSET $2
+    `, [limit + 1, offset]);
+    res.setHeader('X-Has-More', String(result.rows.length > limit));
+    return res.json(result.rows.slice(0, limit));
   } catch (error: any) {
     console.error('Could not load rider withdrawals:', error);
     return res.status(500).json({ error: 'Could not load withdrawal requests.' });

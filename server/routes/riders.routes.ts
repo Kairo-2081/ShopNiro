@@ -457,7 +457,7 @@ router.get('/applications', requireAuth, requireRole(['admin']), async (req, res
       LIMIT $1 OFFSET $2
     `, [limit + 1, offset]);
     res.setHeader('X-Has-More', String(result.rows.length > limit));
-    res.json(result.rows.map((row) => mapRider(row, false)));
+    res.json(result.rows.slice(0, limit).map((row) => mapRider(row, false)));
   } catch (error: any) {
     console.error('Failed to load rider applications:', error);
     res.status(500).json({ error: 'Failed to load rider applications.' });

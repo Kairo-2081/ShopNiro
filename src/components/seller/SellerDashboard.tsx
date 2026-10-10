@@ -70,8 +70,11 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
   const [restockQuantity, setRestockQuantity] = React.useState('');
   const [isRestocking, setIsRestocking] = React.useState(false);
   const [restockError, setRestockError] = React.useState('');
-  const [sellerWallet, setSellerWallet] = React.useState<{ balance: number; entries: any[] } | null>(null);
+  const [sellerWallet, setSellerWallet] = React.useState<{ available: number; pending: number; payoutVerified: boolean; entries: any[] } | null>(null);
   const [walletError, setWalletError] = React.useState<string | null>(null);
+  const [payoutAmount, setPayoutAmount] = React.useState('');
+  const [payoutMessage, setPayoutMessage] = React.useState<string | null>(null);
+  const [isRequestingPayout, setIsRequestingPayout] = React.useState(false);
   const [productAnalytics, setProductAnalytics] = React.useState<Array<{
     Product_ID: string;
     Impressions_7d: number;
@@ -89,6 +92,23 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
     if (activeTab !== 'wallet') return;
     api.getSellerWallet().then(setSellerWallet).catch((error: any) => setWalletError(error.message || 'Could not load seller wallet.'));
   }, [activeTab]);
+
+  const requestPayout = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setPayoutMessage(null);
+    setWalletError(null);
+    setIsRequestingPayout(true);
+    try {
+      await api.requestSellerPayout(Number(payoutAmount));
+      setPayoutAmount('');
+      setPayoutMessage('Payout request submitted.');
+      setSellerWallet(await api.getSellerWallet());
+    } catch (error: any) {
+      setWalletError(error.message || 'Could not submit payout request.');
+    } finally {
+      setIsRequestingPayout(false);
+    }
+  };
 
   React.useEffect(() => {
     if (activeTab !== 'analytics') return;
@@ -898,14 +918,22 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
       {activeTab === 'wallet' && (
         <section className="space-y-4">
           <header className="flex flex-wrap items-end justify-between gap-3">
-            <div><h2 className="text-lg font-bold text-slate-900 dark:text-white">Cash-on-delivery remittances</h2><p className="text-xs text-slate-500 dark:text-zinc-400">Completed COD deliveries credited to this seller ledger.</p></div>
-            <p className="text-lg font-bold text-emerald-800 dark:text-emerald-300">Total received: ৳{sellerWallet?.balance.toLocaleString() || '0'}</p>
+            <div><h2 className="text-lg font-bold text-slate-900 dark:text-white">Seller ledger</h2><p className="text-xs text-slate-500 dark:text-zinc-400">Sales, COD, commission, refunds, and payout activity.</p></div>
+            <div className="text-right"><p className="text-lg font-bold text-emerald-800 dark:text-emerald-300">Available: {formatCurrency(sellerWallet?.available || 0)}</p><p className="text-xs text-slate-500 dark:text-zinc-400">Pending 7-day hold: {formatCurrency(sellerWallet?.pending || 0)}</p></div>
           </header>
           {walletError && <p role="alert" className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/30 dark:text-rose-300">{walletError}</p>}
+          {payoutMessage && <p role="status" className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">{payoutMessage}</p>}
+          <form onSubmit={requestPayout} className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-zinc-800 dark:bg-[#12161D]">
+            <label className="min-w-[180px] flex-1 space-y-1 text-xs font-semibold text-slate-700 dark:text-zinc-300">Payout amount
+              <input type="number" min="0.01" step="0.01" required value={payoutAmount} onChange={(event) => setPayoutAmount(event.target.value)} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-[#181F2A]" />
+            </label>
+            {!sellerWallet?.payoutVerified && <p className="text-xs text-amber-700 dark:text-amber-300">Payout account verification is required before requesting a payout.</p>}
+            <button type="submit" disabled={isRequestingPayout || !sellerWallet?.payoutVerified} className="rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">{isRequestingPayout ? 'Submitting…' : 'Request payout'}</button>
+          </form>
           <div className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white dark:divide-zinc-800 dark:border-zinc-800 dark:bg-[#12161D]">
-            {sellerWallet?.entries.map((entry) => <div key={entry.id} className="flex flex-wrap items-center justify-between gap-3 p-4"><div><p className="text-sm font-semibold text-slate-900 dark:text-white">{entry.description}</p><p className="mt-1 font-mono text-[10px] text-slate-500">Delivery ref: {entry.reference_id} · {formatDate(entry.created_at)}</p></div><span className="font-bold text-emerald-700 dark:text-emerald-300">+৳{Number(entry.amount).toLocaleString()}</span></div>)}
-            {!sellerWallet?.entries.length && !walletError && <p className="p-8 text-center text-sm text-slate-500">No COD remittances yet.</p>}
-            {!sellerWallet && !walletError && <p className="p-8 text-center text-sm text-slate-500">Loading remittances...</p>}
+            {sellerWallet?.entries.map((entry) => <div key={entry.id} className="flex flex-wrap items-center justify-between gap-3 p-4"><div><p className="text-sm font-semibold text-slate-900 dark:text-white">{entry.description}</p><p className="mt-1 font-mono text-[10px] text-slate-500">Ref: {entry.reference_id} · {formatDate(entry.created_at)} · {new Date(entry.available_at).getTime() > Date.now() ? 'On hold' : 'Available'}</p></div><span className={`font-bold ${Number(entry.amount) < 0 ? 'text-rose-700 dark:text-rose-300' : 'text-emerald-700 dark:text-emerald-300'}`}>{formatCurrency(Number(entry.amount))}</span></div>)}
+            {!sellerWallet?.entries.length && !walletError && <p className="p-8 text-center text-sm text-slate-500">No ledger entries yet.</p>}
+            {!sellerWallet && !walletError && <p className="p-8 text-center text-sm text-slate-500">Loading seller ledger...</p>}
           </div>
         </section>
       )}

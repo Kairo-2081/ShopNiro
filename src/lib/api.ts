@@ -47,42 +47,26 @@ function getAnalyticsSessionId(): string {
 function isPublicEndpoint(url: string, method: string = 'GET'): boolean {
   const cleanUrl = url.split('?')[0];
   const upperMethod = method.toUpperCase();
-
-  // Auth login, token verification, role selection, db status, and analytics are public
-  if (
-    cleanUrl === '/api/auth/login' ||
-    cleanUrl === '/api/auth/role' ||
-    cleanUrl === '/api/auth/me' ||
-    cleanUrl === '/api/db/status' ||
-    cleanUrl === '/api/maps/reverse' ||
-    cleanUrl.startsWith('/api/ai') ||
-    cleanUrl === '/api/riders/apply' ||
-    cleanUrl === '/api/riders/cv/parse' ||
-    cleanUrl === '/api/riders/cv/format' ||
-    cleanUrl.startsWith('/api/payment') ||
-    cleanUrl.startsWith('/api/analytics') ||
-    cleanUrl.startsWith('/api/stats')
-  ) {
-    return true;
-  }
-  // User registration is public
-  if (
-    upperMethod === 'POST' &&
-    (cleanUrl === '/api/customers' || cleanUrl === '/api/sellers' || cleanUrl === '/api/admins')
-  ) {
-    return true;
-  }
-  // Storefront read catalog endpoints (categories, active products, reviews, sellers)
   if (upperMethod === 'GET') {
-    if (cleanUrl === '/api/bundles') return true;
-    if (
-      cleanUrl.startsWith('/api/categories') ||
-      cleanUrl.startsWith('/api/products') ||
-      cleanUrl.startsWith('/api/reviews') ||
-      cleanUrl.startsWith('/api/sellers')
-    ) {
-      return true;
-    }
+    return cleanUrl === '/api/auth/me' ||
+      /^\/api\/(categories|reviews|sellers|bundles)$/.test(cleanUrl) ||
+      /^\/api\/products(?:\/[^/]+)?$/.test(cleanUrl) ||
+      /^\/api\/analytics\/(trending-products|top-rated-products|top-rated-sellers|related-products)$/.test(cleanUrl) ||
+      cleanUrl === '/api/maps/reverse' ||
+      /^\/api\/payment\/(methods|bkash\/direct|simulator)$/.test(cleanUrl) ||
+      /^\/api\/payment\/sslcommerz\/(success|fail|cancel)$/.test(cleanUrl) ||
+      cleanUrl === '/api/riders/payroll/settle';
+  }
+  if (upperMethod === 'POST') {
+    return /^\/api\/auth\/(login|logout)$/.test(cleanUrl) ||
+      /^\/api\/(customers|sellers)$/.test(cleanUrl) ||
+      /^\/api\/riders\/(apply|cv\/parse|cv\/format)$/.test(cleanUrl) ||
+      cleanUrl === '/api/analytics/events' ||
+      cleanUrl === '/api/ai/chat' ||
+      cleanUrl === '/api/payment/simulator/complete' ||
+      /^\/api\/payment\/sslcommerz\/(success|fail|cancel|ipn)$/.test(cleanUrl) ||
+      cleanUrl === '/api/support/requests' ||
+      /^\/api\/cron\/(expire-orders|refunds)$/.test(cleanUrl);
   }
   return false;
 }
@@ -91,7 +75,7 @@ async function fetchJson<T>(url: string, options?: RequestInit, handleAuthErrors
   const method = (options?.method || 'GET').toUpperCase();
   const isPublic = isPublicEndpoint(url, method);
   const shouldCache = method === 'GET' && [
-    '/api/categories', '/api/products', '/api/reviews', '/api/sellers', '/api/bundles',
+    '/api/categories', '/api/products', '/api/reviews', '/api/bundles',
   ].some((prefix) => url.split('?')[0] === prefix || url.split('?')[0].startsWith(`${prefix}/`));
   const cacheKey = url;
 
@@ -151,12 +135,14 @@ async function fetchJson<T>(url: string, options?: RequestInit, handleAuthErrors
   return data;
 }
 
-async function fetchAllPages<T>(path: string): Promise<T[]> {
+async function fetchAllPages<T>(path: string, filters = new URLSearchParams()): Promise<T[]> {
   const pageSize = 100;
   const items: T[] = [];
   let offset = 0;
   while (true) {
-    const params = new URLSearchParams({ limit: String(pageSize), offset: String(offset) });
+    const params = new URLSearchParams(filters);
+    params.set('limit', String(pageSize));
+    params.set('offset', String(offset));
     const page = await fetchJson<T[]>(`${path}?${params.toString()}`);
     items.push(...page.slice(0, pageSize));
     if (page.length <= pageSize) return items;
@@ -292,17 +278,34 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(sellerData),
     }),
-  updateSellerStatus: async (id: string, status: SellerStatus, reason?: string): Promise<Seller> =>
+  updateSellerStatus: async (
+    id: string,
+    status: SellerStatus,
+    reason?: string,
+    checklist?: { identityVerified: boolean; documentsReviewed: boolean; payoutVerified: boolean }
+  ): Promise<Seller> =>
     fetchJson<Seller>(`/api/sellers/${encodeURIComponent(id)}/status`, {
       method: 'PATCH',
-      body: JSON.stringify({ status, reason }),
+      body: JSON.stringify({ status, reason, ...checklist }),
     }),
+  getSellerIdentityDocument: async (id: string): Promise<{ url: string; expiresInSeconds: number }> =>
+    fetchJson(`/api/sellers/applications/${encodeURIComponent(id)}/identity-document`),
   updateSellerProfile: async (updates: Partial<Seller>): Promise<Seller> =>
     fetchJson<Seller>('/api/sellers/me/profile', {
       method: 'PUT',
       body: JSON.stringify(updates),
     }),
-  getSellerWallet: async (): Promise<{ balance: number; entries: any[] }> => fetchJson('/api/sellers/me/wallet'),
+  getSellerWallet: async (): Promise<{ available: number; pending: number; payoutVerified: boolean; entries: any[] }> => fetchJson('/api/sellers/me/wallet'),
+  requestSellerPayout: async (amount: number): Promise<{ success: boolean; payoutId: string; status: 'requested' }> =>
+    fetchJson('/api/sellers/me/payouts', { method: 'POST', body: JSON.stringify({ amount }) }),
+  getSellerPayoutRequests: async (): Promise<any[]> => fetchAllPages('/api/payouts'),
+  paySellerPayout: async (id: string, externalReference: string): Promise<{ success: boolean; status: 'paid' }> =>
+    fetchJson(`/api/payouts/${encodeURIComponent(id)}/pay`, {
+      method: 'PATCH',
+      body: JSON.stringify({ externalReference }),
+    }),
+  rejectSellerPayout: async (id: string): Promise<{ success: boolean; status: 'rejected' }> =>
+    fetchJson(`/api/payouts/${encodeURIComponent(id)}/reject`, { method: 'PATCH', body: JSON.stringify({}) }),
   trackProductEvent: async (Product_ID: string, Event_Type: 'impression' | 'click'): Promise<{ success: boolean }> =>
     fetchJson('/api/analytics/events', {
       method: 'POST',
@@ -320,8 +323,8 @@ export const api = {
   }>> => fetchJson('/api/analytics/seller'),
 
   // Seller bundle offers
-  getBundles: async (): Promise<ProductBundle[]> => fetchJson('/api/bundles'),
-  getSellerBundles: async (): Promise<ProductBundle[]> => fetchJson('/api/bundles/seller'),
+  getBundles: async (): Promise<ProductBundle[]> => fetchAllPages('/api/bundles'),
+  getSellerBundles: async (): Promise<ProductBundle[]> => fetchAllPages('/api/bundles/seller'),
   createSellerBundle: async (data: Pick<ProductBundle, 'Name' | 'Product_IDs' | 'Discount_Percent' | 'Ends_At'>): Promise<ProductBundle> =>
     fetchJson('/api/bundles', { method: 'POST', body: JSON.stringify(data) }),
   setSellerBundleActive: async (id: string, Active: boolean): Promise<ProductBundle> =>
@@ -399,7 +402,7 @@ export const api = {
       body: JSON.stringify({ code }),
     }),
   getCustomerRiderDeliveries: async (): Promise<Array<RiderDelivery & { Rider_Name?: string; Rider_Number?: string; Review_ID?: string }>> =>
-    fetchJson('/api/riders/customer-deliveries'),
+    fetchAllPages('/api/riders/customer-deliveries'),
   reviewRiderDelivery: async (deliveryId: string, rating: number, reviewText: string, wasTimely: boolean): Promise<{ success: boolean }> =>
     fetchJson(`/api/riders/customer-deliveries/${encodeURIComponent(deliveryId)}/review`, {
       method: 'POST',
@@ -412,7 +415,7 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ amount, payoutMethod, payoutAccount }),
     }),
-  getRiderWithdrawals: async (): Promise<any[]> => fetchJson('/api/riders/wallet/withdrawals'),
+  getRiderWithdrawals: async (): Promise<any[]> => fetchAllPages('/api/riders/wallet/withdrawals'),
   processRiderWithdrawal: async (id: string, status: 'paid' | 'rejected'): Promise<{ success: boolean; status: string }> =>
     fetchJson(`/api/riders/wallet/withdrawals/${encodeURIComponent(id)}`, {
       method: 'PATCH',
@@ -693,11 +696,10 @@ export const api = {
     }),
 
   getPaymentTransactions: async (params?: { customerId?: string; orderId?: string }): Promise<any[]> => {
-    const query = new URLSearchParams();
-    if (params?.customerId) query.set('customerId', params.customerId);
-    if (params?.orderId) query.set('orderId', params.orderId);
-    const qs = query.toString() ? `?${query.toString()}` : '';
-    return fetchJson<any[]>(`/api/payment/transactions${qs}`);
+    const filters = new URLSearchParams();
+    if (params?.customerId) filters.set('customerId', params.customerId);
+    if (params?.orderId) filters.set('orderId', params.orderId);
+    return fetchAllPages<any>('/api/payment/transactions', filters);
   },
 };
 

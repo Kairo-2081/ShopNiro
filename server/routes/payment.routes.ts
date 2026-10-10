@@ -153,6 +153,18 @@ export const processRefundQueue = async () => {
             if (locked.rows[0].payment_id) {
               await client.query("UPDATE payments SET status = 'REFUNDED', updated_at = CURRENT_TIMESTAMP WHERE id = $1", [locked.rows[0].payment_id]);
             }
+            await client.query(`
+              INSERT INTO seller_wallet_entries (id, seller_id, entry_type, amount, reference_id, description, available_at)
+              SELECT 'CLW-' || substr(md5(wallet.reference_id), 1, 20), wallet.seller_id, 'refund_clawback',
+                -SUM(wallet.amount), wallet.reference_id, 'Refund clawback', now()
+              FROM seller_wallet_entries wallet
+              JOIN seller_fulfillments fulfillment ON fulfillment.id = wallet.reference_id
+              WHERE fulfillment.order_id = $1
+                AND wallet.entry_type IN ('sale', 'cod_received', 'commission')
+              GROUP BY wallet.seller_id, wallet.reference_id
+              HAVING SUM(wallet.amount) <> 0
+              ON CONFLICT (seller_id, entry_type, reference_id) DO NOTHING
+            `, [locked.rows[0].order_id]);
             await client.query('UPDATE order_cancellation_requests SET refund_completed_at = COALESCE(refund_completed_at, CURRENT_TIMESTAMP) WHERE order_id = $1 AND status = \'approved\'', [locked.rows[0].order_id]);
             summary.completed += 1;
           } else {
@@ -272,27 +284,6 @@ router.get('/methods', async (req, res) => {
   });
 });
 
-router.post('/refunds/process', async (req, res) => {
-  if (process.env.RUN_BACKGROUND_JOBS !== 'true') {
-    return res.status(503).json({ error: 'Refund processing is disabled.' });
-  }
-
-  const configuredSecret = process.env.CRON_SECRET || '';
-  const receivedSecret = typeof req.headers['x-cron-secret'] === 'string' ? req.headers['x-cron-secret'] : '';
-  const configuredBuffer = Buffer.from(configuredSecret);
-  const receivedBuffer = Buffer.from(receivedSecret);
-  if (!configuredSecret) return res.status(503).json({ error: 'Refund processing is not configured.' });
-  if (configuredBuffer.length !== receivedBuffer.length || !timingSafeEqual(configuredBuffer, receivedBuffer)) {
-    return res.status(401).json({ error: 'Unauthorized refund processor.' });
-  }
-  try {
-    return res.json(await processRefundQueue());
-  } catch (error) {
-    console.error('Refund processor failed:', error);
-    return res.status(500).json({ error: 'Refund processing failed.' });
-  }
-});
-
 /**
  * POST /api/payment/init
  * Initializes an SSLCommerz payment session for an order (via schema gocart_payment_create)
@@ -381,11 +372,14 @@ router.post('/init', requireAuth, requireRole(['customer']), paymentInitRateLimi
     }
 
     const order = await query(
-      `SELECT id, customer_id, subtotal, shipping_fee, payment_status
+      `SELECT id, customer_id, status, subtotal, shipping_fee, payment_status
        FROM orders WHERE id = $1 AND customer_id = $2`,
       [String(orderId), req.user!.entityId]
     );
     if (order.rows.length === 0) return res.status(404).json({ error: 'Order not found.' });
+    if (order.rows[0].status !== 'placed') {
+      return res.status(409).json({ error: 'This order is no longer eligible for payment.' });
+    }
     if (order.rows[0].payment_status !== 'pending') {
       return res.status(409).json({ error: 'Order payment is already finalized.' });
     }
@@ -565,9 +559,19 @@ router.post('/sslcommerz/ipn', async (req, res) => {
  */
 router.get('/transactions', requireAuth, requireRole(['admin']), async (req, res) => {
   try {
-    const { orderId } = req.query;
-    const result = await query(`SELECT * FROM gocart_payments_list($1)`, [orderId ? String(orderId) : null]);
-    res.json(result.rows);
+    const orderId = typeof req.query.orderId === 'string' ? req.query.orderId : null;
+    const customerId = typeof req.query.customerId === 'string' ? req.query.customerId : null;
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
+    const offset = Math.max(0, Number(req.query.offset) || 0);
+    const result = await query(`
+      SELECT * FROM payments
+      WHERE ($1::varchar IS NULL OR order_id = $1)
+        AND ($2::varchar IS NULL OR customer_id = $2)
+      ORDER BY created_at DESC, id DESC
+      LIMIT $3 OFFSET $4
+    `, [orderId, customerId, limit + 1, offset]);
+    res.setHeader('X-Has-More', String(result.rows.length > limit));
+    res.json(result.rows.slice(0, limit));
   } catch (error: any) {
     console.error('Error fetching transactions:', error);
     res.status(500).json({ error: 'Failed to fetch transactions' });
