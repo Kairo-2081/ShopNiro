@@ -1,0 +1,6 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Fake values used only in CI tests"
+regexes = ['''test-test-test-test''']
