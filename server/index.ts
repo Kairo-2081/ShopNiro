@@ -11,7 +11,7 @@ const PORT = Number(process.env.PORT) || 3000;
 
 async function startServer() {
   try {
-    const shouldRunSchemaOnStart = process.env.RUN_SCHEMA_ON_START === 'true';
+    const shouldRunSchemaOnStart = process.env.RUN_SCHEMA_ON_START === 'true' || (process.env.NODE_ENV !== 'production' && process.env.RUN_SCHEMA_ON_START !== 'false');
     if (shouldRunSchemaOnStart) {
       await ensureDatabaseSchema();
     }

@@ -4,6 +4,7 @@ import { request as httpRequest, Server } from 'node:http';
 import { Router } from 'express';
 
 process.env.JWT_SECRET ??= 'route-policy-test-secret-at-least-32-characters';
+process.env.APP_URL = 'https://configured-shopniro.example';
 
 const { app, apiRouterMounts } = await import('../server/app.ts');
 const { isPublicApiRoute } = await import('../server/middleware/publicRoutes.ts');
@@ -27,7 +28,7 @@ const server = await new Promise<Server>((resolve) => {
   const listener = app.listen(0, '127.0.0.1', () => resolve(listener));
 });
 
-const request = async (method: string, path: string, body?: unknown): Promise<{ status: number; body: any }> => {
+const request = async (method: string, path: string, body?: unknown, extraHeaders: Record<string, string> = {}): Promise<{ status: number; body: any }> => {
   const address = server.address();
   if (!address || typeof address === 'string') throw new Error('Test server has no TCP address.');
   return new Promise((resolve, reject) => {
@@ -40,6 +41,7 @@ const request = async (method: string, path: string, body?: unknown): Promise<{ 
         origin: 'http://localhost',
         'content-type': 'application/json',
         connection: 'close',
+        ...extraHeaders,
       },
     }, (res) => {
       const chunks: Buffer[] = [];
@@ -126,6 +128,20 @@ test('cron routes require a configured matching secret', async () => {
     const response = await request('POST', path);
     assert.ok([401, 503].includes(response.status), `${path} returned ${response.status}`);
   }
+});
+
+test('configured app origin is allowed for cookie-authenticated mutations only', async () => {
+  const allowed = await request('POST', '/api/payment/simulator/complete', {}, {
+    origin: new URL(process.env.APP_URL!).origin,
+    cookie: 'shopniro_session=test-session',
+  });
+  assert.notEqual(allowed.status, 403, JSON.stringify(allowed.body));
+
+  const blocked = await request('POST', '/api/payment/simulator/complete', {}, {
+    origin: 'https://attacker.example',
+    cookie: 'shopniro_session=test-session',
+  });
+  assert.equal(blocked.status, 403, JSON.stringify(blocked.body));
 });
 
 test('public login requests reach the login handler without a session', async () => {

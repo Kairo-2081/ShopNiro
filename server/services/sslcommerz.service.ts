@@ -14,6 +14,11 @@ export interface SSLCommerzInitParams {
   cus_add1: string;
   cus_city: string;
   cus_postcode: string;
+  ship_name: string;
+  ship_add1: string;
+  ship_city: string;
+  ship_postcode: string;
+  ship_country: string;
   product_name: string;
   product_category?: string;
   preferred_channel?: 'bkash' | 'nagad' | 'rocket' | 'cards' | 'any';
@@ -175,6 +180,11 @@ class SSLCommerzService {
     formData.append('cus_country', 'Bangladesh');
     formData.append('cus_phone', params.cus_phone || '01700000000');
     formData.append('shipping_method', 'Courier');
+    formData.append('ship_name', params.ship_name || params.cus_name || 'Valued Customer');
+    formData.append('ship_add1', params.ship_add1 || params.cus_add1 || 'Dhaka, Bangladesh');
+    formData.append('ship_city', params.ship_city || params.cus_city || 'Dhaka');
+    formData.append('ship_postcode', params.ship_postcode || params.cus_postcode || '1200');
+    formData.append('ship_country', params.ship_country || 'Bangladesh');
     formData.append('num_of_item', '1');
     formData.append('product_name', params.product_name || 'Marketplace Order');
     formData.append('product_category', params.product_category || 'General Goods');

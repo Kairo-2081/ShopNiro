@@ -372,7 +372,7 @@ router.post('/init', requireAuth, requireRole(['customer']), paymentInitRateLimi
     }
 
     const order = await query(
-      `SELECT id, customer_id, status, subtotal, shipping_fee, payment_status
+      `SELECT id, customer_id, status, subtotal, shipping_fee, payment_status, shipping_address_json
        FROM orders WHERE id = $1 AND customer_id = $2`,
       [String(orderId), req.user!.entityId]
     );
@@ -388,6 +388,11 @@ router.post('/init', requireAuth, requireRole(['customer']), paymentInitRateLimi
     if (!Number.isFinite(finalAmountBDT) || finalAmountBDT <= 0) {
       return res.status(400).json({ error: 'Order total is invalid.' });
     }
+    const shippingAddress = JSON.parse(String(order.rows[0].shipping_address_json || '{}')) as Record<string, unknown>;
+    const shipAdd1 = [shippingAddress.House_Name, shippingAddress.Street]
+      .filter((part): part is string => typeof part === 'string' && Boolean(part.trim()))
+      .join(' ')
+      .slice(0, 255);
 
     const ipnToken = process.env.SSLCOMMERZ_IPN_TOKEN || sslcommerz.getIpnToken();
     if (!ipnToken) {
@@ -426,6 +431,11 @@ router.post('/init', requireAuth, requireRole(['customer']), paymentInitRateLimi
         cus_add1: typeof address === 'object' ? `${address.House_Name || ''} ${address.Street || ''}`.trim() : String(address || ''),
         cus_city: typeof address === 'object' ? address.City || 'Dhaka' : 'Dhaka',
         cus_postcode: typeof address === 'object' ? address.Postal_Code || '1200' : '1200',
+        ship_name: customerName || 'Marketplace Customer',
+        ship_add1: shipAdd1 || 'Dhaka, Bangladesh',
+        ship_city: typeof shippingAddress.City === 'string' && shippingAddress.City.trim() ? shippingAddress.City.trim() : 'Dhaka',
+        ship_postcode: typeof shippingAddress.Postal_Code === 'string' && shippingAddress.Postal_Code.trim() ? shippingAddress.Postal_Code.trim() : '1200',
+        ship_country: 'Bangladesh',
         product_name: productName,
         preferred_channel: paymentMethod === 'bkash' ? 'bkash' : 'any',
         ipn_url: ipnUrl,
