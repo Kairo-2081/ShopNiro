@@ -616,35 +616,37 @@ dbTest('plaintext stored passwords are rejected with the same message as unknown
     assert.equal(remainingOrder.rows[0].remaining, 0);
   });
 
-  dbTest('checkout rolls back order, stock, and cart when a follow-up write fails', async () => {
-    const fixture = await createCheckoutFixture(1, 1, 100);
-    const realConnect = pool.connect.bind(pool);
+dbTest('checkout rolls back order, stock, and cart when a follow-up write fails', async (t) => {
+  const fixture = await createCheckoutFixture(1, 1, 100);
+  const realConnect = pool.connect.bind(pool);
+
+  // Only intercept the promise form used by the route.
+  // pg-pool's own query() calls connect(callback), so pass those through.
+  t.mock.method(pool, 'connect', async (...args: any[]) => {
+    if (args.length > 0) return (realConnect as any)(...args);
     const client = await realConnect();
     const realQuery = client.query.bind(client);
     const realRelease = client.release.bind(client);
-    (client as any).query = (sql: unknown, ...args: unknown[]) => String(sql).includes('UPDATE seller_fulfillments')
-      ? Promise.reject(new Error('checkout rollback test failure'))
-      : realQuery(sql as string, ...(args as [any]));
-    (client as any).release = () => {
+    (client as any).query = (sql: unknown, ...rest: unknown[]) =>
+      String(sql).includes('UPDATE seller_fulfillments')
+        ? Promise.reject(new Error('checkout rollback test failure'))
+        : realQuery(sql as string, ...(rest as [any]));
+    (client as any).release = (err?: any) => {
       (client as any).query = realQuery;
-      realRelease();
+      realRelease(err);
     };
+    return client;
+  });
 
-    const connectMock = mock.method(pool, 'connect', async () => client as any);
-    let response: Awaited<ReturnType<typeof request>>;
-    try {
-      response = await request(server, '/api/orders', 'POST', {
-        Customer_ID: fixture.customerId,
-        Items: [{ Product_ID: fixture.productId, Quantity: fixture.quantity }],
-        Shipping_Address: { Street: 'Test street', City: 'Dhaka', Postal_Code: '1200' },
-        Billing_Address: { Street: 'Test street', City: 'Dhaka', Postal_Code: '1200' },
-        paymentMethod: 'online',
-      }, fixture.customerCookie);
-    } finally {
-      connectMock.mock.restore();
-    }
+  const response = await request(server, '/api/orders', 'POST', {
+    Customer_ID: fixture.customerId,
+    Items: [{ Product_ID: fixture.productId, Quantity: fixture.quantity }],
+    Shipping_Address: { Street: 'Test street', City: 'Dhaka', Postal_Code: '1200' },
+    Billing_Address: { Street: 'Test street', City: 'Dhaka', Postal_Code: '1200' },
+    paymentMethod: 'online',
+  }, fixture.customerCookie);
 
-    assert.equal(response!.status, 500);
+  assert.equal(response.status, 500);
     const orders = await query('SELECT COUNT(*)::integer AS count FROM orders WHERE customer_id = $1', [fixture.customerId]);
     const stock = await query('SELECT stock FROM products WHERE id = $1', [fixture.productId]);
     const cart = await query('SELECT quantity FROM cart WHERE customer_id = $1 AND product_id = $2', [fixture.customerId, fixture.productId]);
