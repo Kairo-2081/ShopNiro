@@ -9,35 +9,36 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     services:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_DB: postgres
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: shopniro_test
+          POSTGRES_USER: shopniro_test
+          POSTGRES_PASSWORD: shopniro_test_password
         ports:
           - 5432:5432
         options: >-
-          --health-cmd="pg_isready -U postgres -d postgres"
+          --health-cmd="pg_isready -U shopniro_test -d shopniro_test"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=10
 
     env:
       NODE_ENV: test
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/postgres
-      JWT_SECRET: test-jwt-secret-1234567890abcdef
-      CRON_SECRET: test-cron-secret-1234567890abcdef
+      DATABASE_URL: postgresql://shopniro_test:shopniro_test_password@127.0.0.1:5432/shopniro_test
+      JWT_SECRET: test-test-test-test-test-test-test-test
+      CRON_SECRET: test-test-test-test-test-test-test-test
       SSLCOMMERZ_IPN_TOKEN: test-ipn-token-1234567890abcdef
       SSLCOMMERZ_STORE_ID: test-store-id
       SSLCOMMERZ_STORE_PASSWORD: test-store-password
-      RUN_SCHEMA_ON_START: 'true'
-      RUN_BACKGROUND_JOBS: 'false'
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -59,3 +60,12 @@ jobs:
 
       - name: Build bundle
         run: npm run build
+
+      - name: Audit dependencies
+        run: npm audit --audit-level=high
+
+      - name: Scan secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: .github/gitleaks.toml

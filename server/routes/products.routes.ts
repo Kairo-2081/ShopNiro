@@ -72,7 +72,7 @@ router.get('/', async (req, res) => {
     }));
 
     res.setHeader('X-Has-More', String(result.rows.length > limit));
-    res.json(formatted);
+    res.json(formatted.slice(0, limit));
   } catch (error: any) {
     console.error('Error fetching products:', error);
     res.status(500).json({ error: 'Failed to fetch products' });

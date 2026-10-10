@@ -207,6 +207,9 @@ router.post('/login', loginRateLimit, async (req, res) => {
             Logo: s.logo || '',
             Description: s.description || '',
             Status: s.status || 'approved',
+            Payout_Method: s.payout_method || '',
+            Payout_Account: s.payout_account || '',
+            Payout_Verified: Boolean(s.payout_verified),
             Created_At: s.created_at ? new Date(s.created_at).toISOString() : new Date().toISOString(),
           },
         });

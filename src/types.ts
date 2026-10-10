@@ -42,6 +42,11 @@ export interface Seller {
   Logo: string;
   Description: string;
   Status: SellerStatus;
+  Identity_Verified?: boolean;
+  Documents_Reviewed?: boolean;
+  Payout_Verified?: boolean;
+  Payout_Method?: string;
+  Payout_Account?: string;
   Created_At: string;
 }
 

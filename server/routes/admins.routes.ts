@@ -28,7 +28,7 @@ router.get('/', async (req, res) => {
       Address: mapAddress(a),
     }));
     res.setHeader('X-Has-More', String(result.rows.length > limit));
-    return res.json(formatted);
+    return res.json(formatted.slice(0, limit));
   } catch (error: any) {
     console.error('Error fetching admins:', error);
     res.status(500).json({ error: 'Failed to fetch admins' });
@@ -111,7 +111,7 @@ router.get('/users', async (req, res) => {
       FROM users ORDER BY created_at DESC, id DESC LIMIT $1 OFFSET $2
     `, [limit + 1, offset]);
     res.setHeader('X-Has-More', String(result.rows.length > limit));
-    res.json(result.rows);
+    res.json(result.rows.slice(0, limit));
   } catch (error: any) {
     console.error('Error fetching admin users:', error);
     res.status(500).json({ error: 'Failed to fetch platform users' });

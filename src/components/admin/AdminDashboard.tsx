@@ -41,7 +41,12 @@ interface AdminDashboardProps {
   categories: Category[];
   reviews: Review[];
   isLoading?: boolean;
-  onUpdateSellerStatus: (sellerId: string, status: SellerStatus, reason?: string) => Promise<void>;
+  onUpdateSellerStatus: (
+    sellerId: string,
+    status: SellerStatus,
+    reason?: string,
+    checklist?: { identityVerified: boolean; documentsReviewed: boolean; payoutVerified: boolean }
+  ) => Promise<void>;
   onUpdateProductStatus: (productId: string, status: ProductStatus) => Promise<void>;
   onCreateCategory: (name: string) => Promise<void>;
   onUpdateCategory: (categoryId: string, name: string) => Promise<void>;
@@ -81,8 +86,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [feedbackTone, setFeedbackTone] = React.useState<'success' | 'error'>('success');
   const [updatingSellerId, setUpdatingSellerId] = React.useState<string | null>(null);
   const [selectedSellerId, setSelectedSellerId] = React.useState<string | null>(null);
+  const [sellerChecklist, setSellerChecklist] = React.useState({ identityVerified: false, documentsReviewed: false, payoutVerified: false });
   const [transactions, setTransactions] = React.useState<any[]>([]);
   const [loadingTransactions, setLoadingTransactions] = React.useState(false);
+  const [sellerPayouts, setSellerPayouts] = React.useState<any[]>([]);
+  const [payoutReferences, setPayoutReferences] = React.useState<Record<string, string>>({});
+  const [loadingPayouts, setLoadingPayouts] = React.useState(false);
   const [paymentFilter, setPaymentFilter] = React.useState<string>('all');
   const [cancellationRequests, setCancellationRequests] = React.useState<OrderCancellationRequest[]>([]);
   const [loadingCancellations, setLoadingCancellations] = React.useState(false);
@@ -103,11 +112,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const fetchTransactions = async () => {
     setLoadingTransactions(true);
     try {
-      const res = await fetch(apiUrl('/api/payment/transactions'));
-      if (res.ok) {
-        const data = await res.json();
-        setTransactions(data);
-      }
+      setTransactions(await api.getPaymentTransactions());
     } catch (err: any) {
       console.error('Failed to load transactions:', err);
     } finally {
@@ -115,9 +120,40 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
+  const fetchSellerPayouts = async () => {
+    setLoadingPayouts(true);
+    try {
+      setSellerPayouts(await api.getSellerPayoutRequests());
+    } catch (error: any) {
+      showNotification(error.message || 'Could not load seller payouts.', 'error');
+    } finally {
+      setLoadingPayouts(false);
+    }
+  };
+
+  const processSellerPayout = async (payout: any, action: 'pay' | 'reject') => {
+    try {
+      if (action === 'pay') {
+        const reference = (payoutReferences[payout.id] || '').trim();
+        if (!reference) {
+          showNotification('Enter the external payout reference before marking it paid.', 'error');
+          return;
+        }
+        await api.paySellerPayout(payout.id, reference);
+      } else {
+        await api.rejectSellerPayout(payout.id);
+      }
+      showNotification(action === 'pay' ? 'Seller payout marked as paid.' : 'Seller payout rejected and balance restored.');
+      await fetchSellerPayouts();
+    } catch (error: any) {
+      showNotification(error.message || 'Could not process seller payout.', 'error');
+    }
+  };
+
   React.useEffect(() => {
     if (adminTab === 'payments') {
       fetchTransactions();
+      void fetchSellerPayouts();
     }
   }, [adminTab]);
 
@@ -233,13 +269,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         : status === 'approved'
           ? 'Application approved after administrative review.'
           : 'Merchant account status updated after administrative review.';
-      await onUpdateSellerStatus(seller.Seller_ID, status, reason);
+      await onUpdateSellerStatus(seller.Seller_ID, status, reason, status === 'approved' ? sellerChecklist : undefined);
       const action = status === 'approved' ? 'Approved' : status === 'rejected' ? 'Rejected' : 'Suspended';
       showNotification(`${action} merchant ${seller.Name}`);
     } catch (err: any) {
       showNotification(err.message || `Could not update ${seller.Name}'s status.`, 'error');
     } finally {
       setUpdatingSellerId(null);
+    }
+  };
+
+  const handleViewSellerIdentityDocument = async (seller: Seller) => {
+    try {
+      const document = await api.getSellerIdentityDocument(seller.Seller_ID);
+      window.open(document.url, '_blank', 'noopener,noreferrer');
+    } catch (error: any) {
+      showNotification(error.message || 'Could not open the seller identity document.', 'error');
     }
   };
 
@@ -716,7 +761,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           />
                           <button
                             type="button"
-                            onClick={() => setSelectedSellerId(seller.Seller_ID)}
+                            onClick={() => {
+                              setSellerChecklist({
+                                identityVerified: Boolean(seller.Identity_Verified),
+                                documentsReviewed: Boolean(seller.Documents_Reviewed),
+                                payoutVerified: Boolean(seller.Payout_Verified),
+                              });
+                              setSelectedSellerId(seller.Seller_ID);
+                            }}
                             aria-label={`View ${seller.Name} application details`}
                             className="text-left rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                           >
@@ -755,7 +807,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           {seller.Status !== 'approved' && (
                             <button
                               type="button"
-                              onClick={() => void handleSellerStatusChange(seller, 'approved')}
+                              onClick={() => {
+                                setSellerChecklist({
+                                  identityVerified: Boolean(seller.Identity_Verified),
+                                  documentsReviewed: Boolean(seller.Documents_Reviewed),
+                                  payoutVerified: Boolean(seller.Payout_Verified),
+                                });
+                                setSelectedSellerId(seller.Seller_ID);
+                              }}
                               disabled={updatingSellerId === seller.Seller_ID}
                               className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-full text-xs font-bold transition-all cursor-pointer shadow-sm shadow-emerald-500/20"
                             >
@@ -1155,6 +1214,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </table>
             </div>
           </div>
+          <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-zinc-800 dark:bg-[#12161D]">
+            <header className="flex items-center justify-between gap-3 border-b border-slate-200 p-4 dark:border-zinc-800">
+              <div><h2 className="text-sm font-bold text-slate-900 dark:text-white">Seller payout requests</h2><p className="text-xs text-slate-500 dark:text-zinc-400">Verify account details and record an external reference when paying.</p></div>
+              <button type="button" onClick={() => void fetchSellerPayouts()} disabled={loadingPayouts} aria-label="Refresh seller payouts" className="rounded-lg border border-slate-300 p-2 text-slate-600 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300"><RefreshCw className={`h-4 w-4 ${loadingPayouts ? 'animate-spin' : ''}`} /></button>
+            </header>
+            <div className="divide-y divide-slate-200 dark:divide-zinc-800">
+              {sellerPayouts.map((payout) => (
+                <article key={payout.id} className="grid gap-3 p-4 lg:grid-cols-[1fr_auto_auto] lg:items-center">
+                  <div className="min-w-0"><p className="text-sm font-semibold text-slate-900 dark:text-white">{payout.seller_name} · {formatCurrency(Number(payout.amount))}</p><p className="mt-1 break-all text-xs text-slate-500 dark:text-zinc-400">{payout.method}: {payout.account} · {payout.id}</p></div>
+                  <label className="text-xs font-semibold text-slate-600 dark:text-zinc-300">External reference<input value={payoutReferences[payout.id] || ''} onChange={(event) => setPayoutReferences((current) => ({ ...current, [payout.id]: event.target.value }))} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-[#181F2A]" /></label>
+                  <div className="flex gap-2"><button type="button" onClick={() => void processSellerPayout(payout, 'pay')} className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold text-white">Mark paid</button><button type="button" onClick={() => void processSellerPayout(payout, 'reject')} className="rounded-lg border border-rose-300 px-3 py-2 text-xs font-bold text-rose-700 dark:border-rose-900 dark:text-rose-300">Reject</button></div>
+                </article>
+              ))}
+              {!sellerPayouts.length && <p className="p-6 text-center text-sm text-slate-500">{loadingPayouts ? 'Loading payout requests…' : 'No pending seller payouts.'}</p>}
+            </div>
+          </section>
         </div>
       )}
 
@@ -1208,6 +1283,31 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <p className="whitespace-pre-wrap break-words text-slate-800 dark:text-zinc-200">{selectedSeller.Description || 'No description was provided.'}</p>
               </div>
 
+              <section className="space-y-2 border-y border-slate-200 py-4 dark:border-zinc-800">
+                <h3 className="font-semibold text-slate-900 dark:text-white">Verification checklist</h3>
+                <button
+                  type="button"
+                  onClick={() => void handleViewSellerIdentityDocument(selectedSeller)}
+                  className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                >
+                  <ExternalLink className="h-4 w-4" /> View identity document
+                </button>
+                {([
+                  ['identityVerified', 'Identity verified'],
+                  ['documentsReviewed', 'Documents reviewed'],
+                  ['payoutVerified', 'Payout account verified'],
+                ] as const).map(([key, label]) => (
+                  <label key={key} className="flex items-center gap-2 text-sm text-slate-700 dark:text-zinc-300">
+                    <input
+                      type="checkbox"
+                      checked={sellerChecklist[key]}
+                      onChange={(event) => setSellerChecklist((current) => ({ ...current, [key]: event.target.checked }))}
+                    />
+                    {label}
+                  </label>
+                ))}
+              </section>
+
               <dl className="grid gap-4 border-y border-slate-200 py-4 sm:grid-cols-2 dark:border-zinc-800">
                 <div className="min-w-0">
                   <dt className="text-xs font-semibold text-slate-500 dark:text-zinc-400">Email</dt>
@@ -1225,6 +1325,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <dt className="text-xs font-semibold text-slate-500 dark:text-zinc-400">Registered</dt>
                   <dd className="text-slate-800 dark:text-zinc-200">{formatDate(selectedSeller.Created_At)}</dd>
                 </div>
+                <div>
+                  <dt className="text-xs font-semibold text-slate-500 dark:text-zinc-400">Payout method</dt>
+                  <dd className="text-slate-800 dark:text-zinc-200">{selectedSeller.Payout_Method || 'Not provided'}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-semibold text-slate-500 dark:text-zinc-400">Payout account</dt>
+                  <dd className="break-all text-slate-800 dark:text-zinc-200">{selectedSeller.Payout_Account || 'Not provided'}</dd>
+                </div>
                 <div className="sm:col-span-2">
                   <dt className="text-xs font-semibold text-slate-500 dark:text-zinc-400">Business address</dt>
                   <dd className="break-words text-slate-800 dark:text-zinc-200">
@@ -1239,7 +1347,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <button
                   type="button"
                   onClick={() => void handleSellerStatusChange(selectedSeller, 'approved')}
-                  disabled={updatingSellerId === selectedSeller.Seller_ID}
+                  disabled={updatingSellerId === selectedSeller.Seller_ID || !Object.values(sellerChecklist).every(Boolean)}
                   className="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500 disabled:opacity-50"
                 >
                   {updatingSellerId === selectedSeller.Seller_ID ? 'Updating...' : 'Approve seller'}

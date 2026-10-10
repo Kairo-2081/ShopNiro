@@ -15,15 +15,19 @@ const mapBundle = (row: any): ProductBundle => ({
   Active: Boolean(row.active),
 });
 
-router.get('/', async (_req, res) => {
+router.get('/', async (req, res) => {
   try {
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
+    const offset = Math.max(0, Number(req.query.offset) || 0);
     const result = await query(`
       SELECT id, seller_id, name, product_ids_json, discount_percent, ends_at, active
       FROM seller_bundles
       WHERE active = TRUE AND (ends_at IS NULL OR ends_at > CURRENT_TIMESTAMP)
-      ORDER BY created_at DESC
-    `);
-    res.json(result.rows.map(mapBundle));
+      ORDER BY created_at DESC, id DESC
+      LIMIT $1 OFFSET $2
+    `, [limit + 1, offset]);
+    res.setHeader('X-Has-More', String(result.rows.length > limit));
+    res.json(result.rows.slice(0, limit).map(mapBundle));
   } catch (error) {
     console.error('Error fetching active bundles:', error);
     res.status(500).json({ error: 'Could not load bundle offers.' });
@@ -32,11 +36,14 @@ router.get('/', async (_req, res) => {
 
 router.get('/seller', requireAuth, requireRole(['seller']), async (req: AuthRequest, res) => {
   try {
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
+    const offset = Math.max(0, Number(req.query.offset) || 0);
     const result = await query(`
       SELECT id, seller_id, name, product_ids_json, discount_percent, ends_at, active
-      FROM seller_bundles WHERE seller_id = $1 ORDER BY created_at DESC
-    `, [req.user!.entityId]);
-    res.json(result.rows.map(mapBundle));
+      FROM seller_bundles WHERE seller_id = $1 ORDER BY created_at DESC, id DESC LIMIT $2 OFFSET $3
+    `, [req.user!.entityId, limit + 1, offset]);
+    res.setHeader('X-Has-More', String(result.rows.length > limit));
+    res.json(result.rows.slice(0, limit).map(mapBundle));
   } catch (error) {
     console.error('Error fetching seller bundles:', error);
     res.status(500).json({ error: 'Could not load your bundles.' });

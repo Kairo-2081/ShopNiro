@@ -16,6 +16,8 @@ export const SellerProfileModal: React.FC<SellerProfileModalProps> = ({ seller, 
   const [phone, setPhone] = React.useState(seller.Number);
   const [logo, setLogo] = React.useState(seller.Logo);
   const [description, setDescription] = React.useState(seller.Description);
+  const [payoutMethod, setPayoutMethod] = React.useState(seller.Payout_Method || '');
+  const [payoutAccount, setPayoutAccount] = React.useState(seller.Payout_Account || '');
   const [address, setAddress] = React.useState<Address>(seller.Address);
   const [hasSelectedLocation, setHasSelectedLocation] = React.useState(false);
   const [isSaving, setIsSaving] = React.useState(false);
@@ -44,6 +46,8 @@ export const SellerProfileModal: React.FC<SellerProfileModalProps> = ({ seller, 
         Number: phone.trim(),
         Logo: logo.trim(),
         Description: description.trim(),
+        Payout_Method: payoutMethod,
+        Payout_Account: payoutAccount.trim(),
         Address: address,
       });
       onClose();
@@ -73,6 +77,19 @@ export const SellerProfileModal: React.FC<SellerProfileModalProps> = ({ seller, 
             <label className="space-y-1 text-xs font-semibold text-slate-700 dark:text-zinc-300 sm:col-span-2">Logo URL<input type="url" value={logo} onChange={(e) => setLogo(e.target.value)} className={inputClass} /></label>
           </div>
           <label className="block space-y-1 text-xs font-semibold text-slate-700 dark:text-zinc-300">Store description<textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} className={inputClass} /></label>
+
+          <section className="grid gap-3 sm:grid-cols-2">
+            <label className="space-y-1 text-xs font-semibold text-slate-700 dark:text-zinc-300">Payout method
+              <select value={payoutMethod} onChange={(event) => setPayoutMethod(event.target.value)} className={inputClass}>
+                <option value="">Not set</option>
+                <option value="bkash">bKash</option>
+                <option value="bank">Bank</option>
+              </select>
+            </label>
+            <label className="space-y-1 text-xs font-semibold text-slate-700 dark:text-zinc-300">Payout account
+              <input value={payoutAccount} onChange={(event) => setPayoutAccount(event.target.value)} className={inputClass} />
+            </label>
+          </section>
 
           <section className="space-y-3">
             <h3 className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white"><MapPin className="h-4 w-4 text-emerald-700" />Business address</h3>

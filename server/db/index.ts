@@ -7,6 +7,7 @@ const { Pool } = pg;
 declare global {
   var _postgresPool: pg.Pool | undefined;
   var _supabaseClient: SupabaseClient | undefined;
+  var _supabaseAdminClient: SupabaseClient | undefined;
 }
 
 export interface ParsedConnectionConfig {
@@ -151,4 +152,15 @@ export function getSupabaseClient(): SupabaseClient | null {
 
   global._supabaseClient = createClient(url, key);
   return global._supabaseClient;
+}
+
+export function getSupabaseAdminClient(): SupabaseClient | null {
+  if (global._supabaseAdminClient) return global._supabaseAdminClient;
+
+  const url = process.env.SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !serviceRoleKey) return null;
+
+  global._supabaseAdminClient = createClient(url, serviceRoleKey);
+  return global._supabaseAdminClient;
 }
