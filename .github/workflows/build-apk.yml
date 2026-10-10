@@ -132,7 +132,7 @@ jobs:
           if-no-files-found: error
 
   build-windows:
-    needs: [ci, payment-integrity]
+    needs: ci
     runs-on: windows-latest
 
     steps:
