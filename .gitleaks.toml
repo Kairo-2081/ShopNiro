@@ -2,5 +2,6 @@
 useDefault = true
 
 [allowlist]
-description = "Fake values used only in CI tests"
-regexes = ['''test-test-test-test''']
+description = "Fake CI values and public Firebase web config"
+paths = ['''firebase-applet-config\.json''']
+regexes = ['''test-(jwt|cron)-secret-1234567890abcdef''', '''test-test-test-test''']
