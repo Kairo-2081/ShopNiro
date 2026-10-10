@@ -15,6 +15,7 @@ jobs:
     uses: ./.github/workflows/payment-integrity.yml
 
   build-android:
+    needs: [ci, payment-integrity]
     runs-on: ubuntu-latest
 
     steps:
