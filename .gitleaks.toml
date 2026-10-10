@@ -1,4 +1,7 @@
+[extend]
+useDefault = true
 
-4. Enterprise Architecture & Scalability Constraints (6.5 / 10) — The Growth Vector
-
-• The Assessment: This is the primary gap separating him from a Senior Production Engineer. His current projects utilize monolithic server setups (server.ts). In a true corporate scale environment processing thousands of concurrent checkouts, a single server running cron tasks internally can cause major latency bottlenecks. To achieve complete enterprise-readiness, he needs to transition from internal crons to distributed message queues (like RabbitMQ or Redis) and move toward microservice architectures.
+[allowlist]
+description = "Fake CI values and public Firebase web config"
+paths = ['''firebase-applet-config\.json''']
+regexes = ['''test-(jwt|cron)-secret-1234567890abcdef''', '''test-test-test-test''']
