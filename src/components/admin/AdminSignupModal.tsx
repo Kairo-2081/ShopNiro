@@ -90,8 +90,8 @@ export const AdminSignupModal: React.FC<AdminSignupModalProps> = ({
               <ShieldPlus className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-surface-900 dark:text-white">Admin Officer Registration</h3>
-              <p className="text-xs text-surface-500 dark:text-surface-400">Register new Governance Officer account</p>
+              <h3 className="text-base font-bold text-surface-900 dark:text-white">{t('adminOfficerRegistration')}</h3>
+              <p className="text-xs text-surface-500 dark:text-surface-400">{t('registerGovernanceOfficer')}</p>
             </div>
           </div>
           <button
@@ -199,7 +199,7 @@ export const AdminSignupModal: React.FC<AdminSignupModalProps> = ({
 
           <div className="pt-2 border-t border-surface-100 dark:border-surface-800">
             <h4 className="font-semibold text-surface-900 dark:text-white mb-2 flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-brand-500" /> Operational / Office Address
+              <MapPin className="w-3.5 h-3.5 text-brand-500" /> {t('operationalOfficeAddress')}
             </h4>
             <div className="mb-3">
               <label className="block text-surface-600 dark:text-surface-400 mb-1">Location *</label>
@@ -214,7 +214,7 @@ export const AdminSignupModal: React.FC<AdminSignupModalProps> = ({
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-surface-600 dark:text-surface-400 mb-1">Building / Floor</label>
+                <label className="block text-surface-600 dark:text-surface-400 mb-1">{t('buildingFloor')}</label>
                 <input
                   type="text"
                   placeholder="e.g. Floor 12"
@@ -246,7 +246,7 @@ export const AdminSignupModal: React.FC<AdminSignupModalProps> = ({
                 />
               </div>
               <div>
-                <label className="block text-surface-600 dark:text-surface-400 mb-1">Postal Code</label>
+                <label className="block text-surface-600 dark:text-surface-400 mb-1">{t('postalCode')}</label>
                 <input
                   type="text"
                   placeholder="e.g. 95113"
