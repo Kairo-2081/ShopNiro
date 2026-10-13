@@ -76,6 +76,49 @@ try {
     assert.notEqual(result.status, 0);
     assert.match(`${result.stdout}\n${result.stderr}`, /SSLCOMMERZ_IS_SANDBOX=false/);
   });
+
+  test('sandbox payment initialization sends required shipping fields', () => {
+    const script = `
+      const { sslcommerz } = await import('./server/services/sslcommerz.service.ts');
+      let requestUrl = '';
+      let requestBody;
+      globalThis.fetch = async (url, options) => {
+        requestUrl = String(url);
+        requestBody = new URLSearchParams(String(options.body));
+        return new Response(JSON.stringify({ status: 'SUCCESS', GatewayPageURL: 'https://sandbox.sslcommerz.com/gwprocess/v4/gw.php?Q=demo' }), { status: 200 });
+      };
+      await sslcommerz.initPayment({
+        tran_id: 'SSLCZ-TEST-1000', total_amount: 100, currency: 'BDT',
+        cus_name: 'Sandbox Customer', cus_email: 'customer@example.com', cus_phone: '01700000000',
+        cus_add1: '10 Test Street', cus_city: 'Dhaka', cus_postcode: '1200',
+        ship_name: 'Sandbox Customer', ship_add1: '10 Test Street', ship_city: 'Dhaka',
+        ship_postcode: '1200', ship_country: 'Bangladesh', product_name: 'Test order',
+      }, 'http://localhost:3000');
+      if (requestUrl !== 'https://sandbox.sslcommerz.com/gwprocess/v4/api.php') throw new Error('Sandbox endpoint was not used.');
+      for (const [key, expected] of Object.entries({ ship_name: 'Sandbox Customer', ship_add1: '10 Test Street', ship_city: 'Dhaka', ship_postcode: '1200', ship_country: 'Bangladesh' })) {
+        if (requestBody.get(key) !== expected) throw new Error('Missing or incorrect ' + key + '.');
+      }
+    `;
+    const result = spawnSync(process.execPath, [
+      '--import', 'dotenv/config',
+      '--import', 'tsx',
+      '--input-type=module',
+      '-e', script,
+    ], {
+      cwd: process.cwd(),
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        NODE_ENV: 'test',
+        PAYMENT_SIMULATOR: 'false',
+        SSLCOMMERZ_IS_SANDBOX: 'true',
+        SSLCOMMERZ_STORE_ID: 'sandbox-store',
+        SSLCOMMERZ_STORE_PASSWORD: 'sandbox-password',
+      },
+    });
+
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+  });
 } finally {
   if (originalNodeEnv === undefined) delete process.env.NODE_ENV;
   else process.env.NODE_ENV = originalNodeEnv;

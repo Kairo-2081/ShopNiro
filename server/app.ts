@@ -44,6 +44,19 @@ const apiRateLimit = rateLimit({
 const aiRateLimit = rateLimit({ windowMs: 60_000, limit: 10, keyGenerator: keyedRateLimit, standardHeaders: true, legacyHeaders: false });
 const mapsRateLimit = rateLimit({ windowMs: 60_000, limit: 30, keyGenerator: keyedRateLimit, standardHeaders: true, legacyHeaders: false });
 const directApiRoutes = express.Router();
+const configuredOrigins = [
+  process.env.APP_URL,
+  process.env.SHOPNIRO_PUBLIC_URL,
+  process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined,
+  process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : undefined,
+].flatMap((value) => {
+  if (!value) return [];
+  try {
+    return [new URL(value).origin];
+  } catch {
+    return [];
+  }
+});
 const allowedOrigins = new Set([
   ...(!isProduction ? [
     'http://localhost',
@@ -53,10 +66,8 @@ const allowedOrigins = new Set([
     'http://localhost:3000',
   ] : []),
   'https://shopniro.onrender.com',
-  process.env.SHOPNIRO_PUBLIC_URL?.replace(/\/$/, ''),
-  process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined,
-  process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : undefined,
-].filter((origin): origin is string => Boolean(origin)));
+  ...configuredOrigins,
+]);
 
 app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({
