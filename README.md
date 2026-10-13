@@ -38,3 +38,7 @@ See [README-DEPLOY.md](README-DEPLOY.md) for Render/Vercel environment configura
 The GitHub Actions `Scheduled jobs` workflow calls `/api/cron/expire-orders` and `/api/cron/refunds` every five minutes using `Authorization: Bearer $CRON_SECRET`. Configure the repository Actions secrets `APP_URL` and `CRON_SECRET`; `APP_URL` is the deployed API origin. Vercel's daily cron continues to call `/api/riders/payroll/settle` with the same bearer secret. Scheduled execution can be delayed, so use a host-provided cron or external scheduler where tighter timing is required.
 
 Seller identity documents are stored in a private Supabase Storage bucket. Configure `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, and optionally `SUPABASE_SELLER_DOCUMENTS_BUCKET` on the API host. Create the bucket as private before accepting seller applications. Existing BLOB documents can be migrated with `npx tsx scripts/migrate-seller-documents-to-storage.ts`; run it only against the selected backed-up database after configuring storage.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
