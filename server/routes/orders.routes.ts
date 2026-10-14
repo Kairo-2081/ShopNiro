@@ -456,7 +456,8 @@ router.patch('/cancellation-requests/:requestId/review', requireAuth, async (req
     const result = await client.query(
       `SELECT request.id, request.order_id, request.status AS request_status,
         order_record.status AS order_status, order_record.payment_status,
-        order_record.payment_method, order_record.subtotal, order_record.shipping_fee
+        order_record.payment_method, order_record.subtotal, order_record.shipping_fee,
+        order_record.transaction_id AS order_transaction_id
        FROM order_cancellation_requests request
        JOIN orders order_record ON order_record.id = request.order_id
        WHERE request.id = $1 FOR UPDATE OF request, order_record`,
@@ -509,14 +510,16 @@ router.patch('/cancellation-requests/:requestId/review', requireAuth, async (req
       );
       if (request.payment_status === 'paid') {
         const payment = await client.query(
-          `SELECT id FROM payments WHERE order_id = $1 AND status = 'VALIDATED' ORDER BY created_at DESC LIMIT 1 FOR UPDATE`,
-          [request.order_id]
+          `SELECT id FROM payments WHERE order_id = $1 AND status = 'VALIDATED'
+           ORDER BY CASE WHEN transaction_id = $2 THEN 0 ELSE 1 END, created_at ASC, id ASC
+           LIMIT 1 FOR UPDATE`,
+          [request.order_id, request.order_transaction_id]
         );
         if (request.payment_method === 'cash_on_delivery') {
           await client.query(
             `INSERT INTO refunds (id, order_id, amount, method, status, gateway_ref, processed_by)
              VALUES ($1, $2, $3, 'manual_cash', 'completed', 'manual-cash-return', $4)
-             ON CONFLICT (order_id) DO NOTHING`,
+             ON CONFLICT DO NOTHING`,
             [`REF-${randomUUID()}`, request.order_id, Number(request.subtotal) + Number(request.shipping_fee), req.user!.entityId]
           );
           await client.query("UPDATE orders SET payment_status = 'refunded' WHERE id = $1", [request.order_id]);
@@ -529,7 +532,7 @@ router.patch('/cancellation-requests/:requestId/review', requireAuth, async (req
           await client.query(
             `INSERT INTO refunds (id, order_id, payment_id, amount, method, status)
              VALUES ($1, $2, $3, $4, 'sslcommerz', 'requested')
-             ON CONFLICT (order_id) DO NOTHING`,
+             ON CONFLICT DO NOTHING`,
             [`REF-${randomUUID()}`, request.order_id, payment.rows[0].id, Number(request.subtotal) + Number(request.shipping_fee)]
           );
         }
