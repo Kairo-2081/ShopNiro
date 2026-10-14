@@ -1,4 +1,4 @@
-import { timingSafeEqual } from 'node:crypto';
+import { randomUUID, timingSafeEqual } from 'node:crypto';
 import { Router } from 'express';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { pool, query } from '../db/index.ts';
@@ -23,7 +23,7 @@ const simulatorProfiles: Record<string, { name: string; accountLabel: string; ac
 
 const finalizeSslCommerzPayment = async (tranId: string, valId: string) => {
   const paymentResult = await query(
-    `SELECT order_id, amount, status, payment_method, val_id, bank_tran_id,
+    `SELECT id, order_id, amount, status, payment_method, val_id, bank_tran_id,
       card_type, card_brand, card_issuer
      FROM payments WHERE transaction_id = $1`,
     [tranId]
@@ -31,61 +31,88 @@ const finalizeSslCommerzPayment = async (tranId: string, valId: string) => {
   const payment = paymentResult.rows[0];
   if (!payment?.order_id) throw new GatewayError('Payment record not found. Restart checkout and try again.');
 
-  if (payment.status === 'PENDING') {
-    const validation = await sslcommerz.validatePayment(valId, tranId, Number(payment.amount));
-    if (!validation.ok || !validation.raw) throw new GatewayError('SSLCommerz could not verify this payment.');
-
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
-      const lockedPayment = await client.query(
-        `SELECT order_id, status FROM payments WHERE transaction_id = $1 FOR UPDATE`,
-        [tranId]
-      );
-      const currentPayment = lockedPayment.rows[0];
-      if (!currentPayment || currentPayment.order_id !== payment.order_id) {
-        throw new GatewayError('Payment record changed during verification.');
-      }
-
-      if (currentPayment.status === 'PENDING') {
-        const lockedOrder = await client.query(
-          `SELECT payment_status FROM orders WHERE id = $1 FOR UPDATE`,
-          [currentPayment.order_id]
-        );
-        if (!lockedOrder.rows.length || !['pending', 'paid'].includes(lockedOrder.rows[0].payment_status)) {
-          throw new GatewayError('The order is no longer eligible for payment.');
-        }
-        await client.query(
-          `UPDATE payments SET status = 'VALIDATED', bank_tran_id = $2, val_id = $3,
-            card_type = $4, card_brand = $5, card_issuer = $6, updated_at = CURRENT_TIMESTAMP
-           WHERE transaction_id = $1 AND status = 'PENDING'`,
-          [tranId, validation.raw.bank_tran_id || '', validation.raw.val_id || valId,
-            validation.raw.card_type || '', validation.raw.card_brand || '', validation.raw.card_issuer || '']
-        );
-        await client.query(
-          `UPDATE orders SET payment_status = 'paid', payment_method = $2, transaction_id = $3
-           WHERE id = $1 AND payment_status = 'pending'`,
-          [currentPayment.order_id, payment.payment_method, tranId]
-        );
-      } else if (currentPayment.status !== 'VALIDATED') {
-        throw new GatewayError('Payment is already finalized.');
-      }
-      await client.query('COMMIT');
-    } catch (error) {
-      await client.query('ROLLBACK').catch(() => {});
-      throw error;
-    } finally {
-      client.release();
-    }
-  } else if (payment.status !== 'VALIDATED') {
+  const validation = payment.status === 'PENDING'
+    ? await sslcommerz.validatePayment(valId, tranId, Number(payment.amount))
+    : undefined;
+  if (validation && (!validation.ok || !validation.raw)) {
+    throw new GatewayError('SSLCommerz could not verify this payment.');
+  }
+  if (!['PENDING', 'VALIDATED'].includes(payment.status)) {
     throw new GatewayError('Payment is already finalized.');
   }
 
-  const orderResult = await query('SELECT payment_status FROM orders WHERE id = $1', [payment.order_id]);
-  if (orderResult.rows[0]?.payment_status !== 'paid') {
+  const client = await pool.connect();
+  let duplicatePayment = false;
+  try {
+    await client.query('BEGIN');
+    const lockedPayment = await client.query(
+      `SELECT id, order_id, status FROM payments WHERE transaction_id = $1 FOR UPDATE`,
+      [tranId]
+    );
+    const currentPayment = lockedPayment.rows[0];
+    if (!currentPayment || currentPayment.order_id !== payment.order_id) {
+      throw new GatewayError('Payment record changed during verification.');
+    }
+    if (!['PENDING', 'VALIDATED'].includes(currentPayment.status)) {
+      throw new GatewayError('Payment is already finalized.');
+    }
+
+    const lockedOrder = await client.query(
+      `SELECT payment_status, status, transaction_id, payment_method
+       FROM orders WHERE id = $1 FOR UPDATE`,
+      [currentPayment.order_id]
+    );
+    const order = lockedOrder.rows[0];
+    if (!order) throw new GatewayError('The order no longer exists.');
+
+    const validationData = validation?.raw;
+    if (currentPayment.status === 'PENDING') {
+      await client.query(
+        `UPDATE payments SET status = 'VALIDATED', bank_tran_id = $2, val_id = $3,
+          card_type = $4, card_brand = $5, card_issuer = $6, updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1 AND status = 'PENDING'`,
+        [currentPayment.id, validationData?.bank_tran_id || '', validationData?.val_id || valId,
+          validationData?.card_type || '', validationData?.card_brand || '', validationData?.card_issuer || '']
+      );
+    }
+
+    const orderCanBePaid = order.payment_status === 'pending'
+      && order.status !== 'cancelled'
+      && order.payment_method !== 'cash_on_delivery';
+    if (orderCanBePaid && (!order.transaction_id || order.transaction_id === tranId)) {
+      await client.query(
+        `UPDATE orders SET payment_status = 'paid', payment_method = $2, transaction_id = $3
+         WHERE id = $1 AND payment_status = 'pending'`,
+        [currentPayment.order_id, payment.payment_method, tranId]
+      );
+    } else if (order.transaction_id !== tranId || order.payment_status !== 'paid') {
+      duplicatePayment = true;
+      await client.query(
+        `INSERT INTO refunds (id, order_id, payment_id, amount, method, duplicate_payment, status)
+         VALUES ($1, $2, $3, $4, 'sslcommerz', TRUE, 'requested')
+         ON CONFLICT (payment_id) WHERE payment_id IS NOT NULL DO NOTHING`,
+        [`REF-${randomUUID()}`, currentPayment.order_id, currentPayment.id, Number(payment.amount)]
+      );
+    }
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw error;
+  } finally {
+    client.release();
+  }
+
+  const orderResult = await query('SELECT payment_status, transaction_id FROM orders WHERE id = $1', [payment.order_id]);
+  if (orderResult.rows[0]?.payment_status !== 'paid' && !duplicatePayment) {
     throw new GatewayError('The order payment could not be finalized.');
   }
-  return { orderId: String(payment.order_id) };
+  if (orderResult.rows[0]?.transaction_id !== tranId) duplicatePayment = true;
+  if (duplicatePayment) {
+    void processRefundQueue().catch((error) => {
+      console.error('Duplicate payment refund reconciliation failed:', error);
+    });
+  }
+  return { orderId: String(payment.order_id), duplicatePayment };
 };
 
 const paymentReturnUrl = (status: 'success' | 'verification' | 'failed' | 'cancelled', orderId?: string) => {
@@ -103,10 +130,14 @@ const orderIdForTransaction = async (tranId: unknown): Promise<string | undefine
 export const processRefundQueue = async () => {
   const result = await query(`
     SELECT refund.id, refund.order_id, refund.payment_id, refund.amount, refund.status,
-      refund.gateway_ref, payment.bank_tran_id, payment.transaction_id
+      refund.gateway_ref, payment.bank_tran_id, payment.transaction_id, refund.duplicate_payment,
+      refund.updated_at
     FROM refunds refund
     LEFT JOIN payments payment ON payment.id = refund.payment_id
-    WHERE refund.method = 'sslcommerz' AND refund.status IN ('requested', 'submitted')
+    WHERE refund.method = 'sslcommerz'
+      AND (refund.status = 'requested'
+        OR (refund.status = 'initiating' AND refund.updated_at < CURRENT_TIMESTAMP - INTERVAL '2 minutes')
+        OR refund.status = 'submitted')
     ORDER BY refund.created_at ASC
     LIMIT 50
   `);
@@ -115,8 +146,19 @@ export const processRefundQueue = async () => {
   for (const refund of result.rows) {
     try {
       if (refund.status === 'requested') {
+        const claim = await query(
+          `UPDATE refunds SET status = 'initiating', updated_at = CURRENT_TIMESTAMP
+           WHERE id = $1 AND (status = 'requested'
+             OR (status = 'initiating' AND updated_at < CURRENT_TIMESTAMP - INTERVAL '2 minutes'))
+           RETURNING id`,
+          [refund.id]
+        );
+        if (!claim.rowCount) {
+          summary.pending += 1;
+          continue;
+        }
         if (!refund.bank_tran_id) {
-          await query("UPDATE refunds SET status = 'failed', last_error = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND status = 'requested'", [refund.id, 'Verified bank transaction ID is unavailable.']);
+          await query("UPDATE refunds SET status = 'failed', last_error = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND status = 'initiating'", [refund.id, 'Verified bank transaction ID is unavailable.']);
           summary.failed += 1;
           continue;
         }
@@ -129,7 +171,7 @@ export const processRefundQueue = async () => {
         });
         await query(
           `UPDATE refunds SET status = 'submitted', gateway_ref = $2, last_error = NULL,
-            updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND status = 'requested'`,
+            updated_at = CURRENT_TIMESTAMP WHERE id = $1 AND status = 'initiating'`,
           [refund.id, initiated.refund_ref_id]
         );
         summary.initiated += 1;
@@ -146,26 +188,33 @@ export const processRefundQueue = async () => {
         const client = await pool.connect();
         try {
           await client.query('BEGIN');
-          const locked = await client.query('SELECT order_id, payment_id, status FROM refunds WHERE id = $1 FOR UPDATE', [refund.id]);
+          const locked = await client.query(`
+            SELECT refund.order_id, refund.payment_id, refund.status, refund.duplicate_payment
+            FROM refunds refund
+            WHERE refund.id = $1 FOR UPDATE OF refund
+          `, [refund.id]);
           if (locked.rows[0]?.status === 'submitted') {
+            const duplicatePayment = locked.rows[0].duplicate_payment;
             await client.query("UPDATE refunds SET status = 'completed', last_error = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = $1", [refund.id]);
-            await client.query("UPDATE orders SET payment_status = 'refunded' WHERE id = $1", [locked.rows[0].order_id]);
             if (locked.rows[0].payment_id) {
               await client.query("UPDATE payments SET status = 'REFUNDED', updated_at = CURRENT_TIMESTAMP WHERE id = $1", [locked.rows[0].payment_id]);
             }
-            await client.query(`
-              INSERT INTO seller_wallet_entries (id, seller_id, entry_type, amount, reference_id, description, available_at)
-              SELECT 'CLW-' || substr(md5(wallet.reference_id), 1, 20), wallet.seller_id, 'refund_clawback',
-                -SUM(wallet.amount), wallet.reference_id, 'Refund clawback', now()
-              FROM seller_wallet_entries wallet
-              JOIN seller_fulfillments fulfillment ON fulfillment.id = wallet.reference_id
-              WHERE fulfillment.order_id = $1
-                AND wallet.entry_type IN ('sale', 'cod_received', 'commission')
-              GROUP BY wallet.seller_id, wallet.reference_id
-              HAVING SUM(wallet.amount) <> 0
-              ON CONFLICT (seller_id, entry_type, reference_id) DO NOTHING
-            `, [locked.rows[0].order_id]);
-            await client.query('UPDATE order_cancellation_requests SET refund_completed_at = COALESCE(refund_completed_at, CURRENT_TIMESTAMP) WHERE order_id = $1 AND status = \'approved\'', [locked.rows[0].order_id]);
+            if (!duplicatePayment) {
+              await client.query("UPDATE orders SET payment_status = 'refunded' WHERE id = $1", [locked.rows[0].order_id]);
+              await client.query(`
+                INSERT INTO seller_wallet_entries (id, seller_id, entry_type, amount, reference_id, description, available_at)
+                SELECT 'CLW-' || substr(md5(wallet.reference_id), 1, 20), wallet.seller_id, 'refund_clawback',
+                  -SUM(wallet.amount), wallet.reference_id, 'Refund clawback', now()
+                FROM seller_wallet_entries wallet
+                JOIN seller_fulfillments fulfillment ON fulfillment.id = wallet.reference_id
+                WHERE fulfillment.order_id = $1
+                  AND wallet.entry_type IN ('sale', 'cod_received', 'commission')
+                GROUP BY wallet.seller_id, wallet.reference_id
+                HAVING SUM(wallet.amount) <> 0
+                ON CONFLICT (seller_id, entry_type, reference_id) DO NOTHING
+              `, [locked.rows[0].order_id]);
+              await client.query('UPDATE order_cancellation_requests SET refund_completed_at = COALESCE(refund_completed_at, CURRENT_TIMESTAMP) WHERE order_id = $1 AND status = \'approved\'', [locked.rows[0].order_id]);
+            }
             summary.completed += 1;
           } else {
             summary.pending += 1;
@@ -371,29 +420,6 @@ router.post('/init', requireAuth, requireRole(['customer']), paymentInitRateLimi
       return res.status(400).json({ error: `Payment initialization fields are server-controlled: ${suppliedForbiddenFields.join(', ')}` });
     }
 
-    const order = await query(
-      `SELECT id, customer_id, status, subtotal, shipping_fee, payment_status, shipping_address_json
-       FROM orders WHERE id = $1 AND customer_id = $2`,
-      [String(orderId), req.user!.entityId]
-    );
-    if (order.rows.length === 0) return res.status(404).json({ error: 'Order not found.' });
-    if (order.rows[0].status !== 'placed') {
-      return res.status(409).json({ error: 'This order is no longer eligible for payment.' });
-    }
-    if (order.rows[0].payment_status !== 'pending') {
-      return res.status(409).json({ error: 'Order payment is already finalized.' });
-    }
-
-    const finalAmountBDT = Number(order.rows[0].subtotal) + Number(order.rows[0].shipping_fee);
-    if (!Number.isFinite(finalAmountBDT) || finalAmountBDT <= 0) {
-      return res.status(400).json({ error: 'Order total is invalid.' });
-    }
-    const shippingAddress = JSON.parse(String(order.rows[0].shipping_address_json || '{}')) as Record<string, unknown>;
-    const shipAdd1 = [shippingAddress.House_Name, shippingAddress.Street]
-      .filter((part): part is string => typeof part === 'string' && Boolean(part.trim()))
-      .join(' ')
-      .slice(0, 255);
-
     const ipnToken = process.env.SSLCOMMERZ_IPN_TOKEN || sslcommerz.getIpnToken();
     if (!ipnToken) {
       return res.status(503).json({ error: 'SSLCommerz IPN authentication is not configured.' });
@@ -403,56 +429,112 @@ router.post('/init', requireAuth, requireRole(['customer']), paymentInitRateLimi
     const hostUrl = `${protocol}://${host}`;
     const ipnUrl = `${hostUrl}/api/payment/sslcommerz/ipn?token=${encodeURIComponent(ipnToken)}`;
 
-    const tran_id = `SSLCZ-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
-    const paymentId = `PAY-${Date.now()}`;
-    await query(
-      `SELECT * FROM gocart_payment_create($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-      [
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const orderResult = await client.query(
+        `SELECT id, customer_id, status, subtotal, shipping_fee, payment_status, shipping_address_json
+         FROM orders WHERE id = $1 AND customer_id = $2 FOR UPDATE`,
+        [String(orderId), req.user!.entityId]
+      );
+      const order = orderResult.rows[0];
+      if (!order) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'Order not found.' });
+      }
+      if (order.status !== 'placed') {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ error: 'This order is no longer eligible for payment.' });
+      }
+      if (order.payment_status !== 'pending') {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ error: 'Order payment is already finalized.' });
+      }
+
+      const existingResult = await client.query(
+        `SELECT id, transaction_id, amount, payment_method, gateway_session_json
+         FROM payments WHERE order_id = $1 AND status = 'PENDING'
+         ORDER BY created_at DESC, id DESC LIMIT 1 FOR UPDATE`,
+        [String(orderId)]
+      );
+      const existing = existingResult.rows[0];
+      const finalAmountBDT = existing
+        ? Number(existing.amount)
+        : Number(order.subtotal) + Number(order.shipping_fee);
+      if (!Number.isFinite(finalAmountBDT) || finalAmountBDT <= 0) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'Order total is invalid.' });
+      }
+
+      const transactionId = existing?.transaction_id
+        ? String(existing.transaction_id)
+        : `SSLCZ-${randomUUID().replaceAll('-', '').slice(0, 24).toUpperCase()}`;
+      const paymentId = existing?.id ? String(existing.id) : `PAY-${randomUUID()}`;
+      const finalPaymentMethod = existing?.payment_method || paymentMethod;
+      if (!existing) {
+        await client.query(
+          `SELECT * FROM gocart_payment_create($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+          [paymentId, orderId, req.user!.entityId, finalAmountBDT, 'BDT', 'sslcommerz', finalPaymentMethod, transactionId, customerPhone || '']
+        );
+      }
+
+      let session = existing?.gateway_session_json || null;
+      if (!session) {
+        const shippingAddress = JSON.parse(String(order.shipping_address_json || '{}')) as Record<string, unknown>;
+        const shipAdd1 = [shippingAddress.House_Name, shippingAddress.Street]
+          .filter((part): part is string => typeof part === 'string' && Boolean(part.trim()))
+          .join(' ')
+          .slice(0, 255);
+        try {
+          session = await sslcommerz.initPayment(
+            {
+              tran_id: transactionId,
+              total_amount: finalAmountBDT,
+              currency: 'BDT',
+              cus_name: customerName || 'Marketplace Customer',
+              cus_email: customerEmail || 'customer@example.com',
+              cus_phone: customerPhone || '01700000000',
+              cus_add1: typeof address === 'object' ? `${address.House_Name || ''} ${address.Street || ''}`.trim() : String(address || ''),
+              cus_city: typeof address === 'object' ? address.City || 'Dhaka' : 'Dhaka',
+              cus_postcode: typeof address === 'object' ? address.Postal_Code || '1200' : '1200',
+              ship_name: customerName || 'Marketplace Customer',
+              ship_add1: shipAdd1 || 'Dhaka, Bangladesh',
+              ship_city: typeof shippingAddress.City === 'string' && shippingAddress.City.trim() ? shippingAddress.City.trim() : 'Dhaka',
+              ship_postcode: typeof shippingAddress.Postal_Code === 'string' && shippingAddress.Postal_Code.trim() ? shippingAddress.Postal_Code.trim() : '1200',
+              ship_country: 'Bangladesh',
+              product_name: productName,
+              preferred_channel: finalPaymentMethod === 'bkash' ? 'bkash' : 'any',
+              ipn_url: ipnUrl,
+            },
+            hostUrl
+          );
+        } catch (error) {
+          await client.query('COMMIT');
+          throw error;
+        }
+        await client.query(
+          'UPDATE payments SET gateway_session_json = $2::jsonb, updated_at = CURRENT_TIMESTAMP WHERE id = $1',
+          [paymentId, JSON.stringify(session)]
+        );
+      }
+      await client.query('COMMIT');
+
+      res.json({
+        success: true,
+        tran_id: transactionId,
         paymentId,
-        orderId,
-        req.user!.entityId,
-        finalAmountBDT,
-        'BDT',
-        'sslcommerz',
-        paymentMethod,
-        tran_id,
-        customerPhone || '',
-      ]
-    );
-
-    const session = await sslcommerz.initPayment(
-      {
-        tran_id,
-        total_amount: finalAmountBDT,
+        amountBDT: finalAmountBDT,
         currency: 'BDT',
-        cus_name: customerName || 'Marketplace Customer',
-        cus_email: customerEmail || 'customer@example.com',
-        cus_phone: customerPhone || '01700000000',
-        cus_add1: typeof address === 'object' ? `${address.House_Name || ''} ${address.Street || ''}`.trim() : String(address || ''),
-        cus_city: typeof address === 'object' ? address.City || 'Dhaka' : 'Dhaka',
-        cus_postcode: typeof address === 'object' ? address.Postal_Code || '1200' : '1200',
-        ship_name: customerName || 'Marketplace Customer',
-        ship_add1: shipAdd1 || 'Dhaka, Bangladesh',
-        ship_city: typeof shippingAddress.City === 'string' && shippingAddress.City.trim() ? shippingAddress.City.trim() : 'Dhaka',
-        ship_postcode: typeof shippingAddress.Postal_Code === 'string' && shippingAddress.Postal_Code.trim() ? shippingAddress.Postal_Code.trim() : '1200',
-        ship_country: 'Bangladesh',
-        product_name: productName,
-        preferred_channel: paymentMethod === 'bkash' ? 'bkash' : 'any',
-        ipn_url: ipnUrl,
-      },
-      hostUrl
-    );
-
-    res.json({
-      success: true,
-      tran_id,
-      paymentId,
-      amountBDT: finalAmountBDT,
-      currency: 'BDT',
-      session,
-      gateway: 'SSLCommerz',
-      paymentMethod,
-    });
+        session,
+        gateway: 'SSLCommerz',
+        paymentMethod: finalPaymentMethod,
+      });
+    } catch (error) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw error;
+    } finally {
+      client.release();
+    }
   } catch (error: any) {
     console.error('Error initiating payment:', error);
     res.status(500).json({ error: error.message || 'Failed to initialize payment gateway' });
@@ -491,7 +573,7 @@ router.post('/sslcommerz/validate', requireAuth, requireRole(['customer']), asyn
 
     res.json({
       success: true,
-      status: 'VALIDATED',
+      status: finalized.duplicatePayment ? 'REFUND_PENDING' : 'VALIDATED',
       tran_id,
       order_id: finalized.orderId,
       validated_at: new Date().toISOString(),
@@ -516,7 +598,7 @@ const handleSslCommerzSuccess = async (req: AuthRequest, res: any) => {
       throw new GatewayError('SSLCommerz did not return a valid payment reference.');
     }
     const result = await finalizeSslCommerzPayment(tranId, valId);
-    return res.redirect(303, paymentReturnUrl('success', result.orderId));
+    return res.redirect(303, paymentReturnUrl(result.duplicatePayment ? 'verification' : 'success', result.orderId));
   } catch (error: any) {
     console.error('SSLCommerz success callback could not verify payment:', error);
     const orderId = await orderIdForTransaction(tranId).catch(() => undefined);

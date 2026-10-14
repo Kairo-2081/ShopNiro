@@ -15,10 +15,16 @@ const supportSubmissionLimit = rateLimit({
 });
 
 router.post('/requests', supportSubmissionLimit, async (req, res) => {
-  const name = typeof req.body?.name === 'string' ? req.body.name.trim().slice(0, 160) : '';
-  const email = typeof req.body?.email === 'string' ? req.body.email.trim().slice(0, 255) : '';
-  const subject = typeof req.body?.subject === 'string' ? req.body.subject.trim().slice(0, 160) : '';
-  const message = typeof req.body?.message === 'string' ? req.body.message.trim().slice(0, 5000) : '';
+  const nameValue = typeof req.body?.Name === 'string' ? req.body.Name : req.body?.name;
+  const emailValue = typeof req.body?.Email === 'string' ? req.body.Email : req.body?.email;
+  const subjectValue = typeof req.body?.Subject === 'string' ? req.body.Subject : req.body?.subject;
+  const messageValue = typeof req.body?.Message === 'string' ? req.body.Message : req.body?.message;
+
+  const name = typeof nameValue === 'string' ? nameValue.trim().slice(0, 160) : '';
+  const email = typeof emailValue === 'string' ? emailValue.trim().slice(0, 255) : '';
+  const subject = typeof subjectValue === 'string' ? subjectValue.trim().slice(0, 160) : '';
+  const message = typeof messageValue === 'string' ? messageValue.trim().slice(0, 5000) : '';
+
   if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !subject || message.length < 10) {
     return res.status(400).json({ error: 'Provide your name, a valid email, a subject, and a message of at least 10 characters.' });
   }
