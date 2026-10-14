@@ -270,6 +270,124 @@ dbTest('plaintext stored passwords are rejected with the same message as unknown
     getRefundStatus.mock.restore();
   });
 
+  dbTest('concurrent refund workers initiate a requested refund only once', async () => {
+    const customerId = `CUSTOMER-${randomUUID()}`;
+    const orderId = `ORD-${randomUUID()}`;
+    const paymentId = `PAY-${randomUUID()}`;
+    const refundId = `REF-${randomUUID()}`;
+    const transactionId = `SSLCZ-${randomUUID().replaceAll('-', '').toUpperCase()}`;
+    await createCustomer(customerId);
+    await createOrder(customerId, orderId);
+    await query(`
+      INSERT INTO payments (id, order_id, customer_id, amount, currency, gateway, payment_method, transaction_id, bank_tran_id, status)
+      VALUES ($1, $2, $3, 100, 'BDT', 'sslcommerz', 'bkash', $4, $5, 'VALIDATED')
+    `, [paymentId, orderId, customerId, transactionId, `BANK-${randomUUID()}`]);
+    await query(`
+      INSERT INTO refunds (id, order_id, payment_id, amount, method, status)
+      VALUES ($1, $2, $3, 100, 'sslcommerz', 'requested')
+    `, [refundId, orderId, paymentId]);
+
+    let markStarted!: () => void;
+    let releaseInitiation!: () => void;
+    const started = new Promise<void>((resolve) => { markStarted = resolve; });
+    const gate = new Promise<void>((resolve) => { releaseInitiation = resolve; });
+    const initiateRefund = mock.method(sslcommerz, 'initiateRefund', async () => {
+      markStarted();
+      await gate;
+      return { APIConnect: 'DONE', status: 'success', refund_ref_id: `GREF-${refundId}` };
+    });
+
+    try {
+      const firstWorker = processRefundQueue();
+      await started;
+      await processRefundQueue();
+      assert.equal(initiateRefund.mock.callCount(), 1);
+      releaseInitiation();
+      await firstWorker;
+      const refund = await query('SELECT status FROM refunds WHERE id = $1', [refundId]);
+      assert.equal(refund.rows[0].status, 'submitted');
+      assert.equal(initiateRefund.mock.callCount(), 1);
+    } finally {
+      releaseInitiation();
+      initiateRefund.mock.restore();
+    }
+  });
+
+  dbTest('stale refund claims retry with the same gateway transaction ID', async () => {
+    const customerId = `CUSTOMER-${randomUUID()}`;
+    const orderId = `ORD-${randomUUID()}`;
+    const paymentId = `PAY-${randomUUID()}`;
+    const refundId = `REF-${randomUUID()}`;
+    await createCustomer(customerId);
+    await createOrder(customerId, orderId);
+    await query(`
+      INSERT INTO payments (id, order_id, customer_id, amount, currency, gateway, payment_method, transaction_id, bank_tran_id, status)
+      VALUES ($1, $2, $3, 100, 'BDT', 'sslcommerz', 'bkash', $4, $5, 'VALIDATED')
+    `, [paymentId, orderId, customerId, `SSLCZ-${randomUUID().replaceAll('-', '').toUpperCase()}`, `BANK-${randomUUID()}`]);
+    await query(`
+      INSERT INTO refunds (id, order_id, payment_id, amount, method, status, updated_at)
+      VALUES ($1, $2, $3, 100, 'sslcommerz', 'initiating', CURRENT_TIMESTAMP - INTERVAL '3 minutes')
+    `, [refundId, orderId, paymentId]);
+    let refundTransactionId = '';
+    const initiateRefund = mock.method(sslcommerz, 'initiateRefund', async (params) => {
+      refundTransactionId = params.refundTransId;
+      return { APIConnect: 'DONE', status: 'processing', refund_ref_id: `GREF-${refundId}` };
+    });
+
+    try {
+      const result = await processRefundQueue();
+      assert.equal(result.initiated, 1);
+      assert.equal(refundTransactionId, `RF-${refundId.replace(/[^A-Za-z0-9]/g, '').slice(-24)}`);
+      const refund = await query('SELECT status, gateway_ref FROM refunds WHERE id = $1', [refundId]);
+      assert.equal(refund.rows[0].status, 'submitted');
+      assert.equal(refund.rows[0].gateway_ref, `GREF-${refundId}`);
+    } finally {
+      initiateRefund.mock.restore();
+    }
+  });
+
+  dbTest('a validated second payment is refunded without refunding the order', async (t) => {
+    const customerId = `CUSTOMER-${randomUUID()}`;
+    const orderId = `ORD-${randomUUID()}`;
+    const primaryTransactionId = `SSLCZ-${randomUUID().replaceAll('-', '').toUpperCase()}`;
+    const duplicateTransactionId = `SSLCZ-${randomUUID().replaceAll('-', '').toUpperCase()}`;
+    await createCustomer(customerId);
+    await createOrder(customerId, orderId);
+    await query("UPDATE orders SET payment_status = 'paid', payment_method = 'bkash', transaction_id = $2 WHERE id = $1", [orderId, primaryTransactionId]);
+    await query(`
+      INSERT INTO payments (id, order_id, customer_id, amount, currency, gateway, payment_method, transaction_id, status)
+      VALUES ($1, $2, $3, 100, 'BDT', 'sslcommerz', 'bkash', $4, 'VALIDATED'),
+        ($5, $2, $3, 100, 'BDT', 'sslcommerz', 'nagad', $6, 'PENDING')
+    `, [`PAY-${randomUUID()}`, orderId, customerId, primaryTransactionId, `PAY-${randomUUID()}`, duplicateTransactionId]);
+    const cookie = await createSession('customer', customerId);
+    t.mock.method(globalThis, 'fetch', async () => new Response(JSON.stringify({
+      status: 'VALID',
+      tran_id: duplicateTransactionId,
+      val_id: 'VAL-DUPLICATE',
+      amount: '100.00',
+      currency: 'BDT',
+      bank_tran_id: `BANK-${randomUUID()}`,
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    t.mock.method(sslcommerz, 'initiateRefund', async () => ({
+      APIConnect: 'DONE', status: 'success', refund_ref_id: `GREF-${randomUUID()}`,
+    }));
+
+    const response = await request(server, '/api/payment/sslcommerz/validate', 'POST', {
+      tran_id: duplicateTransactionId,
+      val_id: 'VAL-DUPLICATE',
+    }, cookie);
+    assert.equal(response.status, 200, JSON.stringify(response.body));
+    assert.equal(response.body.status, 'REFUND_PENDING');
+    const order = await query('SELECT payment_status, transaction_id FROM orders WHERE id = $1', [orderId]);
+    const duplicatePayment = await query('SELECT id, status FROM payments WHERE transaction_id = $1', [duplicateTransactionId]);
+    const refunds = await query('SELECT payment_id, status FROM refunds WHERE order_id = $1', [orderId]);
+    assert.equal(order.rows[0].payment_status, 'paid');
+    assert.equal(order.rows[0].transaction_id, primaryTransactionId);
+    assert.equal(duplicatePayment.rows[0].status, 'VALIDATED');
+    assert.equal(refunds.rows.length, 1);
+    assert.equal(refunds.rows[0].payment_id, duplicatePayment.rows[0].id);
+  });
+
   dbTest('payment init rejects client-controlled amount and keeps the order pending', async () => {
     const customerId = `CUSTOMER-${randomUUID()}`;
     const orderId = `ORD-${randomUUID()}`;
@@ -283,6 +401,27 @@ dbTest('plaintext stored passwords are rejected with the same message as unknown
     const order = await query('SELECT payment_status, payment_method FROM orders WHERE id = $1', [orderId]);
     assert.equal(order.rows[0].payment_status, 'pending');
     assert.equal(order.rows[0].payment_method, 'cash_on_delivery');
+  });
+
+  dbTest('concurrent payment initialization reuses one transaction and gateway session', async (t) => {
+    process.env.SSLCOMMERZ_IPN_TOKEN ??= 'test-payment-integrity-ipn-token';
+    const fixture = await createCheckoutFixture();
+    const order = await placeCartOrder(fixture, 'online');
+    const initPayment = t.mock.method(sslcommerz, 'initPayment', async () => ({
+      status: 'SUCCESS',
+      GatewayPageURL: 'https://gateway.example.test/session',
+    }));
+
+    const responses = await Promise.all([
+      request(server, '/api/payment/init', 'POST', { orderId: order.Order_ID }, fixture.customerCookie),
+      request(server, '/api/payment/init', 'POST', { orderId: order.Order_ID }, fixture.customerCookie),
+    ]);
+    assert.deepEqual(responses.map((response) => response.status), [200, 200]);
+    assert.equal(responses[0].body.tran_id, responses[1].body.tran_id);
+    assert.deepEqual(responses[0].body.session, responses[1].body.session);
+    assert.equal(initPayment.mock.callCount(), 1);
+    const pendingPayments = await query("SELECT COUNT(*)::integer AS count FROM payments WHERE order_id = $1 AND status = 'PENDING'", [order.Order_ID]);
+    assert.equal(pendingPayments.rows[0].count, 1);
   });
 
   dbTest('payment init rejects an expired order', async () => {
