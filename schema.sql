@@ -629,6 +629,7 @@ CREATE TABLE IF NOT EXISTS payments (
     card_type VARCHAR(50),
     card_brand VARCHAR(50),
     card_issuer VARCHAR(100),
+    gateway_session_json JSONB,
     status VARCHAR(32) NOT NULL DEFAULT 'PENDING',
     customer_phone VARCHAR(50),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -637,21 +638,34 @@ CREATE TABLE IF NOT EXISTS payments (
 
 ALTER TABLE payments
     ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE payments
+    ADD COLUMN IF NOT EXISTS gateway_session_json JSONB;
 
 CREATE TABLE IF NOT EXISTS refunds (
     id VARCHAR(64) PRIMARY KEY,
-    order_id VARCHAR(64) NOT NULL UNIQUE REFERENCES orders(id),
+    order_id VARCHAR(64) NOT NULL REFERENCES orders(id),
     payment_id VARCHAR(64) REFERENCES payments(id),
     amount NUMERIC(10, 2) NOT NULL CHECK (amount > 0),
     method VARCHAR(24) NOT NULL CHECK (method IN ('sslcommerz', 'manual_cash')),
+    duplicate_payment BOOLEAN NOT NULL DEFAULT FALSE,
     status VARCHAR(16) NOT NULL DEFAULT 'requested'
-        CHECK (status IN ('requested', 'submitted', 'completed', 'failed')),
+        CHECK (status IN ('requested', 'initiating', 'submitted', 'completed', 'failed')),
     gateway_ref VARCHAR(100),
     processed_by VARCHAR(64) REFERENCES users(id),
     last_error TEXT,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE refunds DROP CONSTRAINT IF EXISTS refunds_order_id_key;
+ALTER TABLE refunds ADD COLUMN IF NOT EXISTS duplicate_payment BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE refunds DROP CONSTRAINT IF EXISTS refunds_status_check;
+ALTER TABLE refunds ADD CONSTRAINT refunds_status_check
+    CHECK (status IN ('requested', 'initiating', 'submitted', 'completed', 'failed'));
+CREATE UNIQUE INDEX IF NOT EXISTS uq_refunds_payment
+    ON refunds(payment_id) WHERE payment_id IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_refunds_manual_cash_order
+    ON refunds(order_id) WHERE method = 'manual_cash';
 
 -- Upgrade old deployments: copy profile credentials into users, then remove duplicate columns.
 DO $$

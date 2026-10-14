@@ -149,6 +149,18 @@ test('public login requests reach the login handler without a session', async ()
   assert.notEqual(response.status, 401, JSON.stringify(response.body));
 });
 
+test('support request endpoint accepts the app payload shape', async () => {
+  const response = await request('POST', '/api/support/requests', {
+    Name: 'Test User',
+    Email: 'support@example.com',
+    Subject: 'Product refund',
+    Message: 'Need a refund for an incorrect order. Please review.',
+  });
+  assert.equal(response.status, 201, JSON.stringify(response.body));
+  assert.equal(response.body.success, true);
+  assert.match(String(response.body.Request_ID ?? ''), /^SUP-/);
+});
+
 dbTest('guests can register and read the seller catalog without private seller fields', async () => {
   const registration = await request('POST', '/api/customers', {});
   assert.notEqual(registration.status, 401);
