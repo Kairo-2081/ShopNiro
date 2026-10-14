@@ -145,7 +145,7 @@ export const processRefundQueue = async () => {
 
   for (const refund of result.rows) {
     try {
-      if (refund.status === 'requested') {
+      if (refund.status === 'requested' || refund.status === 'initiating') {
         const claim = await query(
           `UPDATE refunds SET status = 'initiating', updated_at = CURRENT_TIMESTAMP
            WHERE id = $1 AND (status = 'requested'
