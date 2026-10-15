@@ -325,10 +325,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
           <div>
             <h1 className="text-xl font-bold tracking-tight text-surface-900 dark:text-white flex items-center gap-2">
-              Platform Admin Governance Console
+              {t('adminGovernanceConsole')}
             </h1>
             <p className="text-xs text-surface-500 dark:text-surface-400 mt-0.5">
-              Review seller applications, manage global product categories, and moderate marketplace entities.
+              {t('adminGovernanceDesc')}
             </p>
           </div>
         </div>
@@ -342,7 +342,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         ) : (
           <div className="px-4 py-2 rounded-full bg-success-500/10 border border-success-500/20 text-success-700 dark:text-success-400 text-xs font-semibold flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-success-500" />
-            <span>All Seller Applications Processed</span>
+            <span>{t('allSellerAppsProcessed')}</span>
           </div>
         )}
       </div>
@@ -391,12 +391,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       {request.Payment_Status === 'paid' && request.Payment_Method === 'cash_on_delivery' ? (
                         <label className="flex items-start gap-2 text-xs text-surface-700 dark:text-surface-300">
                           <input type="checkbox" checked={confirmedCashReturnIds.includes(request.Request_ID)} onChange={(event) => setConfirmedCashReturnIds((ids) => event.target.checked ? [...ids, request.Request_ID] : ids.filter((id) => id !== request.Request_ID))} />
-                          Cash was returned to the customer
+                          {t('cashReturnedToCustomer')}
                         </label>
                       ) : request.Payment_Status === 'paid' ? (
-                        <span className="text-xs text-surface-500 dark:text-surface-400">An SSLCommerz refund will be requested after approval.</span>
+                        <span className="text-xs text-surface-500 dark:text-surface-400">{t('sslCommerzRefundNotice')}</span>
                       ) : (
-                        <span className="text-xs text-surface-500 dark:text-surface-400">No payment refund is required.</span>
+                        <span className="text-xs text-surface-500 dark:text-surface-400">{t('noRefundRequired')}</span>
                       )}
                       <div className="flex gap-2">
                         <button type="button" disabled={reviewingCancellationId === request.Request_ID} onClick={() => void reviewCancellationRequest(request, 'rejected')} className="rounded-full border border-surface-300 px-3 py-2 text-xs font-bold dark:border-surface-700">{t('reject')}</button>
@@ -416,7 +416,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           {loadingSupportRequests ? (
             <div role="status" aria-label="Loading support requests" className="premium-skeleton h-40 rounded-2xl" />
           ) : supportRequests.length === 0 ? (
-            <p className="premium-surface rounded-xl p-8 text-center text-sm text-surface-500 dark:text-surface-400">No support requests.</p>
+            <p className="premium-surface rounded-xl p-8 text-center text-sm text-surface-500 dark:text-surface-400">{t('noSupportRequests')}</p>
           ) : (
             <div className="space-y-3">
               {supportRequests.map((request) => (
@@ -432,7 +432,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   </div>
                   <div className="grid gap-3 border-t border-surface-200 pt-3 dark:border-surface-800 sm:grid-cols-[170px_1fr_auto]">
                     <select value={supportStatuses[request.Request_ID] || request.Status} onChange={(event) => setSupportStatuses((current) => ({ ...current, [request.Request_ID]: event.target.value as SupportRequest['Status'] }))} className="rounded-lg border border-surface-300 bg-white px-3 py-2 text-xs dark:border-surface-700 dark:bg-[#181F2A]">
-                      <option value="open">Open</option><option value="in_progress">In progress</option><option value="resolved">Resolved</option>
+                      <option value="open">{t('openStatus')}</option><option value="in_progress">{t('inProgressStatus')}</option><option value="resolved">{t('resolvedStatus')}</option>
                     </select>
                     <input value={supportNotes[request.Request_ID] || ''} onChange={(event) => setSupportNotes((current) => ({ ...current, [request.Request_ID]: event.target.value }))} maxLength={2000} placeholder="Internal resolution note" className="min-w-0 rounded-lg border border-surface-300 bg-white px-3 py-2 text-xs dark:border-surface-700 dark:bg-[#181F2A]" />
                     <button type="button" disabled={savingSupportId === request.Request_ID} onClick={() => void updateSupportRequest(request)} className="rounded-lg bg-success-700 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">{savingSupportId === request.Request_ID ? t('saving') : t('save')}</button>
@@ -452,9 +452,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <div className="col-span-12 lg:col-span-8 bg-white dark:bg-[#12161D] border border-brand-100 dark:border-brand-500/20 rounded-3xl flex flex-col overflow-hidden shadow-xs">
             <div className="p-6 border-b border-brand-100 dark:border-surface-800 flex items-center justify-between">
               <div>
-                <h2 className="text-sm font-semibold text-surface-900 dark:text-white">Seller Approval Workflow</h2>
+                <h2 className="text-sm font-semibold text-surface-900 dark:text-white">{t('sellerApprovalWorkflow')}</h2>
                 <p className="text-micro text-surface-500 dark:text-surface-400 mt-0.5">
-                  Approve or restrict merchant stores requesting live product listing privileges.
+                  {t('sellerApprovalWorkflowDesc')}
                 </p>
               </div>
               <button
@@ -469,11 +469,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <table className="w-full text-left text-xs">
                 <thead className="bg-surface-50 dark:bg-[#181F2A] text-micro text-surface-500 dark:text-surface-400 uppercase tracking-wider border-b border-brand-100 dark:border-surface-800">
                   <tr>
-                    <th className="px-6 py-4 font-semibold">Seller Info</th>
-                    <th className="px-6 py-4 font-semibold">Contact Email</th>
-                    <th className="px-6 py-4 font-semibold">Registered</th>
-                    <th className="px-6 py-4 font-semibold">Status</th>
-                    <th className="px-6 py-4 font-semibold text-right">Approval Actions</th>
+                    <th className="px-6 py-4 font-semibold">{t('sellerInfoCol')}</th>
+                    <th className="px-6 py-4 font-semibold">{t('contactEmailCol')}</th>
+                    <th className="px-6 py-4 font-semibold">{t('registeredCol')}</th>
+                    <th className="px-6 py-4 font-semibold">{t('statusCol')}</th>
+                    <th className="px-6 py-4 font-semibold text-right">{t('approvalActionsCol')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-brand-100/60 dark:divide-surface-800/80 text-surface-700 dark:text-surface-300">
@@ -494,7 +494,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           <div>
                             <p className="font-semibold text-surface-900 dark:text-white">{seller.Name}</p>
                             <p className="text-micro text-surface-500 dark:text-surface-500 font-mono">ID: {seller.Seller_ID}</p>
-                            <p className="text-micro text-brand-600 dark:text-brand-400">View application</p>
+                            <p className="text-micro text-brand-600 dark:text-brand-400">{t('viewApplication')}</p>
                           </div>
                         </button>
                       </td>
@@ -508,7 +508,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         )}
                         {seller.Status === 'pending' && (
                           <span className="inline-flex whitespace-nowrap px-2.5 py-1 rounded-full bg-warning-500/10 text-warning-600 dark:text-warning-400 text-micro font-bold border border-warning-500/20 uppercase">
-                            Pending Review
+                            {t('pendingReview')}
                           </span>
                         )}
                         {(seller.Status === 'suspended' || seller.Status === 'rejected') && (
@@ -527,7 +527,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               title={`Review ${seller.Name}`}
                               className="inline-flex min-h-10 items-center px-3 py-1 bg-success-600 hover:bg-success-500 disabled:opacity-50 text-white rounded-full text-micro font-bold transition-all cursor-pointer shadow-sm shadow-success-500/20"
                             >
-                              Review &amp; approve
+                              {t('reviewAndApprove')}
                             </button>
                           )}
                           {seller.Status !== 'suspended' && (
@@ -538,7 +538,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               title={`Suspend ${seller.Name}`}
                               className="inline-flex min-h-10 items-center px-3 py-1 bg-danger-600/80 hover:bg-danger-500 disabled:opacity-50 text-white rounded-full text-micro font-bold transition-all cursor-pointer"
                             >
-                              Suspend
+                              {t('suspend')}
                             </button>
                           )}
                         </div>
@@ -555,21 +555,21 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             {/* System Activity Log */}
             <div className="bg-white dark:bg-[#12161D] border border-brand-100 dark:border-brand-500/20 rounded-3xl p-6 flex flex-col justify-between shadow-xs">
               <h2 className="text-sm font-semibold text-surface-900 dark:text-white border-b border-brand-100 dark:border-surface-800 pb-3">
-                System Activity Log
+                {t('systemActivityLog')}
               </h2>
               <div className="space-y-4 pt-4 text-xs">
                 <div className="flex gap-3 items-start">
                   <div className="w-2.5 h-2.5 rounded-full bg-brand-500 mt-1 shrink-0"></div>
                   <div>
-                    <p className="font-medium text-surface-800 dark:text-surface-200">Merchant Directory Synced</p>
-                    <p className="text-micro text-surface-500 dark:text-surface-400">All registered vendors verified with PostgreSQL</p>
+                    <p className="font-medium text-surface-800 dark:text-surface-200">{t('merchantDirSynced')}</p>
+                    <p className="text-micro text-surface-500 dark:text-surface-400">{t('vendorsVerifiedDb')}</p>
                   </div>
                 </div>
 
                 <div className="flex gap-3 items-start">
                   <div className="w-2.5 h-2.5 rounded-full bg-success-500 mt-1 shrink-0"></div>
                   <div>
-                    <p className="font-medium text-surface-800 dark:text-surface-200">Platform Health Guard Active</p>
+                    <p className="font-medium text-surface-800 dark:text-surface-200">{t('platformHealthGuard')}</p>
                     <p className="text-micro text-surface-500 dark:text-surface-400">0 critical incidents reported across active nodes</p>
                   </div>
                 </div>
@@ -577,7 +577,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <div className="flex gap-3 items-start">
                   <div className="w-2.5 h-2.5 rounded-full bg-brand-500 mt-1 shrink-0"></div>
                   <div>
-                    <p className="font-medium text-surface-800 dark:text-surface-200">Category Registry Updated</p>
+                    <p className="font-medium text-surface-800 dark:text-surface-200">{t('categoryRegistryUpdated')}</p>
                     <p className="text-micro text-surface-500 dark:text-surface-400">{categories.length} Categories active in storefront</p>
                   </div>
                 </div>
@@ -587,9 +587,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             {/* Storefront Synchronized Banner */}
             <div className="bg-gradient-to-br from-[#0B1528] to-[#12161D] border border-brand-500/25 rounded-3xl p-6 relative overflow-hidden text-white space-y-3 shadow-lg shadow-brand-500/10">
               <div className="absolute -right-12 -top-12 w-48 h-48 bg-brand-500/10 rounded-full blur-3xl pointer-events-none"></div>
-              <h3 className="text-base font-bold text-brand-400">Storefront Synchronization</h3>
+              <h3 className="text-base font-bold text-brand-400">{t('storefrontSyncTitle')}</h3>
               <p className="text-xs text-surface-300 leading-relaxed">
-                Changes made here immediately update live product visibility and seller status across all client interfaces.
+                {t('storefrontSyncDesc')}
               </p>
               <div className="pt-2">
                 <span className="inline-block bg-brand-600 text-white px-3.5 py-1.5 rounded-full text-xs font-bold shadow-md shadow-brand-500/30">
@@ -622,7 +622,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
             <div className="flex items-center gap-3 text-xs">
               <div className="flex items-center gap-2">
-                <span className="text-surface-600 dark:text-surface-400 font-medium">Status Filter:</span>
+                <span className="text-surface-600 dark:text-surface-400 font-medium">{t('statusFilterLabel')}</span>
                 <select
                   value={sellerStatusFilter}
                   onChange={(e) => setSellerStatusFilter(e.target.value)}
@@ -642,7 +642,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   className="flex items-center gap-1.5 px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white font-semibold rounded-full text-xs transition-all shadow-md shadow-brand-500/25 cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Register New Merchant</span>
+                  <span>{t('registerNewMerchant')}</span>
                 </button>
               )}
             </div>
@@ -653,11 +653,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <table className="w-full text-left text-xs">
                 <thead className="bg-surface-50 dark:bg-[#181F2A] text-micro text-surface-500 dark:text-surface-400 uppercase tracking-wider border-b border-brand-100 dark:border-surface-800">
                   <tr>
-                    <th className="p-4">Merchant Name</th>
+                    <th className="p-4">{t('merchantNameCol')}</th>
                     <th className="p-4">Email &amp; Phone</th>
-                    <th className="p-4">Registered Address</th>
-                    <th className="p-4">Status</th>
-                    <th className="p-4 text-right">Approval Actions</th>
+                    <th className="p-4">{t('registeredAddressCol')}</th>
+                    <th className="p-4">{t('statusCol')}</th>
+                    <th className="p-4 text-right">{t('approvalActionsCol')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-brand-100/60 dark:divide-surface-800/80">
@@ -678,7 +678,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           >
                             <span className="font-bold text-surface-900 dark:text-white block">{seller.Name}</span>
                             <span className="text-micro text-surface-500 dark:text-surface-500 font-mono block">ID: {seller.Seller_ID}</span>
-                            <span className="text-micro text-brand-600 dark:text-brand-400 block">View application</span>
+                            <span className="text-micro text-brand-600 dark:text-brand-400 block">{t('viewApplication')}</span>
                           </button>
                         </div>
                       </td>
@@ -697,7 +697,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         )}
                         {seller.Status === 'pending' && (
                           <span className="inline-flex whitespace-nowrap px-2.5 py-1 rounded-full bg-warning-500/10 text-warning-600 dark:text-warning-400 text-micro font-bold border border-warning-500/20 uppercase">
-                            Pending Review
+                            {t('pendingReview')}
                           </span>
                         )}
                         {(seller.Status === 'suspended' || seller.Status === 'rejected') && (
@@ -955,14 +955,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <div className="bg-white dark:bg-[#12161D] border border-brand-100 dark:border-brand-500/20 rounded-3xl p-5 shadow-xs flex flex-col justify-between">
               <div>
                 <span className="text-micro font-bold text-surface-500 dark:text-surface-500 uppercase tracking-wider block">
-                  Total Order Volume
+                  {t('totalOrderVolume')}
                 </span>
                 <div className="text-2xl font-black text-surface-900 dark:text-white mt-1">
                   {formatBDT(totalOrderVolume)}
                 </div>
               </div>
               <span className="text-micro text-success-500 font-semibold mt-2">
-                Order subtotal plus shipping across the marketplace
+                {t('totalOrderVolumeDesc')}
               </span>
             </div>
 
@@ -976,7 +976,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </div>
               </div>
               <span className="text-micro text-pink-600 dark:text-pink-400 font-semibold mt-2">
-                Official MFS Partner
+                {t('officialMfsPartner')}
               </span>
             </div>
 
@@ -997,7 +997,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <div className="bg-white dark:bg-[#12161D] border border-brand-100 dark:border-brand-500/20 rounded-3xl p-5 shadow-xs flex flex-col justify-between">
               <div>
                 <span className="text-micro font-bold text-surface-500 dark:text-surface-500 uppercase tracking-wider block">
-                  Gateway Status
+                  {t('gatewayStatus')}
                 </span>
                 <div className="text-sm font-black text-success-500 mt-1 flex items-center gap-1.5">
                   <span className="w-2.5 h-2.5 rounded-full bg-success-500 animate-pulse"></span>
@@ -1014,26 +1014,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               <div>
                 <h2 className="text-sm font-bold text-surface-900 dark:text-white flex items-center gap-2">
                   <Lock className="w-4 h-4 text-success-500" />
-                  Online Payment Transaction Ledger
+                  {t('onlineTxnLedger')}
                 </h2>
                 <p className="text-micro text-surface-500 dark:text-surface-400 mt-0.5">
-                  Online gateway sessions recorded separately by payment channel and transaction status.
+                  {t('onlineTxnLedgerDesc')}
                 </p>
               </div>
 
               <div className="flex items-center gap-2">
-                <label className="sr-only" htmlFor="payment-channel-filter">Filter online payments by channel</label>
+                <label className="sr-only" htmlFor="payment-channel-filter">{t('filterOnlineChannel')}</label>
                 <select
                   id="payment-channel-filter"
                   value={paymentFilter}
                   onChange={(event) => setPaymentFilter(event.target.value)}
                   className="min-h-9 rounded-full border border-surface-200 bg-surface-50 px-3 text-xs font-semibold text-surface-700 dark:border-surface-700 dark:bg-[#181F2A] dark:text-surface-200"
                 >
-                  <option value="all">All online channels</option>
+                  <option value="all">{t('allOnlineChannels')}</option>
                   <option value="bkash">bKash</option>
                   <option value="nagad">Nagad</option>
                   <option value="rocket">Rocket</option>
-                  <option value="cards">Cards / Internet banking</option>
+                  <option value="cards">{t('cardsInternetBanking')}</option>
                 </select>
                 <button
                   type="button"
@@ -1042,7 +1042,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   className="px-3.5 py-1.5 rounded-full border border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-[#181F2A] hover:bg-surface-100 text-xs font-bold text-surface-700 dark:text-surface-300 flex items-center gap-1.5 transition-all cursor-pointer"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${loadingTransactions ? 'animate-spin' : ''}`} />
-                  <span>Refresh Ledger</span>
+                  <span>{t('refreshLedger')}</span>
                 </button>
               </div>
             </div>
@@ -1053,12 +1053,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <thead>
                   <tr className="bg-surface-50/50 dark:bg-[#161C24]/80 border-b border-brand-100 dark:border-surface-800 text-micro uppercase font-bold tracking-wider text-surface-500 dark:text-surface-500">
                     <th className="p-4">Transaction ID (tran_id)</th>
-                    <th className="p-4">Channel</th>
+                    <th className="p-4">{t('channelCol')}</th>
                     <th className="p-4">Order ID</th>
-                    <th className="p-4">Customer Phone</th>
+                    <th className="p-4">{t('customerPhoneCol')}</th>
                     <th className="p-4">Amount (BDT)</th>
-                    <th className="p-4">Status</th>
-                    <th className="p-4">Time</th>
+                    <th className="p-4">{t('statusCol')}</th>
+                    <th className="p-4">{t('timeCol')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-brand-100/50 dark:divide-surface-800/80">
@@ -1126,14 +1126,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
           <section className="overflow-hidden rounded-2xl border border-surface-200 bg-white dark:border-surface-800 dark:bg-[#12161D]">
             <header className="flex items-center justify-between gap-3 border-b border-surface-200 p-4 dark:border-surface-800">
-              <div><h2 className="text-sm font-bold text-surface-900 dark:text-white">Seller payout requests</h2><p className="text-xs text-surface-500 dark:text-surface-400">Verify account details and record an external reference when paying.</p></div>
+              <div><h2 className="text-sm font-bold text-surface-900 dark:text-white">{t('sellerPayoutRequests')}</h2><p className="text-xs text-surface-500 dark:text-surface-400">{t('verifyPayoutReferenceNotice')}</p></div>
               <button type="button" onClick={() => void fetchSellerPayouts()} disabled={loadingPayouts} aria-label={t('refresh')} className="rounded-lg border border-surface-300 p-2 text-surface-600 disabled:opacity-50 dark:border-surface-700 dark:text-surface-300"><RefreshCw className={`h-4 w-4 ${loadingPayouts ? 'animate-spin' : ''}`} /></button>
             </header>
             <div className="divide-y divide-surface-200 dark:divide-surface-800">
               {sellerPayouts.map((payout) => (
                 <article key={payout.id} className="grid gap-3 p-4 lg:grid-cols-[1fr_auto_auto] lg:items-center">
                   <div className="min-w-0"><p className="text-sm font-semibold text-surface-900 dark:text-white">{payout.seller_name} · {formatCurrency(Number(payout.amount))}</p><p className="mt-1 break-all text-xs text-surface-500 dark:text-surface-400">{payout.method}: {payout.account} · {payout.id}</p></div>
-                  <label className="text-xs font-semibold text-surface-600 dark:text-surface-300">External reference<input value={payoutReferences[payout.id] || ''} onChange={(event) => setPayoutReferences((current) => ({ ...current, [payout.id]: event.target.value }))} className="mt-1 block w-full rounded-lg border border-surface-300 bg-white px-3 py-2 text-sm dark:border-surface-700 dark:bg-[#181F2A]" /></label>
+                  <label className="text-xs font-semibold text-surface-600 dark:text-surface-300">{t('externalReference')}<input value={payoutReferences[payout.id] || ''} onChange={(event) => setPayoutReferences((current) => ({ ...current, [payout.id]: event.target.value }))} className="mt-1 block w-full rounded-lg border border-surface-300 bg-white px-3 py-2 text-sm dark:border-surface-700 dark:bg-[#181F2A]" /></label>
                   <div className="flex gap-2"><button type="button" onClick={() => void processSellerPayout(payout, 'pay')} className="rounded-lg bg-success-700 px-3 py-2 text-xs font-bold text-white">{t('markPaid')}</button><button type="button" onClick={() => void processSellerPayout(payout, 'reject')} className="rounded-lg border border-danger-300 px-3 py-2 text-xs font-bold text-danger-700 dark:border-danger-900 dark:text-danger-300">{t('reject')}</button></div>
                 </article>
               ))}
@@ -1184,25 +1184,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
             <div className="max-h-[65vh] space-y-5 overflow-y-auto p-5 text-sm">
               <div className="flex items-center justify-between gap-3">
-                <h3 className="font-semibold text-surface-900 dark:text-white">Application details</h3>
+                <h3 className="font-semibold text-surface-900 dark:text-white">{t('applicationDetailsTitle')}</h3>
                 <span className={`whitespace-nowrap rounded-full border px-2.5 py-1 text-micro font-bold uppercase ${selectedSeller.Status === 'approved' ? 'border-success-500/20 bg-success-500/10 text-success-600 dark:text-success-400' : selectedSeller.Status === 'pending' ? 'border-warning-500/20 bg-warning-500/10 text-warning-600 dark:text-warning-400' : 'border-danger-500/20 bg-danger-500/10 text-danger-600 dark:text-danger-400'}`}>
-                  {selectedSeller.Status === 'pending' ? 'Pending review' : selectedSeller.Status}
+                  {selectedSeller.Status === 'pending' ? t('pendingReview') : selectedSeller.Status}
                 </span>
               </div>
 
               <div>
-                <p className="mb-1 text-xs font-semibold text-surface-500 dark:text-surface-400">Business description</p>
+                <p className="mb-1 text-xs font-semibold text-surface-500 dark:text-surface-400">{t('businessDesc')}</p>
                 <p className="whitespace-pre-wrap break-words text-surface-800 dark:text-surface-200">{selectedSeller.Description || 'No description was provided.'}</p>
               </div>
 
               <section className="space-y-2 border-y border-surface-200 py-4 dark:border-surface-800">
-                <h3 className="font-semibold text-surface-900 dark:text-white">Verification checklist</h3>
+                <h3 className="font-semibold text-surface-900 dark:text-white">{t('verificationChecklist')}</h3>
                 <button
                   type="button"
                   onClick={() => void handleViewSellerIdentityDocument(selectedSeller)}
                   className="inline-flex items-center gap-2 rounded-lg border border-surface-300 px-3 py-2 text-xs font-semibold text-surface-700 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-200 dark:hover:bg-surface-800"
                 >
-                  <ExternalLink className="h-4 w-4" /> View identity document
+                  <ExternalLink className="h-4 w-4" /> {t('viewIdDoc')}
                 </button>
                 {([
                   ['identityVerified', 'Identity verified'],
