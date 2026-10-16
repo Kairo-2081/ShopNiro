@@ -424,6 +424,103 @@ dbTest('plaintext stored passwords are rejected with the same message as unknown
     assert.equal(pendingPayments.rows[0].count, 1);
   });
 
+  dbTest('payment init holds no pooled connection and no order lock while the gateway call is in flight', async (t) => {
+    process.env.SSLCOMMERZ_IPN_TOKEN ??= 'test-payment-integrity-ipn-token';
+    const fixture = await createCheckoutFixture();
+    const order = await placeCartOrder(fixture, 'online');
+    let markStarted!: () => void;
+    let releaseGateway!: () => void;
+    const started = new Promise<void>((resolve) => { markStarted = resolve; });
+    const gate = new Promise<void>((resolve) => { releaseGateway = resolve; });
+    t.mock.method(sslcommerz, 'initPayment', async () => {
+      markStarted();
+      await gate;
+      return { status: 'SUCCESS', GatewayPageURL: 'https://gateway.example.test/session' };
+    });
+
+    const inFlight = request(server, '/api/payment/init', 'POST', { orderId: order.Order_ID }, fixture.customerCookie);
+    try {
+      await started;
+      assert.equal(pool.totalCount - pool.idleCount, 0, 'no pooled client may be checked out during the gateway call');
+      // NOWAIT fails immediately (SQLSTATE 55P03) if another transaction still holds the order row lock.
+      const probe = await query('SELECT id FROM orders WHERE id = $1 FOR UPDATE NOWAIT', [order.Order_ID]);
+      assert.equal(probe.rows.length, 1);
+    } finally {
+      releaseGateway();
+    }
+    const response = await inFlight;
+    assert.equal(response.status, 200, JSON.stringify(response.body));
+  });
+
+  dbTest('a failed gateway call releases the session claim so a retry reuses the same transaction', async (t) => {
+    process.env.SSLCOMMERZ_IPN_TOKEN ??= 'test-payment-integrity-ipn-token';
+    const fixture = await createCheckoutFixture();
+    const order = await placeCartOrder(fixture, 'online');
+    let calls = 0;
+    const initPayment = t.mock.method(sslcommerz, 'initPayment', async () => {
+      calls += 1;
+      if (calls === 1) throw new Error('gateway unavailable');
+      return { status: 'SUCCESS', GatewayPageURL: 'https://gateway.example.test/session' };
+    });
+
+    const failed = await request(server, '/api/payment/init', 'POST', { orderId: order.Order_ID }, fixture.customerCookie);
+    assert.equal(failed.status, 500);
+    const afterFailure = await query(
+      "SELECT transaction_id, gateway_session_json, gateway_session_started_at FROM payments WHERE order_id = $1 AND status = 'PENDING'",
+      [order.Order_ID]
+    );
+    assert.equal(afterFailure.rows.length, 1);
+    assert.equal(afterFailure.rows[0].gateway_session_json, null);
+    assert.equal(afterFailure.rows[0].gateway_session_started_at, null);
+
+    const retried = await request(server, '/api/payment/init', 'POST', { orderId: order.Order_ID }, fixture.customerCookie);
+    assert.equal(retried.status, 200, JSON.stringify(retried.body));
+    assert.equal(retried.body.tran_id, afterFailure.rows[0].transaction_id);
+    assert.equal(initPayment.mock.callCount(), 2);
+    const pending = await query("SELECT COUNT(*)::integer AS count FROM payments WHERE order_id = $1 AND status = 'PENDING'", [order.Order_ID]);
+    assert.equal(pending.rows[0].count, 1);
+  });
+
+  dbTest('payment init waits for a fresh session claim and takes over an expired one', async (t) => {
+    process.env.SSLCOMMERZ_IPN_TOKEN ??= 'test-payment-integrity-ipn-token';
+    const initPayment = t.mock.method(sslcommerz, 'initPayment', async () => ({
+      status: 'SUCCESS',
+      GatewayPageURL: 'https://gateway.example.test/taken-over',
+    }));
+    const seedPendingPayment = async (claimAge: string) => {
+      const fixture = await createCheckoutFixture();
+      const order = await placeCartOrder(fixture, 'online');
+      const transactionId = `SSLCZ-${randomUUID().replaceAll('-', '').toUpperCase()}`;
+      await query(`
+        INSERT INTO payments (id, order_id, customer_id, amount, currency, gateway, payment_method, transaction_id, status, gateway_session_started_at)
+        VALUES ($1, $2, $3, $4, 'BDT', 'sslcommerz', 'bkash', $5, 'PENDING', CURRENT_TIMESTAMP - $6::interval)
+      `, [`PAY-${randomUUID()}`, order.Order_ID, fixture.customerId, Number(order.Subtotal) + Number(order.Shipping_Fee), transactionId, claimAge]);
+      return { fixture, order, transactionId };
+    };
+
+    // Fresh claim held by "another request": this request must wait and return the session that request stores.
+    const fresh = await seedPendingPayment('0 seconds');
+    const waiting = request(server, '/api/payment/init', 'POST', { orderId: fresh.order.Order_ID }, fresh.fixture.customerCookie);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    assert.equal(initPayment.mock.callCount(), 0, 'a fresh claim means another request is already calling the gateway');
+    const storedSession = { status: 'SUCCESS', GatewayPageURL: 'https://gateway.example.test/created-by-other-request' };
+    await query('UPDATE payments SET gateway_session_json = $2::jsonb WHERE transaction_id = $1', [fresh.transactionId, JSON.stringify(storedSession)]);
+    const waited = await waiting;
+    assert.equal(waited.status, 200, JSON.stringify(waited.body));
+    assert.equal(waited.body.tran_id, fresh.transactionId);
+    assert.deepEqual(waited.body.session, storedSession);
+    assert.equal(initPayment.mock.callCount(), 0);
+
+    // Expired claim (the creating request died): this request takes over, reusing the same transaction ID.
+    const expired = await seedPendingPayment('5 minutes');
+    const takenOver = await request(server, '/api/payment/init', 'POST', { orderId: expired.order.Order_ID }, expired.fixture.customerCookie);
+    assert.equal(takenOver.status, 200, JSON.stringify(takenOver.body));
+    assert.equal(takenOver.body.tran_id, expired.transactionId);
+    assert.equal(initPayment.mock.callCount(), 1);
+    const stored = await query('SELECT gateway_session_json FROM payments WHERE transaction_id = $1', [expired.transactionId]);
+    assert.equal(stored.rows[0].gateway_session_json.GatewayPageURL, 'https://gateway.example.test/taken-over');
+  });
+
   dbTest('payment init rejects an expired order', async () => {
     const customerId = `CUSTOMER-${randomUUID()}`;
     const orderId = `ORD-${randomUUID()}`;

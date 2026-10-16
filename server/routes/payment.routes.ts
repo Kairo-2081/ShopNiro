@@ -396,6 +396,131 @@ router.post('/simulator/complete', async (req, res) => {
   }
 });
 
+// --- Payment init: no pooled connection or order lock is held while we wait on the gateway ---------------------
+// A request first runs a SHORT transaction that finds or creates the order's pending payment and either returns the
+// stored gateway session or claims the right to create it. The gateway call then runs outside any transaction, and one
+// atomic UPDATE stores the session. Duplicate requests that arrive meanwhile poll a cheap row read instead of
+// blocking on a lock, so slow gateway calls no longer exhaust the connection pool.
+const SESSION_CLAIM_TTL_SECONDS = 20; // initPayment times out after 8 s; this leaves headroom before another request may take over a claim
+const SESSION_WAIT_MS = 25_000; // hard cap on how long a duplicate request waits for the session another request is creating
+const SESSION_POLL_MS = 25;
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+type InitPayment = { paymentId: string; transactionId: string; amount: number; method: string };
+type InitPreparation =
+  | { kind: 'reject'; status: number; error: string }
+  | ({ kind: 'ready'; session: unknown } & InitPayment)
+  | ({ kind: 'claimed'; shippingAddressJson: string } & InitPayment)
+  | { kind: 'wait'; paymentId: string };
+
+const initPaymentResponse = (payment: InitPayment, session: unknown) => ({
+  success: true,
+  tran_id: payment.transactionId,
+  paymentId: payment.paymentId,
+  amountBDT: payment.amount,
+  currency: 'BDT',
+  session,
+  gateway: 'SSLCommerz',
+  paymentMethod: payment.method,
+});
+
+const prepareInitPayment = async (params: {
+  orderId: string;
+  customerId: string;
+  requestedMethod: string;
+  customerPhone: unknown;
+}): Promise<InitPreparation> => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const orderResult = await client.query(
+      `SELECT id, customer_id, status, subtotal, shipping_fee, payment_status, shipping_address_json
+       FROM orders WHERE id = $1 AND customer_id = $2 FOR UPDATE`,
+      [params.orderId, params.customerId]
+    );
+    const order = orderResult.rows[0];
+    if (!order) {
+      await client.query('ROLLBACK');
+      return { kind: 'reject', status: 404, error: 'Order not found.' };
+    }
+    if (order.status !== 'placed') {
+      await client.query('ROLLBACK');
+      return { kind: 'reject', status: 409, error: 'This order is no longer eligible for payment.' };
+    }
+    if (order.payment_status !== 'pending') {
+      await client.query('ROLLBACK');
+      return { kind: 'reject', status: 409, error: 'Order payment is already finalized.' };
+    }
+
+    const existingResult = await client.query(
+      `SELECT id, transaction_id, amount, payment_method, gateway_session_json
+       FROM payments WHERE order_id = $1 AND status = 'PENDING'
+       ORDER BY created_at DESC, id DESC LIMIT 1 FOR UPDATE`,
+      [params.orderId]
+    );
+    const existing = existingResult.rows[0];
+    const amount = existing ? Number(existing.amount) : Number(order.subtotal) + Number(order.shipping_fee);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      await client.query('ROLLBACK');
+      return { kind: 'reject', status: 400, error: 'Order total is invalid.' };
+    }
+
+    const transactionId = existing?.transaction_id
+      ? String(existing.transaction_id)
+      : `SSLCZ-${randomUUID().replaceAll('-', '').slice(0, 24).toUpperCase()}`;
+    const paymentId = existing?.id ? String(existing.id) : `PAY-${randomUUID()}`;
+    const method = String(existing?.payment_method || params.requestedMethod);
+    const payment: InitPayment = { paymentId, transactionId, amount, method };
+
+    if (!existing) {
+      await client.query(
+        `SELECT * FROM gocart_payment_create($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+        [paymentId, params.orderId, params.customerId, amount, 'BDT', 'sslcommerz', method, transactionId, params.customerPhone || '']
+      );
+    } else if (existing.gateway_session_json) {
+      await client.query('COMMIT');
+      return { kind: 'ready', session: existing.gateway_session_json, ...payment };
+    }
+
+    // Claim the right to create the session. Only one request wins while a claim is fresh; an expired claim
+    // (the creating request died) can be taken over.
+    const claim = await client.query(
+      `UPDATE payments SET gateway_session_started_at = CURRENT_TIMESTAMP
+       WHERE id = $1 AND gateway_session_json IS NULL
+         AND (gateway_session_started_at IS NULL
+           OR gateway_session_started_at < CURRENT_TIMESTAMP - make_interval(secs => $2::double precision))
+       RETURNING id`,
+      [paymentId, SESSION_CLAIM_TTL_SECONDS]
+    );
+    await client.query('COMMIT');
+    if (!claim.rowCount) return { kind: 'wait', paymentId };
+    return { kind: 'claimed', shippingAddressJson: String(order.shipping_address_json || '{}'), ...payment };
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    throw error;
+  } finally {
+    client.release();
+  }
+};
+
+// Cheap, lock-free poll while another request creates the session. Returns when there is something to re-evaluate:
+// the session was stored, the claim was released or went stale, or the payment is no longer pending.
+const waitForGatewaySession = async (paymentId: string, deadline: number) => {
+  while (Date.now() < deadline) {
+    await sleep(SESSION_POLL_MS);
+    const result = await query(
+      `SELECT gateway_session_json IS NOT NULL AS has_session,
+              gateway_session_started_at IS NULL AS unclaimed,
+              gateway_session_started_at < CURRENT_TIMESTAMP - make_interval(secs => $2::double precision) AS stale,
+              status
+       FROM payments WHERE id = $1`,
+      [paymentId, SESSION_CLAIM_TTL_SECONDS]
+    );
+    const row = result.rows[0];
+    if (!row || row.has_session || row.unclaimed || row.stale || row.status !== 'PENDING') return;
+  }
+};
+
 router.post('/init', requireAuth, requireRole(['customer']), paymentInitRateLimit, async (req: AuthRequest, res) => {
   try {
     const {
@@ -429,111 +554,73 @@ router.post('/init', requireAuth, requireRole(['customer']), paymentInitRateLimi
     const hostUrl = `${protocol}://${host}`;
     const ipnUrl = `${hostUrl}/api/payment/sslcommerz/ipn?token=${encodeURIComponent(ipnToken)}`;
 
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
-      const orderResult = await client.query(
-        `SELECT id, customer_id, status, subtotal, shipping_fee, payment_status, shipping_address_json
-         FROM orders WHERE id = $1 AND customer_id = $2 FOR UPDATE`,
-        [String(orderId), req.user!.entityId]
-      );
-      const order = orderResult.rows[0];
-      if (!order) {
-        await client.query('ROLLBACK');
-        return res.status(404).json({ error: 'Order not found.' });
+    const deadline = Date.now() + SESSION_WAIT_MS;
+    for (let attempt = 0; ; attempt++) {
+      if (attempt > 0 && Date.now() >= deadline) {
+        return res.status(409).json({ error: 'Payment session is still being created. Please retry in a moment.' });
       }
-      if (order.status !== 'placed') {
-        await client.query('ROLLBACK');
-        return res.status(409).json({ error: 'This order is no longer eligible for payment.' });
-      }
-      if (order.payment_status !== 'pending') {
-        await client.query('ROLLBACK');
-        return res.status(409).json({ error: 'Order payment is already finalized.' });
-      }
-
-      const existingResult = await client.query(
-        `SELECT id, transaction_id, amount, payment_method, gateway_session_json
-         FROM payments WHERE order_id = $1 AND status = 'PENDING'
-         ORDER BY created_at DESC, id DESC LIMIT 1 FOR UPDATE`,
-        [String(orderId)]
-      );
-      const existing = existingResult.rows[0];
-      const finalAmountBDT = existing
-        ? Number(existing.amount)
-        : Number(order.subtotal) + Number(order.shipping_fee);
-      if (!Number.isFinite(finalAmountBDT) || finalAmountBDT <= 0) {
-        await client.query('ROLLBACK');
-        return res.status(400).json({ error: 'Order total is invalid.' });
-      }
-
-      const transactionId = existing?.transaction_id
-        ? String(existing.transaction_id)
-        : `SSLCZ-${randomUUID().replaceAll('-', '').slice(0, 24).toUpperCase()}`;
-      const paymentId = existing?.id ? String(existing.id) : `PAY-${randomUUID()}`;
-      const finalPaymentMethod = existing?.payment_method || paymentMethod;
-      if (!existing) {
-        await client.query(
-          `SELECT * FROM gocart_payment_create($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-          [paymentId, orderId, req.user!.entityId, finalAmountBDT, 'BDT', 'sslcommerz', finalPaymentMethod, transactionId, customerPhone || '']
-        );
-      }
-
-      let session = existing?.gateway_session_json || null;
-      if (!session) {
-        const shippingAddress = JSON.parse(String(order.shipping_address_json || '{}')) as Record<string, unknown>;
-        const shipAdd1 = [shippingAddress.House_Name, shippingAddress.Street]
-          .filter((part): part is string => typeof part === 'string' && Boolean(part.trim()))
-          .join(' ')
-          .slice(0, 255);
-        try {
-          session = await sslcommerz.initPayment(
-            {
-              tran_id: transactionId,
-              total_amount: finalAmountBDT,
-              currency: 'BDT',
-              cus_name: customerName || 'Marketplace Customer',
-              cus_email: customerEmail || 'customer@example.com',
-              cus_phone: customerPhone || '01700000000',
-              cus_add1: typeof address === 'object' ? `${address.House_Name || ''} ${address.Street || ''}`.trim() : String(address || ''),
-              cus_city: typeof address === 'object' ? address.City || 'Dhaka' : 'Dhaka',
-              cus_postcode: typeof address === 'object' ? address.Postal_Code || '1200' : '1200',
-              ship_name: customerName || 'Marketplace Customer',
-              ship_add1: shipAdd1 || 'Dhaka, Bangladesh',
-              ship_city: typeof shippingAddress.City === 'string' && shippingAddress.City.trim() ? shippingAddress.City.trim() : 'Dhaka',
-              ship_postcode: typeof shippingAddress.Postal_Code === 'string' && shippingAddress.Postal_Code.trim() ? shippingAddress.Postal_Code.trim() : '1200',
-              ship_country: 'Bangladesh',
-              product_name: productName,
-              preferred_channel: finalPaymentMethod === 'bkash' ? 'bkash' : 'any',
-              ipn_url: ipnUrl,
-            },
-            hostUrl
-          );
-        } catch (error) {
-          await client.query('COMMIT');
-          throw error;
-        }
-        await client.query(
-          'UPDATE payments SET gateway_session_json = $2::jsonb, updated_at = CURRENT_TIMESTAMP WHERE id = $1',
-          [paymentId, JSON.stringify(session)]
-        );
-      }
-      await client.query('COMMIT');
-
-      res.json({
-        success: true,
-        tran_id: transactionId,
-        paymentId,
-        amountBDT: finalAmountBDT,
-        currency: 'BDT',
-        session,
-        gateway: 'SSLCommerz',
-        paymentMethod: finalPaymentMethod,
+      const step = await prepareInitPayment({
+        orderId,
+        customerId: req.user!.entityId,
+        requestedMethod: paymentMethod,
+        customerPhone,
       });
-    } catch (error) {
-      await client.query('ROLLBACK').catch(() => {});
-      throw error;
-    } finally {
-      client.release();
+      if (step.kind === 'reject') return res.status(step.status).json({ error: step.error });
+      if (step.kind === 'ready') return res.json(initPaymentResponse(step, step.session));
+      if (step.kind === 'wait') {
+        await waitForGatewaySession(step.paymentId, deadline);
+        continue;
+      }
+
+      // We hold the claim. The gateway call runs with no transaction open and no pooled connection checked out.
+      const shippingAddress = JSON.parse(step.shippingAddressJson) as Record<string, unknown>;
+      const shipAdd1 = [shippingAddress.House_Name, shippingAddress.Street]
+        .filter((part): part is string => typeof part === 'string' && Boolean(part.trim()))
+        .join(' ')
+        .slice(0, 255);
+      let session: unknown;
+      try {
+        session = await sslcommerz.initPayment(
+          {
+            tran_id: step.transactionId,
+            total_amount: step.amount,
+            currency: 'BDT',
+            cus_name: customerName || 'Marketplace Customer',
+            cus_email: customerEmail || 'customer@example.com',
+            cus_phone: customerPhone || '01700000000',
+            cus_add1: typeof address === 'object' ? `${address.House_Name || ''} ${address.Street || ''}`.trim() : String(address || ''),
+            cus_city: typeof address === 'object' ? address.City || 'Dhaka' : 'Dhaka',
+            cus_postcode: typeof address === 'object' ? address.Postal_Code || '1200' : '1200',
+            ship_name: customerName || 'Marketplace Customer',
+            ship_add1: shipAdd1 || 'Dhaka, Bangladesh',
+            ship_city: typeof shippingAddress.City === 'string' && shippingAddress.City.trim() ? shippingAddress.City.trim() : 'Dhaka',
+            ship_postcode: typeof shippingAddress.Postal_Code === 'string' && shippingAddress.Postal_Code.trim() ? shippingAddress.Postal_Code.trim() : '1200',
+            ship_country: 'Bangladesh',
+            product_name: productName,
+            preferred_channel: step.method === 'bkash' ? 'bkash' : 'any',
+            ipn_url: ipnUrl,
+          },
+          hostUrl
+        );
+      } catch (error) {
+        // Release the claim so a retry (or a waiting duplicate) can create the session immediately.
+        await query(
+          'UPDATE payments SET gateway_session_started_at = NULL WHERE id = $1 AND gateway_session_json IS NULL',
+          [step.paymentId]
+        ).catch(() => {});
+        throw error;
+      }
+
+      // Store the session only if nobody else has and the payment is still pending.
+      const stored = await query(
+        `UPDATE payments SET gateway_session_json = $2::jsonb, updated_at = CURRENT_TIMESTAMP
+         WHERE id = $1 AND gateway_session_json IS NULL AND status = 'PENDING'
+         RETURNING id`,
+        [step.paymentId, JSON.stringify(session)]
+      );
+      if (stored.rowCount) return res.json(initPaymentResponse(step, session));
+      // Our claim expired and another request stored a session, or the payment left PENDING while we waited on the
+      // gateway: re-evaluate from the top so every caller converges on the stored session or the current order state.
     }
   } catch (error: any) {
     console.error('Error initiating payment:', error);
