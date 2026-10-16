@@ -106,7 +106,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
           ],
         },
         {
-          label: 'Marketplace',
+          label: t('marketplace'),
           items: [primaryItem(t('storefront'), ShoppingBag, 'storefront')],
         },
       ]
@@ -124,7 +124,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
             ],
           },
           {
-            label: 'Marketplace',
+            label: t('marketplace'),
             items: [
               primaryItem(t('previewStorefront'), ShoppingBag, 'storefront'),
               primaryItem(t('support'), LifeBuoy, 'support'),

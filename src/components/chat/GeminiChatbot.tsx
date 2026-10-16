@@ -445,7 +445,7 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
       {/* Role Tabs */}
       <div className="px-3 py-2 bg-surface-50 dark:bg-[#181F2A] border-b border-brand-100 dark:border-surface-800 flex items-center gap-1.5 overflow-x-auto scrollbar-none text-xs">
         <span className="text-micro font-semibold text-surface-500 dark:text-surface-400 px-1 shrink-0">
-          Role:
+          {t('roleLabel')}:
         </span>
         {(Object.keys(ROLE_CONFIGS) as ChatRole[]).map((r) => {
           const cfg = ROLE_CONFIGS[r];
