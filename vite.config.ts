@@ -15,11 +15,13 @@ export default defineConfig(() => {
       rollupOptions: {
         output: {
           manualChunks(id) {
-            if (!id.includes('/node_modules/')) return;
-            if (/\/node_modules\/(react|react-dom|scheduler)\//.test(id)) return 'vendor-react';
-            if (/\/node_modules\/(recharts|d3-[^/]+)\//.test(id)) return 'vendor-charts';
-            if (/\/node_modules\/(leaflet|react-leaflet)\//.test(id)) return 'vendor-maps';
-            if (/\/node_modules\/lucide-react\//.test(id)) return 'vendor-icons';
+            const normalized = id.replace(/\\/g, '/');
+            if (normalized.includes('/src/lib/i18n')) return 'i18n';
+            if (!normalized.includes('/node_modules/')) return;
+            if (/\/node_modules\/(react|react-dom|scheduler)\//.test(normalized)) return 'vendor-react';
+            if (/\/node_modules\/(recharts|d3-[^/]+)\//.test(normalized)) return 'vendor-charts';
+            if (/\/node_modules\/(leaflet|react-leaflet)\//.test(normalized)) return 'vendor-maps';
+            if (/\/node_modules\/lucide-react\//.test(normalized)) return 'vendor-icons';
           },
         },
       },
