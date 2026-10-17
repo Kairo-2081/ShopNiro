@@ -29,6 +29,8 @@ Support requests are stored in PostgreSQL and optionally emailed through Resend.
 
 6. Tests require `DATABASE_URL` pointing to an isolated disposable PostgreSQL database initialized with `schema.sql`; never use production or shared Supabase data. Run `npm test`, `npm run lint`, and `npm run build`. CI provisions a temporary PostgreSQL 16 service. The password migration script also requires an explicit `DATABASE_URL` and does not use `SUPABASE_DB_URL`.
 
+   Payment latency and idempotency benchmarks (`npm run bench:payments`) are described in [docs/benchmarks.md](docs/benchmarks.md).
+
 7. Database relationships, keys, normalization, and operational rules are documented in [docs/database-design.md](docs/database-design.md). Seller commission, holds, payout cadence, and COD remittance policy are in [docs/payouts.md](docs/payouts.md). PostgreSQL DDL and routines are in `schema.sql`; boot seeding runs only when explicitly enabled in non-production.
 
 See [README-DEPLOY.md](README-DEPLOY.md) for Render/Vercel environment configuration and deployment checks.
