@@ -630,6 +630,7 @@ CREATE TABLE IF NOT EXISTS payments (
     card_brand VARCHAR(50),
     card_issuer VARCHAR(100),
     gateway_session_json JSONB,
+    gateway_session_claimed_at TIMESTAMP WITH TIME ZONE,
     status VARCHAR(32) NOT NULL DEFAULT 'PENDING',
     customer_phone VARCHAR(50),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -640,6 +641,8 @@ ALTER TABLE payments
     ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP;
 ALTER TABLE payments
     ADD COLUMN IF NOT EXISTS gateway_session_json JSONB;
+ALTER TABLE payments
+    ADD COLUMN IF NOT EXISTS gateway_session_claimed_at TIMESTAMP WITH TIME ZONE;
 
 CREATE TABLE IF NOT EXISTS refunds (
     id VARCHAR(64) PRIMARY KEY,
