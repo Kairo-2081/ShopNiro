@@ -14,6 +14,47 @@ const paymentInitRateLimit = rateLimit({
   legacyHeaders: false,
 });
 
+// A request that creates (or takes over) a payment's gateway session first "claims" it, calls the
+// gateway with no database connection held, then stores the session. Other requests for the same
+// order poll the stored session instead of calling the gateway again. initPayment aborts after 8 s,
+// so a claim older than SESSION_CLAIM_STALE_SECONDS belongs to a crashed request and may be taken over.
+const SESSION_CLAIM_STALE_SECONDS = 20;
+const SESSION_WAIT_MS = 30_000;
+const SESSION_POLL_MS = 50;
+const delay = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+const claimGatewaySession = async (paymentId: string): Promise<boolean> => {
+  const claim = await query(
+    `UPDATE payments SET gateway_session_claimed_at = CURRENT_TIMESTAMP
+     WHERE id = $1 AND status = 'PENDING' AND gateway_session_json IS NULL
+       AND (gateway_session_claimed_at IS NULL
+         OR gateway_session_claimed_at < CURRENT_TIMESTAMP - make_interval(secs => $2))
+     RETURNING id`,
+    [paymentId, SESSION_CLAIM_STALE_SECONDS]
+  );
+  return Boolean(claim.rowCount);
+};
+
+const releaseGatewaySessionClaim = async (paymentId: string) => {
+  await query(
+    'UPDATE payments SET gateway_session_claimed_at = NULL WHERE id = $1 AND gateway_session_json IS NULL',
+    [paymentId]
+  ).catch(() => {});
+};
+
+// First writer wins; a request whose claim went stale converges on the stored session.
+const storeGatewaySession = async (paymentId: string, session: unknown): Promise<unknown> => {
+  const stored = await query(
+    `UPDATE payments SET gateway_session_json = $2::jsonb, updated_at = CURRENT_TIMESTAMP
+     WHERE id = $1 AND gateway_session_json IS NULL
+     RETURNING gateway_session_json`,
+    [paymentId, JSON.stringify(session)]
+  );
+  if (stored.rowCount) return stored.rows[0].gateway_session_json;
+  const current = await query('SELECT gateway_session_json FROM payments WHERE id = $1', [paymentId]);
+  return current.rows[0]?.gateway_session_json ?? session;
+};
+
 const simulatorProfiles: Record<string, { name: string; accountLabel: string; account: string; codeLabel: string; code: string; securityLabel: string; security: string }> = {
   bkash: { name: 'bKash', accountLabel: 'Demo bKash number', account: '01700000000', codeLabel: 'Demo OTP', code: '123456', securityLabel: 'Demo PIN', security: '12345' },
   nagad: { name: 'Nagad', accountLabel: 'Demo Nagad number', account: '01800000000', codeLabel: 'Demo OTP', code: '123456', securityLabel: 'Demo PIN', security: '12345' },
@@ -127,20 +168,34 @@ const orderIdForTransaction = async (tranId: unknown): Promise<string | undefine
   return result.rows[0]?.order_id ? String(result.rows[0].order_id) : undefined;
 };
 
+// Each refund status gets its own batch, so a backlog of old 'submitted' refunds (waiting on the gateway)
+// can never push new 'requested' refunds out of the batch. Initiations run before status polls.
+const REFUND_BATCH_PER_STATUS = 50;
+
 export const processRefundQueue = async () => {
-  const result = await query(`
-    SELECT refund.id, refund.order_id, refund.payment_id, refund.amount, refund.status,
+  const refundColumns = `refund.id, refund.order_id, refund.payment_id, refund.amount, refund.status,
       refund.gateway_ref, payment.bank_tran_id, payment.transaction_id, refund.duplicate_payment,
-      refund.updated_at
-    FROM refunds refund
-    LEFT JOIN payments payment ON payment.id = refund.payment_id
-    WHERE refund.method = 'sslcommerz'
-      AND (refund.status = 'requested'
-        OR (refund.status = 'initiating' AND refund.updated_at < CURRENT_TIMESTAMP - INTERVAL '2 minutes')
-        OR refund.status = 'submitted')
-    ORDER BY refund.created_at ASC
-    LIMIT 50
-  `);
+      refund.updated_at, refund.created_at`;
+  const result = await query(`
+    SELECT * FROM (
+      (SELECT ${refundColumns}, 0 AS queue_rank
+       FROM refunds refund LEFT JOIN payments payment ON payment.id = refund.payment_id
+       WHERE refund.method = 'sslcommerz' AND refund.status = 'requested'
+       ORDER BY refund.created_at ASC LIMIT $1)
+      UNION ALL
+      (SELECT ${refundColumns}, 0 AS queue_rank
+       FROM refunds refund LEFT JOIN payments payment ON payment.id = refund.payment_id
+       WHERE refund.method = 'sslcommerz' AND refund.status = 'initiating'
+         AND refund.updated_at < CURRENT_TIMESTAMP - INTERVAL '2 minutes'
+       ORDER BY refund.created_at ASC LIMIT $1)
+      UNION ALL
+      (SELECT ${refundColumns}, 1 AS queue_rank
+       FROM refunds refund LEFT JOIN payments payment ON payment.id = refund.payment_id
+       WHERE refund.method = 'sslcommerz' AND refund.status = 'submitted'
+       ORDER BY refund.created_at ASC LIMIT $1)
+    ) queue
+    ORDER BY queue_rank ASC, created_at ASC
+  `, [REFUND_BATCH_PER_STATUS]);
   const summary = { initiated: 0, completed: 0, failed: 0, pending: 0 };
 
   for (const refund of result.rows) {
@@ -429,7 +484,19 @@ router.post('/init', requireAuth, requireRole(['customer']), paymentInitRateLimi
     const hostUrl = `${protocol}://${host}`;
     const ipnUrl = `${hostUrl}/api/payment/sslcommerz/ipn?token=${encodeURIComponent(ipnToken)}`;
 
+    // Phase 1: a short transaction. Lock the order, then find or create the single pending payment for it.
+    // The connection returns to the pool before the gateway is called, so a slow gateway can no longer
+    // hold one of the pool's connections (and the order row lock) for the length of the call.
     const client = await pool.connect();
+    let prepared: {
+      paymentId: string;
+      transactionId: string;
+      amountBDT: number;
+      paymentMethod: string;
+      shippingAddressJson: string;
+      session: unknown;
+      ownsClaim: boolean;
+    };
     try {
       await client.query('BEGIN');
       const orderResult = await client.query(
@@ -471,25 +538,50 @@ router.post('/init', requireAuth, requireRole(['customer']), paymentInitRateLimi
         : `SSLCZ-${randomUUID().replaceAll('-', '').slice(0, 24).toUpperCase()}`;
       const paymentId = existing?.id ? String(existing.id) : `PAY-${randomUUID()}`;
       const finalPaymentMethod = existing?.payment_method || paymentMethod;
+      let ownsClaim = false;
       if (!existing) {
         await client.query(
           `SELECT * FROM gocart_payment_create($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
           [paymentId, orderId, req.user!.entityId, finalAmountBDT, 'BDT', 'sslcommerz', finalPaymentMethod, transactionId, customerPhone || '']
         );
+        // The request that creates the payment row owns the right to create its gateway session.
+        await client.query('UPDATE payments SET gateway_session_claimed_at = CURRENT_TIMESTAMP WHERE id = $1', [paymentId]);
+        ownsClaim = true;
       }
+      await client.query('COMMIT');
+      prepared = {
+        paymentId,
+        transactionId,
+        amountBDT: finalAmountBDT,
+        paymentMethod: finalPaymentMethod,
+        shippingAddressJson: String(order.shipping_address_json || '{}'),
+        session: existing?.gateway_session_json ?? null,
+        ownsClaim,
+      };
+    } catch (error) {
+      await client.query('ROLLBACK').catch(() => {});
+      throw error;
+    } finally {
+      client.release();
+    }
 
-      let session = existing?.gateway_session_json || null;
-      if (!session) {
-        const shippingAddress = JSON.parse(String(order.shipping_address_json || '{}')) as Record<string, unknown>;
+    // Phase 2: no database connection is held below this line.
+    let { session, ownsClaim } = prepared;
+    const { paymentId, transactionId, amountBDT, paymentMethod: finalPaymentMethod } = prepared;
+    const waitDeadline = Date.now() + SESSION_WAIT_MS;
+    while (!session) {
+      if (!ownsClaim) ownsClaim = await claimGatewaySession(paymentId);
+      if (ownsClaim) {
+        const shippingAddress = JSON.parse(prepared.shippingAddressJson) as Record<string, unknown>;
         const shipAdd1 = [shippingAddress.House_Name, shippingAddress.Street]
           .filter((part): part is string => typeof part === 'string' && Boolean(part.trim()))
           .join(' ')
           .slice(0, 255);
         try {
-          session = await sslcommerz.initPayment(
+          const created = await sslcommerz.initPayment(
             {
               tran_id: transactionId,
-              total_amount: finalAmountBDT,
+              total_amount: amountBDT,
               currency: 'BDT',
               cus_name: customerName || 'Marketplace Customer',
               cus_email: customerEmail || 'customer@example.com',
@@ -508,33 +600,41 @@ router.post('/init', requireAuth, requireRole(['customer']), paymentInitRateLimi
             },
             hostUrl
           );
+          session = await storeGatewaySession(paymentId, created);
         } catch (error) {
-          await client.query('COMMIT');
+          // Let a retry (or a request waiting on this payment) create the session straight away.
+          await releaseGatewaySessionClaim(paymentId);
           throw error;
         }
-        await client.query(
-          'UPDATE payments SET gateway_session_json = $2::jsonb, updated_at = CURRENT_TIMESTAMP WHERE id = $1',
-          [paymentId, JSON.stringify(session)]
-        );
+        break;
       }
-      await client.query('COMMIT');
 
-      res.json({
-        success: true,
-        tran_id: transactionId,
-        paymentId,
-        amountBDT: finalAmountBDT,
-        currency: 'BDT',
-        session,
-        gateway: 'SSLCommerz',
-        paymentMethod: finalPaymentMethod,
-      });
-    } catch (error) {
-      await client.query('ROLLBACK').catch(() => {});
-      throw error;
-    } finally {
-      client.release();
+      // Another request is creating the session for this order: wait for it instead of calling the gateway again.
+      const current = await query('SELECT status, gateway_session_json FROM payments WHERE id = $1', [paymentId]);
+      const row = current.rows[0];
+      if (row?.gateway_session_json) {
+        session = row.gateway_session_json;
+        break;
+      }
+      if (!row || row.status !== 'PENDING') {
+        return res.status(409).json({ error: 'Order payment is already finalized.' });
+      }
+      if (Date.now() >= waitDeadline) {
+        return res.status(503).json({ error: 'The payment session is still being prepared. Please try again in a moment.' });
+      }
+      await delay(SESSION_POLL_MS);
     }
+
+    res.json({
+      success: true,
+      tran_id: transactionId,
+      paymentId,
+      amountBDT,
+      currency: 'BDT',
+      session,
+      gateway: 'SSLCommerz',
+      paymentMethod: finalPaymentMethod,
+    });
   } catch (error: any) {
     console.error('Error initiating payment:', error);
     res.status(500).json({ error: error.message || 'Failed to initialize payment gateway' });

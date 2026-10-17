@@ -424,6 +424,146 @@ dbTest('plaintext stored passwords are rejected with the same message as unknown
     assert.equal(pendingPayments.rows[0].count, 1);
   });
 
+  dbTest('payment init does not hold a database connection while the gateway call is in flight', async (t) => {
+    process.env.SSLCOMMERZ_IPN_TOKEN ??= 'test-payment-integrity-ipn-token';
+    const fixture = await createCheckoutFixture();
+    const order = await placeCartOrder(fixture, 'online');
+    let checkedOutDuringGatewayCall = -1;
+    t.mock.method(sslcommerz, 'initPayment', async () => {
+      checkedOutDuringGatewayCall = pool.totalCount - pool.idleCount;
+      return { status: 'SUCCESS', GatewayPageURL: 'https://gateway.example.test/session' };
+    });
+
+    const response = await request(server, '/api/payment/init', 'POST', { orderId: order.Order_ID }, fixture.customerCookie);
+    assert.equal(response.status, 200, JSON.stringify(response.body));
+    assert.equal(checkedOutDuringGatewayCall, 0);
+  });
+
+  dbTest('concurrent payment init waits for the in-flight gateway session instead of calling the gateway again', async (t) => {
+    process.env.SSLCOMMERZ_IPN_TOKEN ??= 'test-payment-integrity-ipn-token';
+    const fixture = await createCheckoutFixture();
+    const order = await placeCartOrder(fixture, 'online');
+    const initPayment = t.mock.method(sslcommerz, 'initPayment', async () => {
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      return { status: 'SUCCESS', GatewayPageURL: 'https://gateway.example.test/session' };
+    });
+
+    const responses = await Promise.all(Array.from({ length: 5 }, () =>
+      request(server, '/api/payment/init', 'POST', { orderId: order.Order_ID }, fixture.customerCookie)));
+    assert.deepEqual(responses.map((response) => response.status), [200, 200, 200, 200, 200]);
+    assert.equal(new Set(responses.map((response) => response.body.tran_id)).size, 1);
+    assert.equal(new Set(responses.map((response) => JSON.stringify(response.body.session))).size, 1);
+    assert.equal(initPayment.mock.callCount(), 1);
+    const pendingPayments = await query("SELECT COUNT(*)::integer AS count FROM payments WHERE order_id = $1 AND status = 'PENDING'", [order.Order_ID]);
+    assert.equal(pendingPayments.rows[0].count, 1);
+  });
+
+  dbTest('payment init releases its claim when the gateway fails so a retry reuses the same transaction', async (t) => {
+    process.env.SSLCOMMERZ_IPN_TOKEN ??= 'test-payment-integrity-ipn-token';
+    const fixture = await createCheckoutFixture();
+    const order = await placeCartOrder(fixture, 'online');
+    let calls = 0;
+    const initPayment = t.mock.method(sslcommerz, 'initPayment', async () => {
+      calls += 1;
+      if (calls === 1) throw new Error('gateway unavailable');
+      return { status: 'SUCCESS', GatewayPageURL: 'https://gateway.example.test/session' };
+    });
+
+    const failed = await request(server, '/api/payment/init', 'POST', { orderId: order.Order_ID }, fixture.customerCookie);
+    assert.equal(failed.status, 500, JSON.stringify(failed.body));
+    const retried = await request(server, '/api/payment/init', 'POST', { orderId: order.Order_ID }, fixture.customerCookie);
+    assert.equal(retried.status, 200, JSON.stringify(retried.body));
+    assert.equal(initPayment.mock.callCount(), 2);
+    const payments = await query('SELECT transaction_id FROM payments WHERE order_id = $1', [order.Order_ID]);
+    assert.equal(payments.rows.length, 1);
+    assert.equal(retried.body.tran_id, payments.rows[0].transaction_id);
+  });
+
+  dbTest('payment init takes over a stale session claim but respects a fresh one', async (t) => {
+    process.env.SSLCOMMERZ_IPN_TOKEN ??= 'test-payment-integrity-ipn-token';
+    const insertPendingPayment = async (orderId: string, customerId: string, amount: number, claimAge: string) => {
+      const transactionId = `SSLCZ-${randomUUID().replaceAll('-', '').toUpperCase()}`;
+      await query(`
+        INSERT INTO payments (id, order_id, customer_id, amount, currency, gateway, payment_method, transaction_id, status, gateway_session_claimed_at)
+        VALUES ($1, $2, $3, $4, 'BDT', 'sslcommerz', 'bkash', $5, 'PENDING', CURRENT_TIMESTAMP - $6::interval)
+      `, [`PAY-${randomUUID()}`, orderId, customerId, amount, transactionId, claimAge]);
+      return transactionId;
+    };
+    const initPayment = t.mock.method(sslcommerz, 'initPayment', async () => ({
+      status: 'SUCCESS', GatewayPageURL: 'https://gateway.example.test/created-by-takeover',
+    }));
+
+    // Stale claim (older than the 8 s gateway timeout plus margin): this request creates the session.
+    const stale = await createCheckoutFixture();
+    const staleOrder = await placeCartOrder(stale, 'online');
+    const staleTransactionId = await insertPendingPayment(
+      staleOrder.Order_ID, stale.customerId, Number(staleOrder.Subtotal) + Number(staleOrder.Shipping_Fee), '1 minute');
+    const takeover = await request(server, '/api/payment/init', 'POST', { orderId: staleOrder.Order_ID }, stale.customerCookie);
+    assert.equal(takeover.status, 200, JSON.stringify(takeover.body));
+    assert.equal(takeover.body.tran_id, staleTransactionId);
+    assert.equal(initPayment.mock.callCount(), 1);
+
+    // Fresh claim: another request is creating the session, so this one waits for it and never calls the gateway.
+    const fresh = await createCheckoutFixture();
+    const freshOrder = await placeCartOrder(fresh, 'online');
+    const freshTransactionId = await insertPendingPayment(
+      freshOrder.Order_ID, fresh.customerId, Number(freshOrder.Subtotal) + Number(freshOrder.Shipping_Fee), '0 seconds');
+    const waiting = request(server, '/api/payment/init', 'POST', { orderId: freshOrder.Order_ID }, fresh.customerCookie);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    await query("UPDATE payments SET gateway_session_json = $2::jsonb WHERE transaction_id = $1",
+      [freshTransactionId, JSON.stringify({ status: 'SUCCESS', GatewayPageURL: 'https://gateway.example.test/created-by-other-request' })]);
+    const waited = await waiting;
+    assert.equal(waited.status, 200, JSON.stringify(waited.body));
+    assert.equal(waited.body.session.GatewayPageURL, 'https://gateway.example.test/created-by-other-request');
+    assert.equal(initPayment.mock.callCount(), 1);
+  });
+
+  dbTest('old submitted refunds waiting on the gateway do not starve new requested refunds', async () => {
+    const customerId = `CUSTOMER-${randomUUID()}`;
+    const orderId = `ORD-${randomUUID()}`;
+    const paymentId = `PAY-${randomUUID()}`;
+    const refundId = `REF-${randomUUID()}`;
+    const backlogPrefix = `REF-BACKLOG-${randomUUID()}-`;
+    await createCustomer(customerId);
+    await createOrder(customerId, orderId);
+    await query(`
+      INSERT INTO payments (id, order_id, customer_id, amount, currency, gateway, payment_method, transaction_id, bank_tran_id, status)
+      VALUES ($1, $2, $3, 100, 'BDT', 'sslcommerz', 'bkash', $4, $5, 'VALIDATED')
+    `, [paymentId, orderId, customerId, `SSLCZ-${randomUUID().replaceAll('-', '').toUpperCase()}`, `BANK-${randomUUID()}`]);
+    await query(`
+      INSERT INTO refunds (id, order_id, amount, method, status, gateway_ref, created_at, updated_at)
+      SELECT $1::text || g::text, $2, 10, 'sslcommerz', 'submitted', 'GREF-' || $1::text || g::text,
+        CURRENT_TIMESTAMP - INTERVAL '1 day', CURRENT_TIMESTAMP - INTERVAL '1 day'
+      FROM generate_series(1, 55) AS g
+    `, [backlogPrefix, orderId]);
+    await query(`
+      INSERT INTO refunds (id, order_id, payment_id, amount, method, status)
+      VALUES ($1, $2, $3, 100, 'sslcommerz', 'requested')
+    `, [refundId, orderId, paymentId]);
+    const getRefundStatus = mock.method(sslcommerz, 'getRefundStatus', async (ref: string) => ({
+      APIConnect: 'DONE', status: 'processing', refund_ref_id: ref,
+    }));
+    const initiateRefund = mock.method(sslcommerz, 'initiateRefund', async () => ({
+      APIConnect: 'DONE', status: 'success', refund_ref_id: `GREF-${refundId}`,
+    }));
+
+    try {
+      await processRefundQueue();
+      const expectedRefundTransId = `RF-${refundId.replace(/[^A-Za-z0-9]/g, '').slice(-24)}`;
+      assert.ok(
+        initiateRefund.mock.calls.some((call) => call.arguments[0].refundTransId === expectedRefundTransId),
+        'the new requested refund must be initiated even with 55 older submitted refunds queued ahead of it'
+      );
+      const refund = await query('SELECT status FROM refunds WHERE id = $1', [refundId]);
+      assert.equal(refund.rows[0].status, 'submitted');
+      assert.equal(getRefundStatus.mock.callCount(), 50, 'submitted refunds are polled in a bounded batch of 50');
+    } finally {
+      getRefundStatus.mock.restore();
+      initiateRefund.mock.restore();
+      await query('DELETE FROM refunds WHERE id = $1 OR id LIKE $2', [refundId, `${backlogPrefix}%`]);
+    }
+  });
+
   dbTest('payment init rejects an expired order', async () => {
     const customerId = `CUSTOMER-${randomUUID()}`;
     const orderId = `ORD-${randomUUID()}`;
