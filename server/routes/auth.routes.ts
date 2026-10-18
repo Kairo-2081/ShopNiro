@@ -1,8 +1,19 @@
 import { Router, Response } from 'express';
 import rateLimit from 'express-rate-limit';
-import { query, mapAddress } from '../db/index.ts';
+import { randomBytes, randomUUID } from 'node:crypto';
+import { pool, query, mapAddress } from '../db/index.ts';
 import { hashPassword, comparePassword, needsPasswordRehash } from '../db/password.ts';
-import { requireAuth, issueAuthCookie, clearAuthCookie, optionalAuth, AUTH_COOKIE_NAME, AuthRequest } from '../middleware/auth.ts';
+import {
+  requireAuth,
+  issueAuthCookie,
+  issueOAuthRegistrationCookie,
+  clearOAuthRegistrationCookie,
+  readOAuthRegistrationCookie,
+  clearAuthCookie,
+  optionalAuth,
+  AUTH_COOKIE_NAME,
+  AuthRequest,
+} from '../middleware/auth.ts';
 
 const router = Router();
 const loginRateLimit = rateLimit({
@@ -16,6 +27,195 @@ const loginFailures = new Map<string, { count: number; windowStartedAt: number; 
 const loginFailureWindowMs = 15 * 60 * 1000;
 const maxLoginFailures = 5;
 const invalidCredentialsMessage = 'Invalid username/email or password.';
+type OAuthProvider = 'google' | 'facebook';
+
+const oauthRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+});
+
+function isOAuthProvider(value: string): value is OAuthProvider {
+  return value === 'google' || value === 'facebook';
+}
+
+function oauthConfig(provider: OAuthProvider, req: { protocol: string; get: (name: string) => string | undefined }) {
+  const prefix = provider === 'google' ? 'GOOGLE' : 'FACEBOOK';
+  const appOrigin = process.env.APP_URL || (process.env.NODE_ENV === 'production'
+    ? 'https://shopniro.onrender.com'
+    : `${req.protocol}://${req.get('host')}`);
+  return {
+    clientId: process.env[`${prefix}_CLIENT_ID`],
+    clientSecret: process.env[`${prefix}_CLIENT_SECRET`],
+    redirectUri: process.env[`${prefix}_OAUTH_REDIRECT_URI`] || new URL(`/api/auth/oauth/${provider}/callback`, appOrigin).toString(),
+  };
+}
+
+function oauthReturnUrl(
+  req: { protocol: string; get: (name: string) => string | undefined },
+  error?: string,
+  signupRole?: 'seller' | 'rider',
+): string {
+  const configuredOrigin = process.env.SHOPNIRO_PUBLIC_URL || process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL || process.env.APP_URL ||
+    (process.env.NODE_ENV === 'production' ? 'https://shopniro.onrender.com' : undefined);
+  const origin = configuredOrigin
+    ? (configuredOrigin.includes('://') ? configuredOrigin : `https://${configuredOrigin}`)
+    : `${req.protocol}://${req.get('host')}`;
+  const target = new URL('/', origin);
+  if (error) target.searchParams.set('oauth_error', error);
+  if (signupRole) target.searchParams.set('oauth_signup', signupRole);
+  return target.toString();
+}
+
+function oauthStateCookieName(provider: OAuthProvider): string {
+  return `shopniro_oauth_state_${provider}`;
+}
+
+function getCookie(req: { headers: { cookie?: string } }, name: string): string | null {
+  const value = req.headers.cookie?.split(';').map((part) => part.trim()).find((part) => part.startsWith(`${name}=`));
+  if (!value) return null;
+  try {
+    return decodeURIComponent(value.slice(name.length + 1));
+  } catch {
+    return null;
+  }
+}
+
+function clearOAuthStateCookie(provider: OAuthProvider, res: Response): void {
+  const secureAttribute = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+  res.append('Set-Cookie', `${oauthStateCookieName(provider)}=; Max-Age=0; Path=/api/auth/oauth/${provider}; HttpOnly; SameSite=Lax${secureAttribute}`);
+}
+
+interface OAuthProfile {
+  providerUserId: string;
+  email: string;
+  name: string;
+}
+
+async function fetchOAuthProfile(provider: OAuthProvider, code: string, req: { protocol: string; get: (name: string) => string | undefined }): Promise<OAuthProfile> {
+  const config = oauthConfig(provider, req);
+  if (!config.clientId || !config.clientSecret) throw new Error('provider_unconfigured');
+
+  const tokenUrl = provider === 'google'
+    ? 'https://oauth2.googleapis.com/token'
+    : 'https://graph.facebook.com/v24.0/oauth/access_token';
+  const tokenBody = new URLSearchParams({
+    code,
+    client_id: config.clientId,
+    client_secret: config.clientSecret,
+    redirect_uri: config.redirectUri,
+    grant_type: 'authorization_code',
+  });
+  const tokenResponse = await fetch(tokenUrl, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: tokenBody,
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (!tokenResponse.ok) throw new Error('provider_rejected');
+  const tokenData = await tokenResponse.json() as { access_token?: string };
+  if (!tokenData.access_token) throw new Error('provider_rejected');
+
+  if (provider === 'google') {
+    const profileResponse = await fetch('https://openidconnect.googleapis.com/v1/userinfo', {
+      headers: { Authorization: `Bearer ${tokenData.access_token}` },
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!profileResponse.ok) throw new Error('provider_rejected');
+    const profile = await profileResponse.json() as { sub?: string; email?: string; email_verified?: boolean; name?: string };
+    if (!profile.sub || !profile.email || profile.email_verified !== true) throw new Error('email_unverified');
+    return { providerUserId: profile.sub, email: profile.email, name: profile.name || profile.email.split('@')[0] };
+  }
+
+  const graphBase = 'https://graph.facebook.com/v24.0';
+  const debugUrl = new URL(`${graphBase}/debug_token`);
+  debugUrl.searchParams.set('input_token', tokenData.access_token);
+  debugUrl.searchParams.set('access_token', `${config.clientId}|${config.clientSecret}`);
+  const debugResponse = await fetch(debugUrl, { signal: AbortSignal.timeout(10_000) });
+  if (!debugResponse.ok) throw new Error('provider_rejected');
+  const debugResult = await debugResponse.json() as { data?: { app_id?: string; is_valid?: boolean } };
+  if (debugResult.data?.app_id !== config.clientId || debugResult.data?.is_valid !== true) throw new Error('provider_rejected');
+
+  const profileUrl = new URL(`${graphBase}/me`);
+  profileUrl.searchParams.set('fields', 'id,name,email');
+  profileUrl.searchParams.set('access_token', tokenData.access_token);
+  const profileResponse = await fetch(profileUrl, { signal: AbortSignal.timeout(10_000) });
+  if (!profileResponse.ok) throw new Error('provider_rejected');
+  const profile = await profileResponse.json() as { id?: string; email?: string; name?: string };
+  if (!profile.id || !profile.email) throw new Error('email_missing');
+  return { providerUserId: profile.id, email: profile.email, name: profile.name || profile.email.split('@')[0] };
+}
+
+async function findOrCreateOAuthAccount(provider: OAuthProvider, profile: OAuthProfile, requestedRole: 'customer' | 'seller' | 'rider') {
+  const client = await pool.connect();
+  const email = profile.email.trim().toLowerCase();
+  try {
+    await client.query('BEGIN');
+    const lockKeys = [`oauth-email:${email}`, `oauth-subject:${provider}:${profile.providerUserId}`].sort();
+    for (const key of lockKeys) {
+      await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [key]);
+    }
+
+    let user = (await client.query(
+      `SELECT u.id, u.username, u.email, u.role
+       FROM oauth_identities oi JOIN users u ON u.id = oi.user_id
+       WHERE oi.provider = $1 AND oi.provider_user_id = $2 FOR UPDATE OF u`,
+      [provider, profile.providerUserId],
+    )).rows[0];
+
+    if (!user) {
+      user = (await client.query(
+        'SELECT id, username, email, role FROM users WHERE LOWER(email) = $1 FOR UPDATE',
+        [email],
+      )).rows[0];
+
+      if (user && (user.role === 'admin' || (requestedRole !== 'customer' && user.role !== requestedRole))) throw new Error('account_conflict');
+
+      if (!user) {
+        if (requestedRole !== 'customer') {
+          await client.query('COMMIT');
+          return null;
+        }
+        const userId = randomUUID();
+        const usernameBase = email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 70) || 'customer';
+        const username = `${usernameBase}_${randomBytes(4).toString('hex')}`;
+        const randomPassword = await hashPassword(randomBytes(48).toString('base64url'));
+        const created = await client.query(
+          'SELECT * FROM gocart_customer_create($1, $2, $3, $4, $5, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)',
+          [userId, username, profile.name, email, randomPassword],
+        );
+        if (!created.rowCount) throw new Error('oauth_failed');
+        user = { id: userId, username, email, role: 'customer' };
+      }
+
+      if (user.role === 'customer' && !(await client.query('SELECT 1 FROM customers WHERE id = $1', [user.id])).rowCount) {
+        throw new Error('account_conflict');
+      }
+      if (user.role === 'seller' && !(await client.query('SELECT 1 FROM sellers WHERE id = $1', [user.id])).rowCount) {
+        throw new Error('account_conflict');
+      }
+      if (user.role === 'rider' && !(await client.query('SELECT 1 FROM riders WHERE id = $1', [user.id])).rowCount) {
+        throw new Error('account_conflict');
+      }
+
+      await client.query(
+        'INSERT INTO oauth_identities (provider, provider_user_id, user_id) VALUES ($1, $2, $3)',
+        [provider, profile.providerUserId, user.id],
+      );
+    }
+
+    if (!['customer', 'seller', 'rider'].includes(user.role)) throw new Error('account_conflict');
+    if (requestedRole !== 'customer' && user.role !== requestedRole) throw new Error('account_conflict');
+    await client.query('COMMIT');
+    return user;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
 
 const isLoginLocked = (identifier: string, now: number) => {
   const state = loginFailures.get(identifier);
@@ -39,6 +239,87 @@ const recordLoginFailure = (identifier: string, now: number) => {
   if (state.count >= maxLoginFailures) state.lockedUntil = now + loginFailureWindowMs;
   loginFailures.set(identifier, state);
 };
+
+router.get('/oauth/registration', (req, res) => {
+  const registration = readOAuthRegistrationCookie(req);
+  res.setHeader('Cache-Control', 'no-store');
+  return res.json({ registration });
+});
+
+router.get('/oauth/:provider', oauthRateLimit, (req, res) => {
+  const provider = req.params.provider;
+  if (!isOAuthProvider(provider)) return res.redirect(302, oauthReturnUrl(req, 'oauth_failed'));
+
+  const config = oauthConfig(provider, req);
+  if (!config.clientId || !config.clientSecret) return res.redirect(302, oauthReturnUrl(req, 'provider_unconfigured'));
+
+  const requestedRole = ['customer', 'seller', 'rider'].includes(String(req.query.role))
+    ? String(req.query.role)
+    : 'customer';
+
+  const state = randomBytes(32).toString('base64url');
+  const secureAttribute = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+  res.append('Set-Cookie', `${oauthStateCookieName(provider)}=${encodeURIComponent(`${state}.${requestedRole}`)}; Max-Age=600; Path=/api/auth/oauth/${provider}; HttpOnly; SameSite=Lax${secureAttribute}`);
+
+  const authorizationUrl = provider === 'google'
+    ? new URL('https://accounts.google.com/o/oauth2/v2/auth')
+    : new URL('https://www.facebook.com/v24.0/dialog/oauth');
+  authorizationUrl.searchParams.set('client_id', config.clientId);
+  authorizationUrl.searchParams.set('redirect_uri', config.redirectUri);
+  authorizationUrl.searchParams.set('response_type', 'code');
+  authorizationUrl.searchParams.set('state', state);
+  authorizationUrl.searchParams.set('scope', provider === 'google' ? 'openid email profile' : 'email,public_profile');
+  if (provider === 'google') authorizationUrl.searchParams.set('prompt', 'select_account');
+  res.redirect(302, authorizationUrl.toString());
+});
+
+router.get('/oauth/:provider/callback', oauthRateLimit, async (req, res) => {
+  const provider = req.params.provider;
+  if (!isOAuthProvider(provider)) return res.redirect(302, oauthReturnUrl(req, 'oauth_failed'));
+  clearOAuthStateCookie(provider, res);
+
+  const receivedState = typeof req.query.state === 'string' ? req.query.state : '';
+  const savedState = getCookie(req, oauthStateCookieName(provider));
+  const [expectedState, requestedRole] = savedState?.split('.') || [];
+  if (
+    !receivedState || !expectedState || receivedState !== expectedState ||
+    !['customer', 'seller', 'rider'].includes(requestedRole)
+  ) {
+    return res.redirect(302, oauthReturnUrl(req, 'oauth_failed'));
+  }
+  if (req.query.error || typeof req.query.code !== 'string') {
+    return res.redirect(302, oauthReturnUrl(req, 'oauth_cancelled'));
+  }
+
+  try {
+    const profile = await fetchOAuthProfile(provider, req.query.code, req);
+    const user = await findOrCreateOAuthAccount(provider, profile, requestedRole as 'customer' | 'seller' | 'rider');
+    if (!user) {
+      issueOAuthRegistrationCookie(res, {
+        role: requestedRole as 'seller' | 'rider',
+        provider,
+        providerUserId: profile.providerUserId,
+        email: profile.email.trim().toLowerCase(),
+        name: profile.name,
+      });
+      return res.redirect(302, oauthReturnUrl(req, undefined, requestedRole as 'seller' | 'rider'));
+    }
+    if (user.role === 'rider') {
+      const rider = await query('SELECT status FROM riders WHERE id = $1', [user.id]);
+      if (!rider.rows.length || ['rejected', 'suspended'].includes(rider.rows[0].status)) {
+        return res.redirect(302, oauthReturnUrl(req, 'account_conflict'));
+      }
+    }
+    await issueAuthCookie(res, { userId: user.id, email: user.email, username: user.username, role: user.role, entityId: user.id });
+    return res.redirect(302, oauthReturnUrl(req));
+  } catch (error) {
+    const errorCode = error instanceof Error && [
+      'provider_unconfigured', 'provider_rejected', 'email_unverified', 'email_missing', 'account_conflict',
+    ].includes(error.message) ? error.message : 'oauth_failed';
+    if (errorCode === 'oauth_failed') console.error('OAuth sign-in failed:', error);
+    return res.redirect(302, oauthReturnUrl(req, errorCode));
+  }
+});
 
 /**
  * GET /api/auth/me

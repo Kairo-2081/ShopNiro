@@ -5,6 +5,8 @@ export const PUBLIC_API_RULES: Array<[string, RegExp]> = [
   ['GET', /^\/api\/health$/],
   ['POST', /^\/api\/auth\/(login|logout)$/],
   ['GET', /^\/api\/auth\/me$/],
+  ['GET', /^\/api\/auth\/oauth\/registration$/],
+  ['GET', /^\/api\/auth\/oauth\/(google|facebook|:provider)(\/callback)?$/],
   ['POST', /^\/api\/(customers|sellers)$/],
   ['POST', /^\/api\/riders\/(apply|cv\/parse|cv\/format)$/],
   ['GET', /^\/api\/(categories|reviews|sellers|bundles)$/],

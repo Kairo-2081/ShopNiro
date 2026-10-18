@@ -8,6 +8,7 @@
 - `CRON_SECRET`: shared bearer secret for order expiry, refund processing, and the Vercel payroll cron.
 - `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`: required for private seller document uploads and signed links. Keep the service-role key server-side only.
 - `SUPABASE_SELLER_DOCUMENTS_BUCKET`: optional private Storage bucket name; defaults to `seller-verification-documents`.
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `FACEBOOK_CLIENT_ID`, `FACEBOOK_CLIENT_SECRET`: optional credentials for customer, seller, and rider sign-in/application signup. Configure each provider's OAuth redirect URL as `https://<API origin>/api/auth/oauth/<provider>/callback`; optionally set `GOOGLE_OAUTH_REDIRECT_URI` or `FACEBOOK_OAUTH_REDIRECT_URI` when the registered callback differs. Set `APP_URL` to the API origin when it cannot be inferred from the incoming request.
 
 For a new or empty database, also configure unique values of at least 16 characters for `SHOPNIRO_SEED_ADMIN_PASSWORD`, `SHOPNIRO_SEED_SELLER_PASSWORD`, and `SHOPNIRO_SEED_CUSTOMER_PASSWORD`. The seed process hashes them before saving demo users. Do not reuse production account passwords.
 
@@ -30,9 +31,10 @@ Vercel supplies `VERCEL_URL` and `VERCEL_PROJECT_PRODUCTION_URL`; the API includ
 ## Deployment checks
 
 1. Configure secrets in the host dashboard, not in committed files.
-2. Confirm the frontend origin exactly matches `SHOPNIRO_PUBLIC_URL` and the API CORS allowlist.
-3. Deploy the API before the frontend when changing API contracts.
-4. Verify `/api/db/status`, sign in, load a protected page, and sign out in the deployed browser origin.
-5. Confirm the session cookie is marked `HttpOnly`, `Secure` in production, and has the intended `SameSite` value.
-6. Create the seller-document Storage bucket as private, then run `npx tsx scripts/migrate-seller-documents-to-storage.ts` against a backed-up database to move existing verification files.
-7. Configure GitHub Actions secrets `APP_URL` and `CRON_SECRET`; dispatch the scheduled-jobs workflow once and confirm both cron endpoints respond successfully.
+2. Apply the updated `schema.sql` to existing databases to create the OAuth identity table.
+3. Confirm the frontend origin exactly matches `SHOPNIRO_PUBLIC_URL` and the API CORS allowlist.
+4. Deploy the API before the frontend when changing API contracts.
+5. Verify `/api/db/status`, sign in, load a protected page, and sign out in the deployed browser origin.
+6. Confirm the session cookie is marked `HttpOnly`, `Secure` in production, and has the intended `SameSite` value.
+7. Create the seller-document Storage bucket as private, then run `npx tsx scripts/migrate-seller-documents-to-storage.ts` against a backed-up database to move existing verification files.
+8. Configure GitHub Actions secrets `APP_URL` and `CRON_SECRET`; dispatch the scheduled-jobs workflow once and confirm both cron endpoints respond successfully.

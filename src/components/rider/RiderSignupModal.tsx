@@ -2,6 +2,7 @@ import React from 'react';
 import { Address } from '../../types';
 import { api } from '../../lib/api';
 import { prepareProfileImage } from '../../lib/profileImage';
+import { OAuthProviderButtons } from '../OAuthProviderButtons';
 import { AccountLocationPicker } from '../AccountLocationPicker';
 import { Lock, MapPin, ShieldCheck, Sparkles, Truck, UploadCloud, X } from 'lucide-react';
 
@@ -35,6 +36,7 @@ export const RiderSignupModal: React.FC<RiderSignupModalProps> = ({ isOpen, onCl
   const [name, setName] = React.useState('');
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
+  const [oauthProvider, setOAuthProvider] = React.useState<'google' | 'facebook' | null>(null);
   const [phone, setPhone] = React.useState('');
   const [presentAddress, setPresentAddress] = React.useState<Address>(emptyAddress);
   const [permanentAddress, setPermanentAddress] = React.useState<Address>(emptyAddress);
@@ -56,6 +58,15 @@ export const RiderSignupModal: React.FC<RiderSignupModalProps> = ({ isOpen, onCl
   React.useEffect(() => {
     if (!isOpen) return;
     setError(null);
+    let isCurrent = true;
+    void api.getOAuthRegistration().then((registration) => {
+      if (!isCurrent || registration?.role !== 'rider') return;
+      setOAuthProvider(registration.provider);
+      setEmail(registration.email);
+      setName(registration.name);
+      setUsername(registration.email.split('@')[0].replace(/[^a-z0-9_]/gi, '').toLowerCase());
+    }).catch(() => {});
+    return () => { isCurrent = false; };
   }, [isOpen]);
 
   if (!isOpen) return null;
@@ -214,6 +225,13 @@ export const RiderSignupModal: React.FC<RiderSignupModalProps> = ({ isOpen, onCl
 
           <section className="space-y-3">
             <h3 className="text-sm font-bold text-slate-900 dark:text-white">Account and contact</h3>
+            {oauthProvider ? (
+              <p className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200">
+                {oauthProvider === 'google' ? 'Google' : 'Facebook'} verified your email. Complete the rider application below; rider access remains pending until administrator approval.
+              </p>
+            ) : (
+              <OAuthProviderButtons role="rider" mode="sign up" />
+            )}
             <div className="grid gap-3 sm:grid-cols-2">
               <input className={fieldClass} required autoComplete="name" placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} />
               <input className={fieldClass} required autoComplete="username" placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} />
@@ -221,7 +239,7 @@ export const RiderSignupModal: React.FC<RiderSignupModalProps> = ({ isOpen, onCl
               <input className={fieldClass} required type="tel" autoComplete="tel" placeholder="Phone number" value={phone} onChange={(e) => setPhone(e.target.value)} />
               <div className="relative sm:col-span-2">
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                <input className={`${fieldClass} pl-9`} required minLength={8} type="password" autoComplete="new-password" placeholder="Password (at least 8 characters)" value={password} onChange={(e) => setPassword(e.target.value)} />
+                <input className={`${fieldClass} pl-9`} required={!oauthProvider} minLength={8} type="password" autoComplete="new-password" placeholder={oauthProvider ? 'Password (optional)' : 'Password (at least 8 characters)'} value={password} onChange={(e) => setPassword(e.target.value)} />
               </div>
             </div>
           </section>

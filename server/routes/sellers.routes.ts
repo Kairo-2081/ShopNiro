@@ -4,7 +4,14 @@ import type { PoolClient } from 'pg';
 import rateLimit from 'express-rate-limit';
 import { pool, query, mapAddress } from '../db/index.ts';
 import { hashPassword } from '../db/password.ts';
-import { requireAuth, requireRole, optionalAuth, AuthRequest } from '../middleware/auth.ts';
+import {
+  requireAuth,
+  requireRole,
+  optionalAuth,
+  AuthRequest,
+  clearOAuthRegistrationCookie,
+  readOAuthRegistrationCookie,
+} from '../middleware/auth.ts';
 import { createSellerDocumentSignedUrl, deleteSellerDocument, uploadSellerDocument } from '../services/sellerDocuments.service.ts';
 import { Seller } from '../../src/types.ts';
 
@@ -85,12 +92,18 @@ router.post('/', registrationRateLimit, async (req, res) => {
   let client: PoolClient | undefined;
   let identityStoragePath: string | undefined;
   try {
+    const oauthRegistration = readOAuthRegistrationCookie(req);
     const { Name, Email, Password, Number: phoneNum, Address, Logo, Description, Username,
       Business_Registration_Number, Payout_Method, Payout_Account, Identity_Document, Identity_Document_File_Name } = req.body;
     if (!Name || !Email) {
       return res.status(400).json({ error: 'Name and Email are required' });
     }
-    if (typeof Password !== 'string' || Password.trim().length < 8) {
+    const cleanEmail = String(Email).trim().toLowerCase();
+    const usesOAuth = oauthRegistration?.role === 'seller' && oauthRegistration.email === cleanEmail;
+    if (oauthRegistration && !usesOAuth) {
+      return res.status(403).json({ error: 'The verified sign-in does not match this seller application.' });
+    }
+    if (!usesOAuth && (typeof Password !== 'string' || Password.trim().length < 8)) {
       return res.status(400).json({ error: 'Password must be at least 8 characters.' });
     }
     const phone = typeof phoneNum === 'string' ? phoneNum.trim() : '';
@@ -111,8 +124,6 @@ router.post('/', registrationRateLimit, async (req, res) => {
     if (!Address?.Street?.trim() || !Address?.City?.trim()) {
       return res.status(400).json({ error: 'Select a location and provide a street and city' });
     }
-    const cleanEmail = Email.trim().toLowerCase();
-
     // Check if user with this email already exists
     const existing = await query(`SELECT * FROM gocart_auth_user_lookup($1, '')`, [cleanEmail]);
     if (existing.rows.length > 0) {
@@ -120,7 +131,7 @@ router.post('/', registrationRateLimit, async (req, res) => {
     }
 
     const id = `SEL-${Date.now()}`;
-    const hashedPassword = await hashPassword(Password);
+    const hashedPassword = await hashPassword(usesOAuth ? randomUUID() : Password);
     const logoUrl = Logo || 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=200&auto=format&fit=crop&q=80';
     const desc = Description || '';
     const username = Username || cleanEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -150,7 +161,14 @@ router.post('/', registrationRateLimit, async (req, res) => {
        VALUES ($1, $2, 'national_id', $3)`,
       [`SDOC-${randomUUID()}`, id, identityStoragePath]
     );
+    if (usesOAuth && oauthRegistration) {
+      await client.query(
+        'INSERT INTO oauth_identities (provider, provider_user_id, user_id) VALUES ($1, $2, $3)',
+        [oauthRegistration.provider, oauthRegistration.providerUserId, id],
+      );
+    }
     await client.query('COMMIT');
+    if (usesOAuth) clearOAuthRegistrationCookie(res);
 
     const s = result.rows[0];
     const newSeller: Seller = {
