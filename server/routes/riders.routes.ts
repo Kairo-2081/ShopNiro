@@ -7,7 +7,13 @@ import { createRequire } from 'node:module';
 import { resolve } from 'node:path';
 import { pool, query } from '../db/index.ts';
 import { hashPassword } from '../db/password.ts';
-import { AuthRequest, requireAuth, requireRole } from '../middleware/auth.ts';
+import {
+  AuthRequest,
+  requireAuth,
+  requireRole,
+  clearOAuthRegistrationCookie,
+  readOAuthRegistrationCookie,
+} from '../middleware/auth.ts';
 import { Address, Rider } from '../../src/types.ts';
 
 const router = Router();
@@ -292,6 +298,7 @@ router.post('/cv/format', async (req, res) => {
 });
 
 router.post('/apply', riderApplicationRateLimit, async (req, res) => {
+  const oauthRegistration = readOAuthRegistrationCookie(req);
   const {
     Username,
     Name,
@@ -310,10 +317,17 @@ router.post('/apply', riderApplicationRateLimit, async (req, res) => {
     Education,
   } = req.body ?? {};
 
-  if (![Username, Name, Email, Password, phone].every((value) => typeof value === 'string' && value.trim())) {
-    return res.status(400).json({ error: 'Name, username, email, password, and phone number are required.' });
+  if (![Username, Name, Email, phone].every((value) => typeof value === 'string' && value.trim())) {
+    return res.status(400).json({ error: 'Name, username, email, and phone number are required.' });
   }
-  if (String(Password).length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters.' });
+  const cleanEmail = String(Email).trim().toLowerCase();
+  const usesOAuth = oauthRegistration?.role === 'rider' && oauthRegistration.email === cleanEmail;
+  if (oauthRegistration && !usesOAuth) {
+    return res.status(403).json({ error: 'The verified sign-in does not match this rider application.' });
+  }
+  if (!usesOAuth && (typeof Password !== 'string' || Password.length < 8)) {
+    return res.status(400).json({ error: 'Password must be at least 8 characters.' });
+  }
   if (typeof Has_CV !== 'boolean') {
     return res.status(400).json({ error: 'Choose whether you have a CV.' });
   }
@@ -370,7 +384,7 @@ router.post('/apply', riderApplicationRateLimit, async (req, res) => {
   try {
     const riderId = `RDR-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
     const username = String(Username).trim().toLowerCase();
-    const email = String(Email).trim().toLowerCase();
+    const email = cleanEmail;
     await client.query('BEGIN');
     const duplicate = await client.query(
       'SELECT 1 FROM users WHERE lower(email) = $1 OR lower(username) = $2 LIMIT 1',
@@ -382,7 +396,7 @@ router.post('/apply', riderApplicationRateLimit, async (req, res) => {
     }
     await client.query(
       'INSERT INTO users (id, username, password, email, role) VALUES ($1, $2, $3, $4, $5)',
-      [riderId, username, await hashPassword(String(Password)), email, 'rider']
+      [riderId, username, await hashPassword(usesOAuth ? randomUUID() : String(Password)), email, 'rider']
     );
     await client.query(
       `INSERT INTO riders (
@@ -406,7 +420,14 @@ router.post('/apply', riderApplicationRateLimit, async (req, res) => {
         JSON.stringify(education),
       ]
     );
+    if (usesOAuth && oauthRegistration) {
+      await client.query(
+        'INSERT INTO oauth_identities (provider, provider_user_id, user_id) VALUES ($1, $2, $3)',
+        [oauthRegistration.provider, oauthRegistration.providerUserId, riderId],
+      );
+    }
     await client.query('COMMIT');
+    if (usesOAuth) clearOAuthRegistrationCookie(res);
     return res.status(201).json({ success: true, status: 'pending', message: 'Application received. Your ShopNiro CV PDF has been generated and saved. An administrator must approve your rider account before delivery operations are available.' });
   } catch (error: any) {
     await client.query('ROLLBACK');

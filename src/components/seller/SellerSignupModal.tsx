@@ -2,13 +2,21 @@ import React, { useState } from 'react';
 import { Seller, Address } from '../../types';
 import { api } from '../../lib/api';
 import { AccountLocationPicker } from '../AccountLocationPicker';
+import { OAuthProviderButtons } from '../OAuthProviderButtons';
 import { X, Store, Send, MapPin, Lock, Eye, EyeOff, User, Mail, Phone, Image, Sparkles } from 'lucide-react';
 
 interface SellerSignupModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onRegisterSeller: (sellerData: Partial<Seller> & { Username?: string }) => Promise<Seller>;
-  onSuccessRegistered: (newSeller: Seller) => void;
+  onRegisterSeller: (sellerData: Partial<Seller> & {
+    Username?: string;
+    Business_Registration_Number: string;
+    Payout_Method: 'bkash' | 'bank';
+    Payout_Account: string;
+    Identity_Document: string;
+    Identity_Document_File_Name: string;
+  }) => Promise<Seller>;
+  onSuccessRegistered: (newSeller: Seller, message?: string) => void;
 }
 
 export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
@@ -21,6 +29,7 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [oauthProvider, setOAuthProvider] = useState<'google' | 'facebook' | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [number, setNumber] = useState('');
   const [hasSelectedLocation, setHasSelectedLocation] = useState(false);
@@ -33,18 +42,60 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
     Postal_Code: '',
     Additional_Info: '',
   });
+  const [businessRegistrationNumber, setBusinessRegistrationNumber] = useState('');
+  const [payoutMethod, setPayoutMethod] = useState<'bkash' | 'bank' | ''>('');
+  const [payoutAccount, setPayoutAccount] = useState('');
+  const [identityDocument, setIdentityDocument] = useState('');
+  const [identityDocumentFileName, setIdentityDocumentFileName] = useState('');
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGeneratingDescription, setIsGeneratingDescription] = useState(false);
   const [descriptionError, setDescriptionError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  React.useEffect(() => {
+    if (!isOpen) return;
+    let isCurrent = true;
+    void api.getOAuthRegistration().then((registration) => {
+      if (!isCurrent || registration?.role !== 'seller') return;
+      setOAuthProvider(registration.provider);
+      setEmail(registration.email);
+      setName(registration.name);
+      setUsername(registration.email.split('@')[0].replace(/[^a-z0-9]/gi, '').toLowerCase());
+    }).catch(() => {});
+    return () => { isCurrent = false; };
+  }, [isOpen]);
+
   if (!isOpen) return null;
+
+  const handleIdentityDocumentChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024 || !['application/pdf', 'image/jpeg', 'image/png'].includes(file.type)) {
+      setError('ID document must be a PDF, JPG, or PNG no larger than 5 MB.');
+      event.target.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setIdentityDocument(reader.result);
+        setIdentityDocumentFileName(file.name);
+        setError(null);
+      }
+    };
+    reader.onerror = () => setError('Could not read the ID document. Please try another file.');
+    reader.readAsDataURL(file);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !email.trim() || !password.trim() || !number.trim() || !hasSelectedLocation || !address.Street.trim() || !address.City.trim()) {
+    if (!name.trim() || !email.trim() || (!oauthProvider && !password.trim()) || !number.trim() || !hasSelectedLocation || !address.Street.trim() || !address.City.trim()) {
       setError('Complete the required fields, enter a phone number, and use current location or select a point on the map.');
+      return;
+    }
+    if (!payoutMethod || payoutAccount.trim().length < 6 || !identityDocument) {
+      setError('Choose a payout method, enter its account, and upload your government ID.');
       return;
     }
 
@@ -61,9 +112,17 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
         Logo: logo.trim(),
         Description: description.trim(),
         Address: address,
+        Business_Registration_Number: businessRegistrationNumber.trim(),
+        Payout_Method: payoutMethod,
+        Payout_Account: payoutAccount.trim(),
+        Identity_Document: identityDocument,
+        Identity_Document_File_Name: identityDocumentFileName,
       });
 
-      onSuccessRegistered(newSeller);
+      onSuccessRegistered(
+        newSeller,
+        oauthProvider ? 'Your seller application is pending review. Use the same Google or Facebook account to sign in.' : undefined,
+      );
       onClose();
     } catch (err: any) {
       setError(err.message || 'Failed to submit seller application');
@@ -127,6 +186,14 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
             </div>
           )}
 
+          {oauthProvider ? (
+            <p className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200">
+              {oauthProvider === 'google' ? 'Google' : 'Facebook'} verified your email. Complete the seller application below; approval is still required before your store goes live.
+            </p>
+          ) : (
+            <OAuthProviderButtons role="seller" mode="sign up" />
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-slate-700 dark:text-zinc-300 font-semibold mb-1">Username *</label>
@@ -173,12 +240,12 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-slate-700 dark:text-zinc-300 font-semibold mb-1">Account Password *</label>
+              <label className="block text-slate-700 dark:text-zinc-300 font-semibold mb-1">Account Password {oauthProvider ? '(optional)' : '*'}</label>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
-                  required
-                  placeholder="Set seller password"
+                  required={!oauthProvider}
+                  placeholder={oauthProvider ? 'Optional when using Google or Facebook' : 'Set seller password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full p-2.5 pl-8 pr-9 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
@@ -223,6 +290,30 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
                 />
                 <Image className="w-3.5 h-3.5 text-slate-400 dark:text-zinc-500 absolute left-2.5 top-3" />
               </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block font-semibold text-slate-700 dark:text-zinc-300">Payout method *</label>
+              <select required value={payoutMethod} onChange={(event) => setPayoutMethod(event.target.value as 'bkash' | 'bank' | '')} className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-900 focus:ring-2 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-[#181F2A] dark:text-white">
+                <option value="">Choose method</option>
+                <option value="bkash">bKash</option>
+                <option value="bank">Bank account</option>
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block font-semibold text-slate-700 dark:text-zinc-300">Payout account *</label>
+              <input required minLength={6} maxLength={100} value={payoutAccount} onChange={(event) => setPayoutAccount(event.target.value)} placeholder="Account number" className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-900 focus:ring-2 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-[#181F2A] dark:text-white" />
+            </div>
+            <div>
+              <label className="mb-1 block font-semibold text-slate-700 dark:text-zinc-300">Business registration number</label>
+              <input maxLength={100} value={businessRegistrationNumber} onChange={(event) => setBusinessRegistrationNumber(event.target.value)} placeholder="If applicable" className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-slate-900 focus:ring-2 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-[#181F2A] dark:text-white" />
+            </div>
+            <div>
+              <label className="mb-1 block font-semibold text-slate-700 dark:text-zinc-300">Government ID document *</label>
+              <input required type="file" accept="application/pdf,image/jpeg,image/png" onChange={(event) => void handleIdentityDocumentChange(event)} className="w-full text-xs text-slate-600 file:mr-2 file:rounded-lg file:border-0 file:bg-emerald-100 file:px-3 file:py-2 file:font-semibold file:text-emerald-800 dark:text-zinc-300 dark:file:bg-emerald-950 dark:file:text-emerald-200" />
+              {identityDocumentFileName && <p className="mt-1 text-[10px] text-emerald-700 dark:text-emerald-300">{identityDocumentFileName}</p>}
             </div>
           </div>
 
