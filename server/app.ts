@@ -5,7 +5,7 @@ import helmet from 'helmet';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { query } from './db/index.ts';
 import { errorHandler } from './middleware/errorHandler.ts';
-import { requireAuth, requireRole, optionalAuth, AuthRequest } from './middleware/auth.ts';
+import { requireAuth, requireRole, optionalAuth, AuthRequest, OAUTH_REGISTRATION_COOKIE_NAME } from './middleware/auth.ts';
 import { enforcePublicApiPolicy } from './middleware/publicRoutes.ts';
 
 import authRoutes from './routes/auth.routes.ts';
@@ -84,7 +84,9 @@ app.use('/api/maps', optionalAuth, mapsRateLimit);
 
 app.use((req, res, next) => {
   if (/^\/api\/payment\/sslcommerz\/(success|fail|cancel|ipn)$/.test(req.path)) return next();
-  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method) || !req.headers.cookie?.includes('shopniro_session=')) {
+  const hasCookieSession = req.headers.cookie?.includes('shopniro_session=') || false;
+  const hasOAuthRegistration = req.headers.cookie?.includes(`${OAUTH_REGISTRATION_COOKIE_NAME}=`) || false;
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method) || (!hasCookieSession && !hasOAuthRegistration)) {
     return next();
   }
 

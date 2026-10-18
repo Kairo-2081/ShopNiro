@@ -49,6 +49,7 @@ function isPublicEndpoint(url: string, method: string = 'GET'): boolean {
   const upperMethod = method.toUpperCase();
   if (upperMethod === 'GET') {
     return cleanUrl === '/api/auth/me' ||
+    cleanUrl === '/api/auth/oauth/registration' ||
       /^\/api\/(categories|reviews|sellers|bundles)$/.test(cleanUrl) ||
       /^\/api\/products(?:\/[^/]+)?$/.test(cleanUrl) ||
       /^\/api\/analytics\/(trending-products|top-rated-products|top-rated-sellers|related-products)$/.test(cleanUrl) ||
@@ -336,7 +337,7 @@ export const api = {
     Username: string;
     Name: string;
     Email: string;
-    Password: string;
+    Password?: string;
     Number: string;
     Present_Address: Address;
     Permanent_Address: Address;
@@ -443,6 +444,22 @@ export const api = {
     hasValidatedSession = res.success;
     return res;
   },
+
+  beginOAuth: (provider: 'google' | 'facebook', role: 'customer' | 'seller' | 'rider' = 'customer'): void => {
+    window.location.assign(apiUrl(`/api/auth/oauth/${provider}?role=${role}`));
+  },
+
+  getOAuthRegistration: async (): Promise<null | {
+    role: 'seller' | 'rider';
+    provider: 'google' | 'facebook';
+    email: string;
+    name: string;
+  }> => (await fetchJson<{ registration: null | {
+    role: 'seller' | 'rider';
+    provider: 'google' | 'facebook';
+    email: string;
+    name: string;
+  } }>('/api/auth/oauth/registration')).registration,
 
   // Auth Current User from JWT Session
   getMe: async (): Promise<{ authenticated: boolean; user?: any; role?: UserRole; entity?: any }> => {
