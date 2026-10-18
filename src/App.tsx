@@ -202,6 +202,34 @@ export default function App() {
 
   // Listen for global authentication requirement/unauthorized events
   React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const oauthError = params.get('oauth_error');
+    const oauthSignup = params.get('oauth_signup');
+    if (!oauthError && !['seller', 'rider'].includes(oauthSignup || '')) return;
+
+    const messages: Record<string, string> = {
+      oauth_cancelled: 'Sign-in was cancelled. You can try again or use your email and password.',
+      provider_unconfigured: 'This sign-in provider is not configured yet.',
+      provider_rejected: 'The provider could not verify your sign-in. Please try again.',
+      email_unverified: 'Verify your Google email address before using it to sign in.',
+      email_missing: 'Facebook did not provide an email address. Try another sign-in method.',
+      account_conflict: 'This provider is associated with a different account type. Sign in with that account or choose its matching application.',
+      oauth_failed: 'Social sign-in failed. Please try again.',
+    };
+    if (oauthError) {
+      setAuthNotice(messages[oauthError] || messages.oauth_failed);
+      setIsLoginModalOpen(true);
+    }
+    if (oauthSignup === 'seller') setIsSellerRegistrationOpen(true);
+    if (oauthSignup === 'rider') setIsRiderSignupOpen(true);
+    params.delete('oauth_error');
+    params.delete('oauth_signup');
+    const query = params.toString();
+    window.history.replaceState(window.history.state, '', `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`);
+  }, []);
+
+  // Listen for global authentication requirement/unauthorized events
+  React.useEffect(() => {
     const handleAuthRequired = (e: any) => {
       setIsLoggedIn(false);
       setAuthNotice(e.detail?.message || 'Authentication required before processing this HTTP request.');
@@ -779,6 +807,11 @@ export default function App() {
     setIsLoginModalOpen(true);
   };
 
+  const handleSellerAccountCreated = (_seller: Seller, message?: string) => {
+    setAuthNotice(message || 'Account created successfully. Sign in with your new credentials.');
+    setIsLoginModalOpen(true);
+  };
+
   // New Customer Registration
   const handleRegisterCustomer = async (customerData: Partial<Customer> & { Username?: string }): Promise<Customer> => {
     return api.createCustomer(customerData);
@@ -868,7 +901,7 @@ export default function App() {
             isOpen={isSellerRegistrationOpen}
             onClose={() => setIsSellerRegistrationOpen(false)}
             onRegisterSeller={handleRegisterSeller}
-            onSuccessRegistered={handleAccountCreated}
+            onSuccessRegistered={handleSellerAccountCreated}
           />
         )}
 
@@ -1371,7 +1404,7 @@ export default function App() {
           isOpen={isSellerRegistrationOpen}
           onClose={() => setIsSellerRegistrationOpen(false)}
           onRegisterSeller={handleRegisterSeller}
-          onSuccessRegistered={handleAccountCreated}
+          onSuccessRegistered={handleSellerAccountCreated}
         />
       )}
 

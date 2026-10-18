@@ -3,6 +3,7 @@ import { UserRole, Customer, Seller, Address } from '../types';
 import { X, LogIn, Lock, User, Eye, EyeOff, ShieldAlert, UserPlus, Store, CheckCircle, Mail, Phone, MapPin } from 'lucide-react';
 import { api } from '../lib/api';
 import { AccountLocationPicker } from './AccountLocationPicker';
+import { OAuthProviderButtons } from './OAuthProviderButtons';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 
 interface LoginModalProps {
@@ -312,6 +313,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   {isSubmitting ? 'Authenticating...' : 'Sign In'}
                 </button>
               </div>
+
+              <OAuthProviderButtons role="login" mode="sign in" />
             </form>
           ) : (
             /* CREATE ACCOUNT FORM */
@@ -355,6 +358,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   </button>
                 </div>
               </div>
+
+              <OAuthProviderButtons role={registerRole} mode="sign up" />
 
               {/* Username & Full Name */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

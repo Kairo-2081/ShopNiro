@@ -17,6 +17,50 @@ if (!JWT_SECRET || JWT_SECRET.length < 32) {
 }
 
 export const AUTH_COOKIE_NAME = 'shopniro_session';
+export const OAUTH_REGISTRATION_COOKIE_NAME = 'shopniro_oauth_registration';
+
+export interface OAuthRegistrationPayload {
+  role: 'seller' | 'rider';
+  provider: 'google' | 'facebook';
+  providerUserId: string;
+  email: string;
+  name: string;
+}
+
+export function issueOAuthRegistrationCookie(res: Response, payload: OAuthRegistrationPayload): void {
+  const token = jwt.sign({ ...payload, purpose: 'oauth-registration' }, JWT_SECRET, { expiresIn: '1h' });
+  const secure = process.env.NODE_ENV === 'production';
+  res.append('Set-Cookie', `${OAUTH_REGISTRATION_COOKIE_NAME}=${encodeURIComponent(token)}; Max-Age=3600; Path=/api; HttpOnly; SameSite=${secure ? 'None' : 'Lax'}${secure ? '; Secure' : ''}`);
+}
+
+export function clearOAuthRegistrationCookie(res: Response): void {
+  const secure = process.env.NODE_ENV === 'production';
+  res.append('Set-Cookie', `${OAUTH_REGISTRATION_COOKIE_NAME}=; Max-Age=0; Path=/api; HttpOnly; SameSite=${secure ? 'None' : 'Lax'}${secure ? '; Secure' : ''}`);
+}
+
+export function readOAuthRegistrationCookie(req: Request): OAuthRegistrationPayload | null {
+  const cookie = req.headers.cookie?.split(';').map((part) => part.trim())
+    .find((part) => part.startsWith(`${OAUTH_REGISTRATION_COOKIE_NAME}=`));
+  if (!cookie) return null;
+  try {
+    const payload = jwt.verify(decodeURIComponent(cookie.slice(OAUTH_REGISTRATION_COOKIE_NAME.length + 1)), JWT_SECRET) as jwt.JwtPayload & OAuthRegistrationPayload & { purpose?: string };
+    if (
+      payload.purpose !== 'oauth-registration' ||
+      !['seller', 'rider'].includes(payload.role) ||
+      !['google', 'facebook'].includes(payload.provider) ||
+      !payload.providerUserId || !payload.email || !payload.name
+    ) return null;
+    return {
+      role: payload.role,
+      provider: payload.provider,
+      providerUserId: payload.providerUserId,
+      email: payload.email,
+      name: payload.name,
+    };
+  } catch {
+    return null;
+  }
+}
 
 export interface TokenPayload {
   userId: string;

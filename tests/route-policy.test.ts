@@ -88,6 +88,9 @@ test('public API routes are exactly the reviewed list', () => {
     'GET /api/analytics/top-rated-sellers',
     'GET /api/analytics/trending-products',
     'GET /api/auth/me',
+    'GET /api/auth/oauth/:provider',
+    'GET /api/auth/oauth/:provider/callback',
+    'GET /api/auth/oauth/registration',
     'GET /api/bundles',
     'GET /api/categories',
     'GET /api/maps/reverse',
@@ -121,6 +124,10 @@ test('public API routes are exactly the reviewed list', () => {
     'POST /api/support/requests',
   ].sort());
   assert.equal(isPublicApiRoute('POST', '/api/payment/sslcommerz/validate'), false);
+  assert.equal(isPublicApiRoute('GET', '/api/auth/oauth/google'), true);
+  assert.equal(isPublicApiRoute('GET', '/api/auth/oauth/facebook/callback'), true);
+  assert.equal(isPublicApiRoute('GET', '/api/auth/oauth/registration'), true);
+  assert.equal(isPublicApiRoute('POST', '/api/auth/oauth/google'), false);
 });
 
 test('cron routes require a configured matching secret', async () => {
@@ -142,11 +149,23 @@ test('configured app origin is allowed for cookie-authenticated mutations only',
     cookie: 'shopniro_session=test-session',
   });
   assert.equal(blocked.status, 403, JSON.stringify(blocked.body));
+
+  const blockedOAuth = await request('POST', '/api/payment/simulator/complete', {}, {
+    origin: 'https://attacker.example',
+    cookie: 'shopniro_oauth_registration=test-registration',
+  });
+  assert.equal(blockedOAuth.status, 403, JSON.stringify(blockedOAuth.body));
 });
 
 test('public login requests reach the login handler without a session', async () => {
   const response = await request('POST', '/api/auth/login', {});
   assert.notEqual(response.status, 401, JSON.stringify(response.body));
+});
+
+test('OAuth signup handoff is readable without a session and does not cache', async () => {
+  const response = await request('GET', '/api/auth/oauth/registration');
+  assert.equal(response.status, 200, JSON.stringify(response.body));
+  assert.deepEqual(response.body, { registration: null });
 });
 
 test('support request endpoint accepts the app payload shape', async () => {

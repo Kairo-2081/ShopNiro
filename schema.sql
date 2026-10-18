@@ -11,6 +11,15 @@ CREATE TABLE IF NOT EXISTS users (
     CONSTRAINT uq_users_email UNIQUE (email)
 );
 
+CREATE TABLE IF NOT EXISTS oauth_identities (
+    provider VARCHAR(16) NOT NULL CHECK (provider IN ('google', 'facebook')),
+    provider_user_id VARCHAR(255) NOT NULL,
+    user_id VARCHAR(64) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (provider, provider_user_id),
+    UNIQUE (provider, user_id)
+);
+
 -- CUSTOMERS TABLE
 CREATE TABLE IF NOT EXISTS customers (
     id VARCHAR(64) PRIMARY KEY,
