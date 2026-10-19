@@ -294,8 +294,8 @@ export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, ri
     });
   };
   const addressForms = [
-    { title: 'Present address', value: presentAddress, set: setPresentAddress },
-    { title: 'Permanent address', value: permanentAddress, set: setPermanentAddress },
+    { title: t('presentAddress'), value: presentAddress, set: setPresentAddress },
+    { title: t('permanentAddress'), value: permanentAddress, set: setPermanentAddress },
   ];
 
   return (
@@ -309,7 +309,7 @@ export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, ri
             {required && <p role="status" className="mt-2 text-xs font-semibold text-warning-800 dark:text-warning-200">{t('completeSaveBeforeNotice')}</p>}
           </div>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={() => void viewCv()} disabled={openingCv} className="inline-flex items-center gap-2 rounded-lg border border-surface-300 px-3 py-2 text-xs font-semibold text-surface-700 disabled:opacity-50 dark:border-surface-700 dark:text-surface-200"><FileText className="h-4 w-4" />{openingCv ? 'Opening...' : t('viewCv')}</button>
+            <button type="button" onClick={() => void viewCv()} disabled={openingCv} className="inline-flex items-center gap-2 rounded-lg border border-surface-300 px-3 py-2 text-xs font-semibold text-surface-700 disabled:opacity-50 dark:border-surface-700 dark:text-surface-200"><FileText className="h-4 w-4" />{openingCv ? t('opening') : t('viewCv')}</button>
             <button type="button" onClick={onClose} aria-label={t('close')} className="rounded-md p-2 text-surface-500 hover:bg-surface-100 dark:text-surface-400 dark:hover:bg-surface-800"><X className="h-5 w-5" /></button>
           </div>
         </header>
@@ -321,13 +321,13 @@ export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, ri
           <section className="space-y-3">
             <h3 className="text-sm font-bold text-surface-900 dark:text-white">{t('accountAndContact')}</h3>
             <div className="grid gap-3 sm:grid-cols-2">
-              <input className={fieldClass} required autoComplete="name" placeholder="Full name" value={name} onChange={(event) => setName(event.target.value)} />
-              <input className={fieldClass} required autoComplete="username" placeholder="Username" value={username} onChange={(event) => setUsername(event.target.value)} />
-              <input className={fieldClass} required type="email" autoComplete="email" placeholder="Email address" value={email} onChange={(event) => setEmail(event.target.value)} />
-              <input className={fieldClass} required type="tel" autoComplete="tel" placeholder="Phone number" value={phone} onChange={(event) => setPhone(event.target.value)} />
+              <input className={fieldClass} required autoComplete="name" placeholder={t('fullName')} value={name} onChange={(event) => setName(event.target.value)} />
+              <input className={fieldClass} required autoComplete="username" placeholder={t('username')} value={username} onChange={(event) => setUsername(event.target.value)} />
+              <input className={fieldClass} required type="email" autoComplete="email" placeholder={t('emailAddress')} value={email} onChange={(event) => setEmail(event.target.value)} />
+              <input className={fieldClass} required type="tel" autoComplete="tel" placeholder={t('phoneNumber')} value={phone} onChange={(event) => setPhone(event.target.value)} />
               <div className="relative sm:col-span-2">
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-surface-400" />
-                <input className={`${fieldClass} pl-9`} type="password" minLength={8} autoComplete="new-password" placeholder="New password (leave blank to keep current)" value={password} onChange={(event) => setPassword(event.target.value)} />
+                <input className={`${fieldClass} pl-9`} type="password" minLength={8} autoComplete="new-password" placeholder={t('leaveBlankToKeepPassword')} value={password} onChange={(event) => setPassword(event.target.value)} />
               </div>
             </div>
           </section>
@@ -336,10 +336,10 @@ export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, ri
             <h3 className="text-sm font-bold text-surface-900 dark:text-white">{t('profilePhoto')}</h3>
             <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-success-400 bg-success-50/60 p-4 text-sm text-surface-700 dark:border-success-800 dark:bg-success-950/20 dark:text-surface-200">
               {profileImage ? <img src={profileImage} alt="Rider profile preview" className="h-14 w-14 rounded-xl border border-success-200 object-cover dark:border-success-800" /> : <ImageIcon className="h-5 w-5 shrink-0 text-success-700 dark:text-success-400" />}
-              <span className="min-w-0 flex-1">{profileImageFile ? `${profileImageFile.name} · Ready` : 'Upload / change profile image (JPG or PNG, max 2 MB)'}</span>
+              <span className="min-w-0 flex-1">{profileImageFile ? `${profileImageFile.name} · ${t('readyLabel')}` : t('uploadChangeProfileImage')}</span>
               <input type="file" accept="image/jpeg,image/png" className="sr-only" onChange={handleProfileImageChange} />
             </label>
-            <p className="text-xs text-surface-500 dark:text-surface-400">Saving a new photo automatically updates the image in your generated CV.</p>
+            <p className="text-xs text-surface-500 dark:text-surface-400">{t('savePhotoUpdatesCv')}</p>
           </section>
 
           {addressForms.map((addressForm) => (
@@ -354,10 +354,10 @@ export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, ri
                   : { ...addressForm.value, Latitude: undefined, Longitude: undefined })}
               />
               <div className="grid gap-3 sm:grid-cols-2">
-                <input className={fieldClass} required placeholder="House / building" value={addressForm.value.House_Name || ''} onChange={(event) => addressForm.set({ ...addressForm.value, House_Name: event.target.value })} />
-                <input className={fieldClass} required placeholder="Street" value={addressForm.value.Street || ''} onChange={(event) => addressForm.set({ ...addressForm.value, Street: event.target.value })} />
-                <input className={fieldClass} required placeholder="City" value={addressForm.value.City || ''} onChange={(event) => addressForm.set({ ...addressForm.value, City: event.target.value })} />
-                <input className={fieldClass} placeholder="Postal code" value={addressForm.value.Postal_Code || ''} onChange={(event) => addressForm.set({ ...addressForm.value, Postal_Code: event.target.value })} />
+                <input className={fieldClass} required placeholder={t('houseBuilding')} value={addressForm.value.House_Name || ''} onChange={(event) => addressForm.set({ ...addressForm.value, House_Name: event.target.value })} />
+                <input className={fieldClass} required placeholder={t('street')} value={addressForm.value.Street || ''} onChange={(event) => addressForm.set({ ...addressForm.value, Street: event.target.value })} />
+                <input className={fieldClass} required placeholder={t('city')} value={addressForm.value.City || ''} onChange={(event) => addressForm.set({ ...addressForm.value, City: event.target.value })} />
+                <input className={fieldClass} placeholder={t('postalCodeLabel')} value={addressForm.value.Postal_Code || ''} onChange={(event) => addressForm.set({ ...addressForm.value, Postal_Code: event.target.value })} />
               </div>
             </section>
           ))}
@@ -365,13 +365,13 @@ export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, ri
           <section className="space-y-3">
             <h3 className="text-sm font-bold text-surface-900 dark:text-white">{t('workEducationHistory')}</h3>
             {[
-              { label: 'Experience', value: experience, set: setExperience },
-              { label: 'Previous jobs', value: previousJobs, set: setPreviousJobs },
-              { label: 'Education and qualifications', value: education, set: setEducation },
+              { label: t('experienceLabel'), value: experience, set: setExperience },
+              { label: t('previousJobsLabel'), value: previousJobs, set: setPreviousJobs },
+              { label: t('educationAndQualifications'), value: education, set: setEducation },
             ].map((field) => (
               <label key={field.label} className="block text-xs font-semibold text-surface-700 dark:text-surface-300">
                 {field.label}
-                <textarea rows={3} value={field.value} onChange={(event) => field.set(event.target.value)} placeholder={`One item per line. Write “None” if not applicable.`} className={`${fieldClass} mt-1`} />
+                <textarea rows={3} value={field.value} onChange={(event) => field.set(event.target.value)} placeholder={t('oneItemPerLine')} className={`${fieldClass} mt-1`} />
               </label>
             ))}
           </section>
