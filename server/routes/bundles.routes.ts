@@ -29,7 +29,7 @@ router.get('/', async (req, res) => {
     res.setHeader('X-Has-More', String(result.rows.length > limit));
     res.json(result.rows.slice(0, limit).map(mapBundle));
   } catch (error) {
-    console.error('Error fetching active bundles:', error);
+    req.log.error({ err: error }, 'Error fetching active bundles:');
     res.status(500).json({ error: 'Could not load bundle offers.' });
   }
 });
@@ -45,7 +45,7 @@ router.get('/seller', requireAuth, requireRole(['seller']), async (req: AuthRequ
     res.setHeader('X-Has-More', String(result.rows.length > limit));
     res.json(result.rows.slice(0, limit).map(mapBundle));
   } catch (error) {
-    console.error('Error fetching seller bundles:', error);
+    req.log.error({ err: error }, 'Error fetching seller bundles:');
     res.status(500).json({ error: 'Could not load your bundles.' });
   }
 });
@@ -85,7 +85,7 @@ router.post('/', requireAuth, requireRole(['seller']), async (req: AuthRequest, 
     `, [id, sellerId, name, JSON.stringify(productIds), discountPercent, endsAt]);
     res.status(201).json(mapBundle(result.rows[0]));
   } catch (error) {
-    console.error('Error creating seller bundle:', error);
+    req.log.error({ err: error }, 'Error creating seller bundle:');
     res.status(500).json({ error: 'Could not create this bundle.' });
   }
 });
@@ -101,7 +101,7 @@ router.patch('/:id/active', requireAuth, requireRole(['seller']), async (req: Au
     if (!result.rows.length) return res.status(404).json({ error: 'Bundle not found.' });
     res.json(mapBundle(result.rows[0]));
   } catch (error) {
-    console.error('Error updating seller bundle:', error);
+    req.log.error({ err: error }, 'Error updating seller bundle:');
     res.status(500).json({ error: 'Could not update this bundle.' });
   }
 });
@@ -112,7 +112,7 @@ router.delete('/:id', requireAuth, requireRole(['seller']), async (req: AuthRequ
     if (!result.rows.length) return res.status(404).json({ error: 'Bundle not found.' });
     res.json({ success: true });
   } catch (error) {
-    console.error('Error deleting seller bundle:', error);
+    req.log.error({ err: error }, 'Error deleting seller bundle:');
     res.status(500).json({ error: 'Could not delete this bundle.' });
   }
 });

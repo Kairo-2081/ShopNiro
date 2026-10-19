@@ -22,7 +22,7 @@ router.get('/', async (req, res) => {
     res.setHeader('X-Has-More', String(result.rows.length > limit));
     return res.json(result.rows.slice(0, limit));
   } catch (error) {
-    console.error('Could not load seller payouts:', error);
+    req.log.error({ err: error }, 'Could not load seller payouts:');
     return res.status(500).json({ error: 'Could not load seller payouts.' });
   }
 });
@@ -49,7 +49,7 @@ router.patch('/:id/pay', async (req: AuthRequest, res) => {
     return res.json({ success: true, status: 'paid' });
   } catch (error) {
     await client.query('ROLLBACK').catch(() => {});
-    console.error('Could not pay seller payout:', error);
+    req.log.error({ err: error }, 'Could not pay seller payout:');
     return res.status(500).json({ error: 'Could not process seller payout.' });
   } finally {
     client.release();
@@ -79,7 +79,7 @@ router.patch('/:id/reject', async (req: AuthRequest, res) => {
     return res.json({ success: true, status: 'rejected' });
   } catch (error) {
     await client.query('ROLLBACK').catch(() => {});
-    console.error('Could not reject seller payout:', error);
+    req.log.error({ err: error }, 'Could not reject seller payout:');
     return res.status(500).json({ error: 'Could not reject seller payout.' });
   } finally {
     client.release();

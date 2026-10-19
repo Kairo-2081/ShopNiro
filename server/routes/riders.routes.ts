@@ -375,7 +375,7 @@ router.post('/apply', riderApplicationRateLimit, async (req, res) => {
       education,
     });
   } catch (error) {
-    console.error('Could not generate rider CV PDF:', error);
+    req.log.error({ err: error }, 'Could not generate rider CV PDF:');
     return res.status(500).json({ error: 'Could not generate your rider CV PDF. Please try again.' });
   }
   const cvFileName = `${String(Name).trim().replace(/[^a-zA-Z0-9-_]+/g, '-').replace(/-+/g, '-').slice(0, 100) || 'rider'}-ShopNiro-CV.pdf`;
@@ -431,7 +431,7 @@ router.post('/apply', riderApplicationRateLimit, async (req, res) => {
     return res.status(201).json({ success: true, status: 'pending', message: 'Application received. Your ShopNiro CV PDF has been generated and saved. An administrator must approve your rider account before delivery operations are available.' });
   } catch (error: any) {
     await client.query('ROLLBACK');
-    console.error('Rider application failed:', error);
+    req.log.error({ err: error }, 'Rider application failed:');
     return res.status(500).json({ error: 'Could not submit rider application.' });
   } finally {
     client.release();
@@ -480,7 +480,7 @@ router.get('/applications', requireAuth, requireRole(['admin']), async (req, res
     res.setHeader('X-Has-More', String(result.rows.length > limit));
     res.json(result.rows.slice(0, limit).map((row) => mapRider(row, false)));
   } catch (error: any) {
-    console.error('Failed to load rider applications:', error);
+    req.log.error({ err: error }, 'Failed to load rider applications:');
     res.status(500).json({ error: 'Failed to load rider applications.' });
   }
 });
@@ -493,7 +493,7 @@ router.get('/applications/:id/cv', requireAuth, requireRole(['admin']), async (r
     res.setHeader('Content-Disposition', `attachment; filename="${cv.fileName.replace(/[\r\n"]+/g, '')}"`);
     return res.send(cv.buffer);
   } catch (error: any) {
-    console.error('Failed to fetch rider CV:', error);
+    req.log.error({ err: error }, 'Failed to fetch rider CV:');
     return res.status(500).json({ error: 'Failed to fetch CV.' });
   }
 });
@@ -523,7 +523,7 @@ router.patch('/applications/:id/status', requireAuth, requireRole(['admin']), as
     }
     return res.json({ Rider_ID: result.rows[0].id, Status: result.rows[0].status });
   } catch (error: any) {
-    console.error('Failed to update rider application:', error);
+    req.log.error({ err: error }, 'Failed to update rider application:');
     return res.status(500).json({ error: 'Failed to update rider application.' });
   }
 });
@@ -593,7 +593,7 @@ router.get('/me', requireAuth, requireRole(['rider']), async (req: AuthRequest, 
     if (!result.rows.length) return res.status(404).json({ error: 'Rider profile not found.' });
     return res.json(mapRider(result.rows[0]));
   } catch (error: any) {
-    console.error('Failed to load rider profile:', error);
+    req.log.error({ err: error }, 'Failed to load rider profile:');
     return res.status(500).json({ error: 'Failed to load rider profile.' });
   }
 });
@@ -606,7 +606,7 @@ router.get('/me/cv', requireAuth, requireRole(['rider']), async (req: AuthReques
     res.setHeader('Content-Disposition', `inline; filename="${cv.fileName.replace(/[\r\n"]+/g, '')}"`);
     return res.send(cv.buffer);
   } catch (error: any) {
-    console.error('Could not prepare rider CV preview:', error);
+    req.log.error({ err: error }, 'Could not prepare rider CV preview:');
     return res.status(500).json({ error: 'Could not prepare your CV preview.' });
   }
 });
@@ -754,7 +754,7 @@ router.put('/me', requireAuth, requireRole(['rider']), async (req: AuthRequest, 
   } catch (error: any) {
     await client.query('ROLLBACK');
     if (error?.code === '23505') return res.status(409).json({ error: 'That email or username is already registered.' });
-    console.error('Could not update rider profile:', error);
+    req.log.error({ err: error }, 'Could not update rider profile:');
     return res.status(500).json({ error: 'Could not update your rider details.' });
   } finally {
     client.release();

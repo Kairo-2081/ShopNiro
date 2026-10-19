@@ -421,7 +421,7 @@ router.get('/simulator', async (req, res) => {
       <p><a class="cancel" href="/api/payment/sslcommerz/fail?tran_id=${encodeURIComponent(tranId)}">Simulate failed payment</a></p>
       <a class="cancel" href="/api/payment/sslcommerz/cancel?tran_id=${encodeURIComponent(tranId)}">Cancel payment</a></main></body></html>`);
   } catch (error) {
-    console.error('Could not load payment simulator:', error);
+    req.log.error({ err: error }, 'Could not load payment simulator:');
     res.status(500).send('Could not load payment simulator.');
   }
 });
@@ -447,7 +447,7 @@ router.post('/simulator/complete', async (req, res) => {
     const result = await finalizeSslCommerzPayment(tranId, `SIM-${tranId}`);
     return res.redirect(303, paymentReturnUrl('success', result.orderId));
   } catch (error) {
-    console.error('Could not complete simulated payment:', error);
+    req.log.error({ err: error }, 'Could not complete simulated payment:');
     return res.redirect(303, `/api/payment/simulator?tran_id=${encodeURIComponent(tranId)}&error=credentials`);
   }
 });
@@ -637,7 +637,7 @@ router.post('/init', requireAuth, requireRole(['customer']), paymentInitRateLimi
       paymentMethod: finalPaymentMethod,
     });
   } catch (error: any) {
-    console.error('Error initiating payment:', error);
+    req.log.error({ err: error }, 'Error initiating payment:');
     res.status(500).json({ error: publicMessage(error, 'Failed to initialize payment gateway') });
   }
 });
@@ -683,7 +683,7 @@ router.post('/sslcommerz/validate', requireAuth, requireRole(['customer']), asyn
     if (error instanceof GatewayError) {
       return res.status(402).json({ error: 'Payment validation failed.', reason: error.message });
     }
-    console.error('Error validating payment:', error);
+    req.log.error({ err: error }, 'Error validating payment:');
     res.status(500).json({ error: publicMessage(error, 'Payment validation failed') });
   }
 });
@@ -701,7 +701,7 @@ const handleSslCommerzSuccess = async (req: AuthRequest, res: any) => {
     const result = await finalizeSslCommerzPayment(tranId, valId);
     return res.redirect(303, paymentReturnUrl(result.duplicatePayment ? 'verification' : 'success', result.orderId));
   } catch (error: any) {
-    console.error('SSLCommerz success callback could not verify payment:', error);
+    req.log.error({ err: error }, 'SSLCommerz success callback could not verify payment:');
     const orderId = await orderIdForTransaction(tranId).catch(() => undefined);
     return res.redirect(303, paymentReturnUrl('verification', orderId));
   }
@@ -741,7 +741,7 @@ router.post('/sslcommerz/ipn', async (req, res) => {
     await finalizeSslCommerzPayment(tran_id, val_id);
     res.status(200).send('IPN Received');
   } catch (error: any) {
-    console.error('SSLCommerz IPN validation failed:', error);
+    req.log.error({ err: error }, 'SSLCommerz IPN validation failed:');
     res.status(402).json({ error: 'Payment validation failed.' });
   }
 });
@@ -766,7 +766,7 @@ router.get('/transactions', requireAuth, requireRole(['admin']), async (req, res
     res.setHeader('X-Has-More', String(result.rows.length > limit));
     res.json(result.rows.slice(0, limit));
   } catch (error: any) {
-    console.error('Error fetching transactions:', error);
+    req.log.error({ err: error }, 'Error fetching transactions:');
     res.status(500).json({ error: 'Failed to fetch transactions' });
   }
 });

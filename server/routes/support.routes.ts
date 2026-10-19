@@ -39,11 +39,11 @@ router.post('/requests', supportSubmissionLimit, async (req, res) => {
     try {
       await sendSupportRequestEmail({ name, email, subject, message, requestId });
     } catch (emailError) {
-      console.error('Support request email notification failed:', emailError);
+      req.log.error({ err: emailError }, 'Support request email notification failed:');
     }
     return res.status(201).json({ success: true, Request_ID: requestId });
   } catch (error) {
-    console.error('Could not save support request:', error);
+    req.log.error({ err: error }, 'Could not save support request:');
     return res.status(500).json({ error: 'Could not send your support request. Please try again later.' });
   }
 });
@@ -71,7 +71,7 @@ router.get('/requests', requireAuth, requireRole(['admin']), async (req: AuthReq
       Resolved_At: row.resolved_at ? new Date(row.resolved_at).toISOString() : undefined,
     })));
   } catch (error) {
-    console.error('Could not load support requests:', error);
+    req.log.error({ err: error }, 'Could not load support requests:');
     return res.status(500).json({ error: 'Could not load support requests.' });
   }
 });
@@ -92,7 +92,7 @@ router.patch('/requests/:id/status', requireAuth, requireRole(['admin']), async 
     if (!result.rows.length) return res.status(404).json({ error: 'Support request not found.' });
     return res.json({ success: true, Request_ID: result.rows[0].id, Status: result.rows[0].status });
   } catch (error) {
-    console.error('Could not update support request:', error);
+    req.log.error({ err: error }, 'Could not update support request:');
     return res.status(500).json({ error: 'Could not update support request.' });
   }
 });
