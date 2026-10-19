@@ -21,7 +21,7 @@ router.post('/events', async (req, res) => {
     `, [productId, eventType, sessionId]);
     res.json({ success: true });
   } catch (error) {
-    console.error('Error recording product event:', error);
+    req.log.error({ err: error }, 'Error recording product event:');
     res.status(500).json({ error: 'Could not record product analytics.' });
   }
 });
@@ -81,7 +81,7 @@ router.get('/seller', requireAuth, requireRole(['seller']), async (req: AuthRequ
       };
     }));
   } catch (error) {
-    console.error('Error fetching seller product analytics:', error);
+    req.log.error({ err: error }, 'Error fetching seller product analytics:');
     res.status(500).json({ error: 'Could not load product analytics.' });
   }
 });

@@ -13,7 +13,7 @@ router.get('/', async (req: AuthRequest, res) => {
     );
     res.json(result.rows.map((row) => row.product_id));
   } catch (error) {
-    console.error('Could not load customer wishlist:', error);
+    req.log.error({ err: error }, 'Could not load customer wishlist:');
     res.status(500).json({ error: 'Could not load your saved products.' });
   }
 });
@@ -33,7 +33,7 @@ router.post('/:productId', async (req: AuthRequest, res) => {
     }
     res.status(200).json({ saved: true, productId: req.params.productId });
   } catch (error) {
-    console.error('Could not save wishlist product:', error);
+    req.log.error({ err: error }, 'Could not save wishlist product:');
     res.status(500).json({ error: 'Could not save this product.' });
   }
 });
@@ -46,7 +46,7 @@ router.delete('/:productId', async (req: AuthRequest, res) => {
     ]);
     res.json({ saved: false, productId: req.params.productId });
   } catch (error) {
-    console.error('Could not remove wishlist product:', error);
+    req.log.error({ err: error }, 'Could not remove wishlist product:');
     res.status(500).json({ error: 'Could not remove this saved product.' });
   }
 });

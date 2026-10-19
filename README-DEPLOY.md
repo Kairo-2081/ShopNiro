@@ -28,6 +28,8 @@ Vercel supplies `VERCEL_URL` and `VERCEL_PROJECT_PRODUCTION_URL`; the API includ
 - `SSLCOMMERZ_IPN_TOKEN`: shared secret configured in SSLCommerz and ShopNiro. This token authenticates IPN callbacks and is required for payment status updates.
 - `GROQ_API_KEY`: optional seller/rider AI assistance.
 - `GOOGLE_MAPS_API_KEY`: optional Google Maps services.
+- `SENTRY_DSN`: enables server error tracking. Unset means Sentry is off. Every 5xx response is reported with its `requestId`.
+- `CSP_ENFORCE`: `true` makes the Content-Security-Policy enforcing. Unset or any other value keeps it report-only (violations appear in the browser console, nothing is blocked). Production only.
 
 ## Deployment checks
 
@@ -40,3 +42,6 @@ Vercel supplies `VERCEL_URL` and `VERCEL_PROJECT_PRODUCTION_URL`; the API includ
 7. Create the seller-document Storage bucket as private, then run `npx tsx scripts/migrate-seller-documents-to-storage.ts` against a backed-up database to move existing verification files.
 8. Configure GitHub Actions secrets `APP_URL` and `CRON_SECRET`; dispatch the scheduled-jobs workflow once and confirm both cron endpoints respond successfully.
 9. Before migrating legacy product images, back up both `products` and `order_items`, create the public `product-images` bucket, and run `npm run migrate:product-images -- --limit=3` with `DATABASE_URL` set to the intended database. Review the dry-run output, then apply one small batch using `--apply` and `PRODUCT_IMAGE_MIGRATION_CONFIRM=YES_I_HAVE_A_BACKUP`. Increase the limit in controlled batches; this script never uses `SUPABASE_DB_URL` or runs automatically.
+10. Error tracking: create a Sentry project (Node.js), set `SENTRY_DSN` on the host, redeploy, then trigger a test error and confirm it appears with its `requestId`. Logs are structured JSON (pino); search the host's log view by `req.id` or the `requestId` a user reports.
+11. Uptime: create an external monitor (for example UptimeRobot, 5-minute interval, email alert) on `GET /api/ready`. It returns 200 when the database answers within 2 seconds and 503 otherwise. Use `/api/health` only for a process-alive check; it does not touch the database.
+12. Enforce the CSP: with `CSP_ENFORCE` unset, click through home, product, cart, checkout, the map/tracking pages, rider PDF preview and seller dashboard in the deployed origin with the browser console open. If there are no `Content Security Policy` violations, set `CSP_ENFORCE=true` on the host and repeat the click-through. To roll back, unset the variable; no deploy is needed.

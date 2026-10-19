@@ -67,7 +67,7 @@ router.patch('/location', requireAuth, requireRole(['rider']), requireApprovedRi
     await query('UPDATE riders SET current_latitude = $2, current_longitude = $3, updated_at = CURRENT_TIMESTAMP WHERE id = $1', [req.user!.entityId, latitude, longitude]);
     return res.json({ success: true });
   } catch (error: any) {
-    console.error('Could not save rider location:', error);
+    req.log.error({ err: error }, 'Could not save rider location:');
     return res.status(500).json({ error: 'Could not save current location.' });
   }
 });
@@ -126,7 +126,7 @@ router.get('/deliveries', requireAuth, requireRole(['rider']), requireApprovedRi
     });
     return res.json(deliveries);
   } catch (error: any) {
-    console.error('Could not load rider deliveries:', error);
+    req.log.error({ err: error }, 'Could not load rider deliveries:');
     return res.status(500).json({ error: 'Could not load available deliveries.' });
   }
 });
@@ -141,7 +141,7 @@ router.post('/deliveries/:id/accept', requireAuth, requireRole(['rider']), requi
     if (!result.rows.length) return res.status(409).json({ error: 'This delivery was already accepted or is no longer available.' });
     return res.json({ success: true });
   } catch (error: any) {
-    console.error('Could not accept rider delivery:', error);
+    req.log.error({ err: error }, 'Could not accept rider delivery:');
     return res.status(500).json({ error: 'Could not accept this delivery.' });
   }
 });
@@ -173,7 +173,7 @@ router.post('/deliveries/:id/on-way', requireAuth, requireRole(['rider']), requi
     return res.json({ success: true });
   } catch (error: any) {
     await client.query('ROLLBACK');
-    console.error('Could not start rider delivery:', error);
+    req.log.error({ err: error }, 'Could not start rider delivery:');
     return res.status(500).json({ error: 'Could not start this delivery.' });
   } finally {
     client.release();
@@ -192,7 +192,7 @@ router.post('/deliveries/:id/cod-collected', requireAuth, requireRole(['rider'])
     if (!result.rows.length) return res.status(409).json({ error: 'This delivery has no COD amount to collect or is not on the way.' });
     return res.json({ success: true });
   } catch (error: any) {
-    console.error('Could not confirm COD collection:', error);
+    req.log.error({ err: error }, 'Could not confirm COD collection:');
     return res.status(500).json({ error: 'Could not confirm COD collection.' });
   }
 });
@@ -352,7 +352,7 @@ router.post('/deliveries/:id/complete', requireAuth, requireRole(['customer']), 
     return res.json({ success: true, wasTimely, performancePoints: points, monthlySalary: salary });
   } catch (error: any) {
     await client.query('ROLLBACK');
-    console.error('Could not complete rider delivery:', error);
+    req.log.error({ err: error }, 'Could not complete rider delivery:');
     return res.status(500).json({ error: 'Could not confirm delivery.' });
   } finally {
     client.release();
@@ -400,7 +400,7 @@ router.get('/customer-deliveries', requireAuth, requireRole(['customer']), async
       Review_ID: row.review_id || undefined,
     })));
   } catch (error: any) {
-    console.error('Could not load customer deliveries:', error);
+    req.log.error({ err: error }, 'Could not load customer deliveries:');
     return res.status(500).json({ error: 'Could not load shipment details.' });
   }
 });
@@ -478,7 +478,7 @@ router.post('/customer-deliveries/:id/review', requireAuth, requireRole(['custom
   } catch (error: any) {
     await client.query('ROLLBACK');
     if (error?.code === '23505') return res.status(409).json({ error: 'A review was already submitted for this delivery.' });
-    console.error('Could not submit rider review:', error);
+    req.log.error({ err: error }, 'Could not submit rider review:');
     return res.status(500).json({ error: 'Could not submit your delivery review.' });
   } finally {
     client.release();
@@ -521,7 +521,7 @@ router.get('/wallet', requireAuth, requireRole(['rider']), requireApprovedRider,
     });
   } catch (error: any) {
     await client.query('ROLLBACK');
-    console.error('Could not load rider wallet:', error);
+    req.log.error({ err: error }, 'Could not load rider wallet:');
     return res.status(500).json({ error: 'Could not load your wallet.' });
   } finally {
     client.release();
@@ -597,7 +597,7 @@ router.post('/wallet/withdrawals', requireAuth, requireRole(['rider']), requireA
     return res.status(201).json({ success: true, withdrawalId });
   } catch (error: any) {
     await client.query('ROLLBACK');
-    console.error('Could not request rider withdrawal:', error);
+    req.log.error({ err: error }, 'Could not request rider withdrawal:');
     return res.status(500).json({ error: 'Could not create withdrawal request.' });
   } finally {
     client.release();
@@ -617,7 +617,7 @@ router.get('/wallet/withdrawals', requireAuth, requireRole(['admin']), async (re
     res.setHeader('X-Has-More', String(result.rows.length > limit));
     return res.json(result.rows.slice(0, limit));
   } catch (error: any) {
-    console.error('Could not load rider withdrawals:', error);
+    req.log.error({ err: error }, 'Could not load rider withdrawals:');
     return res.status(500).json({ error: 'Could not load withdrawal requests.' });
   }
 });
@@ -642,7 +642,7 @@ router.patch('/wallet/withdrawals/:id', requireAuth, requireRole(['admin']), asy
     return res.json({ success: true, status });
   } catch (error: any) {
     await client.query('ROLLBACK');
-    console.error('Could not process rider withdrawal:', error);
+    req.log.error({ err: error }, 'Could not process rider withdrawal:');
     return res.status(500).json({ error: 'Could not process withdrawal.' });
   } finally {
     client.release();

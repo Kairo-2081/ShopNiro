@@ -76,7 +76,7 @@ router.get('/', async (req, res) => {
     res.setHeader('X-Has-More', String(result.rows.length > limit));
     res.json(formatted.slice(0, limit));
   } catch (error: any) {
-    console.error('Error fetching products:', error);
+    req.log.error({ err: error }, 'Error fetching products:');
     res.status(500).json({ error: 'Failed to fetch products' });
   }
 });
@@ -118,7 +118,7 @@ router.get('/:id', async (req, res) => {
     };
     res.json(product);
   } catch (error: any) {
-    console.error('Error fetching product by id:', error);
+    req.log.error({ err: error }, 'Error fetching product by id:');
     res.status(500).json({ error: 'Failed to fetch product' });
   }
 });
@@ -216,7 +216,7 @@ router.post('/', requireAuth, requireRole(['seller', 'admin']), async (req: Auth
     };
     res.status(201).json(newProd);
   } catch (error: any) {
-    console.error('Error creating product:', error);
+    req.log.error({ err: error }, 'Error creating product:');
     res.status(error?.statusCode || 500).json({ error: publicMessage(error, 'Failed to create product') });
   }
 });
@@ -310,7 +310,7 @@ router.put('/:id', requireAuth, requireRole(['seller', 'admin']), async (req: Au
       Size_Chart: sizeChart,
     });
   } catch (error: any) {
-    console.error('Error updating product:', error);
+    req.log.error({ err: error }, 'Error updating product:');
     res.status(error?.statusCode || 500).json({ error: publicMessage(error, 'Failed to update product') });
   }
 });
@@ -344,7 +344,7 @@ router.patch('/:id/status', requireAuth, requireRole(['seller', 'admin']), async
       Seller_ID: row.seller_id,
     });
   } catch (error: any) {
-    console.error('Error updating product status:', error);
+    req.log.error({ err: error }, 'Error updating product status:');
     res.status(500).json({ error: 'Failed to update status' });
   }
 });
@@ -359,7 +359,7 @@ router.delete('/:id', requireAuth, requireRole(['seller', 'admin']), async (req:
     await query(`SELECT * FROM gocart_product_delete($1)`, [id]);
     res.json({ success: true, message: 'Product deleted' });
   } catch (error: any) {
-    console.error('Error deleting product:', error);
+    req.log.error({ err: error }, 'Error deleting product:');
     res.status(500).json({ error: 'Failed to delete product' });
   }
 });

@@ -31,7 +31,7 @@ router.get('/', async (req, res) => {
     res.setHeader('X-Has-More', String(result.rows.length > limit));
     return res.json(formatted.slice(0, limit));
   } catch (error: any) {
-    console.error('Error fetching admins:', error);
+    req.log.error({ err: error }, 'Error fetching admins:');
     res.status(500).json({ error: 'Failed to fetch admins' });
   }
 });
@@ -94,7 +94,7 @@ router.post('/', async (req, res) => {
       },
     });
   } catch (error: any) {
-    console.error('Error creating admin:', error);
+    req.log.error({ err: error }, 'Error creating admin:');
     res.status(500).json({ error: publicMessage(error, 'Failed to create admin') });
   }
 });
@@ -114,7 +114,7 @@ router.get('/users', async (req, res) => {
     res.setHeader('X-Has-More', String(result.rows.length > limit));
     res.json(result.rows.slice(0, limit));
   } catch (error: any) {
-    console.error('Error fetching admin users:', error);
+    req.log.error({ err: error }, 'Error fetching admin users:');
     res.status(500).json({ error: 'Failed to fetch platform users' });
   }
 });
