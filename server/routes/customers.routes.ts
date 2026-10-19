@@ -16,6 +16,7 @@ import { hashPassword } from '../db/password.ts';
 import { requireAuth, AuthRequest } from '../middleware/auth.ts';
 import { Customer } from '../../src/types.ts';
 import { sendWelcomeOfferEmail } from '../services/email.service.ts';
+import { publicMessage } from '../middleware/errorHandler.ts';
 
 const router = Router();
 const registrationRateLimit = rateLimit({
@@ -122,7 +123,7 @@ router.post('/', registrationRateLimit, async (req, res) => {
     res.status(201).json(newCustomer);
   } catch (error: any) {
     console.error('Error creating customer:', error);
-    res.status(500).json({ error: error.message || 'Failed to create customer' });
+    res.status(500).json({ error: publicMessage(error, 'Failed to create customer') });
   }
 });
 

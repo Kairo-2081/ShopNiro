@@ -3,6 +3,7 @@ import { query } from '../db/index.ts';
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth.ts';
 import { storeProductImageIfInline } from '../services/productImages.service.ts';
 import { Product } from '../../src/types.ts';
+import { publicMessage } from '../middleware/errorHandler.ts';
 
 const router = Router();
 
@@ -216,7 +217,7 @@ router.post('/', requireAuth, requireRole(['seller', 'admin']), async (req: Auth
     res.status(201).json(newProd);
   } catch (error: any) {
     console.error('Error creating product:', error);
-    res.status(error?.statusCode || 500).json({ error: error.message || 'Failed to create product' });
+    res.status(error?.statusCode || 500).json({ error: publicMessage(error, 'Failed to create product') });
   }
 });
 
@@ -310,7 +311,7 @@ router.put('/:id', requireAuth, requireRole(['seller', 'admin']), async (req: Au
     });
   } catch (error: any) {
     console.error('Error updating product:', error);
-    res.status(error?.statusCode || 500).json({ error: error.message || 'Failed to update product' });
+    res.status(error?.statusCode || 500).json({ error: publicMessage(error, 'Failed to update product') });
   }
 });
 
