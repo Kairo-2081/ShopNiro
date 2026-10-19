@@ -18,7 +18,7 @@ router.get('/', async (req, res) => {
     }));
     res.json(formatted);
   } catch (error: any) {
-    console.error('Error fetching categories:', error);
+    req.log.error({ err: error }, 'Error fetching categories:');
     res.status(500).json({ error: 'Failed to fetch categories' });
   }
 });
@@ -38,7 +38,7 @@ router.post('/', requireAuth, requireRole(['admin']), async (req: AuthRequest, r
     const row = result.rows[0];
     res.status(201).json({ Category_ID: row.id, Name: row.name });
   } catch (error: any) {
-    console.error('Error creating category:', error);
+    req.log.error({ err: error }, 'Error creating category:');
     res.status(500).json({ error: 'Failed to create category' });
   }
 });
@@ -58,7 +58,7 @@ router.put('/:id', requireAuth, requireRole(['admin']), async (req: AuthRequest,
     const row = result.rows[0];
     res.json({ Category_ID: row?.id || id, Name: row?.name || Name.trim() });
   } catch (error: any) {
-    console.error('Error updating category:', error);
+    req.log.error({ err: error }, 'Error updating category:');
     res.status(500).json({ error: 'Failed to update category' });
   }
 });
@@ -73,7 +73,7 @@ router.delete('/:id', requireAuth, requireRole(['admin']), async (req: AuthReque
     await query(`SELECT * FROM gocart_category_delete($1)`, [id]);
     res.json({ success: true, message: 'Category deleted' });
   } catch (error: any) {
-    console.error('Error deleting category:', error);
+    req.log.error({ err: error }, 'Error deleting category:');
     res.status(500).json({ error: 'Failed to delete category' });
   }
 });

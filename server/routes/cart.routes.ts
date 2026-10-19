@@ -47,7 +47,7 @@ router.get('/', requireAuth, requireRole(['customer']), async (req: AuthRequest,
 
     res.json(enriched);
   } catch (error: any) {
-    console.error('Error fetching cart:', error);
+    req.log.error({ err: error }, 'Error fetching cart:');
     res.status(500).json({ error: 'Failed to fetch cart' });
   }
 });
@@ -103,7 +103,7 @@ router.post('/', requireAuth, requireRole(['customer']), async (req: AuthRequest
 
     res.status(201).json({ Cart_ID: cartId, Customer_ID: custId, Product_ID, Quantity: qty, Size: size || undefined });
   } catch (error: any) {
-    console.error('Error adding to cart:', error);
+    req.log.error({ err: error }, 'Error adding to cart:');
     res.status(500).json({ error: publicMessage(error, 'Failed to update cart') });
   }
 });
@@ -140,7 +140,7 @@ router.put('/:cartId', requireAuth, requireRole(['customer']), async (req: AuthR
     const result = await query(`SELECT * FROM gocart_cart_update($1, $2, $3)`, [cartId, qty, custId]);
     res.json({ Cart_ID: cartId, Quantity: qty, updated: result.rows[0] });
   } catch (error: any) {
-    console.error('Error updating cart item quantity:', error);
+    req.log.error({ err: error }, 'Error updating cart item quantity:');
     res.status(500).json({ error: publicMessage(error, 'Failed to update cart item quantity') });
   }
 });
@@ -156,7 +156,7 @@ router.delete('/:cartId', requireAuth, requireRole(['customer']), async (req: Au
     await query(`SELECT * FROM gocart_cart_delete($1, $2)`, [cartId, custId]);
     res.json({ success: true, message: 'Item removed from cart' });
   } catch (error: any) {
-    console.error('Error removing item from cart:', error);
+    req.log.error({ err: error }, 'Error removing item from cart:');
     res.status(500).json({ error: publicMessage(error, 'Failed to remove item from cart') });
   }
 });

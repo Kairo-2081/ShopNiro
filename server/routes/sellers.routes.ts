@@ -80,7 +80,7 @@ router.get('/', optionalAuth, async (req: AuthRequest, res) => {
     res.setHeader('X-Has-More', String(result.rows.length > limit));
     res.json(formatted.slice(0, limit));
   } catch (error: any) {
-    console.error('Error fetching sellers:', error);
+    req.log.error({ err: error }, 'Error fetching sellers:');
     res.status(500).json({ error: 'Failed to fetch sellers' });
   }
 });
@@ -197,7 +197,7 @@ router.post('/', registrationRateLimit, async (req, res) => {
   } catch (error: any) {
     if (client) await client.query('ROLLBACK').catch(() => {});
     if (identityStoragePath) await deleteSellerDocument(identityStoragePath);
-    console.error('Error creating seller:', error);
+    req.log.error({ err: error }, 'Error creating seller:');
     res.status(error?.statusCode || 500).json({ error: publicMessage(error, 'Failed to create seller') });
   } finally {
     client?.release();
@@ -216,7 +216,7 @@ router.get('/applications/:id/identity-document', requireAuth, requireRole(['adm
     const url = await createSellerDocumentSignedUrl(result.rows[0].storage_path);
     return res.json({ url, expiresInSeconds: 300 });
   } catch (error) {
-    console.error('Could not fetch seller identity document:', error);
+    req.log.error({ err: error }, 'Could not fetch seller identity document:');
     return res.status((error as any)?.statusCode || 500).json({ error: 'Could not fetch seller identity document.' });
   }
 });
@@ -361,7 +361,7 @@ router.put('/me/profile', requireAuth, requireRole(['seller']), async (req: Auth
     await client.query('ROLLBACK');
     if (identityStoragePath && !committed) await deleteSellerDocument(identityStoragePath);
     if (error?.code === '23505') return res.status(409).json({ error: 'That username or email is already in use.' });
-    console.error('Could not update seller profile:', error);
+    req.log.error({ err: error }, 'Could not update seller profile:');
     return res.status(500).json({ error: 'Could not update store details.' });
   } finally {
     client.release();
@@ -389,7 +389,7 @@ router.get('/me/wallet', requireAuth, requireRole(['seller']), async (req: AuthR
       entries: result.rows,
     });
   } catch (error: any) {
-    console.error('Could not load seller wallet:', error);
+    req.log.error({ err: error }, 'Could not load seller wallet:');
     return res.status(500).json({ error: 'Could not load seller COD remittances.' });
   }
 });
@@ -439,7 +439,7 @@ router.post('/me/payouts', requireAuth, requireRole(['seller']), async (req: Aut
     return res.status(201).json({ success: true, payoutId, amount, status: 'requested' });
   } catch (error) {
     await client.query('ROLLBACK').catch(() => {});
-    console.error('Could not request seller payout:', error);
+    req.log.error({ err: error }, 'Could not request seller payout:');
     return res.status(500).json({ error: 'Could not request seller payout.' });
   } finally {
     client.release();
@@ -509,7 +509,7 @@ router.patch('/:id/status', requireAuth, requireRole(['admin']), async (req: Aut
       Created_At: s.created_at ? new Date(s.created_at).toISOString() : new Date().toISOString(),
     });
   } catch (error: any) {
-    console.error('Error updating seller status:', error);
+    req.log.error({ err: error }, 'Error updating seller status:');
     return res.status(500).json({ error: 'Failed to update seller status' });
   }
 });

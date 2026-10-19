@@ -43,7 +43,7 @@ router.get('/', async (req, res) => {
     res.setHeader('X-Has-More', String(hasMore));
     res.json(formatted.slice(0, limit));
   } catch (error: any) {
-    console.error('Error fetching reviews:', error);
+    req.log.error({ err: error }, 'Error fetching reviews:');
     res.status(500).json({ error: 'Failed to fetch reviews' });
   }
 });
@@ -80,7 +80,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
       Created_At: r.created_at ? new Date(r.created_at).toISOString() : new Date().toISOString(),
     });
   } catch (error: any) {
-    console.error('Error creating review:', error);
+    req.log.error({ err: error }, 'Error creating review:');
     res.status(500).json({ error: publicMessage(error, 'Failed to create review') });
   }
 });
