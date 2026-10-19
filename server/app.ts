@@ -115,8 +115,6 @@ app.use(cors({
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, status: 'ok' });
 });
-app.use('/api', apiRateLimit);
-app.use('/api', enforcePublicApiPolicy);
 app.get('/api/ready', async (_req, res) => {
   let timeout: NodeJS.Timeout | undefined;
   try {
@@ -133,6 +131,8 @@ app.get('/api/ready', async (_req, res) => {
     if (timeout) clearTimeout(timeout);
   }
 });
+app.use('/api', apiRateLimit);
+app.use('/api', enforcePublicApiPolicy);
 app.use('/api/ai', optionalAuth, aiRateLimit);
 app.use('/api/maps', optionalAuth, mapsRateLimit);
 
