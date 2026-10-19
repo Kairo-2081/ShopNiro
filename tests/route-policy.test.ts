@@ -135,6 +135,16 @@ test('public API routes are exactly the reviewed list', () => {
   assert.equal(isPublicApiRoute('POST', '/api/auth/oauth/google'), false);
 });
 
+test('readiness endpoint is registered before API authentication middleware', () => {
+  const stack = (app as any)._router.stack;
+  const readinessIndex = stack.findIndex((layer: any) => layer.route?.path === '/api/ready');
+  const authPolicyIndex = stack.findIndex((layer: any) => layer.name === 'enforcePublicApiPolicy');
+
+  assert.ok(readinessIndex >= 0, 'readiness route should be registered');
+  assert.ok(authPolicyIndex >= 0, 'API authentication middleware should be registered');
+  assert.ok(readinessIndex < authPolicyIndex, 'readiness route should bypass API authentication middleware');
+});
+
 test('cron routes require a configured matching secret', async () => {
   for (const path of ['/api/cron/expire-orders', '/api/cron/refunds']) {
     const response = await request('POST', path);

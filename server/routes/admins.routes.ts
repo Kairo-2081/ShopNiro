@@ -3,6 +3,7 @@ import { query, mapAddress } from '../db/index.ts';
 import { hashPassword } from '../db/password.ts';
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth.ts';
 import { Admin } from '../../src/types.ts';
+import { publicMessage } from '../middleware/errorHandler.ts';
 
 const router = Router();
 
@@ -94,7 +95,7 @@ router.post('/', async (req, res) => {
     });
   } catch (error: any) {
     console.error('Error creating admin:', error);
-    res.status(500).json({ error: error.message || 'Failed to create admin' });
+    res.status(500).json({ error: publicMessage(error, 'Failed to create admin') });
   }
 });
 

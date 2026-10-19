@@ -39,6 +39,7 @@
 - If changing the database contract, look at `schema.sql` and the related seed/query patterns before modifying API responses.
 
 ## Relevant docs
+- [docs/api.md](docs/api.md), [docs/erd.md](docs/erd.md), [docs/flows.md](docs/flows.md)
 - [README.md](README.md)
 - [schema.sql](schema.sql)
 - [docs/database-design.md](docs/database-design.md)

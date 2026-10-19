@@ -7,6 +7,7 @@ Routes are listed from `server/routes/*.ts`; prefixes come from the mounts in `s
 | Method | Path | Who may call |
 | --- | --- | --- |
 | GET | `/api/health` | Public |
+| GET | `/api/ready` | Public |
 | GET | `/api/db/status` | Admin |
 | GET | `/api/stats` | Admin |
 | GET | `/api/admin/users` | Admin |
