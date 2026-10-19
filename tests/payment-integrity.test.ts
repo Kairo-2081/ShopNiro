@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { after, mock, test, type TestContext } from 'node:test';
 import express from 'express';
+import pino from 'pino';
+import pinoHttp from 'pino-http';
 import { request as httpRequest, Server } from 'node:http';
 import { randomUUID } from 'node:crypto';
 import { pool, query } from '../server/db/index.ts';
@@ -191,6 +193,7 @@ const createCodDelivery = async (customerId: string, orderId: string, riderId: s
 };
 
 const app = express();
+app.use(pinoHttp({ logger: pino({ level: 'silent' }) }));
 app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/admins', adminsRoutes);
