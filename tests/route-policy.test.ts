@@ -14,15 +14,18 @@ mutationProbe.get('/leak', (_req, res) => res.json({ exposed: true }));
 app.use('/api/route-policy-probe', mutationProbe);
 apiRouterMounts.push(['/api/route-policy-probe', mutationProbe]);
 
-const routes = () => apiRouterMounts.flatMap(([prefix, router]) =>
-  router.stack.flatMap((layer: any) => {
-    if (!layer.route) return [];
-    const paths = Array.isArray(layer.route.path) ? layer.route.path : [layer.route.path];
-    return paths.flatMap((routePath: string) => Object.keys(layer.route.methods)
-      .filter((method) => layer.route.methods[method])
-      .map((method) => [method.toUpperCase(), `${prefix}${routePath === '/' ? '' : routePath}`] as const));
-  })
-);
+const collectRoutes = (router: any, prefix = '') => router.stack.flatMap((layer: any) => {
+  if (!layer.route) return [];
+  const paths = Array.isArray(layer.route.path) ? layer.route.path : [layer.route.path];
+  return paths.flatMap((routePath: string) => Object.keys(layer.route.methods)
+    .filter((method) => layer.route.methods[method])
+    .map((method) => [method.toUpperCase(), `${prefix}${routePath === '/' ? '' : routePath}`] as const));
+});
+
+const routes = () => [
+  ...apiRouterMounts.flatMap(([prefix, router]) => collectRoutes(router, prefix)),
+  ...collectRoutes((app as any)._router || { stack: [] }),
+];
 
 const server = await new Promise<Server>((resolve) => {
   const listener = app.listen(0, '127.0.0.1', () => resolve(listener));
@@ -93,6 +96,8 @@ test('public API routes are exactly the reviewed list', () => {
     'GET /api/auth/oauth/registration',
     'GET /api/bundles',
     'GET /api/categories',
+    'GET /api/health',
+    'GET /api/ready',
     'GET /api/maps/reverse',
     'GET /api/payment/bkash/direct',
     'GET /api/payment/methods',

@@ -2,7 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import { requireAuth } from './auth.ts';
 
 export const PUBLIC_API_RULES: Array<[string, RegExp]> = [
-  ['GET', /^\/api\/health$/],
+  ['GET', /^\/api\/(health|ready)$/],
   ['POST', /^\/api\/auth\/(login|logout)$/],
   ['GET', /^\/api\/auth\/me$/],
   ['GET', /^\/api\/auth\/oauth\/registration$/],
