@@ -8,6 +8,7 @@ process.env.APP_URL = 'https://configured-shopniro.example';
 
 const { app, apiRouterMounts } = await import('../server/app.ts');
 const { isPublicApiRoute } = await import('../server/middleware/publicRoutes.ts');
+const { query } = await import('../server/db/index.ts');
 const dbTest = process.env.DATABASE_URL ? test : test.skip;
 const mutationProbe = Router();
 mutationProbe.get('/leak', (_req, res) => res.json({ exposed: true }));
@@ -31,7 +32,7 @@ const server = await new Promise<Server>((resolve) => {
   const listener = app.listen(0, '127.0.0.1', () => resolve(listener));
 });
 
-const request = async (method: string, path: string, body?: unknown, extraHeaders: Record<string, string> = {}): Promise<{ status: number; body: any }> => {
+const request = async (method: string, path: string, body?: unknown, extraHeaders: Record<string, string> = {}): Promise<{ status: number; body: any; cookies: string[] }> => {
   const address = server.address();
   if (!address || typeof address === 'string') throw new Error('Test server has no TCP address.');
   return new Promise((resolve, reject) => {
@@ -57,7 +58,7 @@ const request = async (method: string, path: string, body?: unknown, extraHeader
         } catch {
           // Keep non-JSON responses available to assertions.
         }
-        resolve({ status: res.statusCode || 0, body: responseBody });
+        resolve({ status: res.statusCode || 0, body: responseBody, cookies: (res.headers['set-cookie'] as string[] | undefined) || [] });
       });
     });
     req.on('error', reject);
@@ -114,6 +115,7 @@ test('public API routes are exactly the reviewed list', () => {
     'POST /api/analytics/events',
     'POST /api/auth/login',
     'POST /api/auth/logout',
+    'POST /api/auth/signup',
     'POST /api/customers',
     'POST /api/cron/expire-orders',
     'POST /api/cron/refunds',
@@ -177,6 +179,11 @@ test('public login requests reach the login handler without a session', async ()
   assert.notEqual(response.status, 401, JSON.stringify(response.body));
 });
 
+test('signup requests reach public validation without a session', async () => {
+  const response = await request('POST', '/api/auth/signup', {});
+  assert.equal(response.status, 400, JSON.stringify(response.body));
+});
+
 test('OAuth signup handoff is readable without a session and does not cache', async () => {
   const response = await request('GET', '/api/auth/oauth/registration');
   assert.equal(response.status, 200, JSON.stringify(response.body));
@@ -204,6 +211,106 @@ dbTest('guests can register and read the seller catalog without private seller f
   for (const seller of catalog.body) {
     for (const field of ['Email', 'Number', 'Payout_Method', 'Payout_Account', 'email', 'number', 'payout_account']) {
       assert.equal(Object.hasOwn(seller, field), false, `guest seller response includes ${field}`);
+    }
+  }
+});
+
+dbTest('minimal signup allows profile edits but blocks other writes until completion', async () => {
+  const username = `profile-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+  const registration = await request('POST', '/api/auth/signup', {
+    role: 'customer',
+    username,
+    password: 'profile-test-password',
+  });
+  assert.equal(registration.status, 201, JSON.stringify(registration.body));
+  const customerId = registration.body.entity.Customer_ID;
+  const cookie = registration.cookies.find((value) => value.startsWith('shopniro_session='))?.split(';')[0];
+  assert.ok(cookie, 'signup should create a session');
+
+  try {
+    const current = await request('GET', '/api/auth/me', undefined, { cookie: cookie! });
+    assert.equal(current.status, 200);
+    assert.equal(current.body.profileComplete, false);
+
+    const otherCustomerEdit = await request('PUT', '/api/customers/OTHER-CUSTOMER', { Name: 'Not mine' }, { cookie: cookie! });
+    assert.equal(otherCustomerEdit.status, 403);
+
+    const partialEdit = await request('PUT', `/api/customers/${customerId}`, { Name: 'Profile Test Customer' }, { cookie: cookie! });
+    assert.equal(partialEdit.status, 200, JSON.stringify(partialEdit.body));
+    assert.equal((await request('GET', '/api/auth/me', undefined, { cookie: cookie! })).body.profileComplete, false);
+
+    const blocked = await request('POST', '/api/analytics/events', {
+      Product_ID: 'PROFILE-TEST-NO-PRODUCT',
+      Event_Type: 'click',
+      Session_ID: 'profiletestsession1234',
+    }, { cookie: cookie! });
+    assert.equal(blocked.status, 403);
+    assert.equal(blocked.body.code, 'PROFILE_INCOMPLETE');
+
+    const completed = await request('PUT', `/api/customers/${customerId}`, {
+      Name: 'Profile Test Customer',
+      Email: `profile-${Date.now()}@example.test`,
+      Number: '01700000000',
+      Address: {
+        House_Name: 'Unit 3',
+        Street: 'Test street',
+        City: 'Dhaka',
+        Postal_Code: '1200',
+        Latitude: 23.8,
+        Longitude: 90.4,
+      },
+    }, { cookie: cookie! });
+    assert.equal(completed.status, 200, JSON.stringify(completed.body));
+    assert.equal((await request('GET', '/api/auth/me', undefined, { cookie: cookie! })).body.profileComplete, true);
+
+    const allowed = await request('POST', '/api/analytics/events', {
+      Product_ID: 'PROFILE-TEST-NO-PRODUCT',
+      Event_Type: 'click',
+      Session_ID: 'profiletestsession1234',
+    }, { cookie: cookie! });
+    assert.equal(allowed.status, 200, JSON.stringify(allowed.body));
+  } finally {
+    await query('DELETE FROM auth_sessions WHERE user_id = $1', [customerId]);
+    await query('DELETE FROM customers WHERE id = $1', [customerId]);
+    await query('DELETE FROM users WHERE id = $1', [customerId]);
+  }
+});
+
+dbTest('minimal seller and rider signup create pending incomplete profiles', async () => {
+  const created: Array<{ id: string; role: 'seller' | 'rider' }> = [];
+  try {
+    for (const role of ['seller', 'rider'] as const) {
+      const username = `${role}-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+      const registration = await request('POST', '/api/auth/signup', {
+        role,
+        username,
+        password: 'profile-test-password',
+      });
+      assert.equal(registration.status, 201, JSON.stringify(registration.body));
+      assert.equal(registration.body.profileComplete, false);
+      const id = role === 'seller' ? registration.body.entity.Seller_ID : registration.body.entity.Rider_ID;
+      created.push({ id, role });
+      const cookie = registration.cookies.find((value) => value.startsWith('shopniro_session='))?.split(';')[0];
+      assert.ok(cookie, `${role} signup should create a session`);
+      const current = await request('GET', '/api/auth/me', undefined, { cookie: cookie! });
+      assert.equal(current.status, 200);
+      assert.equal(current.body.role, role);
+      assert.equal(current.body.profileComplete, false);
+      assert.equal(current.body.entity.Status, 'pending');
+      if (role === 'rider') {
+        for (const path of ['/api/riders/me', '/api/riders/wallet']) {
+          const blocked = await request('GET', path, undefined, { cookie: cookie! });
+          assert.equal(blocked.status, 403, `${path} should require a complete rider profile`);
+          assert.equal(blocked.body.code, 'PROFILE_INCOMPLETE');
+        }
+      }
+    }
+  } finally {
+    for (const account of created) {
+      await query('DELETE FROM auth_sessions WHERE user_id = $1', [account.id]);
+      if (account.role === 'seller') await query('DELETE FROM sellers WHERE id = $1', [account.id]);
+      if (account.role === 'rider') await query('DELETE FROM riders WHERE id = $1', [account.id]);
+      await query('DELETE FROM users WHERE id = $1', [account.id]);
     }
   }
 });

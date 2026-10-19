@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { UserRole, Customer, Seller, Address } from '../types';
-import { X, LogIn, Lock, User, Eye, EyeOff, ShieldAlert, UserPlus, Store, CheckCircle, Mail, Phone, MapPin } from 'lucide-react';
+import { UserRole } from '../types';
+import { X, LogIn, Lock, User, Eye, EyeOff, ShieldAlert, UserPlus, Store, CheckCircle, Truck } from 'lucide-react';
 import { api } from '../lib/api';
-import { AccountLocationPicker } from './AccountLocationPicker';
 import { OAuthProviderButtons } from './OAuthProviderButtons';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 
@@ -13,6 +12,8 @@ interface LoginModalProps {
   onOpenCustomerSignup?: () => void;
   onOpenSellerSignup?: () => void;
   noticeMessage?: string | null;
+  initialTab?: 'login' | 'register';
+  initialRole?: 'customer' | 'seller' | 'rider';
 }
 
 export const LoginModal: React.FC<LoginModalProps> = ({
@@ -20,8 +21,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   onClose,
   onLoginSuccess,
   noticeMessage,
+  initialTab = 'login',
+  initialRole = 'customer',
 }) => {
-  const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
+  const [activeTab, setActiveTab] = useState<'login' | 'register'>(initialTab);
   
   // Login fields
   const [loginUsername, setLoginUsername] = useState('');
@@ -29,26 +32,24 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   
   // Register fields
-  const [registerRole, setRegisterRole] = useState<'customer' | 'seller'>('customer');
-  const [regUsername, setRegUsername] = useState('');
-  const [regName, setRegName] = useState('');
-  const [regEmail, setRegEmail] = useState('');
+  const [registerRole, setRegisterRole] = useState<'customer' | 'seller' | 'rider'>(initialRole);
+  const [regIdentifier, setRegIdentifier] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [showRegPassword, setShowRegPassword] = useState(false);
-  const [regPhone, setRegPhone] = useState('');
-  const [regAddress, setRegAddress] = useState<Address>({
-    House_Name: '',
-    Street: '',
-    City: '',
-    Postal_Code: '',
-    Additional_Info: '',
-  });
-  const [regHasSelectedLocation, setRegHasSelectedLocation] = useState(false);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const dialogRef = useFocusTrap<HTMLDivElement>(isOpen);
+
+  React.useEffect(() => {
+    if (isOpen) {
+      setActiveTab(initialTab);
+      setRegisterRole(initialRole);
+      setError(null);
+      setSuccessMessage(null);
+    }
+  }, [initialRole, initialTab, isOpen]);
 
   React.useEffect(() => {
     if (isOpen && noticeMessage?.startsWith('Account created successfully.')) {
@@ -91,12 +92,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!regName.trim() || !regEmail.trim() || !regPassword.trim()) {
-      setError('Name, Email, and Password are required to create an account.');
-      return;
-    }
-    if (!regPhone.trim() || !regHasSelectedLocation || !regAddress.Street.trim() || !regAddress.City.trim()) {
-      setError('Phone number and a location from GPS or the map are required to create an account.');
+    if (!regIdentifier.trim() || regPassword.length < 8) {
+      setError('Enter a username or email address and a password of at least 8 characters.');
       return;
     }
 
@@ -104,39 +101,16 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     setIsSubmitting(true);
 
     try {
-      const finalUsername = (regUsername.trim() || regEmail.split('@')[0] || regName.replace(/[^a-z0-9]/gi, '')).toLowerCase();
-      
-      if (registerRole === 'customer') {
-        await api.createCustomer({
-          Username: finalUsername,
-          Name: regName.trim(),
-          Email: regEmail.trim(),
-          Password: regPassword.trim(),
-          Number: regPhone.trim(),
-          Address: regAddress,
-        });
-        
-      } else {
-        await api.createSeller({
-          Username: finalUsername,
-          Name: regName.trim(),
-          Email: regEmail.trim(),
-          Password: regPassword.trim(),
-          Number: regPhone.trim(),
-          Logo: 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=200&auto=format&fit=crop&q=80',
-          Description: `${regName.trim()} storefront on ShopNiro Marketplace.`,
-          Address: regAddress,
-        });
-
-      }
-      setLoginUsername(regUsername.trim() || regEmail.trim());
+      const result = await api.signup(registerRole, regIdentifier, regPassword);
+      await onLoginSuccess(result.role, result.entity);
+      setRegIdentifier('');
       setLoginPassword('');
       setRegPassword('');
-      setSuccessMessage('Account created successfully. Sign in with your new credentials.');
-      setActiveTab('login');
+      setError(null);
+      onClose();
     } catch (err: any) {
       console.error('Registration error:', err);
-      setError(err.message || 'Failed to create account. Please try a different email or username.');
+      setError(err.message || 'Could not create your account. Please try another username or email.');
     } finally {
       setIsSubmitting(false);
     }
@@ -225,8 +199,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                     type="button"
                     onClick={() => {
                       setActiveTab('register');
-                      setRegEmail(loginUsername.includes('@') ? loginUsername : '');
-                      setRegUsername(!loginUsername.includes('@') ? loginUsername : '');
+                      setRegIdentifier(loginUsername);
                       setError(null);
                     }}
                     className="text-xs text-blue-600 dark:text-sky-400 hover:underline font-bold inline-flex items-center gap-1 mt-1 cursor-pointer"
@@ -324,7 +297,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                 <label className="block text-slate-700 dark:text-zinc-300 font-semibold mb-1.5">
                   Account Type *
                 </label>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   <button
                     type="button"
                     onClick={() => setRegisterRole('customer')}
@@ -356,73 +329,53 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                       <div className="text-[10px] text-slate-400">Sell products</div>
                     </div>
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setRegisterRole('rider')}
+                    className={`p-2.5 rounded-2xl border text-left flex items-center gap-2.5 cursor-pointer transition-all ${
+                      registerRole === 'rider'
+                        ? 'border-emerald-500 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 font-bold'
+                        : 'border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-400 hover:border-slate-300'
+                    }`}
+                  >
+                    <Truck className="w-4 h-4" />
+                    <div>
+                      <div className="text-xs font-semibold">Rider</div>
+                      <div className="text-[10px] text-slate-400">Delivery</div>
+                    </div>
+                  </button>
                 </div>
               </div>
 
               <OAuthProviderButtons role={registerRole} mode="sign up" />
-
-              {/* Username & Full Name */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-slate-700 dark:text-zinc-300 font-semibold mb-1">
-                    Username *
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. rayan_s"
-                      value={regUsername}
-                      onChange={(e) => setRegUsername(e.target.value)}
-                      className="w-full p-2.5 pl-8 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                    />
-                    <User className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-3" />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-slate-700 dark:text-zinc-300 font-semibold mb-1">
-                    {registerRole === 'seller' ? 'Store / Brand Name *' : 'Full Name *'}
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder={registerRole === 'seller' ? 'e.g. Apex Audio Lab' : 'e.g. Rayan Shah'}
-                    value={regName}
-                    onChange={(e) => setRegName(e.target.value)}
-                    className="w-full p-2.5 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              {/* Email */}
               <div>
                 <label className="block text-slate-700 dark:text-zinc-300 font-semibold mb-1">
-                  Email Address *
+                  Username or email address
                 </label>
                 <div className="relative">
                   <input
-                    type="email"
+                    type="text"
                     required
-                    placeholder="e.g. rayan@example.com"
-                    value={regEmail}
-                    onChange={(e) => setRegEmail(e.target.value)}
+                    autoComplete="username"
+                    placeholder="Choose a username or enter your email"
+                    value={regIdentifier}
+                    onChange={(e) => setRegIdentifier(e.target.value)}
                     className="w-full p-2.5 pl-8 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   />
-                  <Mail className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-3" />
+                  <User className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-3" />
                 </div>
               </div>
-
-              {/* Password */}
               <div>
                 <label className="block text-slate-700 dark:text-zinc-300 font-semibold mb-1">
-                  Desired Password *
+                  Password
                 </label>
                 <div className="relative">
                   <input
                     type={showRegPassword ? 'text' : 'password'}
                     required
-                    placeholder="Create a strong account password"
+                    minLength={8}
+                    autoComplete="new-password"
+                    placeholder="At least 8 characters"
                     value={regPassword}
                     onChange={(e) => setRegPassword(e.target.value)}
                     className="w-full p-2.5 pl-8 pr-9 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
@@ -439,69 +392,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                 <p className="text-[10px] text-slate-400 mt-1">
                   You will use this password every time you log in.
                 </p>
-              </div>
-
-              <div>
-                  <label className="block text-slate-700 dark:text-zinc-300 font-semibold mb-1">
-                    Phone Number *
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="tel"
-                      required
-                      placeholder="+880 1XXX-XXXXXX"
-                      value={regPhone}
-                      onChange={(e) => setRegPhone(e.target.value)}
-                      className="w-full p-2.5 pl-8 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                    />
-                    <Phone className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-3" />
-                  </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="block text-slate-700 dark:text-zinc-300 font-semibold">
-                  Use current location or select a point on the map *
-                </label>
-                <AccountLocationPicker
-                  onAddressSelected={(selectedAddress) => {
-                    setRegHasSelectedLocation(Boolean(selectedAddress));
-                    setRegAddress((currentAddress) => selectedAddress
-                      ? { ...currentAddress, ...selectedAddress }
-                      : { ...currentAddress, Street: '', City: '', Postal_Code: '' });
-                  }}
-                />
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <input
-                    type="text"
-                    placeholder="House / apartment (optional)"
-                    value={regAddress.House_Name}
-                    onChange={(event) => setRegAddress({ ...regAddress, House_Name: event.target.value })}
-                    className="w-full p-2.5 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  />
-                  <input
-                    type="text"
-                    required
-                    placeholder="Street address *"
-                    value={regAddress.Street}
-                    onChange={(event) => setRegAddress({ ...regAddress, Street: event.target.value })}
-                    className="w-full p-2.5 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  />
-                  <input
-                    type="text"
-                    required
-                    placeholder="City *"
-                    value={regAddress.City}
-                    onChange={(event) => setRegAddress({ ...regAddress, City: event.target.value })}
-                    className="w-full p-2.5 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  />
-                  <input
-                    type="text"
-                    placeholder="Postal code (optional)"
-                    value={regAddress.Postal_Code}
-                    onChange={(event) => setRegAddress({ ...regAddress, Postal_Code: event.target.value })}
-                    className="w-full p-2.5 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  />
-                </div>
               </div>
 
               {/* Submit Register */}

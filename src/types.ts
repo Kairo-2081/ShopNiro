@@ -47,6 +47,7 @@ export interface Seller {
   Payout_Verified?: boolean;
   Payout_Method?: string;
   Payout_Account?: string;
+  Has_Identity_Document?: boolean;
   Created_At: string;
 }
 

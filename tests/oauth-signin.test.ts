@@ -36,10 +36,15 @@ const email = (label: string) => `oauth-${label}-${run}@example.test`;
 after(async () => {
   globalThis.fetch = realFetch;
   if (process.env.DATABASE_URL) {
-    await pool.query(
-      `DELETE FROM users WHERE lower(email) LIKE $1 OR id = ANY($2::text[])`,
+    const accounts = await pool.query(
+      `SELECT id FROM users WHERE lower(email) LIKE $1 OR id = ANY($2::text[])`,
       [`oauth-%-${run}@example.test`, ids],
     );
+    const accountIds = accounts.rows.map((row) => row.id);
+    await pool.query('DELETE FROM auth_sessions WHERE user_id = ANY($1::text[])', [accountIds]);
+    await pool.query('DELETE FROM sellers WHERE id = ANY($1::text[])', [accountIds]);
+    await pool.query('DELETE FROM customers WHERE id = ANY($1::text[])', [accountIds]);
+    await pool.query('DELETE FROM users WHERE id = ANY($1::text[])', [accountIds]);
   }
   await new Promise((resolve) => server.close(resolve));
   await pool.end();
@@ -199,22 +204,16 @@ dbTest('an existing seller signs in from the login screen and keeps the seller r
   assert.equal(identity.rows[0].user_id, id);
 });
 
-dbTest('seller application sign-up with no account hands off a registration cookie', async () => {
+dbTest('seller OAuth sign-up creates an incomplete pending seller account and session', async () => {
   const address = email('newseller');
   const response = await callback('seller', { sub: `g-${run}-newseller`, email: address, name: 'New Seller' });
-  assert.equal(hasSession(response), false);
-  assert.equal(redirectParams(response).get('oauth_signup'), 'seller');
-  const registration = cookieValue(response, 'shopniro_oauth_registration');
-  assert.ok(registration);
-  assert.ok(response.cookies.find((cookie) => cookie.startsWith('shopniro_oauth_registration='))?.includes('HttpOnly'));
-  assert.equal((await pool.query('SELECT 1 FROM users WHERE lower(email) = $1', [address])).rowCount, 0);
-
-  const handoff = await rawRequest('GET', '/api/auth/oauth/registration', { cookie: `shopniro_oauth_registration=${registration}` });
-  assert.equal(handoff.status, 200);
-  assert.deepEqual(handoff.body.registration, {
-    role: 'seller', provider: 'google', providerUserId: `g-${run}-newseller`, email: address, name: 'New Seller',
-  });
-  assert.equal(handoff.cookies.length, 0);
+  assert.equal(response.status, 302);
+  assert.equal(hasSession(response), true);
+  assert.equal(redirectParams(response).get('oauth_error'), null);
+  const account = await pool.query('SELECT id, role FROM users WHERE lower(email) = $1', [address]);
+  assert.equal(account.rowCount, 1);
+  assert.equal(account.rows[0].role, 'seller');
+  assert.equal((await pool.query("SELECT status FROM sellers WHERE id = $1", [account.rows[0].id])).rows[0].status, 'pending');
 });
 
 dbTest('registration handoff ignores a tampered cookie', async () => {
@@ -222,10 +221,15 @@ dbTest('registration handoff ignores a tampered cookie', async () => {
   assert.deepEqual(response.body, { registration: null });
 });
 
-dbTest('rider application sign-up with no account hands off a registration cookie', async () => {
-  const response = await callback('rider', { sub: `g-${run}-newrider`, email: email('newrider') });
-  assert.equal(hasSession(response), false);
-  assert.equal(redirectParams(response).get('oauth_signup'), 'rider');
+dbTest('rider OAuth sign-up creates an incomplete pending rider account and session', async () => {
+  const address = email('newrider');
+  const response = await callback('rider', { sub: `g-${run}-newrider`, email: address });
+  assert.equal(response.status, 302);
+  assert.equal(hasSession(response), true);
+  const account = await pool.query('SELECT id, role FROM users WHERE lower(email) = $1', [address]);
+  assert.equal(account.rowCount, 1);
+  assert.equal(account.rows[0].role, 'rider');
+  assert.equal((await pool.query("SELECT status FROM riders WHERE id = $1", [account.rows[0].id])).rows[0].status, 'pending');
 });
 
 dbTest('asking for the seller application with a rider email is a conflict', async () => {

@@ -24,6 +24,7 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ currentCustome
 
   const [savedSuccess, setSavedSuccess] = React.useState(false);
   const [isResolvingLocation, setIsResolvingLocation] = React.useState(false);
+  const [profileError, setProfileError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     setName(currentCustomer.Name);
@@ -56,6 +57,11 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ currentCustome
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isResolvingLocation) return;
+    if (!hasMapLocation) {
+      setProfileError('Select your shipping location on the map before saving.');
+      return;
+    }
+    setProfileError(null);
     onUpdateCustomer({
       ...currentCustomer,
       Name: name,
@@ -87,6 +93,8 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ currentCustome
           Profile and Address details saved successfully!
         </div>
       )}
+
+      {profileError && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300">{profileError}</p>}
 
       <form onSubmit={handleSubmit} className="bg-white dark:bg-[#12161D] p-6 md:p-8 rounded-3xl border border-sky-100 dark:border-zinc-800 shadow-xl space-y-6">
         {/* Personal Info */}

@@ -1,7 +1,9 @@
 import React from 'react';
 import { Address, Rider } from '../../types';
 import { api } from '../../lib/api';
+import { getProfileCompletion } from '../../lib/profileCompletion';
 import { prepareProfileImage } from '../../lib/profileImage';
+import { AccountLocationPicker } from '../AccountLocationPicker';
 import { ChevronLeft, ChevronRight, FileText, Image as ImageIcon, Lock, Save, X } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 import pdfWorkerUrl from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
@@ -102,6 +104,7 @@ interface RiderDetailsModalProps {
   rider: Rider;
   onClose: () => void;
   onSaved: (rider: Rider) => void;
+  required?: boolean;
 }
 
 const emptyAddress = (): Address => ({
@@ -119,7 +122,7 @@ const addressKey = (address: Address) => JSON.stringify([
   address.Additional_Info || '', address.Latitude ?? null, address.Longitude ?? null,
 ]);
 
-export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, rider, onClose, onSaved }) => {
+export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, rider, onClose, onSaved, required = false }) => {
   const [username, setUsername] = React.useState(rider.Username);
   const [name, setName] = React.useState(rider.Name);
   const [email, setEmail] = React.useState(rider.Email);
@@ -208,6 +211,21 @@ export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, ri
       setError('Complete the street and city for both addresses. Their saved map locations will be retained.');
       return;
     }
+    const completion = getProfileCompletion('rider', {
+      Username: username,
+      Name: name,
+      Email: email,
+      Number: phone,
+      Present_Address: presentAddress,
+      Permanent_Address: permanentAddress,
+      Experience: fromLines(experience),
+      Previous_Jobs: fromLines(previousJobs),
+      Education: fromLines(education),
+    });
+    if (!completion.complete) {
+      setError(`Complete your profile first: ${completion.missingFields.join(', ')}.`);
+      return;
+    }
 
     setSaving(true);
     setError(null);
@@ -266,6 +284,7 @@ export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, ri
           <div>
             <h2 id="rider-details-title" className="font-bold text-slate-900 dark:text-white">My details</h2>
             <p className="mt-1 text-xs text-slate-600 dark:text-zinc-400">Profile changes refresh your CV and require approval. Password changes do not.</p>
+            {required && <p role="status" className="mt-2 text-xs font-semibold text-amber-800 dark:text-amber-200">Complete and save your profile before making other changes.</p>}
           </div>
           <div className="flex items-center gap-2">
             <button type="button" onClick={() => void viewCv()} disabled={openingCv} className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200"><FileText className="h-4 w-4" />{openingCv ? 'Opening...' : 'View my CV'}</button>
@@ -304,6 +323,14 @@ export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, ri
           {addressForms.map((addressForm) => (
             <section key={addressForm.title} className="space-y-3">
               <h3 className="text-sm font-bold text-slate-900 dark:text-white">{addressForm.title}</h3>
+              <AccountLocationPicker
+                initialLocation={Number.isFinite(addressForm.value.Latitude) && Number.isFinite(addressForm.value.Longitude)
+                  ? { lat: addressForm.value.Latitude!, lng: addressForm.value.Longitude! }
+                  : null}
+                onAddressSelected={(selected) => addressForm.set(selected
+                  ? { ...addressForm.value, ...selected }
+                  : { ...addressForm.value, Latitude: undefined, Longitude: undefined })}
+              />
               <div className="grid gap-3 sm:grid-cols-2">
                 <input className={fieldClass} required placeholder="House / building" value={addressForm.value.House_Name || ''} onChange={(event) => addressForm.set({ ...addressForm.value, House_Name: event.target.value })} />
                 <input className={fieldClass} required placeholder="Street" value={addressForm.value.Street || ''} onChange={(event) => addressForm.set({ ...addressForm.value, Street: event.target.value })} />

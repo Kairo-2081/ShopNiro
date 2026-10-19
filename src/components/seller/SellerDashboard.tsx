@@ -43,7 +43,9 @@ interface SellerDashboardProps {
   onDeleteProduct: (productId: string) => Promise<void>;
   onUpdateProductStatus: (productId: string, status: ProductStatus) => Promise<void>;
   onUpdateOrderStatus: (orderId: string, status: string) => Promise<void>;
-  onUpdateSellerProfile: (updates: Partial<Seller>) => Promise<Seller>;
+  onUpdateSellerProfile: (updates: Partial<Seller> & { Identity_Document?: string; Identity_Document_File_Name?: string }) => Promise<Seller>;
+  profileComplete?: boolean;
+  requireIdentityDocument?: boolean;
 }
 
 export const SellerDashboard: React.FC<SellerDashboardProps> = ({
@@ -58,6 +60,8 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
   onUpdateProductStatus,
   onUpdateOrderStatus,
   onUpdateSellerProfile,
+  profileComplete = true,
+  requireIdentityDocument = false,
 }) => {
   const [activeTab, setActiveTab] = React.useState<'products' | 'orders' | 'analytics' | 'reviews' | 'wallet' | 'promotions'>('products');
   const [isProductModalOpen, setIsProductModalOpen] = React.useState(false);
@@ -87,6 +91,16 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
   }>>([]);
   const [analyticsError, setAnalyticsError] = React.useState('');
   const [isLoadingAnalytics, setIsLoadingAnalytics] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!profileComplete) setIsProfileModalOpen(true);
+  }, [profileComplete]);
+
+  React.useEffect(() => {
+    const handleIncompleteProfile = () => setIsProfileModalOpen(true);
+    window.addEventListener('profile:incomplete', handleIncompleteProfile);
+    return () => window.removeEventListener('profile:incomplete', handleIncompleteProfile);
+  }, []);
 
   React.useEffect(() => {
     if (activeTab !== 'wallet') return;
@@ -966,6 +980,8 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
       {isProfileModalOpen && (
         <SellerProfileModal
           seller={currentSeller}
+          required={!profileComplete}
+          requireIdentityDocument={requireIdentityDocument}
           onClose={() => setIsProfileModalOpen(false)}
           onSave={async (updates) => { await onUpdateSellerProfile(updates); }}
         />
