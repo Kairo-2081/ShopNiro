@@ -2,7 +2,10 @@ import 'dotenv/config';
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
+import pino from 'pino';
+import pinoHttp from 'pino-http';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
+import { randomUUID } from 'node:crypto';
 import { query } from './db/index.ts';
 import { errorHandler } from './middleware/errorHandler.ts';
 import { requireAuth, requireRole, optionalAuth, AuthRequest, OAUTH_REGISTRATION_COOKIE_NAME } from './middleware/auth.ts';
@@ -32,6 +35,9 @@ import payoutsRoutes from './routes/payouts.routes.ts';
 export const app = express();
 const isProduction = process.env.NODE_ENV === 'production';
 app.set('trust proxy', 1);
+
+const logger = pino({ redact: ['req.headers.authorization', 'req.headers.cookie'] });
+app.use(pinoHttp({ logger, genReqId: () => randomUUID() }));
 
 const keyedRateLimit = (req: express.Request) => (req as AuthRequest).user?.userId || ipKeyGenerator(req.ip || '');
 const apiRateLimit = rateLimit({
@@ -94,6 +100,22 @@ app.get('/api/health', (_req, res) => {
 });
 app.use('/api', apiRateLimit);
 app.use('/api', enforcePublicApiPolicy);
+app.get('/api/ready', async (_req, res) => {
+  let timeout: NodeJS.Timeout | undefined;
+  try {
+    await Promise.race([
+      query('SELECT 1'),
+      new Promise((_, reject) => {
+        timeout = setTimeout(() => reject(new Error('timeout')), 2000);
+      }),
+    ]);
+    res.json({ ok: true });
+  } catch {
+    res.status(503).json({ ok: false });
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
+});
 app.use('/api/ai', optionalAuth, aiRateLimit);
 app.use('/api/maps', optionalAuth, mapsRateLimit);
 

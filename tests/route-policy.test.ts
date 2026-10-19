@@ -93,6 +93,8 @@ test('public API routes are exactly the reviewed list', () => {
     'GET /api/auth/oauth/registration',
     'GET /api/bundles',
     'GET /api/categories',
+    'GET /api/health',
+    'GET /api/ready',
     'GET /api/maps/reverse',
     'GET /api/payment/bkash/direct',
     'GET /api/payment/methods',
