@@ -9,6 +9,8 @@ import 'leaflet/dist/leaflet.css';
 
 interface RiderDashboardProps {
   rider: Rider;
+  profileComplete?: boolean;
+  onProfileSaved?: (rider: Rider) => void;
 }
 
 const defaultCenter: [number, number] = [23.8103, 90.4125];
@@ -21,7 +23,7 @@ function ClickMap({ onSelect }: { onSelect: (location: [number, number]) => void
 
 const addressLabel = (address: Address) => [address.House_Name, address.Street, address.City, address.Postal_Code].filter(Boolean).join(', ');
 
-export const RiderDashboard: React.FC<RiderDashboardProps> = ({ rider }) => {
+export const RiderDashboard: React.FC<RiderDashboardProps> = ({ rider, profileComplete = true, onProfileSaved }) => {
   const [profile, setProfile] = React.useState(rider);
   const [location, setLocation] = React.useState<[number, number] | null>(
     rider.Current_Latitude !== undefined && rider.Current_Longitude !== undefined
@@ -42,6 +44,21 @@ export const RiderDashboard: React.FC<RiderDashboardProps> = ({ rider }) => {
   const [payoutAccount, setPayoutAccount] = React.useState('');
   const [withdrawing, setWithdrawing] = React.useState(false);
   const [showDetails, setShowDetails] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!profileComplete) setShowDetails(true);
+  }, [profileComplete]);
+
+  React.useEffect(() => {
+    const handleIncompleteProfile = () => setShowDetails(true);
+    window.addEventListener('profile:incomplete', handleIncompleteProfile);
+    return () => window.removeEventListener('profile:incomplete', handleIncompleteProfile);
+  }, []);
+
+  const saveProfile = (updated: Rider) => {
+    setProfile(updated);
+    onProfileSaved?.(updated);
+  };
 
   const refresh = React.useCallback(async () => {
     if (profile.Status !== 'approved' || !location) return;
@@ -135,7 +152,7 @@ export const RiderDashboard: React.FC<RiderDashboardProps> = ({ rider }) => {
   if (profile.Status !== 'approved') {
     return <>
       <div className="mx-auto max-w-xl rounded-xl border border-amber-300 bg-amber-50 p-6 text-center dark:border-amber-900 dark:bg-amber-950/30"><h1 className="text-lg font-bold text-slate-900 dark:text-white">Rider application under review</h1><p className="mt-2 text-sm text-slate-600 dark:text-zinc-300">Your account is signed in, but delivery operations will appear after administrator approval.</p><button type="button" onClick={() => setShowDetails(true)} className="mt-4 rounded-lg bg-emerald-700 px-4 py-2 text-sm font-bold text-white">My details</button></div>
-      <RiderDetailsModal isOpen={showDetails} rider={profile} onClose={() => setShowDetails(false)} onSaved={setProfile} />
+      <RiderDetailsModal isOpen={showDetails} rider={profile} required={!profileComplete} onClose={() => setShowDetails(false)} onSaved={saveProfile} />
     </>;
   }
 
@@ -219,7 +236,7 @@ export const RiderDashboard: React.FC<RiderDashboardProps> = ({ rider }) => {
         </div>
       </section>
       <p className="text-xs text-slate-500 dark:text-zinc-500">COD appears in wallet activity and is deducted from pending monthly salary; it is not withdrawable before salary release. {profile.Late_Deliveries} late deliveries recorded.</p>
-      <RiderDetailsModal isOpen={showDetails} rider={profile} onClose={() => setShowDetails(false)} onSaved={setProfile} />
+      <RiderDetailsModal isOpen={showDetails} rider={profile} required={!profileComplete} onClose={() => setShowDetails(false)} onSaved={saveProfile} />
       {loading && <span className="sr-only" role="status">Refreshing rider dashboard</span>}
       <CheckCircle2 className="sr-only" aria-hidden="true" />
     </div>

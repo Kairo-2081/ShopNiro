@@ -11,6 +11,7 @@ import { query } from './db/index.ts';
 import { errorHandler } from './middleware/errorHandler.ts';
 import { requireAuth, requireRole, optionalAuth, AuthRequest, OAUTH_REGISTRATION_COOKIE_NAME } from './middleware/auth.ts';
 import { enforcePublicApiPolicy } from './middleware/publicRoutes.ts';
+import { requireCompleteProfile } from './middleware/profileCompletion.ts';
 import authRoutes from './routes/auth.routes.ts';
 import categoriesRoutes from './routes/categories.routes.ts';
 import sellersRoutes from './routes/sellers.routes.ts';
@@ -133,6 +134,7 @@ app.get('/api/ready', async (_req, res) => {
 });
 app.use('/api', apiRateLimit);
 app.use('/api', enforcePublicApiPolicy);
+app.use('/api', requireCompleteProfile);
 app.use('/api/ai', optionalAuth, aiRateLimit);
 app.use('/api/maps', optionalAuth, mapsRateLimit);
 

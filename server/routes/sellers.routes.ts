@@ -222,7 +222,7 @@ router.get('/applications/:id/identity-document', requireAuth, requireRole(['adm
 });
 
 router.put('/me/profile', requireAuth, requireRole(['seller']), async (req: AuthRequest, res) => {
-  const { Name, Username, Email, Number: phone, Logo, Description, Address, Payout_Method, Payout_Account } = req.body ?? {};
+  const { Name, Username, Email, Number: phone, Logo, Description, Address, Payout_Method, Payout_Account, Identity_Document } = req.body ?? {};
   if (![Name, Username, Email, phone].every((value) => typeof value === 'string' && value.trim())) {
     return res.status(400).json({ error: 'Store name, username, email, and phone number are required.' });
   }
@@ -233,7 +233,18 @@ router.put('/me/profile', requireAuth, requireRole(['seller']), async (req: Auth
     return res.status(400).json({ error: 'Select the updated business address on the map.' });
   }
 
+  let identityDocument: { buffer: Buffer; mimeType: string } | undefined;
+  if (Identity_Document) {
+    try {
+      identityDocument = decodeIdentityDocument(Identity_Document);
+    } catch (error: any) {
+      return res.status(400).json({ error: error.message });
+    }
+  }
+
   const client = await pool.connect();
+  let identityStoragePath: string | undefined;
+  let committed = false;
   try {
     const sellerId = req.user!.entityId;
     const username = String(Username).trim().toLowerCase();
@@ -273,7 +284,7 @@ router.put('/me/profile', requireAuth, requireRole(['seller']), async (req: Auth
       [current.address_additional_info || '', String(Address.Additional_Info || '')],
       [Number(current.address_latitude), Number(Address.Latitude)],
       [Number(current.address_longitude), Number(Address.Longitude)],
-    ].some(([before, after]) => before !== after) || payoutChanged;
+    ].some(([before, after]) => before !== after) || payoutChanged || Boolean(identityDocument);
     const duplicate = await client.query(
       'SELECT 1 FROM users WHERE id <> $1 AND (lower(username) = $2 OR lower(email) = $3) LIMIT 1',
       [sellerId, username, email]
@@ -281,6 +292,14 @@ router.put('/me/profile', requireAuth, requireRole(['seller']), async (req: Auth
     if (duplicate.rows.length) {
       await client.query('ROLLBACK');
       return res.status(409).json({ error: 'That username or email is already in use.' });
+    }
+    if (identityDocument) {
+      identityStoragePath = await uploadSellerDocument(sellerId, 'national_id', identityDocument.buffer, identityDocument.mimeType);
+      await client.query(
+        `INSERT INTO seller_documents (id, seller_id, doc_type, storage_path)
+         VALUES ($1, $2, 'national_id', $3)`,
+        [`SDOC-${randomUUID()}`, sellerId, identityStoragePath],
+      );
     }
     await client.query('UPDATE users SET username = $2, email = $3 WHERE id = $1 AND role = $4', [sellerId, username, email, 'seller']);
     await client.query(`
@@ -290,7 +309,9 @@ router.put('/me/profile', requireAuth, requireRole(['seller']), async (req: Auth
         address_latitude = $11, address_longitude = $12,
         payout_method = $13, payout_account = $14,
         payout_verified = CASE WHEN $15 THEN FALSE ELSE payout_verified END,
-        status = CASE WHEN $16 THEN 'pending' ELSE status END
+        status = CASE WHEN $16 THEN 'pending' ELSE status END,
+        identity_verified = CASE WHEN $17 THEN FALSE ELSE identity_verified END,
+        documents_reviewed = CASE WHEN $17 THEN FALSE ELSE documents_reviewed END
       WHERE id = $1
     `, [
       sellerId,
@@ -309,11 +330,17 @@ router.put('/me/profile', requireAuth, requireRole(['seller']), async (req: Auth
       payoutAccount,
       payoutChanged,
       changed,
+      Boolean(identityDocument),
     ]);
     await client.query('COMMIT');
+    committed = true;
     const profile = await query('SELECT * FROM gocart_seller_get($1)', [sellerId]);
     const seller = profile.rows[0];
     if (!seller) return res.status(404).json({ error: 'Seller profile not found.' });
+    const documentResult = await query(
+      "SELECT EXISTS (SELECT 1 FROM seller_documents WHERE seller_id = $1 AND doc_type = 'national_id') AS has_identity_document",
+      [sellerId],
+    );
     return res.json({
       Seller_ID: seller.id,
       Username: seller.username || username,
@@ -327,10 +354,12 @@ router.put('/me/profile', requireAuth, requireRole(['seller']), async (req: Auth
       Payout_Method: seller.payout_method || payoutMethod,
       Payout_Account: seller.payout_account || payoutAccount,
       Payout_Verified: Boolean(seller.payout_verified),
+      Has_Identity_Document: Boolean(documentResult.rows[0]?.has_identity_document),
       Created_At: seller.created_at ? new Date(seller.created_at).toISOString() : new Date().toISOString(),
     });
   } catch (error: any) {
     await client.query('ROLLBACK');
+    if (identityStoragePath && !committed) await deleteSellerDocument(identityStoragePath);
     if (error?.code === '23505') return res.status(409).json({ error: 'That username or email is already in use.' });
     console.error('Could not update seller profile:', error);
     return res.status(500).json({ error: 'Could not update store details.' });

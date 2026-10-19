@@ -1,15 +1,17 @@
 import React from 'react';
 import { Address, Seller } from '../../types';
 import { AccountLocationPicker } from '../AccountLocationPicker';
-import { MapPin, X } from 'lucide-react';
+import { FileText, MapPin, X } from 'lucide-react';
 
 interface SellerProfileModalProps {
   seller: Seller;
   onClose: () => void;
-  onSave: (updates: Partial<Seller>) => Promise<void>;
+  onSave: (updates: Partial<Seller> & { Identity_Document?: string; Identity_Document_File_Name?: string }) => Promise<void>;
+  required?: boolean;
+  requireIdentityDocument?: boolean;
 }
 
-export const SellerProfileModal: React.FC<SellerProfileModalProps> = ({ seller, onClose, onSave }) => {
+export const SellerProfileModal: React.FC<SellerProfileModalProps> = ({ seller, onClose, onSave, required = false, requireIdentityDocument = false }) => {
   const [name, setName] = React.useState(seller.Name);
   const [username, setUsername] = React.useState(seller.Username || '');
   const [email, setEmail] = React.useState(seller.Email);
@@ -18,10 +20,32 @@ export const SellerProfileModal: React.FC<SellerProfileModalProps> = ({ seller, 
   const [description, setDescription] = React.useState(seller.Description);
   const [payoutMethod, setPayoutMethod] = React.useState(seller.Payout_Method || '');
   const [payoutAccount, setPayoutAccount] = React.useState(seller.Payout_Account || '');
+  const [identityDocument, setIdentityDocument] = React.useState('');
+  const [identityDocumentFileName, setIdentityDocumentFileName] = React.useState('');
   const [address, setAddress] = React.useState<Address>(seller.Address);
   const [hasSelectedLocation, setHasSelectedLocation] = React.useState(false);
   const [isSaving, setIsSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+
+  const handleIdentityDocumentChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024 || !['application/pdf', 'image/jpeg', 'image/png'].includes(file.type)) {
+      setError('ID document must be a PDF, JPG, or PNG no larger than 5 MB.');
+      event.target.value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === 'string') {
+        setIdentityDocument(reader.result);
+        setIdentityDocumentFileName(file.name);
+        setError(null);
+      }
+    };
+    reader.onerror = () => setError('Could not read the ID document. Please try another file.');
+    reader.readAsDataURL(file);
+  };
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -34,6 +58,14 @@ export const SellerProfileModal: React.FC<SellerProfileModalProps> = ({ seller, 
       (addressLocationChanged && !hasSelectedLocation)
     ) {
       setError('Choose the updated business location on the map when changing the street or city.');
+      return;
+    }
+    if (required && (!payoutMethod || payoutAccount.trim().length < 6)) {
+      setError('Choose a payout method and enter a payout account with at least 6 characters.');
+      return;
+    }
+    if (requireIdentityDocument && !identityDocument) {
+      setError('Upload your government ID document to complete the seller profile.');
       return;
     }
     setIsSaving(true);
@@ -49,6 +81,8 @@ export const SellerProfileModal: React.FC<SellerProfileModalProps> = ({ seller, 
         Payout_Method: payoutMethod,
         Payout_Account: payoutAccount.trim(),
         Address: address,
+        Identity_Document: identityDocument || undefined,
+        Identity_Document_File_Name: identityDocumentFileName || undefined,
       });
       onClose();
     } catch (err: any) {
@@ -68,7 +102,15 @@ export const SellerProfileModal: React.FC<SellerProfileModalProps> = ({ seller, 
           <button type="button" onClick={onClose} aria-label="Close store details" className="rounded-full p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-zinc-800"><X className="h-4 w-4" /></button>
         </header>
         <form onSubmit={submit} className="space-y-4 overflow-y-auto p-5">
+          {required && <p role="status" className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">Complete and save your business profile before making other changes.</p>}
           {error && <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300">{error}</p>}
+          {requireIdentityDocument && (
+            <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-dashed border-emerald-500 bg-emerald-50/60 p-4 text-sm text-slate-700 dark:border-emerald-800 dark:bg-emerald-950/20 dark:text-zinc-200">
+              <FileText className="h-5 w-5 shrink-0 text-emerald-700 dark:text-emerald-400" />
+              <span className="min-w-0 flex-1">{identityDocumentFileName || 'Upload government ID (PDF, JPG, PNG · max 5 MB)'}</span>
+              <input type="file" accept="application/pdf,image/jpeg,image/png" className="sr-only" onChange={(event) => void handleIdentityDocumentChange(event)} />
+            </label>
+          )}
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="space-y-1 text-xs font-semibold text-slate-700 dark:text-zinc-300">Store name<input required value={name} onChange={(e) => setName(e.target.value)} className={inputClass} /></label>
             <label className="space-y-1 text-xs font-semibold text-slate-700 dark:text-zinc-300">Username<input required value={username} onChange={(e) => setUsername(e.target.value)} className={inputClass} /></label>
@@ -79,15 +121,15 @@ export const SellerProfileModal: React.FC<SellerProfileModalProps> = ({ seller, 
           <label className="block space-y-1 text-xs font-semibold text-slate-700 dark:text-zinc-300">Store description<textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} className={inputClass} /></label>
 
           <section className="grid gap-3 sm:grid-cols-2">
-            <label className="space-y-1 text-xs font-semibold text-slate-700 dark:text-zinc-300">Payout method
-              <select value={payoutMethod} onChange={(event) => setPayoutMethod(event.target.value)} className={inputClass}>
+            <label className="space-y-1 text-xs font-semibold text-slate-700 dark:text-zinc-300">Payout method{required ? ' *' : ''}
+              <select required={required} value={payoutMethod} onChange={(event) => setPayoutMethod(event.target.value)} className={inputClass}>
                 <option value="">Not set</option>
                 <option value="bkash">bKash</option>
                 <option value="bank">Bank</option>
               </select>
             </label>
-            <label className="space-y-1 text-xs font-semibold text-slate-700 dark:text-zinc-300">Payout account
-              <input value={payoutAccount} onChange={(event) => setPayoutAccount(event.target.value)} className={inputClass} />
+            <label className="space-y-1 text-xs font-semibold text-slate-700 dark:text-zinc-300">Payout account{required ? ' *' : ''}
+              <input required={required} minLength={required ? 6 : undefined} value={payoutAccount} onChange={(event) => setPayoutAccount(event.target.value)} className={inputClass} />
             </label>
           </section>
 

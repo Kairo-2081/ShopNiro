@@ -3,6 +3,7 @@ import rateLimit from 'express-rate-limit';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { pool, query, mapAddress } from '../db/index.ts';
 import { hashPassword, comparePassword, needsPasswordRehash } from '../db/password.ts';
+import { getUserProfileCompletion } from '../services/profileCompletion.service.ts';
 import {
   requireAuth,
   issueAuthCookie,
@@ -22,6 +23,12 @@ const loginRateLimit = rateLimit({
   standardHeaders: 'draft-8',
   legacyHeaders: false,
   message: { error: 'Too many sign-in attempts. Try again in 15 minutes.' },
+});
+const signupRateLimit = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 8,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
 });
 const loginFailures = new Map<string, { count: number; windowStartedAt: number; lockedUntil: number }>();
 const loginFailureWindowMs = 15 * 60 * 1000;
@@ -173,20 +180,33 @@ async function findOrCreateOAuthAccount(provider: OAuthProvider, profile: OAuthP
       if (user && (user.role === 'admin' || (requestedRole !== 'customer' && user.role !== requestedRole))) throw new Error('account_conflict');
 
       if (!user) {
-        if (requestedRole !== 'customer') {
-          await client.query('COMMIT');
-          return null;
-        }
         const userId = randomUUID();
         const usernameBase = email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 70) || 'customer';
         const username = `${usernameBase}_${randomBytes(4).toString('hex')}`;
         const randomPassword = await hashPassword(randomBytes(48).toString('base64url'));
-        const created = await client.query(
-          'SELECT * FROM gocart_customer_create($1, $2, $3, $4, $5, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)',
-          [userId, username, profile.name, email, randomPassword],
-        );
-        if (!created.rowCount) throw new Error('oauth_failed');
-        user = { id: userId, username, email, role: 'customer' };
+        if (requestedRole === 'customer') {
+          const created = await client.query(
+            'SELECT * FROM gocart_customer_create($1, $2, $3, $4, $5, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)',
+            [userId, username, profile.name, email, randomPassword],
+          );
+          if (!created.rowCount) throw new Error('oauth_failed');
+        } else if (requestedRole === 'seller') {
+          const created = await client.query(
+            `SELECT * FROM gocart_seller_create($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+            [userId, username, profile.name, email, randomPassword, '', '', '', '', '', '', '', '', null, null],
+          );
+          if (!created.rowCount) throw new Error('oauth_failed');
+        } else {
+          await client.query(
+            'INSERT INTO users (id, username, password, email, role) VALUES ($1, $2, $3, $4, $5)',
+            [userId, username, randomPassword, email, 'rider'],
+          );
+          await client.query(
+            "INSERT INTO riders (id, name, number, status) VALUES ($1, $2, '', 'pending')",
+            [userId, profile.name],
+          );
+        }
+        user = { id: userId, username, email, role: requestedRole };
       }
 
       if (user.role === 'customer' && !(await client.query('SELECT 1 FROM customers WHERE id = $1', [user.id])).rowCount) {
@@ -244,6 +264,100 @@ router.get('/oauth/registration', (req, res) => {
   const registration = readOAuthRegistrationCookie(req);
   res.setHeader('Cache-Control', 'no-store');
   return res.json({ registration });
+});
+
+router.post('/signup', signupRateLimit, async (req, res) => {
+  try {
+  const role = req.body?.role;
+  const inputUsername = typeof req.body?.username === 'string' ? req.body.username.trim().toLowerCase() : '';
+  const inputEmail = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
+  const password = req.body?.password;
+  if (!['customer', 'seller', 'rider'].includes(role)) {
+    return res.status(400).json({ error: 'Choose a customer, seller, or rider account.' });
+  }
+  if (!inputUsername && !inputEmail) {
+    return res.status(400).json({ error: 'Enter a username or email address.' });
+  }
+  if (inputEmail && (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inputEmail) || inputEmail.endsWith('.invalid'))) {
+    return res.status(400).json({ error: 'Enter a valid email address.' });
+  }
+  if (inputUsername && !/^[a-z0-9_]{3,50}$/.test(inputUsername)) {
+    return res.status(400).json({ error: 'Username must be 3 to 50 letters, numbers, or underscores.' });
+  }
+  if (typeof password !== 'string' || password.length < 8) {
+    return res.status(400).json({ error: 'Password must be at least 8 characters.' });
+  }
+
+  const accountRole = role as 'customer' | 'seller' | 'rider';
+  const username = inputUsername || `${inputEmail.split('@')[0].replace(/[^a-z0-9_]/g, '').slice(0, 42) || accountRole}_${randomBytes(3).toString('hex')}`;
+  const email = inputEmail || `${username}@pending.shopniro.invalid`;
+  const idPrefix = accountRole === 'customer' ? 'CUST' : accountRole === 'seller' ? 'SEL' : 'RDR';
+  const userId = `${idPrefix}-${randomUUID()}`;
+  const passwordHash = await hashPassword(password);
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+    const duplicate = await client.query(
+      'SELECT 1 FROM users WHERE lower(username) = $1 OR lower(email) = $2 LIMIT 1',
+      [username, email],
+    );
+    if (duplicate.rowCount) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'That username or email is already registered.' });
+    }
+
+    if (accountRole === 'customer') {
+      await client.query(
+        'SELECT * FROM gocart_customer_create($1, $2, $3, $4, $5, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)',
+        [userId, username, '', email, passwordHash],
+      );
+    } else if (accountRole === 'seller') {
+      await client.query(
+        'SELECT * FROM gocart_seller_create($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)',
+        [userId, username, '', email, passwordHash, '', '', '', '', '', '', '', '', null, null],
+      );
+    } else {
+      await client.query(
+        'INSERT INTO users (id, username, password, email, role) VALUES ($1, $2, $3, $4, $5)',
+        [userId, username, passwordHash, email, 'rider'],
+      );
+      await client.query("INSERT INTO riders (id, name, number, status) VALUES ($1, '', '', 'pending')", [userId]);
+    }
+    await client.query('COMMIT');
+  } catch (error: any) {
+    await client.query('ROLLBACK').catch(() => {});
+    if (error?.code === '23505') return res.status(409).json({ error: 'That username or email is already registered.' });
+    throw error;
+  } finally {
+    client.release();
+  }
+
+  await issueAuthCookie(res, { userId, email, username, role: accountRole, entityId: userId });
+  const blankAddress = { House_Name: '', Street: '', City: '', Postal_Code: '', Additional_Info: '' };
+  const entity = accountRole === 'customer'
+    ? { Customer_ID: userId, Username: username, Name: '', Email: email, Number: '', Address: blankAddress }
+    : accountRole === 'seller'
+      ? { Seller_ID: userId, Username: username, Name: '', Email: email, Number: '', Address: blankAddress, Logo: '', Description: '', Status: 'pending' }
+      : {
+          Rider_ID: userId,
+          Username: username,
+          Name: '',
+          Email: email,
+          Number: '',
+          Present_Address: blankAddress,
+          Permanent_Address: blankAddress,
+          Experience: [],
+          Previous_Jobs: [],
+          Education: [],
+          Status: 'pending',
+          Has_CV: false,
+        };
+  return res.status(201).json({ success: true, role: accountRole, entity, profileComplete: false });
+  } catch (error) {
+    console.error('Account signup failed:', error);
+    return res.status(500).json({ error: 'Could not create your account.' });
+  }
 });
 
 router.get('/oauth/:provider', oauthRateLimit, (req, res) => {
@@ -365,6 +479,9 @@ router.get('/me', optionalAuth, async (req: AuthRequest, res: Response) => {
           Logo: s.logo || '',
           Description: s.description || '',
           Status: s.status || 'approved',
+          Payout_Method: s.payout_method || '',
+          Payout_Account: s.payout_account || '',
+          Payout_Verified: Boolean(s.payout_verified),
           Created_At: s.created_at ? new Date(s.created_at).toISOString() : new Date().toISOString(),
         };
       }
@@ -417,11 +534,14 @@ router.get('/me', optionalAuth, async (req: AuthRequest, res: Response) => {
       }
     }
 
+    const completion = await getUserProfileCompletion(role, req.user.entityId);
     res.json({
       authenticated: true,
       user: req.user,
       role: req.user.role,
       entity,
+      profileComplete: completion.complete,
+      profileMissingFields: completion.missingFields,
     });
   } catch (error: any) {
     console.error('Error fetching current user:', error);

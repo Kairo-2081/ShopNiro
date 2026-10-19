@@ -59,7 +59,7 @@ function isPublicEndpoint(url: string, method: string = 'GET'): boolean {
       cleanUrl === '/api/riders/payroll/settle';
   }
   if (upperMethod === 'POST') {
-    return /^\/api\/auth\/(login|logout)$/.test(cleanUrl) ||
+    return /^\/api\/auth\/(login|logout|signup)$/.test(cleanUrl) ||
       /^\/api\/(customers|sellers)$/.test(cleanUrl) ||
       /^\/api\/riders\/(apply|cv\/parse|cv\/format)$/.test(cleanUrl) ||
       cleanUrl === '/api/analytics/events' ||
@@ -118,12 +118,16 @@ async function fetchJson<T>(url: string, options?: RequestInit, handleAuthErrors
     }
 
     let errorMsg = `HTTP Error ${res.status}`;
+    let errorData: any = null;
     try {
-      const errorData = await res.json();
+      errorData = await res.json();
       if (errorData?.error) errorMsg = errorData.error;
       else if (errorData?.message) errorMsg = errorData.message;
     } catch {
       // ignore json parse error
+    }
+    if (res.status === 403 && errorData?.code === 'PROFILE_INCOMPLETE' && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('profile:incomplete', { detail: { missingFields: errorData.missingFields || [] } }));
     }
     throw new Error(errorMsg);
   }
@@ -291,7 +295,10 @@ export const api = {
     }),
   getSellerIdentityDocument: async (id: string): Promise<{ url: string; expiresInSeconds: number }> =>
     fetchJson(`/api/sellers/applications/${encodeURIComponent(id)}/identity-document`),
-  updateSellerProfile: async (updates: Partial<Seller>): Promise<Seller> =>
+  updateSellerProfile: async (updates: Partial<Seller> & {
+    Identity_Document?: string;
+    Identity_Document_File_Name?: string;
+  }): Promise<Seller> =>
     fetchJson<Seller>('/api/sellers/me/profile', {
       method: 'PUT',
       body: JSON.stringify(updates),
@@ -432,6 +439,17 @@ export const api = {
     }),
 
   // Auth Login: establishes an HttpOnly cookie-backed JWT session
+  signup: async (role: 'customer' | 'seller' | 'rider', identifier: string, password: string): Promise<{ success: boolean; role: UserRole; entity: any; profileComplete: boolean }> => {
+    const value = identifier.trim();
+    const identity = value.includes('@') ? { email: value } : { username: value };
+    const response = await fetchJson<{ success: boolean; role: UserRole; entity: any; profileComplete: boolean }>('/api/auth/signup', {
+      method: 'POST',
+      body: JSON.stringify({ ...identity, role, password }),
+    }, false);
+    hasValidatedSession = response.success;
+    return response;
+  },
+
   login: async (
     usernameOrEmail: string,
     password: string,
@@ -462,14 +480,14 @@ export const api = {
   } }>('/api/auth/oauth/registration')).registration,
 
   // Auth Current User from JWT Session
-  getMe: async (): Promise<{ authenticated: boolean; user?: any; role?: UserRole; entity?: any }> => {
-    return fetchJson<{ authenticated: boolean; user?: any; role?: UserRole; entity?: any }>('/api/auth/me');
+  getMe: async (): Promise<{ authenticated: boolean; user?: any; role?: UserRole; entity?: any; profileComplete?: boolean; profileMissingFields?: string[] }> => {
+    return fetchJson<{ authenticated: boolean; user?: any; role?: UserRole; entity?: any; profileComplete?: boolean; profileMissingFields?: string[] }>('/api/auth/me');
   },
 
   // Validate Authentication for Page Navigation & HTTP Gatekeeping
-  validateAuth: async (): Promise<{ authenticated: boolean; user?: any; role?: UserRole; entity?: any }> => {
+  validateAuth: async (): Promise<{ authenticated: boolean; user?: any; role?: UserRole; entity?: any; profileComplete?: boolean; profileMissingFields?: string[] }> => {
     try {
-      const res = await fetchJson<{ authenticated: boolean; user?: any; role?: UserRole; entity?: any }>('/api/auth/me', undefined, false);
+      const res = await fetchJson<{ authenticated: boolean; user?: any; role?: UserRole; entity?: any; profileComplete?: boolean; profileMissingFields?: string[] }>('/api/auth/me', undefined, false);
       hasValidatedSession = res.authenticated;
       return res;
     } catch {
