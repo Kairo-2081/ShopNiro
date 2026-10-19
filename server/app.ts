@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import * as Sentry from '@sentry/node';
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
@@ -10,7 +11,6 @@ import { query } from './db/index.ts';
 import { errorHandler } from './middleware/errorHandler.ts';
 import { requireAuth, requireRole, optionalAuth, AuthRequest, OAUTH_REGISTRATION_COOKIE_NAME } from './middleware/auth.ts';
 import { enforcePublicApiPolicy } from './middleware/publicRoutes.ts';
-
 import authRoutes from './routes/auth.routes.ts';
 import categoriesRoutes from './routes/categories.routes.ts';
 import sellersRoutes from './routes/sellers.routes.ts';
@@ -31,6 +31,23 @@ import wishlistRoutes from './routes/wishlist.routes.ts';
 import supportRoutes from './routes/support.routes.ts';
 import cronRoutes from './routes/cron.routes.ts';
 import payoutsRoutes from './routes/payouts.routes.ts';
+
+if (process.env.SENTRY_DSN) Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  environment: process.env.NODE_ENV,
+  dataCollection: {
+    userInfo: false,
+    cookies: false,
+    httpHeaders: false,
+    httpBodies: [],
+    urlQueryParams: false,
+    graphQL: { document: false, variables: false },
+    genAI: { inputs: false, outputs: false },
+    databaseQueryData: false,
+    queues: false,
+    stackFrameVariables: false,
+  },
+});
 
 export const app = express();
 const isProduction = process.env.NODE_ENV === 'production';
@@ -98,8 +115,6 @@ app.use(cors({
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, status: 'ok' });
 });
-app.use('/api', apiRateLimit);
-app.use('/api', enforcePublicApiPolicy);
 app.get('/api/ready', async (_req, res) => {
   let timeout: NodeJS.Timeout | undefined;
   try {
@@ -116,6 +131,8 @@ app.get('/api/ready', async (_req, res) => {
     if (timeout) clearTimeout(timeout);
   }
 });
+app.use('/api', apiRateLimit);
+app.use('/api', enforcePublicApiPolicy);
 app.use('/api/ai', optionalAuth, aiRateLimit);
 app.use('/api/maps', optionalAuth, mapsRateLimit);
 

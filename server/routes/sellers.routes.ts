@@ -14,6 +14,7 @@ import {
 } from '../middleware/auth.ts';
 import { createSellerDocumentSignedUrl, deleteSellerDocument, uploadSellerDocument } from '../services/sellerDocuments.service.ts';
 import { Seller } from '../../src/types.ts';
+import { publicMessage } from '../middleware/errorHandler.ts';
 
 const router = Router();
 const createApplicationReviewAudit = async (accountType: 'seller' | 'rider', accountId: string, adminId: string, decision: 'approved' | 'rejected', reason: string) => {
@@ -197,7 +198,7 @@ router.post('/', registrationRateLimit, async (req, res) => {
     if (client) await client.query('ROLLBACK').catch(() => {});
     if (identityStoragePath) await deleteSellerDocument(identityStoragePath);
     console.error('Error creating seller:', error);
-    res.status(error?.statusCode || 500).json({ error: error.message || 'Failed to create seller' });
+    res.status(error?.statusCode || 500).json({ error: publicMessage(error, 'Failed to create seller') });
   } finally {
     client?.release();
   }

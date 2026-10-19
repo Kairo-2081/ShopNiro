@@ -191,6 +191,10 @@ const createCodDelivery = async (customerId: string, orderId: string, riderId: s
 };
 
 const app = express();
+app.use((req, _res, next) => {
+  (req as any).log = { error: () => {} };
+  next();
+});
 app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/admins', adminsRoutes);

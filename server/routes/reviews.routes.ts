@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { query } from '../db/index.ts';
 import { requireAuth, AuthRequest } from '../middleware/auth.ts';
 import { Review } from '../../src/types.ts';
+import { publicMessage } from '../middleware/errorHandler.ts';
 
 const router = Router();
 
@@ -80,7 +81,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
     });
   } catch (error: any) {
     console.error('Error creating review:', error);
-    res.status(500).json({ error: error.message || 'Failed to create review' });
+    res.status(500).json({ error: publicMessage(error, 'Failed to create review') });
   }
 });
 
