@@ -25,6 +25,8 @@ Support requests are stored in PostgreSQL and optionally emailed through Resend.
 
 4. Production configuration requires `JWT_SECRET` (at least 32 characters), `DATABASE_URL`, `CRON_SECRET`, `SSLCOMMERZ_STORE_ID`, `SSLCOMMERZ_STORE_PASSWORD`, `SSLCOMMERZ_IPN_TOKEN`, and `SSLCOMMERZ_IS_SANDBOX=false`. `PAYMENT_SIMULATOR=true` works only when `NODE_ENV` is explicitly `development` or `test`. Rotate any credential that has appeared in source control or git history; deleting it from current files is not sufficient. For a demo with no real money, set `PAYMENT_MODE=sandbox-demo` and `SSLCOMMERZ_IS_SANDBOX=true` with sandbox credentials; this mode never reaches the live gateway and must be removed before going live.
 
+API routes, entity relationships, and request flows: [docs/api.md](docs/api.md), [docs/erd.md](docs/erd.md), [docs/flows.md](docs/flows.md).
+
 5. For existing databases, migrate password hashes once per database before deploying strict bcrypt-only login: set `DATABASE_URL` to that database and run `npm run migrate:passwords`. Check `SELECT count(*) FROM users WHERE password NOT LIKE '$2%';` returns `0`. Never run migrations against a database unless you have selected and backed it up intentionally.
 
 6. Tests require `DATABASE_URL` pointing to an isolated disposable PostgreSQL database initialized with `schema.sql`; never use production or shared Supabase data. Run `npm test`, `npm run lint`, and `npm run build`. CI provisions a temporary PostgreSQL 16 service. The password migration script also requires an explicit `DATABASE_URL` and does not use `SUPABASE_DB_URL`.

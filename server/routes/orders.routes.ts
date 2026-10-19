@@ -7,6 +7,7 @@ import { Order, ProductBundle } from '../../src/types.ts';
 import { processRefundQueue } from './payment.routes.ts';
 import { discountedPriceForVoucher, discountedUnitPrice, getVoucherRule, isVoucherExpired, normalizeVoucherCode } from '../../src/lib/vouchers.ts';
 import { calculateBundlePrices } from '../../src/lib/bundles.ts';
+import { publicMessage } from '../middleware/errorHandler.ts';
 
 const router = Router();
 
@@ -293,9 +294,9 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
       await client.query('COMMIT');
     } catch (error: any) {
       await client.query('ROLLBACK').catch(() => {});
-      console.error('Error placing order:', error);
+      req.log.error({ err: error }, 'Error placing order');
       const status = error.message?.startsWith('Checkout Failed:') ? 409 : 500;
-      return res.status(status).json({ error: error.message || 'Failed to place order' });
+      return res.status(status).json({ error: status === 409 ? error.message : 'Failed to place order' });
     } finally {
       client.release();
     }
@@ -329,9 +330,9 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
 
     res.status(201).json(newOrder);
   } catch (error: any) {
-    console.error('Error placing order:', error);
+    req.log.error({ err: error }, 'Error placing order');
     const status = error.message?.startsWith('Checkout Failed:') ? 409 : 500;
-    res.status(status).json({ error: error.message || 'Failed to place order' });
+    res.status(status).json({ error: status === 409 ? error.message : 'Failed to place order' });
   }
 });
 

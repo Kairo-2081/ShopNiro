@@ -4,6 +4,7 @@ import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { pool, query } from '../db/index.ts';
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth.ts';
 import { GatewayError, sslcommerz } from '../services/sslcommerz.service.ts';
+import { publicMessage } from '../middleware/errorHandler.ts';
 
 const router = Router();
 const paymentInitRateLimit = rateLimit({
@@ -637,7 +638,7 @@ router.post('/init', requireAuth, requireRole(['customer']), paymentInitRateLimi
     });
   } catch (error: any) {
     console.error('Error initiating payment:', error);
-    res.status(500).json({ error: error.message || 'Failed to initialize payment gateway' });
+    res.status(500).json({ error: publicMessage(error, 'Failed to initialize payment gateway') });
   }
 });
 
@@ -683,7 +684,7 @@ router.post('/sslcommerz/validate', requireAuth, requireRole(['customer']), asyn
       return res.status(402).json({ error: 'Payment validation failed.', reason: error.message });
     }
     console.error('Error validating payment:', error);
-    res.status(500).json({ error: error.message || 'Payment validation failed' });
+    res.status(500).json({ error: publicMessage(error, 'Payment validation failed') });
   }
 });
 

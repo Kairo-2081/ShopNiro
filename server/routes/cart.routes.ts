@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { randomUUID } from 'node:crypto';
 import { query } from '../db/index.ts';
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth.ts';
+import { publicMessage } from '../middleware/errorHandler.ts';
 
 const router = Router();
 
@@ -103,7 +104,7 @@ router.post('/', requireAuth, requireRole(['customer']), async (req: AuthRequest
     res.status(201).json({ Cart_ID: cartId, Customer_ID: custId, Product_ID, Quantity: qty, Size: size || undefined });
   } catch (error: any) {
     console.error('Error adding to cart:', error);
-    res.status(500).json({ error: error.message || 'Failed to update cart' });
+    res.status(500).json({ error: publicMessage(error, 'Failed to update cart') });
   }
 });
 
@@ -140,7 +141,7 @@ router.put('/:cartId', requireAuth, requireRole(['customer']), async (req: AuthR
     res.json({ Cart_ID: cartId, Quantity: qty, updated: result.rows[0] });
   } catch (error: any) {
     console.error('Error updating cart item quantity:', error);
-    res.status(500).json({ error: error.message || 'Failed to update cart item quantity' });
+    res.status(500).json({ error: publicMessage(error, 'Failed to update cart item quantity') });
   }
 });
 
@@ -156,7 +157,7 @@ router.delete('/:cartId', requireAuth, requireRole(['customer']), async (req: Au
     res.json({ success: true, message: 'Item removed from cart' });
   } catch (error: any) {
     console.error('Error removing item from cart:', error);
-    res.status(500).json({ error: error.message || 'Failed to remove item from cart' });
+    res.status(500).json({ error: publicMessage(error, 'Failed to remove item from cart') });
   }
 });
 
