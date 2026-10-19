@@ -199,9 +199,9 @@ export const RiderSignupModal: React.FC<RiderSignupModalProps> = ({ isOpen, onCl
 
   const fieldClass = 'w-full rounded-xl border border-surface-200 bg-surface-50 px-3 py-2.5 text-sm text-surface-900 placeholder:text-surface-400 focus:outline-none focus:ring-2 focus:ring-success-600 dark:border-surface-700 dark:bg-[#181F2A] dark:text-white';
   const resumeFields = [
-    { key: 'experience', title: 'Experience', value: experience, set: setExperience, placeholder: 'Describe relevant experience, one item per line.' },
-    { key: 'previousJobs', title: 'Previous jobs', value: previousJobs, set: setPreviousJobs, placeholder: 'List previous roles and employers, one per line.' },
-    { key: 'education', title: 'Education and qualifications', value: education, set: setEducation, placeholder: 'List schools, qualifications, or training, one per line.' },
+    { key: 'experience', title: t('experienceLabel'), value: experience, set: setExperience, placeholder: t('experiencePlaceholder') },
+    { key: 'previousJobs', title: t('previousJobsLabel'), value: previousJobs, set: setPreviousJobs, placeholder: t('previousJobsPlaceholder') },
+    { key: 'education', title: t('educationAndQualifications'), value: education, set: setEducation, placeholder: t('educationPlaceholder') },
   ];
 
   return (
@@ -239,13 +239,13 @@ export const RiderSignupModal: React.FC<RiderSignupModalProps> = ({ isOpen, onCl
               <OAuthProviderButtons role="rider" mode="sign up" />
             )}
             <div className="grid gap-3 sm:grid-cols-2">
-              <input className={fieldClass} required autoComplete="name" placeholder="Full name" value={name} onChange={(e) => setName(e.target.value)} />
-              <input className={fieldClass} required autoComplete="username" placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} />
-              <input className={fieldClass} required type="email" autoComplete="email" placeholder="Email address" value={email} onChange={(e) => setEmail(e.target.value)} />
-              <input className={fieldClass} required type="tel" autoComplete="tel" placeholder="Phone number" value={phone} onChange={(e) => setPhone(e.target.value)} />
+              <input className={fieldClass} required autoComplete="name" placeholder={t('fullName')} value={name} onChange={(e) => setName(e.target.value)} />
+              <input className={fieldClass} required autoComplete="username" placeholder={t('username')} value={username} onChange={(e) => setUsername(e.target.value)} />
+              <input className={fieldClass} required type="email" autoComplete="email" placeholder={t('emailAddress')} value={email} onChange={(e) => setEmail(e.target.value)} />
+              <input className={fieldClass} required type="tel" autoComplete="tel" placeholder={t('phoneNumber')} value={phone} onChange={(e) => setPhone(e.target.value)} />
               <div className="relative sm:col-span-2">
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-surface-400" />
-                <input className={`${fieldClass} pl-9`} required={!oauthProvider} minLength={8} type="password" autoComplete="new-password" placeholder={oauthProvider ? 'Password (optional)' : 'Password (at least 8 characters)'} value={password} onChange={(e) => setPassword(e.target.value)} />
+                <input className={`${fieldClass} pl-9`} required={!oauthProvider} minLength={8} type="password" autoComplete="new-password" placeholder={oauthProvider ? t('passwordOptional') : t('passwordAtLeast8Chars')} value={password} onChange={(e) => setPassword(e.target.value)} />
               </div>
             </div>
           </section>
@@ -254,21 +254,21 @@ export const RiderSignupModal: React.FC<RiderSignupModalProps> = ({ isOpen, onCl
             <h3 className="text-sm font-bold text-surface-900 dark:text-white">{t('profilePhoto')}</h3>
             <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-success-400 bg-success-50/60 p-4 text-sm text-surface-700 dark:border-success-800 dark:bg-success-950/20 dark:text-surface-200">
               {profileImage ? <img src={profileImage} alt="Rider profile preview" className="h-14 w-14 rounded-xl border border-success-200 object-cover dark:border-success-800" /> : <UploadCloud className="h-5 w-5 shrink-0 text-success-700 dark:text-success-400" />}
-              <span className="min-w-0 flex-1">{profileImageFile ? `${profileImageFile.name} · Ready` : 'Upload a JPG or PNG image (max 2 MB)'}</span>
+              <span className="min-w-0 flex-1">{profileImageFile ? `${profileImageFile.name} · ${t('readyLabel')}` : t('uploadJpgPngMax2Mb')}</span>
               <input type="file" accept="image/jpeg,image/png" className="sr-only" onChange={(event) => void handleProfileImageChange(event)} />
             </label>
             <p className="text-xs text-surface-500 dark:text-surface-400">{t('profilePhotoCvNotice')}</p>
           </section>
 
-          {[{ title: 'Present address', value: presentAddress, set: setPresentAddress }, { title: 'Permanent address', value: permanentAddress, set: setPermanentAddress }].map((addressForm) => (
+          {[{ title: t('presentAddress'), value: presentAddress, set: setPresentAddress }, { title: t('permanentAddress'), value: permanentAddress, set: setPermanentAddress }].map((addressForm) => (
             <section key={addressForm.title} className="space-y-3">
               <h3 className="flex items-center gap-2 text-sm font-bold text-surface-900 dark:text-white"><MapPin className="h-4 w-4 text-success-700 dark:text-success-400" />{addressForm.title}</h3>
               <AccountLocationPicker onAddressSelected={(selected) => addressForm.set(selected ? { ...addressForm.value, ...selected } : { ...addressForm.value, Street: '', City: '' })} />
               <div className="grid gap-3 sm:grid-cols-2">
-                <input className={fieldClass} required placeholder="House / building" value={addressForm.value.House_Name} onChange={(e) => addressForm.set({ ...addressForm.value, House_Name: e.target.value })} />
-                <input className={fieldClass} required placeholder="Street" value={addressForm.value.Street} onChange={(e) => addressForm.set({ ...addressForm.value, Street: e.target.value })} />
-                <input className={fieldClass} required placeholder="City" value={addressForm.value.City} onChange={(e) => addressForm.set({ ...addressForm.value, City: e.target.value })} />
-                <input className={fieldClass} placeholder="Postal code" value={addressForm.value.Postal_Code} onChange={(e) => addressForm.set({ ...addressForm.value, Postal_Code: e.target.value })} />
+                <input className={fieldClass} required placeholder={t('houseBuilding')} value={addressForm.value.House_Name} onChange={(e) => addressForm.set({ ...addressForm.value, House_Name: e.target.value })} />
+                <input className={fieldClass} required placeholder={t('street')} value={addressForm.value.Street} onChange={(e) => addressForm.set({ ...addressForm.value, Street: e.target.value })} />
+                <input className={fieldClass} required placeholder={t('city')} value={addressForm.value.City} onChange={(e) => addressForm.set({ ...addressForm.value, City: e.target.value })} />
+                <input className={fieldClass} placeholder={t('postalCodeLabel')} value={addressForm.value.Postal_Code} onChange={(e) => addressForm.set({ ...addressForm.value, Postal_Code: e.target.value })} />
               </div>
             </section>
           ))}
@@ -290,7 +290,7 @@ export const RiderSignupModal: React.FC<RiderSignupModalProps> = ({ isOpen, onCl
               <div className="inline-flex rounded-lg border border-surface-200 bg-surface-100 p-1 dark:border-surface-700 dark:bg-surface-900">
                 {[true, false].map((choice) => (
                   <button key={String(choice)} type="button" aria-pressed={hasCv === choice} onClick={() => { setHasCv(choice); if (!choice) { setCvFile(null); setCvBase64(''); } setError(null); }} className={`rounded-md px-5 py-2 text-sm font-semibold ${hasCv === choice ? 'bg-success-700 text-white' : 'text-surface-700 dark:text-surface-300'}`}>
-                    {choice ? 'Yes, import a CV' : 'No, enter details'}
+                    {choice ? t('yesImportCv') : t('noEnterDetails')}
                   </button>
                 ))}
               </div>
@@ -299,7 +299,7 @@ export const RiderSignupModal: React.FC<RiderSignupModalProps> = ({ isOpen, onCl
             {hasCv === true && (
               <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-success-400 bg-success-50/60 p-4 text-sm text-surface-700 dark:border-success-800 dark:bg-success-950/20 dark:text-surface-200">
                 <UploadCloud className="h-5 w-5 shrink-0 text-success-700 dark:text-success-400" />
-                <span className="min-w-0 flex-1">{cvFile ? `${cvFile.name} · ${isParsing ? 'Reading CV...' : 'Ready'}` : t('uploadPdfCv')}</span>
+                <span className="min-w-0 flex-1">{cvFile ? `${cvFile.name} · ${isParsing ? 'Reading CV...' : t('readyLabel')}` : t('uploadPdfCv')}</span>
                 <input type="file" accept="application/pdf,.pdf" className="sr-only" onChange={handleCvChange} />
               </label>
             )}
@@ -316,7 +316,7 @@ export const RiderSignupModal: React.FC<RiderSignupModalProps> = ({ isOpen, onCl
           <div className="flex flex-col-reverse justify-between gap-3 border-t border-surface-200 pt-5 dark:border-surface-800 sm:flex-row sm:items-center">
             <p className="flex items-center gap-2 text-xs text-surface-500 dark:text-surface-400"><ShieldCheck className="h-4 w-4 shrink-0" />{t('shopNiroGeneratesCv')}</p>
             <button type="submit" disabled={isSubmitting || isParsing || preparingProfileImage} className="rounded-lg bg-success-700 px-5 py-2.5 text-sm font-bold text-white hover:bg-success-600 disabled:opacity-50">
-              {preparingProfileImage ? 'Preparing photo...' : isSubmitting ? t('submittingApplication') : t('submitApplication')}
+              {preparingProfileImage ? t('preparingPhoto') : isSubmitting ? t('submittingApplication') : t('submitApplication')}
             </button>
           </div>
         </form>
