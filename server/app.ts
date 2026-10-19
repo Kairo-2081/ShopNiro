@@ -3,6 +3,7 @@ import * as Sentry from '@sentry/node';
 import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
+import { buildContentSecurityPolicy } from './middleware/csp.ts';
 import pino from 'pino';
 import pinoHttp from 'pino-http';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
@@ -94,20 +95,7 @@ const allowedOrigins = new Set([
 ]);
 
 app.use(helmet({
-  contentSecurityPolicy: isProduction ? {
-    reportOnly: true,
-    directives: {
-      defaultSrc: ["'self'"],
-      scriptSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
-      fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
-      imgSrc: ["'self'", 'data:', 'blob:', 'https://images.unsplash.com', 'https://*.tile.openstreetmap.org', 'https://*.supabase.co'],
-      connectSrc: ["'self'", 'https://router.project-osrm.org'],
-      objectSrc: ["'none'"],
-      frameAncestors: ["'none'"],
-      baseUri: ["'self'"],
-    },
-  } : false,
+  contentSecurityPolicy: buildContentSecurityPolicy(isProduction),
 }));
 app.use(cors({
   origin: [...allowedOrigins],

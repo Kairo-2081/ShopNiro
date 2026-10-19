@@ -47,7 +47,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
     res.setHeader('X-Has-More', String(result.rows.length > limit));
     return res.json(formatted.slice(0, limit));
   } catch (error: any) {
-    console.error('Error fetching customers:', error);
+    req.log.error({ err: error }, 'Error fetching customers:');
     res.status(500).json({ error: 'Failed to fetch customers' });
   }
 });
@@ -105,7 +105,7 @@ router.post('/', registrationRateLimit, async (req, res) => {
           await query('UPDATE customers SET welcome_offer_email_sent_at = CURRENT_TIMESTAMP WHERE id = $1', [id]);
         }
       } catch (emailError) {
-        console.error('Could not send welcome offer email:', emailError);
+        req.log.error({ err: emailError }, 'Could not send welcome offer email:');
       }
     }
 
@@ -122,7 +122,7 @@ router.post('/', registrationRateLimit, async (req, res) => {
 
     res.status(201).json(newCustomer);
   } catch (error: any) {
-    console.error('Error creating customer:', error);
+    req.log.error({ err: error }, 'Error creating customer:');
     res.status(500).json({ error: publicMessage(error, 'Failed to create customer') });
   }
 });
@@ -197,7 +197,7 @@ router.put('/:id', requireAuth, async (req: AuthRequest, res) => {
 
     res.json(updated);
   } catch (error: any) {
-    console.error('Error updating customer:', error);
+    req.log.error({ err: error }, 'Error updating customer:');
     res.status(500).json({ error: 'Failed to update customer' });
   }
 });

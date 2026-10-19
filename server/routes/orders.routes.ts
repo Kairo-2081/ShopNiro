@@ -115,7 +115,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
     res.setHeader('X-Has-More', String(hasMore));
     res.json(formatted.slice(0, limit));
   } catch (error: any) {
-    console.error('Error fetching orders:', error);
+    req.log.error({ err: error }, 'Error fetching orders:');
     res.status(500).json({ error: 'Failed to fetch orders' });
   }
 });
@@ -370,7 +370,7 @@ router.get('/cancellation-requests', requireAuth, async (req: AuthRequest, res) 
       Refund_Completed_At: row.refund_completed_at ? new Date(row.refund_completed_at).toISOString() : undefined,
     })));
   } catch (error: any) {
-    console.error('Could not list cancellation requests:', error);
+    req.log.error({ err: error }, 'Could not list cancellation requests:');
     res.status(500).json({ error: 'Could not load cancellation requests.' });
   }
 });
@@ -406,7 +406,7 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res) => {
       Additional_Info: order.additional_info || '',
     });
   } catch (error: any) {
-    console.error('Error fetching order:', error);
+    req.log.error({ err: error }, 'Error fetching order:');
     res.status(500).json({ error: 'Failed to fetch order.' });
   }
 });
@@ -440,7 +440,7 @@ router.post('/:id/cancellation-request', requireAuth, async (req: AuthRequest, r
     if (!request.rows.length) return res.status(409).json({ error: 'A cancellation request is already open for this order.' });
     res.status(201).json({ ...request.rows[0], order_status: order.status, payment_status: order.payment_status });
   } catch (error: any) {
-    console.error('Could not request order cancellation:', error);
+    req.log.error({ err: error }, 'Could not request order cancellation:');
     res.status(500).json({ error: 'Could not submit your cancellation request.' });
   }
 });
@@ -550,14 +550,14 @@ router.patch('/cancellation-requests/:requestId/review', requireAuth, async (req
 
     if (decision === 'approved') {
       void processRefundQueue().catch((error) => {
-        console.error('Refund reconciliation failed after approval:', error);
+        req.log.error({ err: error }, 'Refund reconciliation failed after approval:');
       });
     }
 
     res.json({ success: true, status: decision });
   } catch (error: any) {
     if (client) await client.query('ROLLBACK').catch(() => {});
-    console.error('Could not review cancellation request:', error);
+    req.log.error({ err: error }, 'Could not review cancellation request:');
     res.status(500).json({ error: 'Could not review cancellation request.' });
   } finally {
     client?.release();
@@ -663,7 +663,7 @@ router.patch('/:id/revert-failed-payment', requireAuth, async (req: AuthRequest,
     });
   } catch (error: any) {
     if (client) await client.query('ROLLBACK').catch(() => {});
-    console.error('Could not restore failed online payment order to cart:', error);
+    req.log.error({ err: error }, 'Could not restore failed online payment order to cart:');
     res.status(500).json({ error: 'Could not restore your cart items.' });
   } finally {
     client?.release();
@@ -780,7 +780,7 @@ router.patch('/:id/status', requireAuth, async (req: AuthRequest, res) => {
       Order_Placed_At: o.order_placed_at ? new Date(o.order_placed_at).toISOString() : new Date().toISOString(),
     });
   } catch (error: any) {
-    console.error('Error updating order status:', error);
+    req.log.error({ err: error }, 'Error updating order status:');
     res.status(500).json({ error: 'Failed to update order status' });
   }
 });

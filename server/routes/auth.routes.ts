@@ -355,7 +355,7 @@ router.post('/signup', signupRateLimit, async (req, res) => {
         };
   return res.status(201).json({ success: true, role: accountRole, entity, profileComplete: false });
   } catch (error) {
-    console.error('Account signup failed:', error);
+    req.log.error({ err: error }, 'Account signup failed:');
     return res.status(500).json({ error: 'Could not create your account.' });
   }
 });
@@ -544,7 +544,7 @@ router.get('/me', optionalAuth, async (req: AuthRequest, res: Response) => {
       profileMissingFields: completion.missingFields,
     });
   } catch (error: any) {
-    console.error('Error fetching current user:', error);
+    req.log.error({ err: error }, 'Error fetching current user:');
     res.status(500).json({ error: 'Failed to fetch user profile' });
   }
 });
@@ -709,7 +709,7 @@ router.post('/login', loginRateLimit, async (req, res) => {
     recordLoginFailure(normalizedIdentifier, Date.now());
     return res.status(401).json({ error: invalidCredentialsMessage });
   } catch (error: any) {
-    console.error('Error during login:', error);
+    req.log.error({ err: error }, 'Error during login:');
     res.status(500).json({ error: 'Authentication failed due to server error' });
   }
 });

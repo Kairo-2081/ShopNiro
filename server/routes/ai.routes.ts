@@ -59,7 +59,7 @@ router.post('/description', async (req, res) => {
 
     return res.json({ description });
   } catch (error: any) {
-    console.error('ShopNiro AI description error:', error);
+    req.log.error({ err: error }, 'ShopNiro AI description error:');
     const statusCode = error?.statusCode || error?.status || 500;
     const errorMessage = statusCode === 503
       ? 'ShopNiro AI is not configured. Add GROQ_API_KEY to the server environment and restart the server.'
@@ -128,7 +128,7 @@ router.post('/product-copy', requireAuth, requireRole(['seller', 'admin']), asyn
     if (!copy) return res.status(502).json({ error: 'AI could not prepare product copy. Please try again.' });
     return res.json({ copy: copy.slice(0, 2200) });
   } catch (error: any) {
-    console.error('ShopNiro AI product-copy error:', error);
+    req.log.error({ err: error }, 'ShopNiro AI product-copy error:');
     const statusCode = error?.statusCode || error?.status || 500;
     const errorMessage = statusCode === 503
       ? 'ShopNiro AI is not configured. Add GROQ_API_KEY to the server environment and restart the server.'
@@ -277,7 +277,7 @@ router.post('/size-chart', requireAuth, requireRole(['seller', 'admin']), async 
     if (!sizes.length || !sizeChart.length) return res.status(502).json({ error: 'AI could not create a usable size chart. Enter sizes manually.' });
     return res.json({ sizes, sizeChart, isEstimate: true });
   } catch (error: any) {
-    console.error('AI size chart generation failed:', error);
+    req.log.error({ err: error }, 'AI size chart generation failed:');
     const statusCode = error?.statusCode || 502;
     return res.status(statusCode).json({ error: 'Could not generate a size chart. You can enter sizes and measurements manually.' });
   }
@@ -526,7 +526,7 @@ router.post('/chat', async (req, res) => {
       roleUsed: role,
     });
   } catch (error: any) {
-    console.error('ShopNiro AI server error:', error);
+    req.log.error({ err: error }, 'ShopNiro AI server error:');
     const statusCode = error?.statusCode || error?.status || 500;
     const errorMessage = statusCode === 503
       ? 'ShopNiro AI is not configured. Add GROQ_API_KEY to the server environment and restart the server.'
