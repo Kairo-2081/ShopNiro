@@ -10,7 +10,7 @@ export function errorHandler(
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   next: NextFunction
 ) {
-  console.error(`[Server Error] ${req.method} ${req.originalUrl}:`, err);
+  req.log.error({ err }, 'request failed');
 
   const statusCode = typeof err.statusCode === 'number' && err.statusCode >= 400 && err.statusCode < 600
     ? err.statusCode
@@ -18,12 +18,10 @@ export function errorHandler(
       ? err.status
       : 500;
 
-  const errorMessage = err.message || 'Internal Server Error';
-
   res.status(statusCode).json({
     success: false,
-    error: errorMessage,
-    ...(process.env.NODE_ENV !== 'production' && err.stack ? { stack: err.stack } : {}),
+    error: statusCode >= 500 ? 'Something went wrong' : err.message,
+    requestId: req.id,
   });
 }
 
