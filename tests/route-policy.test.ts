@@ -216,7 +216,7 @@ dbTest('guests can register and read the seller catalog without private seller f
 });
 
 dbTest('minimal signup allows profile edits but blocks other writes until completion', async () => {
-  const username = `profile-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+  const username = `profile${Date.now()}${Math.floor(Math.random() * 10000)}`;
   const registration = await request('POST', '/api/auth/signup', {
     role: 'customer',
     username,
@@ -280,7 +280,7 @@ dbTest('minimal seller and rider signup create pending incomplete profiles', asy
   const created: Array<{ id: string; role: 'seller' | 'rider' }> = [];
   try {
     for (const role of ['seller', 'rider'] as const) {
-      const username = `${role}-${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+      const username = `${role}${Date.now()}${Math.floor(Math.random() * 10000)}`;
       const registration = await request('POST', '/api/auth/signup', {
         role,
         username,
