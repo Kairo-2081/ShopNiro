@@ -3,7 +3,7 @@ import { requireAuth } from './auth.ts';
 
 export const PUBLIC_API_RULES: Array<[string, RegExp]> = [
   ['GET', /^\/api\/(health|ready)$/],
-  ['POST', /^\/api\/auth\/(login|logout)$/],
+  ['POST', /^\/api\/auth\/(login|logout|signup)$/],
   ['GET', /^\/api\/auth\/me$/],
   ['GET', /^\/api\/auth\/oauth\/registration$/],
   ['GET', /^\/api\/auth\/oauth\/(google|facebook|:provider)(\/callback)?$/],

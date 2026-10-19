@@ -134,6 +134,9 @@ router.post('/', registrationRateLimit, async (req, res) => {
 router.put('/:id', requireAuth, async (req: AuthRequest, res) => {
   try {
     const { id } = req.params;
+    if (req.user!.role !== 'admin' && req.user!.entityId !== id) {
+      return res.status(403).json({ error: 'You can only update your own customer profile.' });
+    }
     const { Name, Email, Number: phoneNum, Address } = req.body;
 
     const addr = Address || {};

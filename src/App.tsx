@@ -15,6 +15,7 @@ import {
   Rider,
 } from './types';
 import { api } from './lib/api';
+import { getProfileCompletion } from './lib/profileCompletion';
 import { shopNiroLogo } from './lib/branding';
 import { MarketplaceClosing, MarketplaceStat } from './components/MarketplaceClosing';
 import { Navbar } from './components/Navbar';
@@ -74,6 +75,8 @@ export default function App() {
   // Authentication State
   const [isLoggedIn, setIsLoggedIn] = React.useState<boolean>(false);
   const [currentRole, setCurrentRole] = React.useState<UserRole>('customer');
+  const [profileComplete, setProfileComplete] = React.useState(true);
+  const [profileMissingFields, setProfileMissingFields] = React.useState<string[]>([]);
   const [activeTab, setActiveTab] = React.useState<AppTab>('storefront');
 
   // Logged-in Entities
@@ -140,10 +143,24 @@ export default function App() {
   const [isAdminRegistrationOpen, setIsAdminRegistrationOpen] = React.useState(false);
   const [isRiderSignupOpen, setIsRiderSignupOpen] = React.useState(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = React.useState(false);
+  const [loginModalInitialTab, setLoginModalInitialTab] = React.useState<'login' | 'register'>('login');
+  const [loginModalInitialRole, setLoginModalInitialRole] = React.useState<'customer' | 'seller' | 'rider'>('customer');
   const [authNotice, setAuthNotice] = React.useState<string | null>(null);
   const [isValidatingAuth, setIsValidatingAuth] = React.useState<boolean>(false);
   const [paymentReceiptOrder, setPaymentReceiptOrder] = React.useState<Order | null>(null);
   const paymentReturnHandledRef = React.useRef(false);
+
+  const openSignup = (role: 'customer' | 'seller' | 'rider') => {
+    setLoginModalInitialTab('register');
+    setLoginModalInitialRole(role);
+    setIsLoginModalOpen(true);
+    setAuthNotice(null);
+  };
+
+  const openLogin = () => {
+    setLoginModalInitialTab('login');
+    setIsLoginModalOpen(true);
+  };
 
   // Authenticate and validate on every page before processing page requests
   const validateAuthForPage = React.useCallback(async (targetTab: string) => {
@@ -153,6 +170,15 @@ export default function App() {
       if (auth.authenticated && auth.role && auth.entity) {
         setIsLoggedIn(true);
         setCurrentRole(auth.role);
+        const complete = auth.profileComplete !== false;
+        setProfileComplete(complete);
+        setProfileMissingFields(auth.profileMissingFields || []);
+        if (!complete) {
+          setAuthNotice('Update your profile first before making changes.');
+          if (auth.role === 'customer' && !['storefront', 'profile'].includes(targetTab)) setActiveTab('profile');
+        } else {
+          setAuthNotice(null);
+        }
 
         if (viewMode !== 'landing') {
           setViewMode('app');
@@ -176,11 +202,13 @@ export default function App() {
           setSelectedSeller(null);
           setSelectedAdmin(null);
         }
-        setAuthNotice(null);
+        setAuthNotice(complete ? null : 'Update your profile first before making changes.');
         return true;
       } else {
         // Not authenticated
         setIsLoggedIn(false);
+        setProfileComplete(true);
+        setProfileMissingFields([]);
         setSelectedCustomer(null);
         setSelectedSeller(null);
         setSelectedAdmin(null);
@@ -188,7 +216,7 @@ export default function App() {
         if (viewMode !== 'landing' && !['storefront', 'support'].includes(targetTab)) {
           const tabLabel = targetTab.replace('-', ' ');
           setAuthNotice(`Authentication Required: You must be authenticated before processing HTTP requests on the ${tabLabel} page.`);
-          setIsLoginModalOpen(true);
+          openLogin();
         }
         return false;
       }
@@ -218,10 +246,9 @@ export default function App() {
     };
     if (oauthError) {
       setAuthNotice(messages[oauthError] || messages.oauth_failed);
-      setIsLoginModalOpen(true);
+      openLogin();
     }
-    if (oauthSignup === 'seller') setIsSellerRegistrationOpen(true);
-    if (oauthSignup === 'rider') setIsRiderSignupOpen(true);
+    if (oauthSignup === 'seller' || oauthSignup === 'rider') openSignup(oauthSignup);
     params.delete('oauth_error');
     params.delete('oauth_signup');
     const query = params.toString();
@@ -233,7 +260,21 @@ export default function App() {
     const handleAuthRequired = (e: any) => {
       setIsLoggedIn(false);
       setAuthNotice(e.detail?.message || 'Authentication required before processing this HTTP request.');
-      setIsLoginModalOpen(true);
+      openLogin();
+    };
+
+    const handleProfileIncomplete = (event: Event) => {
+      const detail = (event as CustomEvent<{ missingFields?: string[] }>).detail;
+      setProfileComplete(false);
+      setProfileMissingFields(detail?.missingFields || []);
+      setAuthNotice('Update your profile first before making changes.');
+      setViewMode('app');
+      setIsCartOpen(false);
+      setIsCheckoutOpen(false);
+      setSelectedProductForDetail(null);
+      if (currentRole === 'customer') setActiveTab('profile');
+      if (currentRole === 'seller') setActiveTab('seller-dashboard');
+      if (currentRole === 'rider') setActiveTab('rider-dashboard');
     };
 
     const handleAuthUnauthorized = (e: any) => {
@@ -243,17 +284,19 @@ export default function App() {
       setSelectedAdmin(null);
       setSelectedRider(null);
       setAuthNotice('Your session has expired or is invalid. Please sign in again.');
-      setIsLoginModalOpen(true);
+      openLogin();
     };
 
     window.addEventListener('auth:required', handleAuthRequired);
     window.addEventListener('auth:unauthorized', handleAuthUnauthorized);
+    window.addEventListener('profile:incomplete', handleProfileIncomplete);
 
     return () => {
       window.removeEventListener('auth:required', handleAuthRequired);
       window.removeEventListener('auth:unauthorized', handleAuthUnauthorized);
+      window.removeEventListener('profile:incomplete', handleProfileIncomplete);
     };
-  }, []);
+  }, [currentRole]);
 
   React.useEffect(() => {
     const rememberOutsideFocus = (event: Event) => {
@@ -314,8 +357,12 @@ export default function App() {
       if (auth.authenticated && auth.role && auth.entity) {
         setIsLoggedIn(true);
         setCurrentRole(auth.role);
+        const complete = auth.profileComplete !== false;
+        setProfileComplete(complete);
+        setProfileMissingFields(auth.profileMissingFields || []);
+        setAuthNotice(complete ? null : 'Update your profile first before making changes.');
         setViewMode('app');
-        setActiveTab(auth.role === 'admin' ? 'admin-dashboard' : auth.role === 'seller' ? 'seller-dashboard' : auth.role === 'rider' ? 'rider-dashboard' : 'storefront');
+        setActiveTab(!complete && auth.role === 'customer' ? 'profile' : auth.role === 'admin' ? 'admin-dashboard' : auth.role === 'seller' ? 'seller-dashboard' : auth.role === 'rider' ? 'rider-dashboard' : 'storefront');
 
         if (auth.role === 'admin' || auth.role === 'seller') {
           const allProducts = await api.getProducts();
@@ -362,6 +409,8 @@ export default function App() {
         }
       } else {
         setIsLoggedIn(false);
+        setProfileComplete(true);
+        setProfileMissingFields([]);
         setOrders([]);
         setCart([]);
         setCustomers([]);
@@ -505,7 +554,7 @@ export default function App() {
 
   const handleToggleWishlist = async (product: Product) => {
     if (!selectedCustomer || !isLoggedIn) {
-      setIsLoginModalOpen(true);
+      openLogin();
       return;
     }
     const isSaved = wishlistProductIds.includes(product.Product_ID);
@@ -523,9 +572,15 @@ export default function App() {
 
   // Handle Login: by Username & Password simply!
   const handleLoginSuccess = async (role: UserRole, entity: any) => {
+    const auth = await api.validateAuth();
+    const complete = auth.authenticated
+      ? auth.profileComplete === true
+      : getProfileCompletion(role, entity).complete;
     setIsLoggedIn(true);
     setCurrentRole(role);
-    setAuthNotice(null);
+    setProfileComplete(complete);
+    setProfileMissingFields(auth.profileMissingFields || []);
+    setAuthNotice(complete ? null : 'Update your profile first before making changes.');
 
     // Refresh public catalog and authenticated user dataset
     await loadInitialData();
@@ -534,7 +589,7 @@ export default function App() {
       setSelectedCustomer(entity as Customer);
       setSelectedSeller(null);
       setSelectedAdmin(null);
-      setActiveTab('storefront');
+      setActiveTab(complete ? 'storefront' : 'profile');
       try {
         const [userCart, userOrders] = await Promise.all([
           api.getCart(entity.Customer_ID).catch(() => []),
@@ -588,6 +643,8 @@ export default function App() {
   const handleLogout = () => {
     api.logout();
     setIsLoggedIn(false);
+    setProfileComplete(true);
+    setProfileMissingFields([]);
     setViewMode('landing');
     setSelectedCustomer(null);
     setSelectedSeller(null);
@@ -605,7 +662,7 @@ export default function App() {
   // Cart operations
   const handleAddToCart = async (product: Product, quantity: number = 1, size?: string) => {
     if (!isLoggedIn || !selectedCustomer) {
-      setIsLoginModalOpen(true);
+      openLogin();
       return;
     }
     try {
@@ -620,7 +677,7 @@ export default function App() {
 
   const handleBuyNow = async (product: Product, quantity: number, size?: string) => {
     if (!isLoggedIn || !selectedCustomer) {
-      setIsLoginModalOpen(true);
+      openLogin();
       return;
     }
     try {
@@ -683,7 +740,7 @@ export default function App() {
   // Review Submission
   const handleSubmitReview = async (productId: string, rating: number, reviewText: string) => {
     if (!isLoggedIn || !selectedCustomer) {
-      setIsLoginModalOpen(true);
+      openLogin();
       return;
     }
     const newRev = await api.createReview({
@@ -701,6 +758,10 @@ export default function App() {
     try {
       const refreshed = await api.updateCustomer(updated.Customer_ID, updated);
       setSelectedCustomer(refreshed);
+      const completion = getProfileCompletion('customer', refreshed);
+      setProfileComplete(completion.complete);
+      setProfileMissingFields(completion.missingFields);
+      setAuthNotice(completion.complete ? null : 'Update your profile first before making changes.');
       setCustomers((prev) => prev.map((c) => (c.Customer_ID === refreshed.Customer_ID ? refreshed : c)));
       setOrders((prev) => prev.map((order) => {
         if (order.Customer_ID !== refreshed.Customer_ID || !['placed', 'processing'].includes(order.Status)) {
@@ -733,11 +794,23 @@ export default function App() {
     }
   };
 
-  const handleUpdateSellerProfile = async (updates: Partial<Seller>): Promise<Seller> => {
+  const handleUpdateSellerProfile = async (updates: Partial<Seller> & { Identity_Document?: string; Identity_Document_File_Name?: string }): Promise<Seller> => {
     const updated = await api.updateSellerProfile(updates);
     setSelectedSeller(updated);
+    const completion = getProfileCompletion('seller', updated);
+    setProfileComplete(completion.complete);
+    setProfileMissingFields(completion.missingFields);
+    setAuthNotice(completion.complete ? null : 'Update your profile first before making changes.');
     setSellers((prev) => prev.map((seller) => seller.Seller_ID === updated.Seller_ID ? updated : seller));
     return updated;
+  };
+
+  const handleRiderProfileSaved = (updated: Rider) => {
+    setSelectedRider(updated);
+    const completion = getProfileCompletion('rider', updated);
+    setProfileComplete(completion.complete);
+    setProfileMissingFields(completion.missingFields);
+    setAuthNotice(completion.complete ? null : 'Update your profile first before making changes.');
   };
 
   // Product CRUD (Seller)
@@ -804,12 +877,12 @@ export default function App() {
 
   const handleAccountCreated = () => {
     setAuthNotice('Account created successfully. Sign in with your new credentials.');
-    setIsLoginModalOpen(true);
+    openLogin();
   };
 
   const handleSellerAccountCreated = (_seller: Seller, message?: string) => {
     setAuthNotice(message || 'Account created successfully. Sign in with your new credentials.');
-    setIsLoginModalOpen(true);
+    openLogin();
   };
 
   // New Customer Registration
@@ -874,14 +947,14 @@ export default function App() {
           admin={defaultAdmin}
           admins={admins}
           dbStatus={{ connected: true, provider: 'Raw SQL Database Engine', database: 'marketpulse_db' }}
-          onOpenLogin={() => setIsLoginModalOpen(true)}
+          onOpenLogin={openLogin}
           onEnterAsGuest={() => {
             setViewMode('app');
             setActiveTab('storefront');
           }}
-          onOpenCustomerSignup={() => setIsCustomerRegistrationOpen(true)}
-          onOpenSellerSignup={() => setIsSellerRegistrationOpen(true)}
-          onOpenRiderSignup={() => setIsRiderSignupOpen(true)}
+          onOpenCustomerSignup={() => openSignup('customer')}
+          onOpenSellerSignup={() => openSignup('seller')}
+          onOpenRiderSignup={() => openSignup('rider')}
           onOpenAdminSignup={() => setIsAdminRegistrationOpen(true)}
           theme={theme}
           onToggleTheme={toggleTheme}
@@ -918,8 +991,8 @@ export default function App() {
           <RiderSignupModal
             isOpen={isRiderSignupOpen}
             onClose={() => setIsRiderSignupOpen(false)}
-            onOpenLogin={() => setIsLoginModalOpen(true)}
-            onSubmitted={(message) => { setAuthNotice(message); setIsLoginModalOpen(true); }}
+            onOpenLogin={openLogin}
+            onSubmitted={(message) => { setAuthNotice(message); openLogin(); }}
           />
         )}
 
@@ -932,6 +1005,8 @@ export default function App() {
             }}
             onLoginSuccess={handleLoginSuccess}
             noticeMessage={authNotice}
+            initialTab={loginModalInitialTab}
+            initialRole={loginModalInitialRole}
           />
         )}
       </>
@@ -977,11 +1052,11 @@ export default function App() {
         isLoggedIn={isLoggedIn}
         currentRole={currentRole}
         currentUserEntity={currentUserEntity}
-        onOpenCustomerSignup={() => setIsCustomerRegistrationOpen(true)}
-        onOpenSellerSignup={() => setIsSellerRegistrationOpen(true)}
+        onOpenCustomerSignup={() => openSignup('customer')}
+        onOpenSellerSignup={() => openSignup('seller')}
         onOpenAdminSignup={() => setIsAdminRegistrationOpen(true)}
-        onOpenRiderSignup={() => setIsRiderSignupOpen(true)}
-        onOpenLogin={() => setIsLoginModalOpen(true)}
+        onOpenRiderSignup={() => openSignup('rider')}
+        onOpenLogin={openLogin}
         onLogout={handleLogout}
       />
 
@@ -997,12 +1072,12 @@ export default function App() {
         cartCount={cart.reduce((sum, item) => sum + item.Quantity, 0)}
         onOpenCart={() => {
           if (!isLoggedIn || !selectedCustomer) {
-            setIsLoginModalOpen(true);
+            openLogin();
           } else {
             setIsCartOpen(true);
           }
         }}
-        onOpenLogin={() => setIsLoginModalOpen(true)}
+        onOpenLogin={openLogin}
         onLogout={handleLogout}
         theme={theme}
         onToggleTheme={toggleTheme}
@@ -1013,14 +1088,35 @@ export default function App() {
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 pt-4 pb-16 app-panel animate-fade-up sm:px-6 lg:px-8 lg:pt-6">
         <React.Suspense fallback={<div className="flex min-h-[40vh] items-center justify-center text-sm text-slate-500 dark:text-zinc-400">Loading marketplace...</div>}>
         {/* Authentication Notice Banner if set */}
-        {authNotice && !isLoginModalOpen && (
+        {isLoggedIn && !profileComplete && (
+          <div role="status" className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs text-amber-800 shadow-xs dark:text-amber-200">
+            <div className="min-w-0">
+              <strong className="block">Update your profile first</strong>
+              <span>Complete your profile before making account changes or placing orders.</span>
+              {profileMissingFields.length > 0 && <span className="mt-1 block text-[11px] opacity-80">Missing: {profileMissingFields.join(', ')}</span>}
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (currentRole === 'customer') setActiveTab('profile');
+                if (currentRole === 'seller') setActiveTab('seller-dashboard');
+                if (currentRole === 'rider') setActiveTab('rider-dashboard');
+              }}
+              className="shrink-0 rounded-lg bg-amber-700 px-3 py-2 font-bold text-white hover:bg-amber-600"
+            >
+              Complete profile
+            </button>
+          </div>
+        )}
+
+        {authNotice && !isLoginModalOpen && profileComplete && (
           <div className="mb-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs flex items-center justify-between gap-3 shadow-xs">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
               <strong>Security Protocol:</strong> {authNotice}
             </div>
             <button
-              onClick={() => setIsLoginModalOpen(true)}
+              onClick={openLogin}
               className="px-3 py-1 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg shadow-xs cursor-pointer shrink-0"
             >
               Sign In Now
@@ -1079,7 +1175,7 @@ export default function App() {
               requiredRole="Customer"
               onOpenLogin={() => {
                 setAuthNotice('Please sign in as a Customer to view and manage your orders.');
-                setIsLoginModalOpen(true);
+                openLogin();
               }}
               onBackToStorefront={() => setActiveTab('storefront')}
             />
@@ -1154,7 +1250,7 @@ export default function App() {
               requiredRole="Customer"
               onOpenLogin={() => {
                 setAuthNotice('Please sign in to view and update your customer profile.');
-                setIsLoginModalOpen(true);
+                openLogin();
               }}
               onBackToStorefront={() => setActiveTab('storefront')}
             />
@@ -1176,6 +1272,8 @@ export default function App() {
               onUpdateProductStatus={handleUpdateProductStatus}
               onUpdateOrderStatus={handleUpdateOrderStatus}
               onUpdateSellerProfile={handleUpdateSellerProfile}
+              profileComplete={profileComplete}
+              requireIdentityDocument={profileMissingFields.includes('government ID document')}
             />
           ) : (
             <AuthenticationGuard
@@ -1183,7 +1281,7 @@ export default function App() {
               requiredRole="Seller"
               onOpenLogin={() => {
                 setAuthNotice('Please sign in with a registered Seller account to access product and order management.');
-                setIsLoginModalOpen(true);
+                openLogin();
               }}
               onBackToStorefront={() => setActiveTab('storefront')}
             />
@@ -1213,7 +1311,7 @@ export default function App() {
               requiredRole="Admin"
               onOpenLogin={() => {
                 setAuthNotice('Platform Administrator credentials required to access system governance and moderation.');
-                setIsLoginModalOpen(true);
+                openLogin();
               }}
               onBackToStorefront={() => setActiveTab('storefront')}
             />
@@ -1222,14 +1320,14 @@ export default function App() {
 
         {activeTab === 'rider-dashboard' && (
           isLoggedIn && selectedRider ? (
-            <RiderDashboard rider={selectedRider} />
+            <RiderDashboard rider={selectedRider} profileComplete={profileComplete} onProfileSaved={handleRiderProfileSaved} />
           ) : (
             <AuthenticationGuard
               pageName="Delivery Rider Portal"
               requiredRole="Approved Delivery Rider"
               onOpenLogin={() => {
                 setAuthNotice('Only approved rider applicants may sign in to the delivery portal.');
-                setIsLoginModalOpen(true);
+                openLogin();
               }}
               onBackToStorefront={() => setActiveTab('storefront')}
             />
@@ -1326,7 +1424,7 @@ export default function App() {
           onBuyNow={handleBuyNow}
           onSubmitReview={handleSubmitReview}
           onSelectProduct={(nextProduct) => setSelectedProductForDetail(nextProduct)}
-          onOpenLogin={() => setIsLoginModalOpen(true)}
+          onOpenLogin={openLogin}
           onAskAI={(query) => {
             setChatInitialQuery(query);
             setIsChatOpen(true);
@@ -1422,8 +1520,8 @@ export default function App() {
         <RiderSignupModal
           isOpen={isRiderSignupOpen}
           onClose={() => setIsRiderSignupOpen(false)}
-          onOpenLogin={() => setIsLoginModalOpen(true)}
-          onSubmitted={(message) => { setAuthNotice(message); setIsLoginModalOpen(true); }}
+          onOpenLogin={openLogin}
+          onSubmitted={(message) => { setAuthNotice(message); openLogin(); }}
         />
       )}
 
@@ -1437,6 +1535,8 @@ export default function App() {
           }}
           onLoginSuccess={handleLoginSuccess}
           noticeMessage={authNotice}
+          initialTab={loginModalInitialTab}
+          initialRole={loginModalInitialRole}
         />
       )}
 
