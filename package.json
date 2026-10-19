@@ -13,6 +13,7 @@
     "test": "cross-env NODE_ENV=test node --import tsx --test tests/**/*.test.ts",
     "test:ci": "npm test",
     "migrate:passwords": "cross-env NODE_ENV=development tsx scripts/migrate-existing-passwords.ts",
+    "migrate:product-images": "cross-env NODE_ENV=development tsx scripts/migrate-product-images-to-storage.ts",
     "bench:payments": "cross-env NODE_ENV=test tsx scripts/payment-bench.mts",
     "electron:dev": "electron .",
     "electron:build": "npm run build && electron-builder --win -p never",

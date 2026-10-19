@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { query } from '../db/index.ts';
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth.ts';
+import { storeProductImageIfInline } from '../services/productImages.service.ts';
 import { Product } from '../../src/types.ts';
 
 const router = Router();
@@ -165,10 +166,17 @@ router.post('/', requireAuth, requireRole(['seller', 'admin']), async (req: Auth
     if (sellerCheck.rows.length === 0 || (sellerCheck.rows[0] as any).status !== 'approved') {
       return res.status(403).json({ error: 'Only approved sellers can publish products' });
     }
+    if (req.user!.role === 'seller' && req.user!.entityId !== Seller_ID) {
+      return res.status(403).json({ error: 'You can only publish products for your own store.' });
+    }
 
     const id = `PROD-${Date.now()}`;
-    const images = Array.isArray(Images) ? Images.map(String).map((url: string) => url.trim()).filter(Boolean) : [];
-    const img = images[0] || Image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80';
+    const submittedImages = Array.isArray(Images) ? Images.map(String).map((url: string) => url.trim()).filter(Boolean) : [];
+    const imagesToStore = submittedImages.length
+      ? submittedImages
+      : [String(Image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80').trim()];
+    const images = await Promise.all(imagesToStore.map((url) => storeProductImageIfInline(Seller_ID, url)));
+    const img = images[0];
     const desc = Description || '';
     const vouch = Voucher || '';
     const stockNum = Number(Stock) || 0;
@@ -208,7 +216,7 @@ router.post('/', requireAuth, requireRole(['seller', 'admin']), async (req: Auth
     res.status(201).json(newProd);
   } catch (error: any) {
     console.error('Error creating product:', error);
-    res.status(500).json({ error: error.message || 'Failed to create product' });
+    res.status(error?.statusCode || 500).json({ error: error.message || 'Failed to create product' });
   }
 });
 
@@ -223,6 +231,9 @@ router.put('/:id', requireAuth, requireRole(['seller', 'admin']), async (req: Au
     if (existing.rows.length === 0) return res.status(404).json({ error: 'Product not found' });
 
     const current: any = existing.rows[0];
+    if (req.user!.role === 'seller' && req.user!.entityId !== current.seller_id) {
+      return res.status(403).json({ error: 'You can only update products from your own store.' });
+    }
     const name = req.body.Name ?? current.name;
     const description = req.body.Description ?? current.description;
     const warrantyInformation = req.body.Warranty_Information ?? current.warranty_information ?? '';
@@ -237,7 +248,12 @@ router.put('/:id', requireAuth, requireRole(['seller', 'admin']), async (req: Au
     }
     const requestedImages = Array.isArray(req.body.Images) ? req.body.Images.map(String).map((url: string) => url.trim()).filter(Boolean) : null;
     const currentImages = Array.isArray(current.images_json) ? current.images_json : [];
-    const image = requestedImages?.[0] ?? req.body.Image ?? current.image;
+    const sourceImages = requestedImages !== null
+      ? requestedImages
+      : req.body.Image !== undefined ? [String(req.body.Image)] : currentImages;
+    const imagesToStore = sourceImages.length ? sourceImages : [String(req.body.Image ?? current.image)];
+    const images = await Promise.all(imagesToStore.map((url: string) => storeProductImageIfInline(current.seller_id, url)));
+    const image = images[0] ?? current.image;
     const price = req.body.Price !== undefined ? Number(req.body.Price) : Number(current.price);
     if (!Number.isFinite(price) || price <= 0 || price > 99999999.99) {
       return res.status(400).json({ error: 'Price must be between 0.01 and 99,999,999.99.' });
@@ -265,7 +281,6 @@ router.put('/:id', requireAuth, requireRole(['seller', 'admin']), async (req: Au
       `SELECT * FROM gocart_product_update($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
       [id, name, image, description, price, voucher, stock, productStatus, categoryId]
     );
-    const images = requestedImages ?? currentImages;
     await query('UPDATE products SET size_gender = $2, sizes_json = $3::jsonb, size_chart_json = $4::jsonb, images_json = $5::jsonb, highlights_json = $6::jsonb, warranty_information = $7, return_policy = $8, video_url = $9 WHERE id = $1', [id, sizes.length ? sizeGender : null, JSON.stringify(sizes), JSON.stringify(sizeChart), JSON.stringify(images.length ? images : [image]), JSON.stringify(highlights), String(warrantyInformation).trim(), String(returnPolicy).trim(), videoUrl]);
     await query('UPDATE products SET voucher_expires_at = $2, featured_deal = $3 WHERE id = $1', [id, voucher ? voucherExpiry : null, Boolean(voucher && featuredDeal)]);
 
@@ -295,7 +310,7 @@ router.put('/:id', requireAuth, requireRole(['seller', 'admin']), async (req: Au
     });
   } catch (error: any) {
     console.error('Error updating product:', error);
-    res.status(500).json({ error: error.message || 'Failed to update product' });
+    res.status(error?.statusCode || 500).json({ error: error.message || 'Failed to update product' });
   }
 });
 
