@@ -540,7 +540,7 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
                 type="url"
                 value={image}
                 onChange={(e) => setImage(e.target.value)}
-                placeholder="Primary image link, or upload a file"
+                placeholder={t('primaryImagePlaceholder')}
                 className="min-w-0 flex-1 p-2.5 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-success-500 text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500"
               />
               {renderUploadButton(0)}
@@ -551,7 +551,7 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
                   type="url"
                   value={url}
                   onChange={(event) => setAdditionalImages((current) => current.map((item, itemIndex) => itemIndex === index ? event.target.value : item))}
-                  placeholder={`Additional image ${index + 2} link, or upload a file`}
+                  placeholder={t('additionalImagePlaceholder', { index: index + 2 })}
                   className="min-w-0 flex-1 p-2.5 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-success-500 text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500"
                 />
                 {renderUploadButton(index + 1)}
@@ -584,7 +584,7 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
                   maxLength={120}
                   value={highlight}
                   onChange={(event) => setHighlights((current) => current.map((item, itemIndex) => itemIndex === index ? event.target.value : item))}
-                  placeholder={`Key spec ${index + 1}`}
+                  placeholder={t('keySpecPlaceholder', { index: index + 1 })}
                   aria-label={`Key product spec ${index + 1}`}
                   className="min-w-0 flex-1 rounded-lg border border-surface-200 bg-surface-50 px-3 py-2 text-xs text-surface-900 focus:outline-none focus:ring-2 focus:ring-success-500 dark:border-surface-700 dark:bg-[#181F2A] dark:text-white"
                 />
@@ -691,7 +691,7 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
                   <label htmlFor="seller-warranty-info" className="block text-xs font-semibold text-surface-700 dark:text-surface-300">Warranty terms · seller verified</label>
                   <button type="button" onClick={() => void handleAICopy('warranty')} disabled={aiCopyLoading.warranty} className="inline-flex shrink-0 items-center gap-1 text-micro font-semibold text-success-700 hover:text-success-800 disabled:opacity-50 dark:text-success-300"><Sparkles className="h-3.5 w-3.5" />{aiCopyLoading.warranty ? 'Working...' : warrantyInformation.trim() ? 'Enhance with AI' : 'Draft with AI'}</button>
                 </div>
-                <textarea id="seller-warranty-info" rows={4} maxLength={2200} value={warrantyInformation} onChange={(event) => { setWarrantyInformation(event.target.value); setAiCopyErrors((current) => ({ ...current, warranty: null })); }} placeholder="Enter verified warranty coverage and duration." className="w-full rounded-xl border border-surface-200 bg-surface-50 p-2.5 text-xs text-surface-900 focus:outline-none focus:ring-2 focus:ring-success-500 dark:border-surface-700 dark:bg-[#181F2A] dark:text-white" />
+                <textarea id="seller-warranty-info" rows={4} maxLength={2200} value={warrantyInformation} onChange={(event) => { setWarrantyInformation(event.target.value); setAiCopyErrors((current) => ({ ...current, warranty: null })); }} placeholder={t('warrantyInfoPlaceholder')} className="w-full rounded-xl border border-surface-200 bg-surface-50 p-2.5 text-xs text-surface-900 focus:outline-none focus:ring-2 focus:ring-success-500 dark:border-surface-700 dark:bg-[#181F2A] dark:text-white" />
                 {aiCopyErrors.warranty && <p role="alert" className="mt-1 text-danger-600 dark:text-danger-300">{aiCopyErrors.warranty}</p>}
               </div>
             )}
@@ -701,7 +701,7 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
                   <label htmlFor="seller-guarantee-info" className="block text-xs font-semibold text-surface-700 dark:text-surface-300">Guarantee terms · seller verified</label>
                   <button type="button" onClick={() => void handleAICopy('guarantee')} disabled={aiCopyLoading.guarantee} className="inline-flex shrink-0 items-center gap-1 text-micro font-semibold text-success-700 hover:text-success-800 disabled:opacity-50 dark:text-success-300"><Sparkles className="h-3.5 w-3.5" />{aiCopyLoading.guarantee ? 'Working...' : guaranteeInformation.trim() ? 'Enhance with AI' : 'Draft with AI'}</button>
                 </div>
-                <textarea id="seller-guarantee-info" rows={4} maxLength={2200} value={guaranteeInformation} onChange={(event) => { setGuaranteeInformation(event.target.value); setAiCopyErrors((current) => ({ ...current, guarantee: null })); }} placeholder="Enter verified guarantee conditions and duration." className="w-full rounded-xl border border-surface-200 bg-surface-50 p-2.5 text-xs text-surface-900 focus:outline-none focus:ring-2 focus:ring-success-500 dark:border-surface-700 dark:bg-[#181F2A] dark:text-white" />
+                <textarea id="seller-guarantee-info" rows={4} maxLength={2200} value={guaranteeInformation} onChange={(event) => { setGuaranteeInformation(event.target.value); setAiCopyErrors((current) => ({ ...current, guarantee: null })); }} placeholder={t('guaranteeInfoPlaceholder')} className="w-full rounded-xl border border-surface-200 bg-surface-50 p-2.5 text-xs text-surface-900 focus:outline-none focus:ring-2 focus:ring-success-500 dark:border-surface-700 dark:bg-[#181F2A] dark:text-white" />
                 {aiCopyErrors.guarantee && <p role="alert" className="mt-1 text-danger-600 dark:text-danger-300">{aiCopyErrors.guarantee}</p>}
               </div>
             )}
@@ -712,7 +712,7 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
               <label htmlFor="seller-return-policy" className="block text-xs font-semibold text-surface-700 dark:text-surface-300">Return terms · seller provided</label>
               <button type="button" onClick={() => void handleAICopy('return-policy')} disabled={aiCopyLoading['return-policy']} className="inline-flex shrink-0 items-center gap-1 text-micro font-semibold text-success-700 hover:text-success-800 disabled:opacity-50 dark:text-success-300"><Sparkles className="h-3.5 w-3.5" />{aiCopyLoading['return-policy'] ? 'Working...' : returnPolicy.trim() ? 'Enhance with AI' : 'Draft with AI'}</button>
             </div>
-            <textarea id="seller-return-policy" rows={4} maxLength={2200} value={returnPolicy} onChange={(event) => { setReturnPolicy(event.target.value); setAiCopyErrors((current) => ({ ...current, 'return-policy': null })); }} placeholder="State return conditions, or leave blank." className="w-full rounded-xl border border-surface-200 bg-surface-50 p-2.5 text-xs text-surface-900 focus:outline-none focus:ring-2 focus:ring-success-500 dark:border-surface-700 dark:bg-[#181F2A] dark:text-white" />
+            <textarea id="seller-return-policy" rows={4} maxLength={2200} value={returnPolicy} onChange={(event) => { setReturnPolicy(event.target.value); setAiCopyErrors((current) => ({ ...current, 'return-policy': null })); }} placeholder={t('returnPolicyPlaceholder')} className="w-full rounded-xl border border-surface-200 bg-surface-50 p-2.5 text-xs text-surface-900 focus:outline-none focus:ring-2 focus:ring-success-500 dark:border-surface-700 dark:bg-[#181F2A] dark:text-white" />
             {aiCopyErrors['return-policy'] && <p role="alert" className="mt-1 text-danger-600 dark:text-danger-300">{aiCopyErrors['return-policy']}</p>}
           </section>
 

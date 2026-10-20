@@ -198,7 +198,7 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">Username *</label>
+              <label className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">{t('username')} *</label>
               <div className="relative">
                 <input
                   type="text"
@@ -213,7 +213,7 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">Business / Brand Name *</label>
+              <label className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">{t('businessBrandName')} *</label>
               <input
                 type="text"
                 required
@@ -227,7 +227,7 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">Official Email *</label>
+              <label className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">{t('officialEmail')} *</label>
               <div className="relative">
                 <input
                   type="email"
@@ -242,12 +242,12 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">Account Password {oauthProvider ? '(optional)' : '*'}</label>
+              <label className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">{t('accountPassword')} {oauthProvider ? `(${t('optionalText')})` : '*'}</label>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
                   required={!oauthProvider}
-                  placeholder={oauthProvider ? 'Optional when using Google or Facebook' : 'Set seller password'}
+                  placeholder={oauthProvider ? t('optionalWhenSocial') : t('setSellerPassword')}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full p-2.5 pl-8 pr-9 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500 focus:ring-2 focus:ring-success-500 focus:outline-none"
@@ -266,7 +266,7 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">Phone Number *</label>
+              <label className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">{t('phoneNumber')} *</label>
               <div className="relative">
                 <input
                   type="tel"
@@ -281,7 +281,7 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">Logo URL</label>
+              <label className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">{t('logoUrl')}</label>
               <div className="relative">
                 <input
                   type="url"
@@ -297,7 +297,7 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block font-semibold text-surface-700 dark:text-surface-300">Payout method *</label>
+              <label className="mb-1 block font-semibold text-surface-700 dark:text-surface-300">{t('payoutMethod')} *</label>
               <select required value={payoutMethod} onChange={(event) => setPayoutMethod(event.target.value as 'bkash' | 'bank' | '')} className="w-full rounded-xl border border-surface-200 bg-surface-50 p-2.5 text-surface-900 focus:ring-2 focus:ring-success-500 dark:border-surface-700 dark:bg-[#181F2A] dark:text-white">
                 <option value="">{t('chooseMethod')}</option>
                 <option value="bkash">bKash</option>
@@ -305,15 +305,15 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
               </select>
             </div>
             <div>
-              <label className="mb-1 block font-semibold text-surface-700 dark:text-surface-300">Payout account *</label>
-              <input required minLength={6} maxLength={100} value={payoutAccount} onChange={(event) => setPayoutAccount(event.target.value)} placeholder="Account number" className="w-full rounded-xl border border-surface-200 bg-surface-50 p-2.5 text-surface-900 focus:ring-2 focus:ring-success-500 dark:border-surface-700 dark:bg-[#181F2A] dark:text-white" />
+              <label className="mb-1 block font-semibold text-surface-700 dark:text-surface-300">{t('payoutAccount')} *</label>
+              <input required minLength={6} maxLength={100} value={payoutAccount} onChange={(event) => setPayoutAccount(event.target.value)} placeholder={t('accountNumberPlaceholder')} className="w-full rounded-xl border border-surface-200 bg-surface-50 p-2.5 text-surface-900 focus:ring-2 focus:ring-success-500 dark:border-surface-700 dark:bg-[#181F2A] dark:text-white" />
             </div>
             <div>
               <label className="mb-1 block font-semibold text-surface-700 dark:text-surface-300">{t('businessRegNumber')}</label>
-              <input maxLength={100} value={businessRegistrationNumber} onChange={(event) => setBusinessRegistrationNumber(event.target.value)} placeholder="If applicable" className="w-full rounded-xl border border-surface-200 bg-surface-50 p-2.5 text-surface-900 focus:ring-2 focus:ring-success-500 dark:border-surface-700 dark:bg-[#181F2A] dark:text-white" />
+              <input maxLength={100} value={businessRegistrationNumber} onChange={(event) => setBusinessRegistrationNumber(event.target.value)} placeholder={t('ifApplicablePlaceholder')} className="w-full rounded-xl border border-surface-200 bg-surface-50 p-2.5 text-surface-900 focus:ring-2 focus:ring-success-500 dark:border-surface-700 dark:bg-[#181F2A] dark:text-white" />
             </div>
             <div>
-              <label className="mb-1 block font-semibold text-surface-700 dark:text-surface-300">Government ID document *</label>
+              <label className="mb-1 block font-semibold text-surface-700 dark:text-surface-300">{t('govIdDoc')} *</label>
               <input required type="file" accept="application/pdf,image/jpeg,image/png" onChange={(event) => void handleIdentityDocumentChange(event)} className="w-full text-xs text-surface-600 file:mr-2 file:rounded-lg file:border-0 file:bg-success-100 file:px-3 file:py-2 file:font-semibold file:text-success-800 dark:text-surface-300 dark:file:bg-success-950 dark:file:text-success-200" />
               {identityDocumentFileName && <p className="mt-1 text-micro text-success-700 dark:text-success-300">{identityDocumentFileName}</p>}
             </div>
@@ -321,7 +321,7 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
 
           <div>
             <div className="flex items-center justify-between gap-3 mb-1">
-              <label className="block text-surface-700 dark:text-surface-300 font-semibold">Brand Story &amp; Description</label>
+              <label className="block text-surface-700 dark:text-surface-300 font-semibold">{t('brandStoryDescription')}</label>
               <button
                 type="button"
                 onClick={handleGenerateDescription}
@@ -334,7 +334,7 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
             </div>
             <textarea
               rows={2}
-              placeholder="Tell buyers and admins about your brand and product quality..."
+              placeholder={t('brandDescriptionPlaceholder')}
               value={description}
               onChange={(e) => {
                 setDescription(e.target.value);
@@ -350,7 +350,7 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
               <MapPin className="w-3.5 h-3.5 text-success-500" /> {t('businessHqAddress')}
             </h4>
             <div className="mb-3">
-              <label className="block text-surface-600 dark:text-surface-400 mb-1">Location *</label>
+              <label className="block text-surface-600 dark:text-surface-400 mb-1">{t('locationLabel')} *</label>
               <AccountLocationPicker
                 onAddressSelected={(selectedAddress) => {
                   setHasSelectedLocation(Boolean(selectedAddress));
@@ -362,7 +362,7 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-surface-600 dark:text-surface-400 mb-1">House / Suite / Building</label>
+                <label className="block text-surface-600 dark:text-surface-400 mb-1">{t('houseSuiteBuilding')}</label>
                 <input
                   type="text"
                   placeholder="e.g. Suite 400"
@@ -372,7 +372,7 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
                 />
               </div>
               <div>
-                <label className="block text-surface-600 dark:text-surface-400 mb-1">Street Address *</label>
+                <label className="block text-surface-600 dark:text-surface-400 mb-1">{t('streetAddress')} *</label>
                 <input
                   type="text"
                   required
@@ -383,7 +383,7 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
                 />
               </div>
               <div>
-                <label className="block text-surface-600 dark:text-surface-400 mb-1">City *</label>
+                <label className="block text-surface-600 dark:text-surface-400 mb-1">{t('city')} *</label>
                 <input
                   type="text"
                   required
@@ -394,7 +394,7 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
                 />
               </div>
               <div>
-                <label className="block text-surface-600 dark:text-surface-400 mb-1">Postal Code</label>
+                <label className="block text-surface-600 dark:text-surface-400 mb-1">{t('postalCodeLabel')}</label>
                 <input
                   type="text"
                   placeholder="e.g. 78701"
