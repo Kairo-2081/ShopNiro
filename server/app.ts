@@ -96,6 +96,7 @@ const allowedOrigins = new Set([
 
 app.use(helmet({
   contentSecurityPolicy: buildContentSecurityPolicy(isProduction),
+  referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
 }));
 app.use(cors({
   origin: [...allowedOrigins],
