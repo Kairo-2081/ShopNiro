@@ -499,16 +499,16 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                           <td className="p-4 font-semibold">
                             <div className="flex min-w-32 flex-col items-start gap-1.5">
                               {Number(p.Stock) === 0 ? (
-                                <span className="font-bold text-danger-700 dark:text-danger-300">Out of stock</span>
+                                <span className="font-bold text-danger-700 dark:text-danger-300">{t('outOfStock')}</span>
                               ) : Number(p.Stock) <= 5 ? (
-                                <span className="font-bold text-warning-700 dark:text-warning-300">Low: {p.Stock} left</span>
+                                <span className="font-bold text-warning-700 dark:text-warning-300">{t('lowStockNotice', { count: p.Stock })}</span>
                               ) : (
-                                <span className="font-medium text-surface-600 dark:text-surface-300">{p.Stock} in stock</span>
+                                <span className="font-medium text-surface-600 dark:text-surface-300">{t('inStockCount', { count: p.Stock })}</span>
                               )}
                               {restockingProductId === p.Product_ID ? (
                                 <form onSubmit={(event) => { event.preventDefault(); void restockProduct(p); }} className="flex flex-wrap items-center gap-1.5">
-                                  <input type="number" min="1" step="1" required value={restockQuantity} onChange={(event) => setRestockQuantity(event.target.value)} aria-label={`Quantity to add for ${p.Name}`} placeholder="Qty" className="luxury-input h-9 min-h-9 w-20 rounded-lg px-2 text-xs tabular-nums" />
-                                  <button type="submit" disabled={isRestocking} title={`Save restock quantity for ${p.Name}`} className="min-h-10 rounded-lg bg-[#77775a] px-3 py-2 text-micro font-bold text-white hover:bg-[#66664c] disabled:opacity-50">{isRestocking ? 'Saving…' : 'Save'}</button>
+                                  <input type="number" min="1" step="1" required value={restockQuantity} onChange={(event) => setRestockQuantity(event.target.value)} aria-label={`Quantity to add for ${p.Name}`} placeholder={t('qtyPlaceholder')} className="luxury-input h-9 min-h-9 w-20 rounded-lg px-2 text-xs tabular-nums" />
+                                  <button type="submit" disabled={isRestocking} title={`Save restock quantity for ${p.Name}`} className="min-h-10 rounded-lg bg-[#77775a] px-3 py-2 text-micro font-bold text-white hover:bg-[#66664c] disabled:opacity-50">{isRestocking ? t('saving') : t('save')}</button>
                                   <button type="button" onClick={() => { setRestockingProductId(null); setRestockError(''); }} aria-label={`Cancel restock for ${p.Name}`} title={`Cancel restock for ${p.Name}`} className="grid h-10 w-10 place-items-center rounded-lg text-surface-500 hover:bg-surface-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] dark:text-surface-300 dark:hover:bg-surface-800"><X className="h-4 w-4" /></button>
                                   {restockError && <span role="alert" className="w-full text-micro text-danger-600 dark:text-danger-300">{restockError}</span>}
                                 </form>
