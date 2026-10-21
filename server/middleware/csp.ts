@@ -22,7 +22,7 @@ export const buildContentSecurityPolicy = (
       styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
       fontSrc: ["'self'", 'https://fonts.gstatic.com', 'data:'],
       imgSrc: ["'self'", 'data:', 'blob:', 'https://images.unsplash.com', 'https://*.tile.openstreetmap.org', 'https://*.supabase.co'],
-      connectSrc: ["'self'", 'https://router.project-osrm.org'],
+      connectSrc: ["'self'", 'blob:', 'https://router.project-osrm.org'],
       workerSrc: ["'self'", 'blob:'],
       objectSrc: ["'none'"],
       frameAncestors: ["'none'"],
