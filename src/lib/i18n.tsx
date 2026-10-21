@@ -1131,6 +1131,10 @@ const messages = {
     qtyPlaceholder: 'Qty',
     lowStockNotice: 'Low: {count} left',
     inStockCount: '{count} in stock',
+    searchSellersPlaceholder: 'Search sellers by name or email...',
+    internalResolutionNote: 'Internal resolution note',
+    categoryName: 'Category Name',
+    categoryNamePlaceholder: 'e.g. Eco-Hardware or Audio & Studio',
   },
   bn: {
     shop: 'দোকান',
@@ -2259,6 +2263,10 @@ const messages = {
     qtyPlaceholder: 'পরিমাণ',
     lowStockNotice: 'সীমিত: {count}টি অবশিষ্ট',
     inStockCount: '{count}টি মজুত আছে',
+    searchSellersPlaceholder: 'নাম বা ইমেইল দিয়ে বিক্রেতা খুঁজুন...',
+    internalResolutionNote: 'অভ্যন্তরীণ সমাধানের নোট',
+    categoryName: 'ক্যাটাগরির নাম',
+    categoryNamePlaceholder: 'যেমন: ইকোলজি বা অডিও ও স্টুডিও',
   },
 } as const;
 
