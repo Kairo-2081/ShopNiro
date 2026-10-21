@@ -1,0 +1,60 @@
+name: db-backup
+
+# Weekly encrypted dump of the public schema.
+# The repo is public, so artifacts are downloadable by anyone: the dump is
+# encrypted with an age PUBLIC key and can only be opened with the private key
+# kept offline by the owner. Never upload an unencrypted dump.
+on:
+  schedule:
+    - cron: '0 20 * * 0' # Sundays 20:00 UTC = Mondays 02:00 Asia/Dhaka
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: db-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Install Postgres 17 client and age
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-17 age
+
+      - name: Dump public schema
+        env:
+          BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "$BACKUP_DATABASE_URL" ]; then echo "BACKUP_DATABASE_URL secret is not set" >&2; exit 1; fi
+          /usr/lib/postgresql/17/bin/pg_dump "$BACKUP_DATABASE_URL" \
+            --schema=public --no-owner --no-privileges -Fc -f backup.dump
+          size=$(stat -c %s backup.dump)
+          echo "dump size: $size bytes"
+          # A real dump of this app is hundreds of KB. A tiny file means something failed silently.
+          if [ "$size" -lt 100000 ]; then echo "dump is suspiciously small" >&2; exit 1; fi
+          /usr/lib/postgresql/17/bin/pg_restore --list backup.dump | grep -q "TABLE DATA public orders"
+
+      - name: Encrypt (age public key) and delete the plaintext
+        run: |
+          set -euo pipefail
+          out="shopniro-$(date -u +%F).dump.age"
+          age -r age10nenyly00nwmwt8h023qq9ue5u0gkqma8zqn6kdpxupa5mcpq9dsnkm6ey -o "$out" backup.dump
+          shred -u backup.dump
+          test -s "$out"
+          ls -l "$out"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: db-backup
+          path: shopniro-*.dump.age
+          retention-days: 30
+          if-no-files-found: error
