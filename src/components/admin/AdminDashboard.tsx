@@ -434,7 +434,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <select value={supportStatuses[request.Request_ID] || request.Status} onChange={(event) => setSupportStatuses((current) => ({ ...current, [request.Request_ID]: event.target.value as SupportRequest['Status'] }))} className="rounded-lg border border-surface-300 bg-white px-3 py-2 text-xs dark:border-surface-700 dark:bg-[#181F2A]">
                       <option value="open">{t('openStatus')}</option><option value="in_progress">{t('inProgressStatus')}</option><option value="resolved">{t('resolvedStatus')}</option>
                     </select>
-                    <input value={supportNotes[request.Request_ID] || ''} onChange={(event) => setSupportNotes((current) => ({ ...current, [request.Request_ID]: event.target.value }))} maxLength={2000} placeholder="Internal resolution note" className="min-w-0 rounded-lg border border-surface-300 bg-white px-3 py-2 text-xs dark:border-surface-700 dark:bg-[#181F2A]" />
+                    <input value={supportNotes[request.Request_ID] || ''} onChange={(event) => setSupportNotes((current) => ({ ...current, [request.Request_ID]: event.target.value }))} maxLength={2000} placeholder={t('internalResolutionNote')} className="min-w-0 rounded-lg border border-surface-300 bg-white px-3 py-2 text-xs dark:border-surface-700 dark:bg-[#181F2A]" />
                     <button type="button" disabled={savingSupportId === request.Request_ID} onClick={() => void updateSupportRequest(request)} className="rounded-lg bg-success-700 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">{savingSupportId === request.Request_ID ? t('saving') : t('save')}</button>
                   </div>
                 </article>
@@ -615,7 +615,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 type="text"
                 value={sellerSearch}
                 onChange={(e) => setSellerSearch(e.target.value)}
-                placeholder="Search sellers by name or email..."
+                placeholder={t('searchSellersPlaceholder')}
                 className="w-full pl-9 pr-3 py-2 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-full text-xs text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500 focus:outline-none focus:ring-2 focus:ring-brand-500"
               />
             </div>
@@ -763,13 +763,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </h3>
             <form onSubmit={handleCreateCategory} className="space-y-3 text-xs">
               <div>
-                <label className="block text-surface-600 dark:text-surface-400 mb-1 font-medium">Category Name *</label>
+                <label className="block text-surface-600 dark:text-surface-400 mb-1 font-medium">{t('categoryName')} *</label>
                 <input
                   type="text"
                   required
                   value={newCategoryName}
                   onChange={(e) => setNewCategoryName(e.target.value)}
-                  placeholder="e.g. Eco-Hardware or Audio & Studio"
+                  placeholder={t('categoryNamePlaceholder')}
                   className="luxury-input w-full p-2.5 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500"
                 />
               </div>
