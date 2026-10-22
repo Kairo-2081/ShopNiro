@@ -342,7 +342,7 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
                 </div>
 
                 <div className="text-right">
-                  <span className="text-micro font-bold text-pink-200 uppercase block">Amount</span>
+                  <span className="text-micro font-bold text-pink-200 uppercase block">{t('amount')}</span>
                   <span className="text-base font-black">{formatBDT(paymentAmountBDT)}</span>
                 </div>
               </div>

@@ -1135,6 +1135,9 @@ const messages = {
     internalResolutionNote: 'Internal resolution note',
     categoryName: 'Category Name',
     categoryNamePlaceholder: 'e.g. Eco-Hardware or Audio & Studio',
+    traceDeliveryRoutes: 'Trace the delivery routes',
+    deliveryRoutesHighlighted: 'Delivery routes highlighted.',
+    globeNetworkDescription: 'A still globe centred on South Asia with delivery routes running from {home} to {destinations}.',
   },
   bn: {
     shop: 'দোকান',
@@ -2267,6 +2270,9 @@ const messages = {
     internalResolutionNote: 'অভ্যন্তরীণ সমাধানের নোট',
     categoryName: 'ক্যাটাগরির নাম',
     categoryNamePlaceholder: 'যেমন: ইকোলজি বা অডিও ও স্টুডিও',
+    traceDeliveryRoutes: 'ডেলিভারি রুট ট্র্যাক করুন',
+    deliveryRoutesHighlighted: 'ডেলিভারি রুট দৃশ্যমান করা হয়েছে।',
+    globeNetworkDescription: 'দক্ষিণ এশিয়া ভিত্তিক একটি গ্লোব যেখানে {home} থেকে {destinations} পর্যন্ত ডেলিভারি রুট দেখানো হয়েছে।',
   },
 } as const;
 
