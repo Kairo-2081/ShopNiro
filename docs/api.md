@@ -115,6 +115,7 @@ Routes are listed from `server/routes/*.ts`; prefixes come from the mounts in `s
 | --- | --- | --- |
 | GET | `/api/products` | Public |
 | GET | `/api/products/:id` | Public |
+| POST | `/api/products/images` | Approved seller or admin; uploads one image (data URL, up to 2 MB) and returns its Storage URL; 30 per minute |
 | POST | `/api/products` | Seller or admin |
 | PUT | `/api/products/:id` | Seller or admin; ownership checked |
 | PATCH | `/api/products/:id/status` | Seller or admin; ownership checked |

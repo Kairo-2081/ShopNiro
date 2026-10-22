@@ -35,6 +35,27 @@ export async function uploadProductImage(sellerId: string, dataUrl: string): Pro
   return client.storage.from(bucketName()).getPublicUrl(path).data.publicUrl;
 }
 
+export type ProductImageKind = 'inline' | 'link' | 'invalid';
+
+/**
+ * A product image is either an uploaded file sent as a data URL ("inline"),
+ * or a plain http(s) link / root-relative path ("link"). Anything else is rejected.
+ */
+export function classifyProductImage(value: string): ProductImageKind {
+  const image = value.trim();
+  if (!image || image.length > 2048 && !image.startsWith('data:image/')) return 'invalid';
+  if (image.startsWith('data:image/')) return 'inline';
+  if (/^https?:\/\/[^\s]+$/i.test(image)) return 'link';
+  if (image.startsWith('/') && !image.startsWith('//') && !/\s/.test(image)) return 'link';
+  return 'invalid';
+}
+
+/**
+ * Uploaded files go to Storage and become a public URL. Links are kept as they are.
+ * Anything that is neither is rejected with a 400.
+ */
 export async function storeProductImageIfInline(sellerId: string, imageUrl: string): Promise<string> {
-  return imageUrl.startsWith('data:image/') ? uploadProductImage(sellerId, imageUrl) : imageUrl;
+  const kind = classifyProductImage(imageUrl);
+  if (kind === 'invalid') throw fail('Product images must be an uploaded file or an http(s) link.', 400);
+  return kind === 'inline' ? uploadProductImage(sellerId, imageUrl.trim()) : imageUrl.trim();
 }

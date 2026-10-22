@@ -245,6 +245,12 @@ export const api = {
       body: JSON.stringify(productData),
     }),
 
+  uploadProductImage: async (dataUrl: string): Promise<{ url: string }> =>
+    fetchJson<{ url: string }>('/api/products/images', {
+      method: 'POST',
+      body: JSON.stringify({ Image: dataUrl }),
+    }),
+
   updateProduct: async (id: string, updates: Partial<Product>): Promise<Product> =>
     fetchJson<Product>(`/api/products/${encodeURIComponent(id)}`, {
       method: 'PUT',

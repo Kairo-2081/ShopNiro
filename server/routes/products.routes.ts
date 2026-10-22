@@ -1,11 +1,22 @@
 import { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import { query } from '../db/index.ts';
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth.ts';
-import { storeProductImageIfInline } from '../services/productImages.service.ts';
+import { storeProductImageIfInline, uploadProductImage } from '../services/productImages.service.ts';
 import { Product } from '../../src/types.ts';
 import { publicMessage } from '../middleware/errorHandler.ts';
 
 const router = Router();
+
+const productImageUploadLimit = rateLimit({
+  windowMs: 60_000,
+  limit: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => (req as AuthRequest).user?.entityId || 'anonymous',
+  validate: { keyGeneratorIpFallback: false },
+  message: { error: 'Too many image uploads. Please wait a minute and try again.' },
+});
 
 const parseVoucherExpiry = (value: unknown): Date | null | undefined => {
   if (value === undefined || value === null || value === '') return null;
@@ -124,6 +135,35 @@ router.get('/:id', async (req, res) => {
 });
 
 /**
+ * POST /api/products/images
+ * Uploads one product image (data URL) to Storage and returns its public URL.
+ * Sellers upload each picture here first, then send the returned links when saving the product,
+ * so the product request itself stays small.
+ */
+router.post('/images', requireAuth, requireRole(['seller', 'admin']), productImageUploadLimit, async (req: AuthRequest, res) => {
+  try {
+    const image = typeof req.body?.Image === 'string' ? req.body.Image : '';
+    if (!image.startsWith('data:image/')) {
+      return res.status(400).json({ error: 'Choose a JPG, PNG or WebP image to upload.' });
+    }
+    if (req.user!.role === 'seller') {
+      const seller = await query('SELECT * FROM gocart_seller_get($1)', [req.user!.entityId]);
+      if (!seller.rows.length || (seller.rows[0] as any).status !== 'approved') {
+        return res.status(403).json({ error: 'Only approved sellers can upload product images.' });
+      }
+    }
+    const url = await uploadProductImage(req.user!.entityId, image);
+    return res.status(201).json({ url });
+  } catch (error: any) {
+    req.log.error({ err: error }, 'Error uploading product image:');
+    if (error?.statusCode === 503) {
+      return res.status(503).json({ error: 'Image upload is temporarily unavailable. Paste an image link instead.' });
+    }
+    return res.status(error?.statusCode || 500).json({ error: publicMessage(error, 'Could not upload the image.') });
+  }
+});
+
+/**
  * POST /api/products
  * Create product with seller approval moderation check (via schema gocart_product_create)
  */
@@ -217,7 +257,7 @@ router.post('/', requireAuth, requireRole(['seller', 'admin']), async (req: Auth
     res.status(201).json(newProd);
   } catch (error: any) {
     req.log.error({ err: error }, 'Error creating product:');
-    res.status(error?.statusCode || 500).json({ error: publicMessage(error, 'Failed to create product') });
+    res.status(error?.statusCode || 500).json({ error: error?.statusCode === 503 ? 'Image upload is temporarily unavailable. Paste an image link instead.' : publicMessage(error, 'Failed to create product') });
   }
 });
 
@@ -311,7 +351,7 @@ router.put('/:id', requireAuth, requireRole(['seller', 'admin']), async (req: Au
     });
   } catch (error: any) {
     req.log.error({ err: error }, 'Error updating product:');
-    res.status(error?.statusCode || 500).json({ error: publicMessage(error, 'Failed to update product') });
+    res.status(error?.statusCode || 500).json({ error: error?.statusCode === 503 ? 'Image upload is temporarily unavailable. Paste an image link instead.' : publicMessage(error, 'Failed to update product') });
   }
 });
 

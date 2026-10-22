@@ -3,7 +3,8 @@ import { Product, Category, Seller, ProductStatus, SizeChartMeasurement } from '
 import { api } from '../../lib/api';
 import { describeVoucher } from '../../lib/vouchers';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
-import { X, Package, Save, Sparkles, Plus, Trash2 } from 'lucide-react';
+import { X, Package, Save, Sparkles, Plus, Trash2, Upload } from 'lucide-react';
+import { prepareProductImage } from '../../lib/productImage';
 const toLocalDateTimeInput = (value?: string) => {
   if (!value) return '';
   const date = new Date(value);
@@ -105,6 +106,7 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
   const [sizeError, setSizeError] = React.useState<string | null>(null);
   const [status, setStatus] = React.useState<ProductStatus>('active');
   const [isSaving, setIsSaving] = React.useState(false);
+  const [uploadingSlot, setUploadingSlot] = React.useState<number | null>(null);
   const [aiCopyLoading, setAiCopyLoading] = React.useState<Record<ProductCopyField, boolean>>({
     description: false,
     warranty: false,
@@ -191,6 +193,42 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
   }, [productToEdit, categories, isOpen]);
 
   if (!isOpen) return null;
+
+  // Slot 0 is the primary image, slot N is additionalImages[N - 1].
+  const uploadImageFile = async (slot: number, file: File | undefined) => {
+    if (!file) return;
+    setUploadingSlot(slot);
+    setError(null);
+    try {
+      const { url } = await api.uploadProductImage(await prepareProductImage(file));
+      if (slot === 0) setImage(url);
+      else setAdditionalImages((current) => current.map((item, index) => index === slot - 1 ? url : item));
+    } catch (err: any) {
+      setError(err.message || 'Could not upload the image.');
+    } finally {
+      setUploadingSlot(null);
+    }
+  };
+
+  const renderUploadButton = (slot: number) => (
+    <label
+      className={`inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border border-emerald-300 px-3 text-xs font-bold text-emerald-800 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 ${uploadingSlot !== null ? 'pointer-events-none opacity-50' : ''}`}
+    >
+      <Upload className="h-3.5 w-3.5" />
+      {uploadingSlot === slot ? 'Uploading...' : 'Upload'}
+      <input
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="sr-only"
+        disabled={uploadingSlot !== null}
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          event.target.value = '';
+          void uploadImageFile(slot, file);
+        }}
+      />
+    </label>
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -487,32 +525,36 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
 
           <section className="space-y-2">
             <div className="flex items-baseline justify-between gap-3">
-              <label className="block text-slate-700 dark:text-zinc-300 font-semibold">Product Image URLs</label>
+              <label className="block text-slate-700 dark:text-zinc-300 font-semibold">Product Images</label>
               <span className="shrink-0 text-[10px] tabular-nums text-slate-500 dark:text-zinc-400">
                 {[image, ...additionalImages].filter((url) => url.trim()).length}/7
               </span>
             </div>
-            <input
-              type="url"
-              value={image}
-              onChange={(e) => setImage(e.target.value)}
-              placeholder="Primary image URL"
-              className="w-full p-2.5 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500"
-            />
+            <div className="flex gap-2">
+              <input
+                type="url"
+                value={image}
+                onChange={(e) => setImage(e.target.value)}
+                placeholder="Primary image link, or upload a file"
+                className="min-w-0 flex-1 p-2.5 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500"
+              />
+              {renderUploadButton(0)}
+            </div>
             {additionalImages.map((url, index) => (
               <div key={index} className="flex gap-2">
                 <input
                   type="url"
                   value={url}
                   onChange={(event) => setAdditionalImages((current) => current.map((item, itemIndex) => itemIndex === index ? event.target.value : item))}
-                  placeholder={`Additional image ${index + 2} URL`}
+                  placeholder={`Additional image ${index + 2} link, or upload a file`}
                   className="min-w-0 flex-1 p-2.5 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500"
                 />
+                {renderUploadButton(index + 1)}
                 <button type="button" onClick={() => setAdditionalImages((current) => current.filter((_, itemIndex) => itemIndex !== index))} aria-label={`Remove image ${index + 2}`} className="rounded-lg border border-slate-300 px-3 text-slate-500 hover:text-rose-600 dark:border-zinc-700"><Trash2 className="h-4 w-4" /></button>
               </div>
             ))}
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-[10px] text-slate-500 dark:text-zinc-400">Add 1–7 clear product views. Use sharp images that show the item clearly.</p>
+              <p className="text-[10px] text-slate-500 dark:text-zinc-400">Add 1–7 clear product views. Upload a file, or paste a link. Uploaded pictures are always shown; links from other websites may be blocked.</p>
               <button type="button" disabled={[image, ...additionalImages].filter((url) => url.trim()).length >= 7} onClick={() => setAdditionalImages((current) => [...current, ''])} className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 px-3 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-emerald-800 dark:text-emerald-300"><Plus className="h-3.5 w-3.5" />Add image</button>
             </div>
           </section>
@@ -679,7 +721,7 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={isSaving}
+              disabled={isSaving || uploadingSlot !== null}
               className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold rounded-full shadow-lg shadow-emerald-500/30 transition-all cursor-pointer"
             >
               <Save className="w-4 h-4" />
