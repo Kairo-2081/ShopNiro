@@ -1,12 +1,12 @@
 name: db-backup
 
-# Weekly encrypted dump of the public schema.
+# Daily encrypted dump of the public schema, plus the product images it references.
 # The repo is public, so artifacts are downloadable by anyone: the dump is
 # encrypted with an age PUBLIC key and can only be opened with the private key
 # kept offline by the owner. Never upload an unencrypted dump.
 on:
   schedule:
-    - cron: '0 20 * * 0' # Sundays 20:00 UTC = Mondays 02:00 Asia/Dhaka
+    - cron: '0 20 * * *' # daily 20:00 UTC = 02:00 Asia/Dhaka
   workflow_dispatch:
 
 permissions:
@@ -52,9 +52,89 @@ jobs:
           test -s "$out"
           ls -l "$out"
 
+      - name: Back up referenced product images
+        env:
+          BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+        run: |
+          set -euo pipefail
+          mkdir -p images
+          # Only objects in the public product-images bucket that products or past orders point to.
+          /usr/lib/postgresql/17/bin/psql "$BACKUP_DATABASE_URL" -At -c "
+            select distinct image from (select image from products union select image from order_items) t
+            where image like 'https://%.supabase.co/storage/v1/object/public/product-images/%'" > image-urls.txt
+          total=$(wc -l < image-urls.txt)
+          ok=0; missing=0
+          while IFS= read -r url; do
+            [ -z "$url" ] && continue
+            path="images/$(echo "$url" | sed 's#.*/product-images/##')"
+            mkdir -p "$(dirname "$path")"
+            if curl -fsS --retry 3 -o "$path" "$url"; then ok=$((ok+1)); else missing=$((missing+1)); echo "::warning::could not fetch $url"; fi
+          done < image-urls.txt
+          echo "referenced: $total, saved: $ok, missing: $missing"
+          # Old orders may point at images that were deleted, so missing files warn instead of failing.
+          # Zero saved while URLs exist means something is broken, so that does fail.
+          if [ "$total" -gt 0 ] && [ "$ok" -eq 0 ]; then echo "no images could be downloaded" >&2; exit 1; fi
+          tar czf images.tgz images image-urls.txt
+          out="shopniro-images-$(date -u +%F).tgz.age"
+          age -r age10nenyly00nwmwt8h023qq9ue5u0gkqma8zqn6kdpxupa5mcpq9dsnkm6ey -o "$out" images.tgz
+          rm -rf images images.tgz image-urls.txt
+          ls -l "$out"
+
       - uses: actions/upload-artifact@v4
         with:
           name: db-backup
-          path: shopniro-*.dump.age
+          path: |
+            shopniro-*.dump.age
+            shopniro-images-*.tgz.age
+          retention-days: 30
+          if-no-files-found: error
+
+  storage-backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # Supabase Storage S3-compatible endpoint. Not a secret.
+      STORAGE_S3_ENDPOINT: https://hphjwgeecprdvgtsgsbn.storage.supabase.co/storage/v1/s3
+      AWS_DEFAULT_REGION: ap-northeast-1
+      AWS_ACCESS_KEY_ID: ${{ secrets.STORAGE_S3_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.STORAGE_S3_SECRET_ACCESS_KEY }}
+      AWS_REQUEST_CHECKSUM_CALCULATION: when_required
+      AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
+    steps:
+      - name: Install age
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq age
+
+      - name: Copy every Storage bucket
+        run: |
+          set -euo pipefail
+          if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ]; then
+            echo "STORAGE_S3_ACCESS_KEY_ID / STORAGE_S3_SECRET_ACCESS_KEY secrets are not set" >&2; exit 1
+          fi
+          buckets=$(aws s3api list-buckets --endpoint-url "$STORAGE_S3_ENDPOINT" --query 'Buckets[].Name' --output text)
+          if [ -z "$buckets" ]; then echo "no buckets found" >&2; exit 1; fi
+          mkdir storage
+          for b in $buckets; do
+            echo "bucket: $b"
+            aws s3 sync "s3://$b" "storage/$b" --endpoint-url "$STORAGE_S3_ENDPOINT" --only-show-errors
+          done
+          find storage -type f | wc -l
+          tar -czf storage.tar.gz storage
+          size=$(stat -c %s storage.tar.gz)
+          echo "archive size: $size bytes"
+          if [ "$size" -lt 1000 ]; then echo "storage archive is suspiciously small" >&2; exit 1; fi
+
+      - name: Encrypt (age public key) and delete the plaintext
+        run: |
+          set -euo pipefail
+          out="shopniro-storage-$(date -u +%F).tar.gz.age"
+          age -r age10nenyly00nwmwt8h023qq9ue5u0gkqma8zqn6kdpxupa5mcpq9dsnkm6ey -o "$out" storage.tar.gz
+          rm -rf storage storage.tar.gz
+          test -s "$out"
+          ls -l "$out"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: storage-backup
+          path: shopniro-storage-*.tar.gz.age
           retention-days: 30
           if-no-files-found: error
