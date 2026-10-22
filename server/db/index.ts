@@ -1,6 +1,7 @@
 import pg from 'pg';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Address } from '../../src/types.ts';
+import { buildDatabaseSsl } from './ssl.ts';
 
 const { Pool } = pg;
 
@@ -56,14 +57,7 @@ export function getDatabaseProviderInfo() {
   };
 }
 
-const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '::1']);
-
-function sslFor(host?: string): pg.PoolConfig['ssl'] {
-  const mode = (process.env.DATABASE_SSL || '').toLowerCase();
-  if (mode === 'false' || mode === 'disable') return false;
-  if (mode === 'true' || mode === 'require') return { rejectUnauthorized: false };
-  return host && LOCAL_HOSTS.has(host) ? false : { rejectUnauthorized: false };
-}
+const sslFor = (host?: string): pg.PoolConfig['ssl'] => buildDatabaseSsl(host);
 
 export const createPool = () => {
   if (!global._postgresPool) {
