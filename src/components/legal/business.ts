@@ -6,6 +6,7 @@ export const BUSINESS = {
   supportEmail: 'shopnirosupport@gmail.com',
   /** Do not publish an unverified personal or campus address as a business address. */
   address: 'Operator details and authorized service address pending',
+  addressBn: 'পরিচালনাকারীর বিবরণ ও অনুমোদিত সেবার ঠিকানা নির্ধারণাধীন',
   siteUrl: 'https://shopniro.onrender.com',
   lastUpdated: '9 November 2026',
   freeShippingThresholdBDT: 400,
