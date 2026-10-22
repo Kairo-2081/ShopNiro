@@ -94,7 +94,7 @@ const connectWith = async (port: number, ssl: pg.ClientConfig['ssl']) => {
 test('a server whose certificate is not signed by our CA is rejected', async () => {
   const server = await startFakePostgres(makeCert('db.test'));
   const otherCa = makeCert('db.test').cert;
-  const ssl = buildDatabaseSsl(remote, { DB_CA_CERT: otherCa }) as pg.ConnectionOptions;
+  const ssl = buildDatabaseSsl(remote, { DB_CA_CERT: otherCa }) as tls.ConnectionOptions;
   const result = await connectWith(server.port, { ...ssl, servername: 'db.test' });
   server.close();
   assert.match(result, /SELF_SIGNED|UNABLE_TO_VERIFY|CERT/i, result);
@@ -104,7 +104,7 @@ test('a server whose certificate is not signed by our CA is rejected', async () 
 test('a server whose certificate matches our CA and hostname completes the handshake', async () => {
   const creds = makeCert('db.test');
   const server = await startFakePostgres(creds);
-  const ssl = buildDatabaseSsl(remote, { DB_CA_CERT: creds.cert }) as pg.ConnectionOptions;
+  const ssl = buildDatabaseSsl(remote, { DB_CA_CERT: creds.cert }) as tls.ConnectionOptions;
   await connectWith(server.port, { ...ssl, servername: 'db.test' });
   server.close();
   assert.equal(server.handshakes(), 1);
@@ -113,7 +113,7 @@ test('a server whose certificate matches our CA and hostname completes the hands
 test('the right CA with the wrong hostname is rejected', async () => {
   const creds = makeCert('db.test');
   const server = await startFakePostgres(creds);
-  const ssl = buildDatabaseSsl(remote, { DB_CA_CERT: creds.cert }) as pg.ConnectionOptions;
+  const ssl = buildDatabaseSsl(remote, { DB_CA_CERT: creds.cert }) as tls.ConnectionOptions;
   const result = await connectWith(server.port, { ...ssl, servername: 'evil.example' });
   server.close();
   assert.match(result, /ERR_TLS_CERT_ALTNAME_INVALID|altname/i, result);
