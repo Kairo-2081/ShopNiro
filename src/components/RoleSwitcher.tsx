@@ -1,5 +1,6 @@
 import React from 'react';
 import { Store, LogIn, UserPlus, Truck } from 'lucide-react';
+import { useLocale } from '../lib/i18n';
 
 interface RoleSwitcherProps {
   isLoggedIn: boolean;
@@ -16,6 +17,8 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
   onOpenRiderSignup,
   onOpenLogin,
 }) => {
+  const { t } = useLocale();
+
   if (isLoggedIn) return null;
 
   return (
@@ -23,10 +26,10 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
       <div className="mx-auto flex min-w-0 max-w-7xl flex-col items-start gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
         <div className="flex min-w-0 items-center gap-2">
           <span className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-warning-500/10 text-warning-600 dark:text-warning-400 font-bold uppercase tracking-wider text-micro border border-warning-500/20">
-            Guest Mode
+            {t('guestMode')}
           </span>
           <span className="text-surface-600 dark:text-surface-400 hidden sm:inline">
-            You are browsing the public marketplace catalog. Sign in to place orders, apply discount vouchers, or manage stores.
+            {t('guestModePrompt')}
           </span>
         </div>
 
@@ -37,7 +40,7 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
             className="luxury-control premium-button flex min-w-0 items-center justify-center gap-1.5 rounded-full px-2.5 py-1.5 text-center leading-tight text-white font-bold cursor-pointer sm:px-3.5"
           >
             <LogIn className="w-3.5 h-3.5" />
-            <span>Sign In</span>
+            <span>{t('signIn')}</span>
           </button>
 
           {/* Registration Options */}
@@ -47,7 +50,7 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
               className="luxury-control flex min-w-0 items-center justify-center gap-1 px-2.5 py-1.5 text-center leading-tight bg-[#d0c8a5]/10 dark:bg-[#181F2A] text-surface-700 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white border border-[#d0c8a5]/35 dark:border-surface-700 rounded-full transition-colors cursor-pointer font-medium sm:px-3"
             >
               <UserPlus className="w-3.5 h-3.5 text-[#a99b72] dark:text-[#d0c8a5]" />
-              <span>Customer Signup</span>
+              <span>{t('customerSignup')}</span>
             </button>
           )}
 
@@ -57,7 +60,7 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
               className="luxury-control flex min-w-0 items-center justify-center gap-1 px-2.5 py-1.5 text-center leading-tight bg-[#77775a] hover:bg-[#555541] text-white border border-[#77775a]/70 rounded-full transition-colors cursor-pointer font-medium sm:px-3"
             >
               <Store className="w-3.5 h-3.5" />
-              <span>Become a Seller</span>
+              <span>{t('becomeSeller')}</span>
             </button>
           )}
 
@@ -67,7 +70,7 @@ export const RoleSwitcher: React.FC<RoleSwitcherProps> = ({
               className="luxury-control flex min-w-0 items-center justify-center gap-1 px-2.5 py-1.5 text-center leading-tight bg-[#77775a] hover:bg-[#555541] text-white border border-[#77775a]/70 rounded-full transition-colors cursor-pointer font-medium sm:px-3"
             >
               <Truck className="w-3.5 h-3.5" />
-              <span>Rider portal</span>
+              <span>{t('riderPortal')}</span>
             </button>
           )}
         </div>
