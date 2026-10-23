@@ -3,6 +3,16 @@ import { readdirSync, readFileSync } from 'node:fs';
 import test from 'node:test';
 import {
   addToCartBody,
+  aiChatBody,
+  aiHelperBody,
+  analyticsEventBody,
+  bundleActiveBody,
+  categoryBody,
+  createBundleBody,
+  createProductBody,
+  productIdParam,
+  productStatusBody,
+  updateProductBody,
   createOrderBody,
   loginBody,
   paymentInitBody,
@@ -93,6 +103,54 @@ test('earlier schemas still behave: cart quantity, order items, id params', () =
   bad(createOrderBody, { Customer_ID: 'C1', Items: [], Shipping_Address: { Street: 's', City: 'c' } });
   ok(resourceIdParam, { id: 'PAYOUT-1' });
   bad(resourceIdParam, { id: '../etc/passwd' });
+});
+
+test('product writes: types and size caps, partial updates allowed, unknown fields kept', () => {
+  ok(createProductBody, { Name: 'Shirt', Price: '499.50', Stock: 3, Category_ID: 'CAT-1', Seller_ID: 'SEL-1', Images: ['https://x.example/a.jpg'], Voucher_Expires_At: null });
+  ok(updateProductBody, { Stock: 12 });
+  ok(updateProductBody, {});
+  assert.equal((createProductBody.parse({ Name: 'a', Featured_Deal: true }) as any).Featured_Deal, true);
+  bad(createProductBody, { Name: 'x'.repeat(81) });
+  bad(createProductBody, { Name: { $gt: '' } });
+  bad(createProductBody, { Price: 'free' });
+  bad(createProductBody, { Stock: -1 });
+  bad(createProductBody, { Stock: 1.5 });
+  bad(createProductBody, { Images: 'not-an-array' });
+  bad(createProductBody, { Images: Array(31).fill('a') });
+  bad(createProductBody, { Description: 'w'.repeat(6001) });
+  bad(createProductBody, { Seller_ID: "x'; --" });
+  bad(updateProductBody, { Video_URL: 'h'.repeat(2049) });
+  ok(productStatusBody, { status: 'inactive' });
+  bad(productStatusBody, { status: 'deleted' });
+});
+
+test('categories, bundles, analytics and params', () => {
+  ok(categoryBody, { Name: ' Shoes ' });
+  bad(categoryBody, { Name: '   ' });
+  bad(categoryBody, { Name: 'n'.repeat(81) });
+  ok(createBundleBody, { Name: 'Duo', Product_IDs: ['P1', 'P2'], Discount_Percent: '10' });
+  bad(createBundleBody, { Name: 'Duo', Product_IDs: 'P1', Discount_Percent: 10 });
+  bad(createBundleBody, { Name: 'Duo', Product_IDs: ['P1', 'P2'], Discount_Percent: 'lots' });
+  ok(bundleActiveBody, { Active: false });
+  bad(bundleActiveBody, { Active: 'false' });
+  ok(analyticsEventBody, { Product_ID: 'PROD-1', Event_Type: 'click', Session_ID: 'a'.repeat(20) });
+  bad(analyticsEventBody, { Product_ID: 'PROD-1', Event_Type: 'purchase', Session_ID: 'a'.repeat(20) });
+  bad(analyticsEventBody, { Product_ID: 'PROD-1', Event_Type: 'click', Session_ID: 'short' });
+  ok(productIdParam, { productId: 'PROD-1700000000000' });
+  bad(productIdParam, { productId: 'a b' });
+});
+
+test('AI inputs are bounded before they reach the paid model', () => {
+  ok(aiChatBody, { message: 'hello', history: [{ role: 'user', parts: [{ text: 'hi' }] }] });
+  bad(aiChatBody, { message: '' });
+  bad(aiChatBody, { message: 'x'.repeat(4001) });
+  bad(aiChatBody, { message: 'hi', history: Array(61).fill({}) });
+  bad(aiChatBody, { message: ['hi'] });
+  ok(aiHelperBody, { productName: 'Shirt', notes: 'fast' });
+  ok(aiHelperBody, {});
+  bad(aiHelperBody, { sourceText: 's'.repeat(8001) });
+  bad(aiHelperBody, { products: Array(51).fill({}) });
+  bad(aiHelperBody, { productName: 123 });
 });
 
 test('validateBody replies 400 with the first message and never calls the handler', () => {

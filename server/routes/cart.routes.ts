@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { randomUUID } from 'node:crypto';
 import { query } from '../db/index.ts';
-import { validateBody } from '../middleware/validate.ts';
+import { validateBody, validateParams } from '../middleware/validate.ts';
 import * as schemas from '../validation/schemas.ts';
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth.ts';
 import { publicMessage } from '../middleware/errorHandler.ts';
@@ -151,7 +151,7 @@ router.put('/:cartId', requireAuth, requireRole(['customer']), validateBody(sche
  * DELETE /api/cart/:cartId
  * Remove item from cart (via schema gocart_cart_delete)
  */
-router.delete('/:cartId', requireAuth, requireRole(['customer']), async (req: AuthRequest, res) => {
+router.delete('/:cartId', requireAuth, requireRole(['customer']), validateParams(schemas.cartIdParam), async (req: AuthRequest, res) => {
   try {
     const { cartId } = req.params;
     const custId = req.user!.entityId;
