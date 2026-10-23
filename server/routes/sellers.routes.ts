@@ -15,6 +15,8 @@ import {
 import { createSellerDocumentSignedUrl, deleteSellerDocument, uploadSellerDocument } from '../services/sellerDocuments.service.ts';
 import { Seller } from '../../src/types.ts';
 import { publicMessage } from '../middleware/errorHandler.ts';
+import { validateBody } from '../middleware/validate.ts';
+import { sellerPayoutRequestBody } from '../validation/schemas.ts';
 
 const router = Router();
 const createApplicationReviewAudit = async (accountType: 'seller' | 'rider', accountId: string, adminId: string, decision: 'approved' | 'rejected', reason: string) => {
@@ -394,7 +396,7 @@ router.get('/me/wallet', requireAuth, requireRole(['seller']), async (req: AuthR
   }
 });
 
-router.post('/me/payouts', requireAuth, requireRole(['seller']), async (req: AuthRequest, res) => {
+router.post('/me/payouts', requireAuth, requireRole(['seller']), validateBody(sellerPayoutRequestBody), async (req: AuthRequest, res) => {
   const amount = Number(req.body?.amount);
   if (!Number.isFinite(amount) || amount <= 0) return res.status(400).json({ error: 'Payout amount must be greater than zero.' });
 

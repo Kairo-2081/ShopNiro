@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { randomUUID } from 'node:crypto';
 import { pool } from '../db/index.ts';
 import { AuthRequest, requireAuth, requireRole } from '../middleware/auth.ts';
+import { validateBody, validateParams } from '../middleware/validate.ts';
+import { payoutPayBody, resourceIdParam } from '../validation/schemas.ts';
 
 const router = Router();
 router.use(requireAuth, requireRole(['admin']));
@@ -27,7 +29,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.patch('/:id/pay', async (req: AuthRequest, res) => {
+router.patch('/:id/pay', validateParams(resourceIdParam), validateBody(payoutPayBody), async (req: AuthRequest, res) => {
   const externalReference = typeof req.body?.externalReference === 'string'
     ? req.body.externalReference.trim().slice(0, 100)
     : '';
@@ -56,7 +58,7 @@ router.patch('/:id/pay', async (req: AuthRequest, res) => {
   }
 });
 
-router.patch('/:id/reject', async (req: AuthRequest, res) => {
+router.patch('/:id/reject', validateParams(resourceIdParam), async (req: AuthRequest, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
