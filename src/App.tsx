@@ -1,4 +1,5 @@
 import React from 'react';
+import { POLICIES } from './components/legal/policies';
 import {
   UserRole,
   Customer,
@@ -1405,6 +1406,13 @@ export default function App() {
 
           <div className="text-[11px] text-slate-400 dark:text-zinc-500 font-mono text-center md:text-right">
             <span>© {new Date().getFullYear()} ShopNiro • Smart commerce network</span>
+            <nav aria-label="Policies" className="mt-1 flex flex-wrap justify-center gap-x-3 md:justify-end">
+              {POLICIES.map((policy) => (
+                <a key={policy.id} href={policy.path} className="hover:text-blue-500 dark:hover:text-sky-400">
+                  {policy.title}
+                </a>
+              ))}
+            </nav>
           </div>
         </div>
       </footer>

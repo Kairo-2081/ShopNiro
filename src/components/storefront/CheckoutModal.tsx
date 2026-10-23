@@ -1,6 +1,7 @@
 import React from 'react';
 import { Customer, CartItem, Address, Order, PaymentMethod, ProductBundle } from '../../types';
 import { api, formatCurrency, formatBDT } from '../../lib/api';
+import { PolicyLinks } from '../legal/PolicyLinks';
 import { calculateBundlePrices } from '../../lib/bundles';
 import { describeVoucher, discountedPriceForVoucher, discountedUnitPrice, getVoucherRule, isVoucherExpired, normalizeVoucherCode } from '../../lib/vouchers';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
@@ -68,6 +69,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   });
 
   const [useSameBilling, setUseSameBilling] = React.useState(true);
+  const [acceptedPolicies, setAcceptedPolicies] = React.useState(false);
   const [billingAddress, setBillingAddress] = React.useState<Address>({
     Street: currentCustomer.Address?.Street || '',
     House_Name: currentCustomer.Address?.House_Name || '',
@@ -241,6 +243,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
   const handleOpenPaymentOrSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!acceptedPolicies) {
+      onNotify('Please accept the Terms of Service, Refund Policy and Delivery Policy to place your order.', 'error');
+      return;
+    }
     if (!validateAddress()) return;
 
     const order = await createPendingOrder();
@@ -810,6 +816,18 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     </div>
                   </div>
                 </div>
+
+                <label className="flex items-start gap-2 text-[11px] text-slate-600 dark:text-zinc-400 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={acceptedPolicies}
+                    onChange={(e) => setAcceptedPolicies(e.target.checked)}
+                    className="mt-0.5 h-3.5 w-3.5 shrink-0 cursor-pointer"
+                  />
+                  <span>
+                    I have read and agree to the <PolicyLinks ids={['terms', 'refunds', 'delivery']} />.
+                  </span>
+                </label>
 
                 <div className="flex flex-col-reverse items-stretch gap-2 border-t border-slate-200 pt-3 dark:border-zinc-800 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:border-0 sm:pt-2">
                   <button
