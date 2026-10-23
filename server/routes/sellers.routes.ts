@@ -17,6 +17,8 @@ import { Seller } from '../../src/types.ts';
 import { publicMessage } from '../middleware/errorHandler.ts';
 import { validateBody } from '../middleware/validate.ts';
 import { sellerPayoutRequestBody } from '../validation/schemas.ts';
+import { validateParams } from '../middleware/validate.ts';
+import { resourceIdParam, sellerStatusBody } from '../validation/schemas.ts';
 
 const router = Router();
 const createApplicationReviewAudit = async (accountType: 'seller' | 'rider', accountId: string, adminId: string, decision: 'approved' | 'rejected', reason: string) => {
@@ -452,7 +454,7 @@ router.post('/me/payouts', requireAuth, requireRole(['seller']), validateBody(se
  * PATCH /api/sellers/:id/status
  * Approves or suspends a seller (via schema gocart_seller_status_update)
  */
-router.patch('/:id/status', requireAuth, requireRole(['admin']), async (req: AuthRequest, res) => {
+router.patch('/:id/status', requireAuth, requireRole(['admin']), validateParams(resourceIdParam), validateBody(sellerStatusBody), async (req: AuthRequest, res) => {
   try {
     const { id } = req.params;
     const { status, reason, identityVerified, documentsReviewed, payoutVerified } = req.body ?? {};

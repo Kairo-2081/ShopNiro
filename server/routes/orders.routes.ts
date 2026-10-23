@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { randomInt, randomUUID } from 'node:crypto';
 import type { PoolClient } from 'pg';
 import { pool, query } from '../db/index.ts';
-import { validateBody } from '../middleware/validate.ts';
+import { validateBody, validateParams } from '../middleware/validate.ts';
 import * as schemas from '../validation/schemas.ts';
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth.ts';
 import { Order, ProductBundle } from '../../src/types.ts';
@@ -570,7 +570,7 @@ router.patch('/cancellation-requests/:requestId/review', requireAuth, validateBo
  * PATCH /api/orders/:id/status
  * Updates order status (via schema gocart_order_status_update)
  */
-router.patch('/:id/revert-failed-payment', requireAuth, async (req: AuthRequest, res) => {
+router.patch('/:id/revert-failed-payment', requireAuth, validateParams(schemas.resourceIdParam), async (req: AuthRequest, res) => {
   let client: PoolClient | undefined;
   try {
     if (req.user?.role !== 'customer') {
