@@ -4,6 +4,7 @@ import { X, LogIn, Lock, User, Eye, EyeOff, ShieldAlert, UserPlus, Store, CheckC
 import { api } from '../lib/api';
 import { OAuthProviderButtons } from './OAuthProviderButtons';
 import { useFocusTrap } from '../hooks/useFocusTrap';
+import { PolicyLinks } from './legal/PolicyLinks';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -36,6 +37,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   const [regIdentifier, setRegIdentifier] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [showRegPassword, setShowRegPassword] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -48,6 +50,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       setRegisterRole(initialRole);
       setError(null);
       setSuccessMessage(null);
+      setAcceptedTerms(false);
     }
   }, [initialRole, initialTab, isOpen]);
 
@@ -94,6 +97,11 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     e.preventDefault();
     if (!regIdentifier.trim() || regPassword.length < 8) {
       setError('Enter a username or email address and a password of at least 8 characters.');
+      return;
+    }
+
+    if (!acceptedTerms) {
+      setError('Please accept the Terms of Service and Privacy Policy to create an account.');
       return;
     }
 
@@ -348,6 +356,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               </div>
 
               <OAuthProviderButtons role={registerRole} mode="sign up" />
+              <p className="text-[10px] text-slate-400 text-center">
+                By signing up with a provider you agree to the <PolicyLinks ids={['terms', 'privacy']} />.
+              </p>
               <div>
                 <label className="block text-slate-700 dark:text-zinc-300 font-semibold mb-1">
                   Username or email address
@@ -393,6 +404,18 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   You will use this password every time you log in.
                 </p>
               </div>
+
+              <label className="flex items-start gap-2 text-[11px] text-slate-600 dark:text-zinc-400 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={acceptedTerms}
+                  onChange={(e) => setAcceptedTerms(e.target.checked)}
+                  className="mt-0.5 h-3.5 w-3.5 shrink-0 cursor-pointer"
+                />
+                <span>
+                  I am 18 or older and I agree to the <PolicyLinks ids={['terms', 'privacy']} />.
+                </span>
+              </label>
 
               {/* Submit Register */}
               <div className="pt-2 flex items-center justify-between">
