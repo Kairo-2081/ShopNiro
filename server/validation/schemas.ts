@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { address, idString, requiredText, text, wholeNumber } from './common.ts';
+import { address, idString, moneyAmount, requiredText, text, wholeNumber } from './common.ts';
 
 const ORDER_STATUSES = ['placed', 'processing', 'shipped', 'delivered', 'cancelled'] as const;
 
@@ -85,3 +85,64 @@ export const supportStatusBody = z.object({
 });
 
 export const resourceIdParam = z.object({ id: idString('Invalid ID.') });
+
+// --- auth -----------------------------------------------------------------
+
+/** Types and size caps only. Username/email rules and normalisation stay in the signup handler. */
+export const signupBody = z.object({
+  role: z.enum(['customer', 'seller', 'rider'], { error: 'Choose a customer, seller, or rider account.' }),
+  username: z.string({ error: 'Enter a valid username.' }).max(120, 'Username must be 3 to 50 letters, numbers, or underscores.').optional(),
+  email: z.string({ error: 'Enter a valid email address.' }).max(255, 'Enter a valid email address.').optional(),
+  password: z
+    .string({ error: 'Password must be at least 8 characters.' })
+    .min(8, 'Password must be at least 8 characters.')
+    .max(128, 'Password must be 128 characters or fewer.'),
+});
+
+/** The login field is named `email` but accepts a username too. */
+export const loginBody = z.object({
+  email: z.string({ error: 'Username/Email and Password are required' }).trim().min(1, 'Username/Email and Password are required').max(255, 'Username/Email and Password are required'),
+  password: z.string({ error: 'Username/Email and Password are required' }).min(1, 'Username/Email and Password are required').max(1000, 'Username/Email and Password are required'),
+});
+
+// --- payments and payouts -------------------------------------------------
+
+/** `.loose()` on purpose: the handler rejects server-controlled fields (amount, customerId, ...) by name. */
+export const paymentInitBody = z
+  .object({
+    orderId: idString('A valid orderId is required.'),
+    customerName: text(160).optional(),
+    customerEmail: text(255).optional(),
+    customerPhone: text(40).optional(),
+    address: z.unknown().optional(),
+    paymentMethod: z.enum(['bkash', 'nagad', 'rocket', 'visa_mastercard'], { error: 'Unsupported payment method.' }).optional().default('bkash'),
+    productName: text(200).optional().default('ShopNiro Marketplace Order'),
+  })
+  .loose();
+
+export const sslcommerzValidateBody = z.object({
+  tran_id: z.string({ error: 'A valid SSLCommerz transaction ID is required' }).regex(/^SSLCZ-[A-Z0-9-]+$/, 'A valid SSLCommerz transaction ID is required').max(80, 'A valid SSLCommerz transaction ID is required'),
+  val_id: z.string({ error: 'A payment validation ID is required' }).trim().min(1, 'A payment validation ID is required').max(120, 'A payment validation ID is required'),
+  order_id: idString('A valid order ID is required.').optional(),
+});
+
+export const sellerPayoutRequestBody = z.object({ amount: moneyAmount('Payout amount must be greater than zero.') });
+
+export const payoutPayBody = z.object({
+  externalReference: requiredText(100, 'An external payout reference is required.'),
+});
+
+export const riderWithdrawalBody = z.object({
+  amount: moneyAmount('Enter a valid amount and payout account.'),
+  payoutMethod: z.enum(['bkash', 'bank', 'nagad'], { error: 'Enter a valid amount and payout account.' }),
+  payoutAccount: requiredText(120, 'Enter a valid amount and payout account.'),
+});
+
+export const withdrawalStatusBody = z.object({
+  status: z.enum(['paid', 'rejected'], { error: 'Choose paid or rejected.' }),
+});
+
+export const riderLocationBody = z.object({
+  latitude: z.preprocess((v) => (typeof v === 'string' && v.trim() !== '' ? Number(v) : v), z.number({ error: 'Choose a valid location on the map.' }).min(-90, 'Choose a valid location on the map.').max(90, 'Choose a valid location on the map.')),
+  longitude: z.preprocess((v) => (typeof v === 'string' && v.trim() !== '' ? Number(v) : v), z.number({ error: 'Choose a valid location on the map.' }).min(-180, 'Choose a valid location on the map.').max(180, 'Choose a valid location on the map.')),
+});

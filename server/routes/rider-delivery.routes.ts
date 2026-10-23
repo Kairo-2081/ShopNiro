@@ -3,6 +3,8 @@ import { randomInt } from 'node:crypto';
 import { AuthRequest, requireAuth, requireRole } from '../middleware/auth.ts';
 import { pool, query } from '../db/index.ts';
 import { requireCronSecret } from '../middleware/cronAuth.ts';
+import { validateBody, validateParams } from '../middleware/validate.ts';
+import { resourceIdParam, riderLocationBody, riderWithdrawalBody, withdrawalStatusBody } from '../validation/schemas.ts';
 
 const router = Router();
 
@@ -57,7 +59,7 @@ async function creditAvailableSalary(client: any, riderId: string) {
   `, [riderId]);
 }
 
-router.patch('/location', requireAuth, requireRole(['rider']), requireApprovedRider, async (req: AuthRequest, res) => {
+router.patch('/location', requireAuth, requireRole(['rider']), requireApprovedRider, validateBody(riderLocationBody), async (req: AuthRequest, res) => {
   const latitude = Number(req.body?.latitude);
   const longitude = Number(req.body?.longitude);
   if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
@@ -180,7 +182,7 @@ router.post('/deliveries/:id/on-way', requireAuth, requireRole(['rider']), requi
   }
 });
 
-router.post('/deliveries/:id/cod-collected', requireAuth, requireRole(['rider']), requireApprovedRider, async (req: AuthRequest, res) => {
+router.post('/deliveries/:id/cod-collected', requireAuth, requireRole(['rider']), requireApprovedRider, validateParams(resourceIdParam), async (req: AuthRequest, res) => {
   try {
     const result = await query(
       `UPDATE rider_deliveries SET cod_collected = TRUE
@@ -555,7 +557,7 @@ router.get('/payroll/settle', requireCronSecret, async (_req, res) => {
   }
 });
 
-router.post('/wallet/withdrawals', requireAuth, requireRole(['rider']), requireApprovedRider, async (req: AuthRequest, res) => {
+router.post('/wallet/withdrawals', requireAuth, requireRole(['rider']), requireApprovedRider, validateBody(riderWithdrawalBody), async (req: AuthRequest, res) => {
   const amount = Number(req.body?.amount);
   const payoutMethod = String(req.body?.payoutMethod || '');
   const payoutAccount = String(req.body?.payoutAccount || '').trim();
@@ -622,7 +624,7 @@ router.get('/wallet/withdrawals', requireAuth, requireRole(['admin']), async (re
   }
 });
 
-router.patch('/wallet/withdrawals/:id', requireAuth, requireRole(['admin']), async (req, res) => {
+router.patch('/wallet/withdrawals/:id', requireAuth, requireRole(['admin']), validateParams(resourceIdParam), validateBody(withdrawalStatusBody), async (req, res) => {
   const { status } = req.body ?? {};
   if (!['paid', 'rejected'].includes(status)) return res.status(400).json({ error: 'Choose paid or rejected.' });
   const client = await pool.connect();

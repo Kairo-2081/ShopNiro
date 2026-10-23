@@ -5,6 +5,8 @@ import { pool, query } from '../db/index.ts';
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth.ts';
 import { GatewayError, sslcommerz } from '../services/sslcommerz.service.ts';
 import { publicMessage } from '../middleware/errorHandler.ts';
+import { validateBody } from '../middleware/validate.ts';
+import { paymentInitBody, sslcommerzValidateBody } from '../validation/schemas.ts';
 
 const router = Router();
 const paymentInitRateLimit = rateLimit({
@@ -452,7 +454,7 @@ router.post('/simulator/complete', async (req, res) => {
   }
 });
 
-router.post('/init', requireAuth, requireRole(['customer']), paymentInitRateLimit, async (req: AuthRequest, res) => {
+router.post('/init', requireAuth, requireRole(['customer']), paymentInitRateLimit, validateBody(paymentInitBody), async (req: AuthRequest, res) => {
   try {
     const {
       orderId,
@@ -646,7 +648,7 @@ router.post('/init', requireAuth, requireRole(['customer']), paymentInitRateLimi
  * POST /api/payment/sslcommerz/validate
  * Validates SSLCommerz payment and updates via schema gocart_payment_update
  */
-router.post('/sslcommerz/validate', requireAuth, requireRole(['customer']), async (req: AuthRequest, res) => {
+router.post('/sslcommerz/validate', requireAuth, requireRole(['customer']), validateBody(sslcommerzValidateBody), async (req: AuthRequest, res) => {
   try {
     const { tran_id, val_id, order_id } = req.body;
 

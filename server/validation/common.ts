@@ -26,3 +26,14 @@ export const address = z.object({
   Latitude: z.number().min(-90).max(90).nullable().optional(),
   Longitude: z.number().min(-180).max(180).nullable().optional(),
 });
+
+/** A positive money amount in taka: 3, "3" or "3.50"; at most 2 decimals and a sane ceiling. */
+export const moneyAmount = (message: string, max = 10_000_000) =>
+  z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() !== '' ? Number(value) : value),
+    z
+      .number({ error: message })
+      .positive(message)
+      .max(max, message)
+      .refine((n) => Math.abs(n * 100 - Math.round(n * 100)) < 1e-6, message)
+  );
