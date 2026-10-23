@@ -4,7 +4,7 @@ import { AuthRequest, requireAuth, requireRole } from '../middleware/auth.ts';
 import { pool, query } from '../db/index.ts';
 import { requireCronSecret } from '../middleware/cronAuth.ts';
 import { validateBody, validateParams } from '../middleware/validate.ts';
-import { resourceIdParam, riderLocationBody, riderWithdrawalBody, withdrawalStatusBody } from '../validation/schemas.ts';
+import { deliveryReviewBody, resourceIdParam, riderLocationBody, riderWithdrawalBody, withdrawalStatusBody } from '../validation/schemas.ts';
 
 const router = Router();
 
@@ -133,7 +133,7 @@ router.get('/deliveries', requireAuth, requireRole(['rider']), requireApprovedRi
   }
 });
 
-router.post('/deliveries/:id/accept', requireAuth, requireRole(['rider']), requireApprovedRider, async (req: AuthRequest, res) => {
+router.post('/deliveries/:id/accept', requireAuth, requireRole(['rider']), requireApprovedRider, validateParams(resourceIdParam), async (req: AuthRequest, res) => {
   try {
     const result = await query(
       `UPDATE rider_deliveries SET rider_id = $2, status = 'accepted', accepted_at = CURRENT_TIMESTAMP
@@ -148,7 +148,7 @@ router.post('/deliveries/:id/accept', requireAuth, requireRole(['rider']), requi
   }
 });
 
-router.post('/deliveries/:id/on-way', requireAuth, requireRole(['rider']), requireApprovedRider, async (req: AuthRequest, res) => {
+router.post('/deliveries/:id/on-way', requireAuth, requireRole(['rider']), requireApprovedRider, validateParams(resourceIdParam), async (req: AuthRequest, res) => {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
@@ -199,7 +199,7 @@ router.post('/deliveries/:id/cod-collected', requireAuth, requireRole(['rider'])
   }
 });
 
-router.post('/deliveries/:id/complete', requireAuth, requireRole(['customer']), async (req: AuthRequest, res) => {
+router.post('/deliveries/:id/complete', requireAuth, requireRole(['customer']), validateParams(resourceIdParam), async (req: AuthRequest, res) => {
   const client = await pool.connect();
   try {
     const code = String(req.body?.code || '').trim();
@@ -407,7 +407,7 @@ router.get('/customer-deliveries', requireAuth, requireRole(['customer']), async
   }
 });
 
-router.post('/customer-deliveries/:id/review', requireAuth, requireRole(['customer']), async (req: AuthRequest, res) => {
+router.post('/customer-deliveries/:id/review', requireAuth, requireRole(['customer']), validateParams(resourceIdParam), validateBody(deliveryReviewBody), async (req: AuthRequest, res) => {
   const rating = Number(req.body?.rating);
   const reviewText = typeof req.body?.reviewText === 'string' ? req.body.reviewText.trim().slice(0, 2000) : '';
   const wasTimely = req.body?.wasTimely;

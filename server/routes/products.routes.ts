@@ -6,7 +6,7 @@ import { storeProductImageIfInline, uploadProductImage } from '../services/produ
 import { Product } from '../../src/types.ts';
 import { publicMessage } from '../middleware/errorHandler.ts';
 import { validateBody, validateParams } from '../middleware/validate.ts';
-import { createProductBody, productStatusBody, resourceIdParam, updateProductBody } from '../validation/schemas.ts';
+import { createProductBody, productImageUploadBody, productStatusBody, resourceIdParam, updateProductBody } from '../validation/schemas.ts';
 
 const router = Router();
 
@@ -142,7 +142,7 @@ router.get('/:id', async (req, res) => {
  * Sellers upload each picture here first, then send the returned links when saving the product,
  * so the product request itself stays small.
  */
-router.post('/images', requireAuth, requireRole(['seller', 'admin']), productImageUploadLimit, async (req: AuthRequest, res) => {
+router.post('/images', requireAuth, requireRole(['seller', 'admin']), productImageUploadLimit, validateBody(productImageUploadBody), async (req: AuthRequest, res) => {
   try {
     const image = typeof req.body?.Image === 'string' ? req.body.Image : '';
     if (!image.startsWith('data:image/')) {

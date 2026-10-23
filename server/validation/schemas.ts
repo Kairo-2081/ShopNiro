@@ -247,3 +247,50 @@ export const aiChatBody = z
   })
   .loose();
 export const cartIdParam = z.object({ cartId: idString('Invalid cart item ID.') });
+
+// --- admin review actions, delivery steps, uploads --------------------------
+
+const reviewReason = z.string({ error: 'Enter a valid reason.' }).max(1000, 'Reasons must be 1000 characters or fewer.').nullable().optional();
+
+export const sellerStatusBody = z.object({
+  status: z.enum(['pending', 'approved', 'rejected', 'suspended'], { error: 'Valid status is required' }),
+  reason: reviewReason,
+  identityVerified: z.boolean().optional(),
+  documentsReviewed: z.boolean().optional(),
+  payoutVerified: z.boolean().optional(),
+});
+
+export const riderApplicationStatusBody = z.object({
+  status: z.enum(['approved', 'rejected', 'suspended'], { error: 'Choose approved, rejected, or suspended.' }),
+  reason: reviewReason,
+});
+
+export const deliveryReviewBody = z.object({
+  rating: wholeNumber(1, 5, 'Choose a 1\u20135 rating and whether delivery was timely.'),
+  reviewText: z.string().max(2000, 'Reviews must be 2000 characters or fewer.').optional(),
+  wasTimely: z.boolean({ error: 'Choose a 1\u20135 rating and whether delivery was timely.' }),
+});
+
+export const productImageUploadBody = z.object({
+  Image: z
+    .string({ error: 'Choose a JPG, PNG or WebP image to upload.' })
+    .startsWith('data:image/', 'Choose a JPG, PNG or WebP image to upload.')
+    .max(4_000_000, 'That image is too large. Choose one under 2 MB.'),
+});
+
+const cvList = z.array(z.string().max(1000, 'Each entry must be 1000 characters or fewer.')).max(40, 'Too many entries.');
+export const cvFormatBody = z.object({ experience: cvList.optional(), previousJobs: cvList.optional(), education: cvList.optional() });
+export const cvParseBody = z.object({ cvBase64: z.string({ error: 'Upload a PDF CV.' }).min(1, 'Upload a PDF CV.').max(8_000_000, 'That CV is too large.') });
+
+/** Types and caps only; the handler keeps its required-field and duplicate checks. */
+export const createAdminBody = z
+  .object({
+    Name: text(160),
+    Email: text(255),
+    Username: text(60),
+    Password: z.string().max(128, 'Password must be 128 characters or fewer.'),
+    Number: text(40),
+    Address: z.object({}).loose(),
+  })
+  .partial()
+  .loose();

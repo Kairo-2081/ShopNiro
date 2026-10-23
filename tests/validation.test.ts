@@ -10,6 +10,13 @@ import {
   categoryBody,
   createBundleBody,
   createProductBody,
+  createAdminBody,
+  cvFormatBody,
+  cvParseBody,
+  deliveryReviewBody,
+  productImageUploadBody,
+  riderApplicationStatusBody,
+  sellerStatusBody,
   productIdParam,
   productStatusBody,
   updateProductBody,
@@ -151,6 +158,36 @@ test('AI inputs are bounded before they reach the paid model', () => {
   bad(aiHelperBody, { sourceText: 's'.repeat(8001) });
   bad(aiHelperBody, { products: Array(51).fill({}) });
   bad(aiHelperBody, { productName: 123 });
+});
+
+test('admin review actions and delivery steps', () => {
+  ok(sellerStatusBody, { status: 'approved', identityVerified: true, documentsReviewed: true, payoutVerified: true });
+  ok(sellerStatusBody, { status: 'rejected', reason: 'Documents unreadable' });
+  bad(sellerStatusBody, { status: 'banned' });
+  bad(sellerStatusBody, { status: 'approved', identityVerified: 'yes' });
+  bad(sellerStatusBody, { status: 'rejected', reason: 'r'.repeat(1001) });
+  ok(riderApplicationStatusBody, { status: 'suspended', reason: null });
+  bad(riderApplicationStatusBody, { status: 'pending' });
+  ok(deliveryReviewBody, { rating: 5, wasTimely: true, reviewText: 'quick' });
+  bad(deliveryReviewBody, { rating: 6, wasTimely: true });
+  bad(deliveryReviewBody, { rating: 5, wasTimely: 'yes' });
+  bad(deliveryReviewBody, { rating: 5, wasTimely: true, reviewText: 'r'.repeat(2001) });
+});
+
+test('uploads and CV helpers are bounded', () => {
+  ok(productImageUploadBody, { Image: 'data:image/png;base64,AAAA' });
+  bad(productImageUploadBody, { Image: 'https://example.com/a.png' });
+  bad(productImageUploadBody, { Image: 'data:image/png;base64,' + 'A'.repeat(4_000_000) });
+  bad(productImageUploadBody, {});
+  ok(cvFormatBody, { experience: ['a'], education: [] });
+  bad(cvFormatBody, { experience: 'a' });
+  bad(cvFormatBody, { experience: Array(41).fill('a') });
+  ok(cvParseBody, { cvBase64: 'JVBERi0=' });
+  bad(cvParseBody, { cvBase64: '' });
+  bad(cvParseBody, { cvBase64: 'A'.repeat(8_000_001) });
+  ok(createAdminBody, { Name: 'Root', Email: 'a@b.co', Password: 'longenough', Number: '017', Address: { Street: 's', City: 'c' } });
+  bad(createAdminBody, { Password: 'p'.repeat(129) });
+  bad(createAdminBody, { Address: 'Dhaka' });
 });
 
 test('validateBody replies 400 with the first message and never calls the handler', () => {
