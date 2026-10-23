@@ -146,3 +146,104 @@ export const riderLocationBody = z.object({
   latitude: z.preprocess((v) => (typeof v === 'string' && v.trim() !== '' ? Number(v) : v), z.number({ error: 'Choose a valid location on the map.' }).min(-90, 'Choose a valid location on the map.').max(90, 'Choose a valid location on the map.')),
   longitude: z.preprocess((v) => (typeof v === 'string' && v.trim() !== '' ? Number(v) : v), z.number({ error: 'Choose a valid location on the map.' }).min(-180, 'Choose a valid location on the map.').max(180, 'Choose a valid location on the map.')),
 });
+
+// --- catalogue: products, categories, bundles ------------------------------
+
+const decimalInput = (message: string) =>
+  z.preprocess((v) => (typeof v === 'string' && v.trim() !== '' ? Number(v) : v), z.number({ error: message }).finite(message));
+
+const imageRef = z.string({ error: 'Product images must be text.' }).max(4_000_000, 'A product image is too large.');
+
+/**
+ * Types and size caps for a product write. Business rules (required fields, price range, word counts,
+ * seller approval) stay in the handler; `.loose()` keeps fields this schema does not know about.
+ */
+const productFields = {
+  Name: z.string({ error: 'Product name must be text.' }).trim().max(80, 'Product titles must be 80 characters or fewer.'),
+  Image: imageRef.nullable(),
+  Video_URL: z.string().max(2048, 'Product video must use a valid HTTP or HTTPS URL under 2048 characters.').nullable(),
+  Images: z.array(imageRef).max(30, 'A product can have up to 7 images.'),
+  Highlights: z.array(z.string().max(300, 'Each highlight must be 300 characters or fewer.')).max(30, 'Too many highlights.'),
+  Description: z.string({ error: 'Description must be text.' }).max(6000, 'Product descriptions must be 300 words or fewer.').nullable(),
+  Warranty_Information: z.string().max(2000, 'Warranty information is too long.').nullable(),
+  Return_Policy: z.string().max(2000, 'Return policy is too long.').nullable(),
+  Price: decimalInput('Price must be between 0.01 and 99,999,999.99.'),
+  Voucher: z.string().max(100, 'Voucher is too long.').nullable(),
+  Voucher_Expires_At: z.union([z.string().max(64, 'Enter a valid voucher end date.'), z.null()]),
+  Stock: wholeNumber(0, 10_000_000, 'Stock must be a whole number.'),
+  Category_ID: idString('Choose a valid category.'),
+  Seller_ID: idString('Choose a valid seller.'),
+  Product_Status: z.string().max(40, 'Invalid product status.'),
+  Size_Gender: z.string().max(20, 'Invalid size category.').nullable(),
+  Sizes: z.array(z.string().max(40, 'Each size must be 40 characters or fewer.')).max(40, 'Too many sizes.'),
+  Size_Chart: z.array(z.object({}).loose()).max(60, 'Size chart is too large.'),
+};
+
+export const createProductBody = z.object({ ...productFields }).partial().loose();
+export const updateProductBody = z.object({ ...productFields }).partial().loose();
+
+export const productStatusBody = z.object({
+  status: z.enum(['active', 'inactive', 'deactivated'], { error: 'Valid status is required' }),
+});
+
+export const categoryBody = z.object({ Name: requiredText(80, 'Category Name is required') });
+
+export const createBundleBody = z.object({
+  Name: requiredText(120, 'Bundle name is required and must be 120 characters or fewer.'),
+  Product_IDs: z.array(z.string().max(80), { error: 'Choose between 2 and 5 products for a bundle.' }).max(20, 'Choose between 2 and 5 products for a bundle.'),
+  Discount_Percent: decimalInput('Bundle discount must be between 0 and 50 percent.'),
+  Ends_At: z.union([z.string().max(64, 'Bundle end date must be in the future.'), z.null()]).optional(),
+});
+
+export const bundleActiveBody = z.object({ Active: z.boolean({ error: 'Active must be a boolean.' }) });
+
+// --- wishlist, analytics ---------------------------------------------------
+
+export const productIdParam = z.object({ productId: idString('Invalid product ID.') });
+
+export const analyticsEventBody = z.object({
+  Product_ID: idString('A valid product event is required.'),
+  Event_Type: z.enum(['impression', 'click'], { error: 'A valid product event is required.' }),
+  Session_ID: z.string({ error: 'A valid product event is required.' }).regex(/^[a-zA-Z0-9_-]{16,64}$/, 'A valid product event is required.'),
+});
+
+// --- AI assistant ----------------------------------------------------------
+
+const aiText = (max: number) => z.string().max(max, `Keep this under ${max} characters.`);
+
+/** One loose schema for the single-shot AI helpers: every named field is type- and size-capped. */
+export const aiHelperBody = z
+  .object({
+    kind: aiText(40),
+    field: aiText(40),
+    shopName: aiText(200),
+    productName: aiText(300),
+    categoryName: aiText(200),
+    productFacts: z.union([aiText(4000), z.array(aiText(500)).max(40), z.object({}).loose()]),
+    sourceText: aiText(8000),
+    styleIndex: z.union([wholeNumber(0, 100, 'Invalid style.'), z.null()]),
+    productDescription: aiText(4000),
+    sentiment: aiText(40),
+    notes: aiText(2000),
+    riderName: aiText(200),
+    rating: wholeNumber(1, 5, 'Rating must be a whole number from 1 to 5'),
+    wasTimely: z.boolean(),
+    products: z.array(z.unknown()).max(50, 'Too many products.'),
+    shippingAddress: z.union([aiText(1000), z.object({}).loose()]),
+    preferences: z.union([aiText(2000), z.object({}).loose()]),
+    gender: aiText(40),
+    imageUrl: aiText(2048),
+  })
+  .partial()
+  .loose();
+
+export const aiChatBody = z
+  .object({
+    message: z.string({ error: 'Message text is required' }).trim().min(1, 'Message text is required').max(4000, 'Messages can be at most 4000 characters.'),
+    history: z.array(z.object({}).loose()).max(60, 'Conversation history is too long.').optional(),
+    role: aiText(60).optional(),
+    taskComplexity: aiText(40).nullable().optional(),
+    requestedModel: aiText(80).nullable().optional(),
+  })
+  .loose();
+export const cartIdParam = z.object({ cartId: idString('Invalid cart item ID.') });
