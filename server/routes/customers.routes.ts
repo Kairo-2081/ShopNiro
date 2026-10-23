@@ -17,6 +17,7 @@ import { requireAuth, AuthRequest } from '../middleware/auth.ts';
 import { Customer } from '../../src/types.ts';
 import { sendWelcomeOfferEmail } from '../services/email.service.ts';
 import { publicMessage } from '../middleware/errorHandler.ts';
+import { newId } from '../lib/ids.ts';
 
 const router = Router();
 const registrationRateLimit = rateLimit({
@@ -78,7 +79,7 @@ router.post('/', registrationRateLimit, async (req, res) => {
       return res.status(409).json({ error: 'An account with this email address already exists. Please log in instead.' });
     }
 
-    const id = `CUST-${Date.now()}`;
+    const id = newId('CUST');
     const hashedPassword = await hashPassword(Password);
     const name = Name || Username || 'Customer User';
     const username = Username || cleanEmail.split('@')[0].toLowerCase().replace(/[^a-z0-9]/g, '');

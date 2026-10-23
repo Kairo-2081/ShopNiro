@@ -8,6 +8,7 @@ import { processRefundQueue } from './payment.routes.ts';
 import { discountedPriceForVoucher, discountedUnitPrice, getVoucherRule, isVoucherExpired, normalizeVoucherCode } from '../../src/lib/vouchers.ts';
 import { calculateBundlePrices } from '../../src/lib/bundles.ts';
 import { publicMessage } from '../middleware/errorHandler.ts';
+import { newId, newTrackingId } from '../lib/ids.ts';
 
 const router = Router();
 
@@ -149,10 +150,8 @@ router.post('/', requireAuth, async (req: AuthRequest, res) => {
       return res.status(403).json({ error: 'You can only place orders for your own account.' });
     }
 
-    const trackNum1 = Math.floor(1000 + Math.random() * 9000);
-    const trackNum2 = Math.floor(1000 + Math.random() * 9000);
-    const Tracking_ID = `TRK-${trackNum1}-${trackNum2}`;
-    const id = `ORD-${Date.now()}`;
+    const Tracking_ID = newTrackingId();
+    const id = newId('ORD');
     const shipAddrJson = JSON.stringify(Shipping_Address);
     const billAddrJson = JSON.stringify(Billing_Address || Shipping_Address);
     const addInfo = Additional_Info || '';

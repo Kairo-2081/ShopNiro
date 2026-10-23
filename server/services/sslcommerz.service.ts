@@ -4,6 +4,8 @@
  * and bKash / Nagad / Rocket / Card processing.
  */
 
+import { newId } from '../lib/ids.ts';
+
 export interface SSLCommerzInitParams {
   tran_id: string;
   total_amount: number;
@@ -134,7 +136,7 @@ class SSLCommerzService {
     const simulatorUrl = `${hostUrl}/api/payment/simulator?tran_id=${encodeURIComponent(params.tran_id)}`;
     return {
       status: 'SUCCESS',
-      sessionkey: `SSLCZ-SESS-${Date.now()}`,
+      sessionkey: newId('SSLCZ-SESS'),
       GatewayPageURL: simulatorUrl,
       DirectPaymentURLbKash: simulatorUrl,
       isSandbox: this.isSandbox,

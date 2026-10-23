@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { query } from '../db/index.ts';
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth.ts';
 import { Category } from '../../src/types.ts';
+import { newId } from '../lib/ids.ts';
 
 const router = Router();
 
@@ -33,7 +34,7 @@ router.post('/', requireAuth, requireRole(['admin']), async (req: AuthRequest, r
     if (!Name || !Name.trim()) {
       return res.status(400).json({ error: 'Category Name is required' });
     }
-    const id = `CAT-${Date.now()}`;
+    const id = newId('CAT');
     const result = await query(`SELECT * FROM gocart_category_create($1, $2)`, [id, Name.trim()]);
     const row = result.rows[0];
     res.status(201).json({ Category_ID: row.id, Name: row.name });

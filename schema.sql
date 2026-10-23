@@ -1619,7 +1619,7 @@ CREATE OR REPLACE FUNCTION gocart_products_list()
 RETURNS SETOF products
 LANGUAGE SQL STABLE
 AS $$
-    SELECT * FROM products ORDER BY id DESC;
+    SELECT * FROM products ORDER BY created_at DESC NULLS LAST, id DESC;
 $$;
 
 CREATE OR REPLACE FUNCTION gocart_product_get(p_id VARCHAR)
