@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { query } from '../db/index.ts';
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth.ts';
 import { ProductBundle } from '../../src/types.ts';
+import { newId } from '../lib/ids.ts';
 
 const router = Router();
 
@@ -77,7 +78,7 @@ router.post('/', requireAuth, requireRole(['seller']), async (req: AuthRequest, 
       return res.status(400).json({ error: 'Bundles can include only active, in-stock products from your store.' });
     }
 
-    const id = `BND-${Date.now()}`;
+    const id = newId('BND');
     const result = await query(`
       INSERT INTO seller_bundles (id, seller_id, name, product_ids_json, discount_percent, ends_at, active)
       VALUES ($1, $2, $3, $4::jsonb, $5, $6, TRUE)

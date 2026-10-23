@@ -15,6 +15,7 @@ import {
   readOAuthRegistrationCookie,
 } from '../middleware/auth.ts';
 import { Address, Rider } from '../../src/types.ts';
+import { newId } from '../lib/ids.ts';
 
 const router = Router();
 const createApplicationReviewAudit = async (accountType: 'seller' | 'rider', accountId: string, adminId: string, decision: 'approved' | 'rejected', reason: string) => {
@@ -382,7 +383,7 @@ router.post('/apply', riderApplicationRateLimit, async (req, res) => {
 
   const client = await pool.connect();
   try {
-    const riderId = `RDR-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const riderId = newId('RDR');
     const username = String(Username).trim().toLowerCase();
     const email = cleanEmail;
     await client.query('BEGIN');
