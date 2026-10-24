@@ -21,14 +21,24 @@ import {
   productStatusBody,
   updateProductBody,
   createOrderBody,
+  customerRegisterBody,
+  customerUpdateBody,
+  emptyBody,
+  gatewayReturnBody,
   loginBody,
   paymentInitBody,
   payoutPayBody,
   resourceIdParam,
+  riderApplyBody,
   riderLocationBody,
+  riderProfileBody,
   riderWithdrawalBody,
   sellerPayoutRequestBody,
+  sellerProfileBody,
+  sellerRegisterBody,
   signupBody,
+  simulatorCompleteBody,
+  sslcommerzIpnBody,
   sslcommerzValidateBody,
   withdrawalStatusBody,
 } from '../server/validation/schemas.ts';
@@ -200,6 +210,92 @@ test('validateBody replies 400 with the first message and never calls the handle
   assert.equal(called, false);
   assert.equal(payload.error, 'Username/Email and Password are required');
   assert.ok(Array.isArray(payload.issues));
+});
+
+const goodAddress = { House_Name: '12', Street: 'Road 5', City: 'Dhaka', Postal_Code: '1207', Latitude: 23.8, Longitude: 90.4 };
+const pdfDataUrl = 'data:application/pdf;base64,JVBERi0x';
+
+test('customer registration: required fields keep their messages, types and sizes are capped', () => {
+  const good = { Name: 'Ayesha', Email: 'a@example.com', Password: 'longenough1', Number: '01700000000', Address: goodAddress, Marketing_Consent: true };
+  ok(customerRegisterBody, good);
+  bad(customerRegisterBody, { ...good, Password: 'short' });
+  assert.equal((customerRegisterBody.safeParse({ ...good, Number: '  ' }) as any).error.issues[0].message, 'A phone number is required');
+  assert.equal((customerRegisterBody.safeParse({ ...good, Address: { ...goodAddress, City: '' } }) as any).error.issues[0].message, 'Select a location and provide a street and city');
+  bad(customerRegisterBody, { ...good, Password: 'x'.repeat(129) });
+  bad(customerRegisterBody, { ...good, Name: 'x'.repeat(121) });
+  bad(customerRegisterBody, { ...good, Name: { $gt: '' } });
+  bad(customerRegisterBody, { ...good, Marketing_Consent: 'yes' });
+  bad(customerRegisterBody, { ...good, Address: 'Dhaka' });
+  assert.equal('Role' in (customerRegisterBody.parse({ ...good, Role: 'admin' }) as object), false, 'unknown keys are dropped');
+});
+
+test('customer update: every field optional but typed and capped', () => {
+  ok(customerUpdateBody, {});
+  ok(customerUpdateBody, { Name: 'New', Address: { City: 'Dhaka', Latitude: null, Longitude: null } });
+  bad(customerUpdateBody, { Name: 123 });
+  bad(customerUpdateBody, { Email: 'x'.repeat(256) });
+  bad(customerUpdateBody, { Address: { Street: 'x'.repeat(201) } });
+  bad(customerUpdateBody, { Address: [] });
+});
+
+test('seller registration: payout, identity document and address rules', () => {
+  const good = { Name: 'Shop', Email: 's@example.com', Password: 'longenough1', Number: '01700000000', Address: goodAddress, Payout_Method: 'bkash', Payout_Account: '01700000000', Identity_Document: pdfDataUrl };
+  ok(sellerRegisterBody, good);
+  ok(sellerRegisterBody, { ...good, Password: undefined });
+  assert.equal((sellerRegisterBody.safeParse({ ...good, Name: '' }) as any).error.issues[0].message, 'Name and Email are required');
+  assert.equal((sellerRegisterBody.safeParse({ ...good, Payout_Method: 'cash' }) as any).error.issues[0].message, 'Choose bKash or bank payout and provide a valid payout account.');
+  assert.equal((sellerRegisterBody.safeParse({ ...good, Identity_Document: undefined }) as any).error.issues[0].message, 'Upload a government ID document.');
+  bad(sellerRegisterBody, { ...good, Identity_Document: 'x'.repeat(7_100_001) });
+  bad(sellerRegisterBody, { ...good, Payout_Account: 'x'.repeat(101) });
+  bad(sellerRegisterBody, { ...good, Description: 'x'.repeat(2001) });
+  bad(sellerRegisterBody, { ...good, Address: { ...goodAddress, Street: '' } });
+});
+
+test('seller profile update: typed, capped, payout method limited to the known set', () => {
+  ok(sellerProfileBody, { Name: 'Shop', Address: goodAddress, Payout_Method: 'bank', Payout_Account: '123456' });
+  ok(sellerProfileBody, { Payout_Method: '' });
+  bad(sellerProfileBody, { Payout_Method: 'paypal' });
+  bad(sellerProfileBody, { Name: ['a'] });
+  bad(sellerProfileBody, { Identity_Document: 'x'.repeat(7_100_001) });
+  bad(sellerProfileBody, { Address: { Latitude: { lat: 1 } } });
+});
+
+test('rider application and profile: lists, images and CV are bounded', () => {
+  const base = { Username: 'rider1', Name: 'Rafi', Email: 'r@example.com', Password: 'longenough1', Number: '01700000000', Present_Address: goodAddress, Permanent_Address: goodAddress, Has_CV: false, Experience: ['2 years'], Previous_Jobs: [], Education: ['HSC'] };
+  ok(riderApplyBody, base);
+  ok(riderApplyBody, { ...base, Has_CV: true, CV_Base64: pdfDataUrl, CV_File_Name: 'cv.pdf' });
+  assert.equal((riderApplyBody.safeParse({ ...base, Has_CV: 'no' }) as any).error.issues[0].message, 'Choose whether you have a CV.');
+  bad(riderApplyBody, { ...base, CV_Base64: 'x'.repeat(4_200_001) });
+  bad(riderApplyBody, { ...base, Profile_Image: 'x'.repeat(2_900_001) });
+  bad(riderApplyBody, { ...base, Experience: 'ten years' });
+  bad(riderApplyBody, { ...base, Experience: Array.from({ length: 51 }, () => 'x') });
+  bad(riderApplyBody, { ...base, Education: ['x'.repeat(501)] });
+  ok(riderProfileBody, { ...base, Password: '' });
+  bad(riderProfileBody, { ...base, Present_Address: 'Dhaka' });
+  bad(riderProfileBody, { ...base, Username: 'x'.repeat(61) });
+});
+
+test('gateway callbacks never reject: bad fields are dropped, not answered with 400', () => {
+  assert.deepEqual(gatewayReturnBody.parse({ tran_id: 'SSLCZ-1', val_id: 'VAL', card_no: '4111' }), { tran_id: 'SSLCZ-1', val_id: 'VAL' });
+  const dropped = gatewayReturnBody.parse({ tran_id: { a: 1 }, val_id: 'x'.repeat(500) });
+  assert.equal(dropped.tran_id, undefined);
+  assert.equal(dropped.val_id, undefined);
+  assert.equal(gatewayReturnBody.parse({}).tran_id, undefined);
+  assert.deepEqual(simulatorCompleteBody.parse({ tran_id: 5, account: ['x'], code: 'y'.repeat(500) }), { tran_id: '', account: '', code: '', security: '' });
+});
+
+test('IPN: the transaction id must look like ours, other fields are capped and optional', () => {
+  ok(sslcommerzIpnBody, { tran_id: 'SSLCZ-ABC-123', val_id: 'v', status: 'VALID', amount: '10.00' });
+  ok(sslcommerzIpnBody, { tran_id: 'SSLCZ-ABC-123' });
+  assert.equal((sslcommerzIpnBody.safeParse({ tran_id: "x'; DROP TABLE payments;--" }) as any).error.issues[0].message, 'A valid SSLCommerz transaction ID is required');
+  bad(sslcommerzIpnBody, {});
+  bad(sslcommerzIpnBody, { tran_id: ['SSLCZ-A'] });
+  assert.equal((sslcommerzIpnBody.parse({ tran_id: 'SSLCZ-A', status: { x: 1 } }) as any).status, undefined);
+});
+
+test('bodyless routes discard whatever the client sends', () => {
+  assert.deepEqual(emptyBody.parse({ anything: 1, nested: { a: 2 } }), {});
+  assert.deepEqual(emptyBody.parse({}), {});
 });
 
 // Ratchet: a write route must either validate its input or be on this list. The list may only shrink.

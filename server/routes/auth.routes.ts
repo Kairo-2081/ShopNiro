@@ -17,7 +17,7 @@ import {
 } from '../middleware/auth.ts';
 
 import { validateBody } from '../middleware/validate.ts';
-import { loginBody, signupBody } from '../validation/schemas.ts';
+import { emptyBody, loginBody, signupBody } from '../validation/schemas.ts';
 
 const router = Router();
 const loginRateLimit = rateLimit({
@@ -720,7 +720,7 @@ router.post('/login', loginRateLimit, validateBody(loginBody), async (req, res) 
 /**
  * POST /api/auth/logout
  */
-router.post('/logout', optionalAuth, async (req: AuthRequest, res) => {
+router.post('/logout', optionalAuth, validateBody(emptyBody), async (req: AuthRequest, res) => {
   try {
     if (req.user?.jti) {
       await query(`SELECT gocart_session_revoke($1)`, [req.user.jti]);

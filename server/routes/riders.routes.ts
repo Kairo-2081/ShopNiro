@@ -17,7 +17,7 @@ import {
 import { Address, Rider } from '../../src/types.ts';
 import { newId } from '../lib/ids.ts';
 import { validateBody, validateParams } from '../middleware/validate.ts';
-import { cvFormatBody, cvParseBody, resourceIdParam, riderApplicationStatusBody } from '../validation/schemas.ts';
+import { cvFormatBody, cvParseBody, resourceIdParam, riderApplicationStatusBody, riderApplyBody, riderProfileBody } from '../validation/schemas.ts';
 
 const router = Router();
 const createApplicationReviewAudit = async (accountType: 'seller' | 'rider', accountId: string, adminId: string, decision: 'approved' | 'rejected', reason: string) => {
@@ -300,7 +300,7 @@ router.post('/cv/format', validateBody(cvFormatBody), async (req, res) => {
   }
 });
 
-router.post('/apply', riderApplicationRateLimit, async (req, res) => {
+router.post('/apply', riderApplicationRateLimit, validateBody(riderApplyBody), async (req, res) => {
   const oauthRegistration = readOAuthRegistrationCookie(req);
   const {
     Username,
@@ -614,7 +614,7 @@ router.get('/me/cv', requireAuth, requireRole(['rider']), async (req: AuthReques
   }
 });
 
-router.put('/me', requireAuth, requireRole(['rider']), async (req: AuthRequest, res) => {
+router.put('/me', requireAuth, requireRole(['rider']), validateBody(riderProfileBody), async (req: AuthRequest, res) => {
   const {
     Username,
     Name,

@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { query, mapAddress } from '../db/index.ts';
+import { validateBody, validateParams } from '../middleware/validate.ts';
+import { customerRegisterBody, customerUpdateBody, resourceIdParam } from '../validation/schemas.ts';
 
 function getAddressCoordinates(address: any) {
   const latitude = address?.Latitude;
@@ -57,7 +59,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
  * POST /api/customers
  * Register a new customer (via schema gocart_customer_create)
  */
-router.post('/', registrationRateLimit, async (req, res) => {
+router.post('/', registrationRateLimit, validateBody(customerRegisterBody), async (req, res) => {
   try {
     const { Name, Email, Password, Number: phoneNum, Address, Username, Marketing_Consent } = req.body;
     if (typeof Password !== 'string' || Password.trim().length < 8) {
@@ -132,7 +134,7 @@ router.post('/', registrationRateLimit, async (req, res) => {
  * PUT /api/customers/:id
  * Updates customer details (via schema gocart_customer_update)
  */
-router.put('/:id', requireAuth, async (req: AuthRequest, res) => {
+router.put('/:id', requireAuth, validateParams(resourceIdParam), validateBody(customerUpdateBody), async (req: AuthRequest, res) => {
   try {
     const { id } = req.params;
     if (req.user!.role !== 'admin' && req.user!.entityId !== id) {
