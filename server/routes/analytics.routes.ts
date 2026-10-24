@@ -1,10 +1,12 @@
 import { Router } from 'express';
 import { query } from '../db/index.ts';
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth.ts';
+import { validateBody } from '../middleware/validate.ts';
+import { analyticsEventBody } from '../validation/schemas.ts';
 
 const router = Router();
 
-router.post('/events', async (req, res) => {
+router.post('/events', validateBody(analyticsEventBody), async (req, res) => {
   const productId = typeof req.body?.Product_ID === 'string' ? req.body.Product_ID.trim() : '';
   const eventType = req.body?.Event_Type;
   const sessionId = typeof req.body?.Session_ID === 'string' ? req.body.Session_ID : '';

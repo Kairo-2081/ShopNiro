@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { randomUUID } from 'node:crypto';
 import { query } from '../db/index.ts';
+import { validateBody } from '../middleware/validate.ts';
+import * as schemas from '../validation/schemas.ts';
 import { requireAuth, AuthRequest } from '../middleware/auth.ts';
 import { Review } from '../../src/types.ts';
 import { publicMessage } from '../middleware/errorHandler.ts';
@@ -52,16 +54,19 @@ router.get('/', async (req, res) => {
  * POST /api/reviews
  * Submit a review for a product (via schema gocart_review_create)
  */
-router.post('/', requireAuth, async (req: AuthRequest, res) => {
+router.post('/', requireAuth, validateBody(schemas.createReviewBody), async (req: AuthRequest, res) => {
   try {
-    const { Product_ID, Customer_ID, Customer_Name, Review_text, Rating } = req.body;
-    const ratingNum = Number(Rating);
-    if (!Product_ID || !Customer_ID || !Number.isInteger(ratingNum) || ratingNum < 1 || ratingNum > 5) {
-      return res.status(400).json({ error: 'Product_ID, Customer_ID, and a rating from 1 to 5 are required' });
+    const { Product_ID, Customer_ID, Review_text, Rating } = req.body;
+    if (req.user!.role !== 'customer' || Customer_ID !== req.user!.entityId) {
+      return res.status(403).json({ error: 'You can only post reviews from your own customer account.' });
     }
+    const ratingNum = Number(Rating);
+
+    const customer = await query('SELECT name FROM customers WHERE id = $1', [req.user!.entityId]);
+    if (!customer.rows.length) return res.status(404).json({ error: 'Customer account not found.' });
 
     const id = `REV-${randomUUID()}`;
-    const custName = Customer_Name || 'Verified Customer';
+    const custName = String(customer.rows[0].name || '').trim() || 'Verified Customer';
     const revText = Review_text || '';
 
     const result = await query(
