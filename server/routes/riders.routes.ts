@@ -15,6 +15,7 @@ import {
   readOAuthRegistrationCookie,
 } from '../middleware/auth.ts';
 import { Address, Rider } from '../../src/types.ts';
+import { newId } from '../lib/ids.ts';
 import { validateBody, validateParams } from '../middleware/validate.ts';
 import { cvFormatBody, cvParseBody, resourceIdParam, riderApplicationStatusBody } from '../validation/schemas.ts';
 
@@ -384,7 +385,7 @@ router.post('/apply', riderApplicationRateLimit, async (req, res) => {
 
   const client = await pool.connect();
   try {
-    const riderId = `RDR-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const riderId = newId('RDR');
     const username = String(Username).trim().toLowerCase();
     const email = cleanEmail;
     await client.query('BEGIN');

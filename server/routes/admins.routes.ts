@@ -4,6 +4,7 @@ import { hashPassword } from '../db/password.ts';
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth.ts';
 import { Admin } from '../../src/types.ts';
 import { publicMessage } from '../middleware/errorHandler.ts';
+import { newId } from '../lib/ids.ts';
 import { validateBody } from '../middleware/validate.ts';
 import { createAdminBody } from '../validation/schemas.ts';
 
@@ -61,7 +62,7 @@ router.post('/', validateBody(createAdminBody), async (req, res) => {
       return res.status(409).json({ error: 'An account with this email address already exists. Please log in instead.' });
     }
 
-    const id = `ADM-${Date.now()}`;
+    const id = newId('ADM');
     if (typeof Password !== 'string' || Password.trim().length < 12) {
       return res.status(400).json({ error: 'Admin password must be at least 12 characters.' });
     }
