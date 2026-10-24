@@ -56,7 +56,16 @@ jobs:
         run: npm run lint
 
       - name: Run tests
-        run: npm test
+        shell: bash
+        run: |
+          set -o pipefail
+          npm test 2>&1 | tee test-output.log || {
+            # Surface failing tests as annotations so they are visible without downloading logs.
+            grep -E "^\s*not ok|^\s+(error|expected|actual|message):|Error:" test-output.log | head -40 | while IFS= read -r line; do
+              echo "::error::${line}"
+            done
+            exit 1
+          }
 
       - name: Build bundle
         run: npm run build
