@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import { randomInt } from 'node:crypto';
 import { AuthRequest, requireAuth, requireRole } from '../middleware/auth.ts';
 import { pool, query } from '../db/index.ts';
 import { requireCronSecret } from '../middleware/cronAuth.ts';
+import { newId } from '../lib/ids.ts';
 import { validateBody, validateParams } from '../middleware/validate.ts';
 import { deliveryReviewBody, resourceIdParam, riderLocationBody, riderWithdrawalBody, withdrawalStatusBody } from '../validation/schemas.ts';
 
@@ -437,7 +437,7 @@ router.post('/customer-deliveries/:id/review', requireAuth, requireRole(['custom
     await client.query(
       `INSERT INTO rider_reviews (id, delivery_id, rider_id, customer_id, rating, review_text, was_timely)
       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [`RRV-${Date.now()}-${randomInt(1000, 10000)}`, delivery.id, delivery.rider_id, req.user!.entityId, rating, reviewText, wasTimely]
+      [newId('RRV'), delivery.id, delivery.rider_id, req.user!.entityId, rating, reviewText, wasTimely]
     );
 
     if (Boolean(delivery.was_timely) !== wasTimely) {
@@ -588,7 +588,7 @@ router.post('/wallet/withdrawals', requireAuth, requireRole(['rider']), requireA
       await client.query('ROLLBACK');
       return res.status(409).json({ error: 'Withdrawal amount exceeds your available wallet balance. COD funds unlock after month-end.' });
     }
-    const withdrawalId = `WD-${Date.now()}-${randomInt(1000, 10000)}`;
+    const withdrawalId = newId('WD');
     await client.query(
       `INSERT INTO rider_withdrawals (id, rider_id, amount, payout_method, payout_account)
       VALUES ($1, $2, $3, $4, $5)`,

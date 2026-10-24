@@ -5,6 +5,7 @@ import { requireAuth, requireRole, AuthRequest } from '../middleware/auth.ts';
 import { storeProductImageIfInline, uploadProductImage } from '../services/productImages.service.ts';
 import { Product } from '../../src/types.ts';
 import { publicMessage } from '../middleware/errorHandler.ts';
+import { newId } from '../lib/ids.ts';
 import { validateBody, validateParams } from '../middleware/validate.ts';
 import { createProductBody, productImageUploadBody, productStatusBody, resourceIdParam, updateProductBody } from '../validation/schemas.ts';
 
@@ -213,7 +214,7 @@ router.post('/', requireAuth, requireRole(['seller', 'admin']), validateBody(cre
       return res.status(403).json({ error: 'You can only publish products for your own store.' });
     }
 
-    const id = `PROD-${Date.now()}`;
+    const id = newId('PROD');
     const submittedImages = Array.isArray(Images) ? Images.map(String).map((url: string) => url.trim()).filter(Boolean) : [];
     const imagesToStore = submittedImages.length
       ? submittedImages

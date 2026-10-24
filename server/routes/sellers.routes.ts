@@ -15,6 +15,7 @@ import {
 import { createSellerDocumentSignedUrl, deleteSellerDocument, uploadSellerDocument } from '../services/sellerDocuments.service.ts';
 import { Seller } from '../../src/types.ts';
 import { publicMessage } from '../middleware/errorHandler.ts';
+import { newId } from '../lib/ids.ts';
 import { validateBody } from '../middleware/validate.ts';
 import { sellerPayoutRequestBody } from '../validation/schemas.ts';
 import { validateParams } from '../middleware/validate.ts';
@@ -135,7 +136,7 @@ router.post('/', registrationRateLimit, async (req, res) => {
       return res.status(409).json({ error: 'An account with this email address already exists. Please log in instead.' });
     }
 
-    const id = `SEL-${Date.now()}`;
+    const id = newId('SEL');
     const hashedPassword = await hashPassword(usesOAuth ? randomUUID() : Password);
     const logoUrl = Logo || 'https://images.unsplash.com/photo-1513519245088-0e12902e5a38?w=200&auto=format&fit=crop&q=80';
     const desc = Description || '';
