@@ -178,7 +178,7 @@ jobs:
           merge-multiple: true
 
       - name: Publish APK and Windows executables
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: release-artifacts/*
         env:
