@@ -6,7 +6,7 @@ import { requireAuth, requireRole, AuthRequest } from '../middleware/auth.ts';
 import { GatewayError, sslcommerz } from '../services/sslcommerz.service.ts';
 import { publicMessage } from '../middleware/errorHandler.ts';
 import { validateBody } from '../middleware/validate.ts';
-import { paymentInitBody, sslcommerzValidateBody } from '../validation/schemas.ts';
+import { gatewayReturnBody, paymentInitBody, simulatorCompleteBody, sslcommerzIpnBody, sslcommerzValidateBody } from '../validation/schemas.ts';
 
 const router = Router();
 const paymentInitRateLimit = rateLimit({
@@ -428,7 +428,7 @@ router.get('/simulator', async (req, res) => {
   }
 });
 
-router.post('/simulator/complete', async (req, res) => {
+router.post('/simulator/complete', validateBody(simulatorCompleteBody), async (req, res) => {
   if (!sslcommerz.isPaymentSimulatorEnabled()) return res.sendStatus(404);
   const tranId = typeof req.body?.tran_id === 'string' ? req.body.tran_id : '';
   if (!/^SSLCZ-[A-Z0-9-]+$/.test(tranId)) return res.status(400).send('Invalid simulated transaction.');
@@ -715,14 +715,15 @@ const handleSslCommerzExit = async (req: AuthRequest, res: any, status: 'failed'
   return res.redirect(303, paymentReturnUrl(status, orderId));
 };
 
-router.post('/sslcommerz/success', handleSslCommerzSuccess);
+router.post('/sslcommerz/success', validateBody(gatewayReturnBody), handleSslCommerzSuccess);
 router.get('/sslcommerz/success', handleSslCommerzSuccess);
-router.post('/sslcommerz/fail', (req, res) => handleSslCommerzExit(req, res, 'failed'));
+router.post('/sslcommerz/fail', validateBody(gatewayReturnBody), (req, res) => handleSslCommerzExit(req, res, 'failed'));
 router.get('/sslcommerz/fail', (req, res) => handleSslCommerzExit(req, res, 'failed'));
-router.post('/sslcommerz/cancel', (req, res) => handleSslCommerzExit(req, res, 'cancelled'));
+router.post('/sslcommerz/cancel', validateBody(gatewayReturnBody), (req, res) => handleSslCommerzExit(req, res, 'cancelled'));
 router.get('/sslcommerz/cancel', (req, res) => handleSslCommerzExit(req, res, 'cancelled'));
 
-router.post('/sslcommerz/ipn', async (req, res) => {
+// Authenticate first, then validate: an unauthenticated caller must always get 401, never a schema error.
+const requireIpnToken = (req: any, res: any, next: () => void) => {
   const configuredToken = process.env.SSLCOMMERZ_IPN_TOKEN || sslcommerz.getIpnToken();
   const receivedToken = typeof req.query.token === 'string' ? req.query.token : '';
   const expectedToken = configuredToken ? Buffer.from(configuredToken) : Buffer.alloc(0);
@@ -730,11 +731,11 @@ router.post('/sslcommerz/ipn', async (req, res) => {
   if (!configuredToken || tokenBuffer.length !== expectedToken.length || !timingSafeEqual(tokenBuffer, expectedToken)) {
     return res.status(401).json({ error: 'Invalid SSLCommerz IPN authentication token.' });
   }
+  next();
+};
 
+router.post('/sslcommerz/ipn', requireIpnToken, validateBody(sslcommerzIpnBody), async (req, res) => {
   const { tran_id, val_id, status } = req.body;
-  if (!tran_id || typeof tran_id !== 'string' || !/^SSLCZ-[A-Z0-9-]+$/.test(tran_id)) {
-    return res.status(400).json({ error: 'A valid SSLCommerz transaction ID is required' });
-  }
   if (status !== 'VALID' && status !== 'VALIDATED') {
     return res.status(202).send('IPN Ignored');
   }
