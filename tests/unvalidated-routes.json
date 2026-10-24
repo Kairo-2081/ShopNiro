@@ -1,0 +1,16 @@
+[
+  "auth.routes.ts POST /logout",
+  "cron.routes.ts POST /expire-orders",
+  "cron.routes.ts POST /refunds",
+  "customers.routes.ts POST /",
+  "customers.routes.ts PUT /:id",
+  "payment.routes.ts POST /simulator/complete",
+  "payment.routes.ts POST /sslcommerz/cancel",
+  "payment.routes.ts POST /sslcommerz/fail",
+  "payment.routes.ts POST /sslcommerz/ipn",
+  "payment.routes.ts POST /sslcommerz/success",
+  "riders.routes.ts POST /apply",
+  "riders.routes.ts PUT /me",
+  "sellers.routes.ts POST /",
+  "sellers.routes.ts PUT /me/profile"
+]

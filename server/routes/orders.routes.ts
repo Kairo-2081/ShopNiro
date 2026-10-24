@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { randomInt, randomUUID } from 'node:crypto';
 import type { PoolClient } from 'pg';
 import { pool, query } from '../db/index.ts';
+import { validateBody, validateParams } from '../middleware/validate.ts';
+import * as schemas from '../validation/schemas.ts';
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth.ts';
 import { Order, ProductBundle } from '../../src/types.ts';
 import { processRefundQueue } from './payment.routes.ts';
@@ -125,7 +127,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
  * POST /api/orders
  * Checkout & place order using schema routine process_checkout or gocart_seed_row
  */
-router.post('/', requireAuth, async (req: AuthRequest, res) => {
+router.post('/', requireAuth, validateBody(schemas.createOrderBody), async (req: AuthRequest, res) => {
   try {
     const {
       Customer_ID,
@@ -410,7 +412,7 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res) => {
   }
 });
 
-router.post('/:id/cancellation-request', requireAuth, async (req: AuthRequest, res) => {
+router.post('/:id/cancellation-request', requireAuth, validateBody(schemas.cancellationRequestBody), async (req: AuthRequest, res) => {
   if (req.user?.role !== 'customer') return res.status(403).json({ error: 'Only customers can request order cancellation.' });
   const reason = typeof req.body?.reason === 'string' ? req.body.reason.trim().slice(0, 500) : '';
   try {
@@ -444,7 +446,7 @@ router.post('/:id/cancellation-request', requireAuth, async (req: AuthRequest, r
   }
 });
 
-router.patch('/cancellation-requests/:requestId/review', requireAuth, async (req: AuthRequest, res) => {
+router.patch('/cancellation-requests/:requestId/review', requireAuth, validateBody(schemas.cancellationReviewBody), async (req: AuthRequest, res) => {
   if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Only admins can review cancellation requests.' });
   const decision = req.body?.decision;
   if (!['approved', 'rejected'].includes(decision)) return res.status(400).json({ error: 'Choose approve or reject.' });
@@ -567,7 +569,7 @@ router.patch('/cancellation-requests/:requestId/review', requireAuth, async (req
  * PATCH /api/orders/:id/status
  * Updates order status (via schema gocart_order_status_update)
  */
-router.patch('/:id/revert-failed-payment', requireAuth, async (req: AuthRequest, res) => {
+router.patch('/:id/revert-failed-payment', requireAuth, validateParams(schemas.resourceIdParam), async (req: AuthRequest, res) => {
   let client: PoolClient | undefined;
   try {
     if (req.user?.role !== 'customer') {
@@ -669,7 +671,7 @@ router.patch('/:id/revert-failed-payment', requireAuth, async (req: AuthRequest,
   }
 });
 
-router.patch('/:id/status', requireAuth, async (req: AuthRequest, res) => {
+router.patch('/:id/status', requireAuth, validateBody(schemas.orderStatusBody), async (req: AuthRequest, res) => {
   try {
     const { id } = req.params;
     const status = req.body?.status ?? req.body?.Status;

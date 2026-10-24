@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { randomUUID } from 'node:crypto';
 import { query } from '../db/index.ts';
+import { validateBody, validateParams } from '../middleware/validate.ts';
+import * as schemas from '../validation/schemas.ts';
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth.ts';
 import { publicMessage } from '../middleware/errorHandler.ts';
 
@@ -56,7 +58,7 @@ router.get('/', requireAuth, requireRole(['customer']), async (req: AuthRequest,
  * POST /api/cart
  * Add item to cart or increment quantity if already exists (via schema gocart_cart_existing, gocart_cart_update, gocart_cart_create)
  */
-router.post('/', requireAuth, requireRole(['customer']), async (req: AuthRequest, res) => {
+router.post('/', requireAuth, requireRole(['customer']), validateBody(schemas.addToCartBody), async (req: AuthRequest, res) => {
   try {
     const { Customer_ID, Product_ID, Quantity = 1, Size = '' } = req.body;
     const custId = req.user!.entityId;
@@ -112,7 +114,7 @@ router.post('/', requireAuth, requireRole(['customer']), async (req: AuthRequest
  * PUT /api/cart/:cartId
  * Update item quantity in cart (via schema gocart_cart_update)
  */
-router.put('/:cartId', requireAuth, requireRole(['customer']), async (req: AuthRequest, res) => {
+router.put('/:cartId', requireAuth, requireRole(['customer']), validateBody(schemas.updateCartBody), async (req: AuthRequest, res) => {
   try {
     const { cartId } = req.params;
     const { Quantity } = req.body;
@@ -149,7 +151,7 @@ router.put('/:cartId', requireAuth, requireRole(['customer']), async (req: AuthR
  * DELETE /api/cart/:cartId
  * Remove item from cart (via schema gocart_cart_delete)
  */
-router.delete('/:cartId', requireAuth, requireRole(['customer']), async (req: AuthRequest, res) => {
+router.delete('/:cartId', requireAuth, requireRole(['customer']), validateParams(schemas.cartIdParam), async (req: AuthRequest, res) => {
   try {
     const { cartId } = req.params;
     const custId = req.user!.entityId;

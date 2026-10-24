@@ -3,6 +3,8 @@ import { query } from '../db/index.ts';
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth.ts';
 import { ProductBundle } from '../../src/types.ts';
 import { newId } from '../lib/ids.ts';
+import { validateBody, validateParams } from '../middleware/validate.ts';
+import { bundleActiveBody, createBundleBody, resourceIdParam } from '../validation/schemas.ts';
 
 const router = Router();
 
@@ -51,7 +53,7 @@ router.get('/seller', requireAuth, requireRole(['seller']), async (req: AuthRequ
   }
 });
 
-router.post('/', requireAuth, requireRole(['seller']), async (req: AuthRequest, res) => {
+router.post('/', requireAuth, requireRole(['seller']), validateBody(createBundleBody), async (req: AuthRequest, res) => {
   try {
     const name = typeof req.body?.Name === 'string' ? req.body.Name.trim() : '';
     const productIds = Array.isArray(req.body?.Product_IDs)
@@ -91,7 +93,7 @@ router.post('/', requireAuth, requireRole(['seller']), async (req: AuthRequest, 
   }
 });
 
-router.patch('/:id/active', requireAuth, requireRole(['seller']), async (req: AuthRequest, res) => {
+router.patch('/:id/active', requireAuth, requireRole(['seller']), validateParams(resourceIdParam), validateBody(bundleActiveBody), async (req: AuthRequest, res) => {
   if (typeof req.body?.Active !== 'boolean') return res.status(400).json({ error: 'Active must be a boolean.' });
   try {
     const result = await query(`
@@ -107,7 +109,7 @@ router.patch('/:id/active', requireAuth, requireRole(['seller']), async (req: Au
   }
 });
 
-router.delete('/:id', requireAuth, requireRole(['seller']), async (req: AuthRequest, res) => {
+router.delete('/:id', requireAuth, requireRole(['seller']), validateParams(resourceIdParam), async (req: AuthRequest, res) => {
   try {
     const result = await query('DELETE FROM seller_bundles WHERE id = $1 AND seller_id = $2 RETURNING id', [req.params.id, req.user!.entityId]);
     if (!result.rows.length) return res.status(404).json({ error: 'Bundle not found.' });

@@ -5,6 +5,8 @@ import { requireAuth, requireRole, AuthRequest } from '../middleware/auth.ts';
 import { Admin } from '../../src/types.ts';
 import { publicMessage } from '../middleware/errorHandler.ts';
 import { newId } from '../lib/ids.ts';
+import { validateBody } from '../middleware/validate.ts';
+import { createAdminBody } from '../validation/schemas.ts';
 
 const router = Router();
 
@@ -41,7 +43,7 @@ router.get('/', async (req, res) => {
  * POST /api/admins
  * Creates a new admin (via schema gocart_admin_create)
  */
-router.post('/', async (req, res) => {
+router.post('/', validateBody(createAdminBody), async (req, res) => {
   try {
     const { Name, Email, Password, Number: phoneNum, Address, Username } = req.body;
     const phone = typeof phoneNum === 'string' ? phoneNum.trim() : '';

@@ -6,6 +6,8 @@ import { storeProductImageIfInline, uploadProductImage } from '../services/produ
 import { Product } from '../../src/types.ts';
 import { publicMessage } from '../middleware/errorHandler.ts';
 import { newId } from '../lib/ids.ts';
+import { validateBody, validateParams } from '../middleware/validate.ts';
+import { createProductBody, productImageUploadBody, productStatusBody, resourceIdParam, updateProductBody } from '../validation/schemas.ts';
 
 const router = Router();
 
@@ -141,7 +143,7 @@ router.get('/:id', async (req, res) => {
  * Sellers upload each picture here first, then send the returned links when saving the product,
  * so the product request itself stays small.
  */
-router.post('/images', requireAuth, requireRole(['seller', 'admin']), productImageUploadLimit, async (req: AuthRequest, res) => {
+router.post('/images', requireAuth, requireRole(['seller', 'admin']), productImageUploadLimit, validateBody(productImageUploadBody), async (req: AuthRequest, res) => {
   try {
     const image = typeof req.body?.Image === 'string' ? req.body.Image : '';
     if (!image.startsWith('data:image/')) {
@@ -168,7 +170,7 @@ router.post('/images', requireAuth, requireRole(['seller', 'admin']), productIma
  * POST /api/products
  * Create product with seller approval moderation check (via schema gocart_product_create)
  */
-router.post('/', requireAuth, requireRole(['seller', 'admin']), async (req: AuthRequest, res) => {
+router.post('/', requireAuth, requireRole(['seller', 'admin']), validateBody(createProductBody), async (req: AuthRequest, res) => {
   try {
     const { Name, Image, Video_URL, Images, Highlights, Description, Warranty_Information, Return_Policy, Price, Voucher, Voucher_Expires_At, Featured_Deal, Stock, Category_ID, Seller_ID, Product_Status, Size_Gender, Sizes, Size_Chart } = req.body;
     if (!Name || Price === undefined || !Category_ID || !Seller_ID) {
@@ -266,7 +268,7 @@ router.post('/', requireAuth, requireRole(['seller', 'admin']), async (req: Auth
  * PUT /api/products/:id
  * Updates product details (via schema gocart_product_update)
  */
-router.put('/:id', requireAuth, requireRole(['seller', 'admin']), async (req: AuthRequest, res) => {
+router.put('/:id', requireAuth, requireRole(['seller', 'admin']), validateParams(resourceIdParam), validateBody(updateProductBody), async (req: AuthRequest, res) => {
   try {
     const { id } = req.params;
     const existing = await query(`SELECT * FROM gocart_product_get($1)`, [id]);
@@ -360,7 +362,7 @@ router.put('/:id', requireAuth, requireRole(['seller', 'admin']), async (req: Au
  * PATCH /api/products/:id/status
  * Updates product status (via schema gocart_product_status_update)
  */
-router.patch('/:id/status', requireAuth, requireRole(['seller', 'admin']), async (req: AuthRequest, res) => {
+router.patch('/:id/status', requireAuth, requireRole(['seller', 'admin']), validateParams(resourceIdParam), validateBody(productStatusBody), async (req: AuthRequest, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -394,7 +396,7 @@ router.patch('/:id/status', requireAuth, requireRole(['seller', 'admin']), async
  * DELETE /api/products/:id
  * Delete a product (via schema gocart_product_delete)
  */
-router.delete('/:id', requireAuth, requireRole(['seller', 'admin']), async (req: AuthRequest, res) => {
+router.delete('/:id', requireAuth, requireRole(['seller', 'admin']), validateParams(resourceIdParam), async (req: AuthRequest, res) => {
   try {
     const { id } = req.params;
     await query(`SELECT * FROM gocart_product_delete($1)`, [id]);

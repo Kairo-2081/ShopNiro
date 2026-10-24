@@ -679,6 +679,61 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_refunds_payment
 CREATE UNIQUE INDEX IF NOT EXISTS uq_refunds_manual_cash_order
     ON refunds(order_id) WHERE method = 'manual_cash';
 
+-- Money integrity: foreign keys and CHECK constraints for payments and orders.payment_status.
+-- (orders.status, non-negative subtotal/shipping and order-line price/quantity already have CHECKs.)
+-- Each constraint is added NOT VALID first, so new writes are checked immediately, and then validated
+-- against existing rows. A constraint that existing data violates stays NOT VALID (enforced for new
+-- rows, ignored for legacy ones) and raises a NOTICE; fix the rows, then run
+--   ALTER TABLE <table> VALIDATE CONSTRAINT <name>;
+-- Deliberately NOT added: a unique index on payments(order_id) WHERE status = 'VALIDATED'. A duplicate
+-- payment is marked VALIDATED before it is refunded, so that index would make the write fail after the
+-- gateway had already taken the customer's money. uq_refunds_payment already stops double refunds.
+CREATE INDEX IF NOT EXISTS idx_payments_customer ON payments(customer_id);
+
+DO $$
+DECLARE
+    item RECORD;
+BEGIN
+    FOR item IN
+        SELECT * FROM (VALUES
+            ('payments', 'fk_payments_order',
+             'FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE RESTRICT'),
+            ('payments', 'fk_payments_customer',
+             'FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE RESTRICT'),
+            ('payments', 'chk_payments_order_required',
+             'CHECK (order_id IS NOT NULL)'),
+            ('payments', 'chk_payments_status',
+             $c$CHECK (status IN ('PENDING', 'VALIDATED', 'EXPIRED', 'REFUNDED'))$c$),
+            ('payments', 'chk_payments_amount',
+             'CHECK (amount > 0)'),
+            ('orders', 'chk_orders_payment_status',
+             $c$CHECK (payment_status IN ('pending', 'paid', 'refunded', 'expired'))$c$)
+        ) AS constraints(table_name, constraint_name, definition)
+    LOOP
+        IF NOT EXISTS (
+            SELECT 1 FROM pg_constraint
+            WHERE conname = item.constraint_name
+              AND conrelid = to_regclass('public.' || item.table_name)
+        ) THEN
+            EXECUTE format('ALTER TABLE %I ADD CONSTRAINT %I %s NOT VALID',
+                item.table_name, item.constraint_name, item.definition);
+        END IF;
+        IF EXISTS (
+            SELECT 1 FROM pg_constraint
+            WHERE conname = item.constraint_name
+              AND conrelid = to_regclass('public.' || item.table_name)
+              AND NOT convalidated
+        ) THEN
+            BEGIN
+                EXECUTE format('ALTER TABLE %I VALIDATE CONSTRAINT %I', item.table_name, item.constraint_name);
+            EXCEPTION WHEN OTHERS THEN
+                RAISE NOTICE 'Constraint % on % left NOT VALID: existing rows violate it (%).',
+                    item.constraint_name, item.table_name, SQLERRM;
+            END;
+        END IF;
+    END LOOP;
+END $$;
+
 -- Upgrade old deployments: copy profile credentials into users, then remove duplicate columns.
 DO $$
 BEGIN

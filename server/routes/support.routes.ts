@@ -2,6 +2,8 @@ import { Router } from 'express';
 import { randomUUID } from 'node:crypto';
 import rateLimit from 'express-rate-limit';
 import { query } from '../db/index.ts';
+import { validateBody } from '../middleware/validate.ts';
+import * as schemas from '../validation/schemas.ts';
 import { AuthRequest, requireAuth, requireRole } from '../middleware/auth.ts';
 import { sendSupportRequestEmail } from '../services/email.service.ts';
 
@@ -14,7 +16,7 @@ const supportSubmissionLimit = rateLimit({
   message: { error: 'Too many support requests. Please try again later.' },
 });
 
-router.post('/requests', supportSubmissionLimit, async (req, res) => {
+router.post('/requests', supportSubmissionLimit, validateBody(schemas.supportRequestBody), async (req, res) => {
   const nameValue = typeof req.body?.Name === 'string' ? req.body.Name : req.body?.name;
   const emailValue = typeof req.body?.Email === 'string' ? req.body.Email : req.body?.email;
   const subjectValue = typeof req.body?.Subject === 'string' ? req.body.Subject : req.body?.subject;
@@ -76,7 +78,7 @@ router.get('/requests', requireAuth, requireRole(['admin']), async (req: AuthReq
   }
 });
 
-router.patch('/requests/:id/status', requireAuth, requireRole(['admin']), async (req, res) => {
+router.patch('/requests/:id/status', requireAuth, requireRole(['admin']), validateBody(schemas.supportStatusBody), async (req, res) => {
   const status = req.body?.status;
   const adminNotes = typeof req.body?.adminNotes === 'string' ? req.body.adminNotes.trim().slice(0, 2000) : '';
   if (!['open', 'in_progress', 'resolved'].includes(status)) {
