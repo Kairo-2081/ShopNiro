@@ -294,3 +294,130 @@ export const createAdminBody = z
   })
   .partial()
   .loose();
+
+// --- registration, profile forms, gateway callbacks and bodyless routes ---------------------
+
+/**
+ * Types and size caps for the forms. Required-field rules and their messages stay in the handlers, which
+ * the UI already depends on; this layer guarantees a handler never sees an object, array or megabyte
+ * string where it expects short text.
+ */
+const coordinate = z.union([z.number(), z.string().max(32), z.null()]).optional();
+
+const formAddress = z.object({
+  House_Name: text(120).optional(),
+  Street: text(200).optional(),
+  City: text(100).optional(),
+  Postal_Code: text(20).optional(),
+  Additional_Info: text(500).optional(),
+  Latitude: coordinate,
+  Longitude: coordinate,
+});
+
+const addressRequired = 'Select a location and provide a street and city';
+const registrationAddress = formAddress.extend({
+  Street: requiredText(200, addressRequired),
+  City: requiredText(100, addressRequired),
+});
+
+const passwordField = z.string({ error: 'Password must be at least 8 characters.' }).max(128, 'Password must be 128 characters or fewer.');
+const lineList = z.array(z.string().max(500)).max(50).optional();
+// 5 MB / 3 MB / 2 MB of binary is about 7.0M / 4.0M / 2.8M characters of base64 plus the data: prefix.
+const base64Id = z.string().max(7_100_000, 'Upload a valid ID document no larger than 5 MB.');
+const base64Cv = z.string().max(4_200_000, 'CV must be a valid PDF file under 3 MB.');
+const base64Image = z.string().max(2_900_000, 'Profile image must be a valid JPG or PNG under 2 MB.');
+
+export const customerRegisterBody = z.object({
+  Name: text(120).optional(),
+  Username: text(60).optional(),
+  Email: text(255).optional(),
+  Password: passwordField.min(8, 'Password must be at least 8 characters.'),
+  Number: requiredText(40, 'A phone number is required'),
+  Address: registrationAddress,
+  Marketing_Consent: z.boolean().optional(),
+});
+
+export const customerUpdateBody = z.object({
+  Name: text(120).optional(),
+  Email: text(255).optional(),
+  Number: text(40).optional(),
+  Address: formAddress.optional(),
+});
+
+export const sellerRegisterBody = z.object({
+  Name: requiredText(120, 'Name and Email are required'),
+  Username: text(60).optional(),
+  Email: requiredText(255, 'Name and Email are required'),
+  Password: passwordField.optional(),
+  Number: requiredText(40, 'A phone number is required'),
+  Address: registrationAddress,
+  Logo: z.string().max(2_000_000).optional(),
+  Description: text(2000).optional(),
+  Business_Registration_Number: text(100).optional(),
+  Payout_Method: z.enum(['bkash', 'bank'], { error: 'Choose bKash or bank payout and provide a valid payout account.' }),
+  Payout_Account: requiredText(100, 'Choose bKash or bank payout and provide a valid payout account.'),
+  Identity_Document: z.string({ error: 'Upload a government ID document.' }).max(7_100_000, 'Upload a valid ID document no larger than 5 MB.'),
+  Identity_Document_File_Name: text(200).optional(),
+});
+
+export const sellerProfileBody = z.object({
+  Name: text(120).optional(),
+  Username: text(60).optional(),
+  Email: text(255).optional(),
+  Number: text(40).optional(),
+  Logo: z.string().max(2_000_000).optional(),
+  Description: text(2000).optional(),
+  Address: formAddress.optional(),
+  Payout_Method: z.enum(['', 'bkash', 'bank'], { error: 'Choose a valid payout method and account.' }).optional(),
+  Payout_Account: text(100).optional(),
+  Identity_Document: base64Id.optional(),
+});
+
+const riderCommon = {
+  Username: text(60).optional(),
+  Name: text(120).optional(),
+  Email: text(255).optional(),
+  Password: passwordField.optional(),
+  Number: text(40).optional(),
+  Present_Address: formAddress.optional(),
+  Permanent_Address: formAddress.optional(),
+  Profile_Image: base64Image.optional(),
+  Profile_Image_File_Name: text(200).optional(),
+  Experience: lineList,
+  Previous_Jobs: lineList,
+  Education: lineList,
+};
+
+export const riderApplyBody = z.object({
+  ...riderCommon,
+  Has_CV: z.boolean({ error: 'Choose whether you have a CV.' }).optional(),
+  CV_Base64: base64Cv.optional(),
+  CV_File_Name: text(200).optional(),
+});
+
+export const riderProfileBody = z.object(riderCommon);
+
+/** For routes that read nothing from the body (logout, cron triggers): whatever arrives is discarded. */
+export const emptyBody = z.object({});
+
+// Gateway callbacks must never answer 400: a malformed field is dropped (`.catch`) and the handler
+// treats the missing reference as an unverifiable payment, exactly as before.
+const gatewayText = (max: number) => z.string().max(max).optional().catch(undefined);
+
+export const gatewayReturnBody = z.object({
+  tran_id: gatewayText(80),
+  val_id: gatewayText(120),
+});
+
+export const sslcommerzIpnBody = z.object({
+  tran_id: z.string({ error: 'A valid SSLCommerz transaction ID is required' }).regex(/^SSLCZ-[A-Z0-9-]+$/, 'A valid SSLCommerz transaction ID is required').max(80, 'A valid SSLCommerz transaction ID is required'),
+  val_id: gatewayText(120),
+  status: gatewayText(40),
+});
+
+export const simulatorCompleteBody = z.object({
+  tran_id: z.string().max(80).catch(''),
+  account: z.string().max(100).catch(''),
+  code: z.string().max(100).catch(''),
+  security: z.string().max(100).catch(''),
+});
