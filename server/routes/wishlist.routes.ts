@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { query } from '../db/index.ts';
 import { AuthRequest, requireAuth, requireRole } from '../middleware/auth.ts';
+import { validateParams } from '../middleware/validate.ts';
+import { productIdParam } from '../validation/schemas.ts';
 
 const router = Router();
 router.use(requireAuth, requireRole(['customer']));
@@ -18,7 +20,7 @@ router.get('/', async (req: AuthRequest, res) => {
   }
 });
 
-router.post('/:productId', async (req: AuthRequest, res) => {
+router.post('/:productId', validateParams(productIdParam), async (req: AuthRequest, res) => {
   try {
     const result = await query(
       `INSERT INTO customer_wishlist (customer_id, product_id)
@@ -38,7 +40,7 @@ router.post('/:productId', async (req: AuthRequest, res) => {
   }
 });
 
-router.delete('/:productId', async (req: AuthRequest, res) => {
+router.delete('/:productId', validateParams(productIdParam), async (req: AuthRequest, res) => {
   try {
     await query('DELETE FROM customer_wishlist WHERE customer_id = $1 AND product_id = $2', [
       req.user!.entityId,
