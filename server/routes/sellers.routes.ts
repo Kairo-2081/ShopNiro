@@ -19,7 +19,7 @@ import { newId } from '../lib/ids.ts';
 import { validateBody } from '../middleware/validate.ts';
 import { sellerPayoutRequestBody } from '../validation/schemas.ts';
 import { validateParams } from '../middleware/validate.ts';
-import { resourceIdParam, sellerStatusBody } from '../validation/schemas.ts';
+import { resourceIdParam, sellerProfileBody, sellerRegisterBody, sellerStatusBody } from '../validation/schemas.ts';
 
 const router = Router();
 const createApplicationReviewAudit = async (accountType: 'seller' | 'rider', accountId: string, adminId: string, decision: 'approved' | 'rejected', reason: string) => {
@@ -94,7 +94,7 @@ router.get('/', optionalAuth, async (req: AuthRequest, res) => {
  * POST /api/sellers
  * Register new seller (via schema gocart_seller_create)
  */
-router.post('/', registrationRateLimit, async (req, res) => {
+router.post('/', registrationRateLimit, validateBody(sellerRegisterBody), async (req, res) => {
   let client: PoolClient | undefined;
   let identityStoragePath: string | undefined;
   try {
@@ -226,7 +226,7 @@ router.get('/applications/:id/identity-document', requireAuth, requireRole(['adm
   }
 });
 
-router.put('/me/profile', requireAuth, requireRole(['seller']), async (req: AuthRequest, res) => {
+router.put('/me/profile', requireAuth, requireRole(['seller']), validateBody(sellerProfileBody), async (req: AuthRequest, res) => {
   const { Name, Username, Email, Number: phone, Logo, Description, Address, Payout_Method, Payout_Account, Identity_Document } = req.body ?? {};
   if (![Name, Username, Email, phone].every((value) => typeof value === 'string' && value.trim())) {
     return res.status(400).json({ error: 'Store name, username, email, and phone number are required.' });
