@@ -16,6 +16,9 @@ import {
   AuthRequest,
 } from '../middleware/auth.ts';
 
+import { validateBody } from '../middleware/validate.ts';
+import { loginBody, signupBody } from '../validation/schemas.ts';
+
 const router = Router();
 const loginRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -266,7 +269,7 @@ router.get('/oauth/registration', (req, res) => {
   return res.json({ registration });
 });
 
-router.post('/signup', signupRateLimit, async (req, res) => {
+router.post('/signup', signupRateLimit, validateBody(signupBody), async (req, res) => {
   try {
   const role = req.body?.role;
   const inputUsername = typeof req.body?.username === 'string' ? req.body.username.trim().toLowerCase() : '';
@@ -553,7 +556,7 @@ router.get('/me', optionalAuth, async (req: AuthRequest, res: Response) => {
  * POST /api/auth/login
  * User login with bcrypt verification and JWT issuance using schema routines
  */
-router.post('/login', loginRateLimit, async (req, res) => {
+router.post('/login', loginRateLimit, validateBody(loginBody), async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || typeof email !== 'string' || !email.trim() || !password || typeof password !== 'string') {

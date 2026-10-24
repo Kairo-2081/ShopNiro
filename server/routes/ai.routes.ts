@@ -2,6 +2,8 @@ import { Router } from 'express';
 import Groq from 'groq-sdk';
 import { query } from '../db/index.ts';
 import { AuthRequest, requireAuth, requireRole } from '../middleware/auth.ts';
+import { validateBody } from '../middleware/validate.ts';
+import { aiChatBody, aiHelperBody } from '../validation/schemas.ts';
 
 const router = Router();
 
@@ -21,7 +23,7 @@ router.get('/status', (_req, res) => {
   res.json({ configured: Boolean(groq) });
 });
 
-router.post('/description', async (req, res) => {
+router.post('/description', validateBody(aiHelperBody), async (req, res) => {
   try {
     requireGroqClient();
 
@@ -70,7 +72,7 @@ router.post('/description', async (req, res) => {
   }
 });
 
-router.post('/product-copy', requireAuth, requireRole(['seller', 'admin']), async (req: AuthRequest, res) => {
+router.post('/product-copy', requireAuth, requireRole(['seller', 'admin']), validateBody(aiHelperBody), async (req: AuthRequest, res) => {
   try {
     requireGroqClient();
 
@@ -143,7 +145,7 @@ router.post('/product-copy', requireAuth, requireRole(['seller', 'admin']), asyn
   }
 });
 
-router.post('/review-draft', requireAuth, requireRole(['customer']), async (req: AuthRequest, res) => {
+router.post('/review-draft', requireAuth, requireRole(['customer']), validateBody(aiHelperBody), async (req: AuthRequest, res) => {
   const { productName, productDescription, sentiment, notes } = req.body ?? {};
   if (
     typeof productName !== 'string' || !productName.trim() ||
@@ -172,7 +174,7 @@ router.post('/review-draft', requireAuth, requireRole(['customer']), async (req:
   }
 });
 
-router.post('/rider-review-draft', requireAuth, requireRole(['customer']), async (req: AuthRequest, res) => {
+router.post('/rider-review-draft', requireAuth, requireRole(['customer']), validateBody(aiHelperBody), async (req: AuthRequest, res) => {
   const { riderName, rating, wasTimely, notes } = req.body ?? {};
   if (
     typeof riderName !== 'string' || !riderName.trim() ||
@@ -202,7 +204,7 @@ router.post('/rider-review-draft', requireAuth, requireRole(['customer']), async
   }
 });
 
-router.post('/delivery-instructions', requireAuth, requireRole(['customer']), async (req: AuthRequest, res) => {
+router.post('/delivery-instructions', requireAuth, requireRole(['customer']), validateBody(aiHelperBody), async (req: AuthRequest, res) => {
   const { products, shippingAddress, preferences } = req.body ?? {};
   if (!Array.isArray(products) || !shippingAddress || typeof shippingAddress !== 'object') {
     return res.status(400).json({ error: 'Order items and a delivery address are required.' });
@@ -227,7 +229,7 @@ router.post('/delivery-instructions', requireAuth, requireRole(['customer']), as
   }
 });
 
-router.post('/size-chart', requireAuth, requireRole(['seller', 'admin']), async (req: AuthRequest, res) => {
+router.post('/size-chart', requireAuth, requireRole(['seller', 'admin']), validateBody(aiHelperBody), async (req: AuthRequest, res) => {
   try {
     requireGroqClient();
     const { productName, categoryName, gender, imageUrl } = req.body ?? {};
@@ -431,7 +433,7 @@ function buildHelpfulFallback(role: string, message: string, products: any[] = [
  * POST /api/ai/chat
  * Multi-turn chat endpoint using the server-side Groq SDK.
  */
-router.post('/chat', async (req, res) => {
+router.post('/chat', validateBody(aiChatBody), async (req, res) => {
   try {
     requireGroqClient();
 

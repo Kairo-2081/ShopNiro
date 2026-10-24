@@ -16,6 +16,8 @@ import {
 } from '../middleware/auth.ts';
 import { Address, Rider } from '../../src/types.ts';
 import { newId } from '../lib/ids.ts';
+import { validateBody, validateParams } from '../middleware/validate.ts';
+import { cvFormatBody, cvParseBody, resourceIdParam, riderApplicationStatusBody } from '../validation/schemas.ts';
 
 const router = Router();
 const createApplicationReviewAudit = async (accountType: 'seller' | 'rider', accountId: string, adminId: string, decision: 'approved' | 'rejected', reason: string) => {
@@ -244,7 +246,7 @@ function mapRider(row: any, includeProfileImage = true): Rider {
   };
 }
 
-router.post('/cv/parse', async (req, res) => {
+router.post('/cv/parse', validateBody(cvParseBody), async (req, res) => {
   try {
     requireGroq();
     const pdfBuffer = decodePdf(req.body?.cvBase64);
@@ -274,7 +276,7 @@ router.post('/cv/parse', async (req, res) => {
   }
 });
 
-router.post('/cv/format', async (req, res) => {
+router.post('/cv/format', validateBody(cvFormatBody), async (req, res) => {
   try {
     requireGroq();
     const { experience, previousJobs, education } = req.body ?? {};
@@ -499,7 +501,7 @@ router.get('/applications/:id/cv', requireAuth, requireRole(['admin']), async (r
   }
 });
 
-router.patch('/applications/:id/status', requireAuth, requireRole(['admin']), async (req: AuthRequest, res) => {
+router.patch('/applications/:id/status', requireAuth, requireRole(['admin']), validateParams(resourceIdParam), validateBody(riderApplicationStatusBody), async (req: AuthRequest, res) => {
   const { status, reason } = req.body ?? {};
   const reviewReason = sanitizeReviewReason(reason);
   if (!['approved', 'rejected', 'suspended'].includes(status)) {

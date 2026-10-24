@@ -3,6 +3,8 @@ import { query } from '../db/index.ts';
 import { requireAuth, requireRole, AuthRequest } from '../middleware/auth.ts';
 import { Category } from '../../src/types.ts';
 import { newId } from '../lib/ids.ts';
+import { validateBody, validateParams } from '../middleware/validate.ts';
+import { categoryBody, resourceIdParam } from '../validation/schemas.ts';
 
 const router = Router();
 
@@ -28,7 +30,7 @@ router.get('/', async (req, res) => {
  * POST /api/categories
  * Creates a new category (via schema gocart_category_create)
  */
-router.post('/', requireAuth, requireRole(['admin']), async (req: AuthRequest, res) => {
+router.post('/', requireAuth, requireRole(['admin']), validateBody(categoryBody), async (req: AuthRequest, res) => {
   try {
     const { Name } = req.body;
     if (!Name || !Name.trim()) {
@@ -48,7 +50,7 @@ router.post('/', requireAuth, requireRole(['admin']), async (req: AuthRequest, r
  * PUT /api/categories/:id
  * Updates an existing category (via schema gocart_category_update)
  */
-router.put('/:id', requireAuth, requireRole(['admin']), async (req: AuthRequest, res) => {
+router.put('/:id', requireAuth, requireRole(['admin']), validateParams(resourceIdParam), validateBody(categoryBody), async (req: AuthRequest, res) => {
   try {
     const { id } = req.params;
     const { Name } = req.body;
@@ -68,7 +70,7 @@ router.put('/:id', requireAuth, requireRole(['admin']), async (req: AuthRequest,
  * DELETE /api/categories/:id
  * Deletes a category (via schema gocart_category_delete)
  */
-router.delete('/:id', requireAuth, requireRole(['admin']), async (req: AuthRequest, res) => {
+router.delete('/:id', requireAuth, requireRole(['admin']), validateParams(resourceIdParam), async (req: AuthRequest, res) => {
   try {
     const { id } = req.params;
     await query(`SELECT * FROM gocart_category_delete($1)`, [id]);
