@@ -189,13 +189,13 @@ async function findOrCreateOAuthAccount(provider: OAuthProvider, profile: OAuthP
         const randomPassword = await hashPassword(randomBytes(48).toString('base64url'));
         if (requestedRole === 'customer') {
           const created = await client.query(
-            'SELECT * FROM gocart_customer_create($1, $2, $3, $4, $5, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)',
+            'SELECT * FROM shopniro_customer_create($1, $2, $3, $4, $5, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)',
             [userId, username, profile.name, email, randomPassword],
           );
           if (!created.rowCount) throw new Error('oauth_failed');
         } else if (requestedRole === 'seller') {
           const created = await client.query(
-            `SELECT * FROM gocart_seller_create($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+            `SELECT * FROM shopniro_seller_create($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
             [userId, username, profile.name, email, randomPassword, '', '', '', '', '', '', '', '', null, null],
           );
           if (!created.rowCount) throw new Error('oauth_failed');
@@ -312,12 +312,12 @@ router.post('/signup', signupRateLimit, validateBody(signupBody), async (req, re
 
     if (accountRole === 'customer') {
       await client.query(
-        'SELECT * FROM gocart_customer_create($1, $2, $3, $4, $5, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)',
+        'SELECT * FROM shopniro_customer_create($1, $2, $3, $4, $5, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)',
         [userId, username, '', email, passwordHash],
       );
     } else if (accountRole === 'seller') {
       await client.query(
-        'SELECT * FROM gocart_seller_create($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)',
+        'SELECT * FROM shopniro_seller_create($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)',
         [userId, username, '', email, passwordHash, '', '', '', '', '', '', '', '', null, null],
       );
     } else {
@@ -456,7 +456,7 @@ router.get('/me', optionalAuth, async (req: AuthRequest, res: Response) => {
     let entity: any = null;
 
     if (role === 'customer') {
-      const cRes = await query(`SELECT * FROM gocart_customer_get($1)`, [targetId]);
+      const cRes = await query(`SELECT * FROM shopniro_customer_get($1)`, [targetId]);
       if (cRes.rows.length > 0) {
         const c = cRes.rows[0];
         entity = {
@@ -469,7 +469,7 @@ router.get('/me', optionalAuth, async (req: AuthRequest, res: Response) => {
         };
       }
     } else if (role === 'seller') {
-      const sRes = await query(`SELECT * FROM gocart_seller_get($1)`, [targetId]);
+      const sRes = await query(`SELECT * FROM shopniro_seller_get($1)`, [targetId]);
       if (sRes.rows.length > 0) {
         const s = sRes.rows[0];
         entity = {
@@ -523,7 +523,7 @@ router.get('/me', optionalAuth, async (req: AuthRequest, res: Response) => {
         };
       }
     } else if (role === 'admin') {
-      const aRes = await query(`SELECT * FROM gocart_admin_get($1)`, [targetId]);
+      const aRes = await query(`SELECT * FROM shopniro_admin_get($1)`, [targetId]);
       if (aRes.rows.length > 0) {
         const a = aRes.rows[0];
         entity = {
@@ -568,7 +568,7 @@ router.post('/login', loginRateLimit, validateBody(loginBody), async (req, res) 
     if (isLoginLocked(normalizedIdentifier, Date.now())) {
       return res.status(401).json({ error: invalidCredentialsMessage });
     }
-    const userRes = await query(`SELECT * FROM gocart_auth_user_lookup($1, $2)`, [cleanInput, cleanInput]);
+    const userRes = await query(`SELECT * FROM shopniro_auth_user_lookup($1, $2)`, [cleanInput, cleanInput]);
 
     if (userRes.rows.length > 0) {
       const userMatch: any = userRes.rows[0];
@@ -582,14 +582,14 @@ router.post('/login', loginRateLimit, validateBody(loginBody), async (req, res) 
       loginFailures.delete(normalizedIdentifier);
       if (needsPasswordRehash(userMatch.password)) {
         const newHash = await hashPassword(password);
-        await query(`SELECT gocart_auth_password_update('user', $1, $2)`, [userMatch.id, newHash]);
+        await query(`SELECT shopniro_auth_password_update('user', $1, $2)`, [userMatch.id, newHash]);
       }
 
       const userRole = userMatch.role;
       const entityId = userMatch.id;
 
       if (userRole === 'seller') {
-        const sellerRes = await query(`SELECT * FROM gocart_seller_get($1)`, [entityId]);
+        const sellerRes = await query(`SELECT * FROM shopniro_seller_get($1)`, [entityId]);
         const s = sellerRes.rows[0] || {};
         await issueAuthCookie(res, {
           userId: userMatch.id,
@@ -662,7 +662,7 @@ router.post('/login', loginRateLimit, validateBody(loginBody), async (req, res) 
         });
         return res.json({ success: true, role: 'rider', entity });
       } else if (userRole === 'admin') {
-        const adminRes = await query(`SELECT * FROM gocart_admin_get($1)`, [entityId]);
+        const adminRes = await query(`SELECT * FROM shopniro_admin_get($1)`, [entityId]);
         const a = adminRes.rows[0] || {};
         await issueAuthCookie(res, {
           userId: userMatch.id,
@@ -685,7 +685,7 @@ router.post('/login', loginRateLimit, validateBody(loginBody), async (req, res) 
         });
       } else {
         // Customer
-        const custRes = await query(`SELECT * FROM gocart_customer_get($1)`, [entityId]);
+        const custRes = await query(`SELECT * FROM shopniro_customer_get($1)`, [entityId]);
         const c = custRes.rows[0] || {};
         await issueAuthCookie(res, {
           userId: userMatch.id,
@@ -723,7 +723,7 @@ router.post('/login', loginRateLimit, validateBody(loginBody), async (req, res) 
 router.post('/logout', optionalAuth, validateBody(emptyBody), async (req: AuthRequest, res) => {
   try {
     if (req.user?.jti) {
-      await query(`SELECT gocart_session_revoke($1)`, [req.user.jti]);
+      await query(`SELECT shopniro_session_revoke($1)`, [req.user.jti]);
     }
     clearAuthCookie(res);
     return res.json({ success: true, message: 'Logged out successfully' });

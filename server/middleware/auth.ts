@@ -94,7 +94,7 @@ export async function issueAuthCookie(res: Response, payload: Omit<TokenPayload,
   const token = generateToken(payload);
   const decoded = verifyToken(token);
   const expiresAt = new Date((jwt.decode(token) as jwt.JwtPayload).exp! * 1000);
-  await query('SELECT gocart_session_create($1, $2, $3)', [decoded.jti, decoded.userId, expiresAt]);
+  await query('SELECT shopniro_session_create($1, $2, $3)', [decoded.jti, decoded.userId, expiresAt]);
 
   const configuredSameSite = process.env.AUTH_COOKIE_SAME_SITE?.toLowerCase();
   const sameSite = ['lax', 'strict', 'none'].includes(configuredSameSite || '')
@@ -128,7 +128,7 @@ function getRequestToken(req: Request): string | null {
 
 async function getActiveSession(token: string): Promise<TokenPayload | null> {
   const decoded = verifyToken(token);
-  const session = await query('SELECT gocart_session_active($1) AS active', [decoded.jti]);
+  const session = await query('SELECT shopniro_session_active($1) AS active', [decoded.jti]);
   return session.rows[0]?.active ? decoded : null;
 }
 

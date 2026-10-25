@@ -10,13 +10,13 @@ const router = Router();
 
 /**
  * GET /api/cart
- * Fetch cart items (via schema gocart_cart_list and gocart_products_list)
+ * Fetch cart items (via schema shopniro_cart_list and shopniro_products_list)
  */
 router.get('/', requireAuth, requireRole(['customer']), async (req: AuthRequest, res) => {
   try {
     const customerId = req.user!.entityId;
-    const itemsRes = await query(`SELECT * FROM gocart_cart_list($1)`, [customerId]);
-    const productsRes = await query(`SELECT * FROM gocart_products_list()`);
+    const itemsRes = await query(`SELECT * FROM shopniro_cart_list($1)`, [customerId]);
+    const productsRes = await query(`SELECT * FROM shopniro_products_list()`);
     const allProducts: any[] = productsRes.rows;
 
     const enriched = itemsRes.rows.map((item: any) => {
@@ -56,7 +56,7 @@ router.get('/', requireAuth, requireRole(['customer']), async (req: AuthRequest,
 
 /**
  * POST /api/cart
- * Add item to cart or increment quantity if already exists (via schema gocart_cart_existing, gocart_cart_update, gocart_cart_create)
+ * Add item to cart or increment quantity if already exists (via schema shopniro_cart_existing, shopniro_cart_update, shopniro_cart_create)
  */
 router.post('/', requireAuth, requireRole(['customer']), validateBody(schemas.addToCartBody), async (req: AuthRequest, res) => {
   try {
@@ -88,7 +88,7 @@ router.post('/', requireAuth, requireRole(['customer']), validateBody(schemas.ad
       return res.status(409).json({ error: 'Insufficient stock for this product' });
     }
 
-    const existing = await query(`SELECT * FROM gocart_cart_existing($1, $2, $3)`, [custId, Product_ID, size]);
+    const existing = await query(`SELECT * FROM shopniro_cart_existing($1, $2, $3)`, [custId, Product_ID, size]);
 
     if (existing.rows.length > 0) {
       const currentItem: any = existing.rows[0];
@@ -96,12 +96,12 @@ router.post('/', requireAuth, requireRole(['customer']), validateBody(schemas.ad
       if (newQty > Number(product.stock)) {
         return res.status(409).json({ error: 'Requested quantity exceeds available stock' });
       }
-      await query(`SELECT * FROM gocart_cart_update($1, $2, $3)`, [currentItem.id, newQty, custId]);
+      await query(`SELECT * FROM shopniro_cart_update($1, $2, $3)`, [currentItem.id, newQty, custId]);
       return res.json({ Cart_ID: currentItem.id, Customer_ID: custId, Product_ID, Quantity: newQty });
     }
 
     const cartId = `CART-${randomUUID()}`;
-    await query(`SELECT * FROM gocart_cart_create($1, $2, $3, $4, $5)`, [cartId, custId, Product_ID, qty, size]);
+    await query(`SELECT * FROM shopniro_cart_create($1, $2, $3, $4, $5)`, [cartId, custId, Product_ID, qty, size]);
 
     res.status(201).json({ Cart_ID: cartId, Customer_ID: custId, Product_ID, Quantity: qty, Size: size || undefined });
   } catch (error: any) {
@@ -112,7 +112,7 @@ router.post('/', requireAuth, requireRole(['customer']), validateBody(schemas.ad
 
 /**
  * PUT /api/cart/:cartId
- * Update item quantity in cart (via schema gocart_cart_update)
+ * Update item quantity in cart (via schema shopniro_cart_update)
  */
 router.put('/:cartId', requireAuth, requireRole(['customer']), validateBody(schemas.updateCartBody), async (req: AuthRequest, res) => {
   try {
@@ -139,7 +139,7 @@ router.put('/:cartId', requireAuth, requireRole(['customer']), validateBody(sche
       return res.status(409).json({ error: 'Requested quantity exceeds available stock' });
     }
 
-    const result = await query(`SELECT * FROM gocart_cart_update($1, $2, $3)`, [cartId, qty, custId]);
+    const result = await query(`SELECT * FROM shopniro_cart_update($1, $2, $3)`, [cartId, qty, custId]);
     res.json({ Cart_ID: cartId, Quantity: qty, updated: result.rows[0] });
   } catch (error: any) {
     req.log.error({ err: error }, 'Error updating cart item quantity:');
@@ -149,13 +149,13 @@ router.put('/:cartId', requireAuth, requireRole(['customer']), validateBody(sche
 
 /**
  * DELETE /api/cart/:cartId
- * Remove item from cart (via schema gocart_cart_delete)
+ * Remove item from cart (via schema shopniro_cart_delete)
  */
 router.delete('/:cartId', requireAuth, requireRole(['customer']), validateParams(schemas.cartIdParam), async (req: AuthRequest, res) => {
   try {
     const { cartId } = req.params;
     const custId = req.user!.entityId;
-    await query(`SELECT * FROM gocart_cart_delete($1, $2)`, [cartId, custId]);
+    await query(`SELECT * FROM shopniro_cart_delete($1, $2)`, [cartId, custId]);
     res.json({ success: true, message: 'Item removed from cart' });
   } catch (error: any) {
     req.log.error({ err: error }, 'Error removing item from cart:');
