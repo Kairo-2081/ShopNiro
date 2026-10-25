@@ -29,7 +29,7 @@ const parseVoucherExpiry = (value: unknown): Date | null | undefined => {
 
 /**
  * GET /api/products
- * Product catalog with query filtering (via schema gocart_products_list)
+ * Product catalog with query filtering (via schema shopniro_products_list)
  */
 router.get('/', async (req, res) => {
   try {
@@ -97,12 +97,12 @@ router.get('/', async (req, res) => {
 
 /**
  * GET /api/products/:id
- * Retrieve single product by ID (via schema gocart_product_get)
+ * Retrieve single product by ID (via schema shopniro_product_get)
  */
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await query(`SELECT * FROM gocart_product_get($1)`, [id]);
+    const result = await query(`SELECT * FROM shopniro_product_get($1)`, [id]);
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Product not found' });
     }
@@ -150,7 +150,7 @@ router.post('/images', requireAuth, requireRole(['seller', 'admin']), productIma
       return res.status(400).json({ error: 'Choose a JPG, PNG or WebP image to upload.' });
     }
     if (req.user!.role === 'seller') {
-      const seller = await query('SELECT * FROM gocart_seller_get($1)', [req.user!.entityId]);
+      const seller = await query('SELECT * FROM shopniro_seller_get($1)', [req.user!.entityId]);
       if (!seller.rows.length || (seller.rows[0] as any).status !== 'approved') {
         return res.status(403).json({ error: 'Only approved sellers can upload product images.' });
       }
@@ -168,7 +168,7 @@ router.post('/images', requireAuth, requireRole(['seller', 'admin']), productIma
 
 /**
  * POST /api/products
- * Create product with seller approval moderation check (via schema gocart_product_create)
+ * Create product with seller approval moderation check (via schema shopniro_product_create)
  */
 router.post('/', requireAuth, requireRole(['seller', 'admin']), validateBody(createProductBody), async (req: AuthRequest, res) => {
   try {
@@ -205,8 +205,8 @@ router.post('/', requireAuth, requireRole(['seller', 'admin']), validateBody(cre
       return res.status(400).json({ error: 'Choose a size-chart category for apparel sizes.' });
     }
 
-    // Moderation: ensure seller exists and is approved via gocart_seller_get
-    const sellerCheck = await query(`SELECT * FROM gocart_seller_get($1)`, [Seller_ID]);
+    // Moderation: ensure seller exists and is approved via shopniro_seller_get
+    const sellerCheck = await query(`SELECT * FROM shopniro_seller_get($1)`, [Seller_ID]);
     if (sellerCheck.rows.length === 0 || (sellerCheck.rows[0] as any).status !== 'approved') {
       return res.status(403).json({ error: 'Only approved sellers can publish products' });
     }
@@ -227,7 +227,7 @@ router.post('/', requireAuth, requireRole(['seller', 'admin']), validateBody(cre
     const prodStat = Product_Status || 'active';
 
     const result = await query(
-      `SELECT * FROM gocart_product_create($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      `SELECT * FROM shopniro_product_create($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
       [id, Name, img, desc, priceNum, vouch, stockNum, prodStat, Category_ID, Seller_ID]
     );
     await query('UPDATE products SET size_gender = $2, sizes_json = $3::jsonb, size_chart_json = $4::jsonb, images_json = $5::jsonb, highlights_json = $6::jsonb, warranty_information = $7, return_policy = $8, video_url = $9 WHERE id = $1', [id, sizes.length ? Size_Gender : null, JSON.stringify(sizes), JSON.stringify(sizeChart), JSON.stringify(images.length ? images : [img]), JSON.stringify(highlights), String(Warranty_Information || '').trim(), String(Return_Policy || '').trim(), videoUrl]);
@@ -266,12 +266,12 @@ router.post('/', requireAuth, requireRole(['seller', 'admin']), validateBody(cre
 
 /**
  * PUT /api/products/:id
- * Updates product details (via schema gocart_product_update)
+ * Updates product details (via schema shopniro_product_update)
  */
 router.put('/:id', requireAuth, requireRole(['seller', 'admin']), validateParams(resourceIdParam), validateBody(updateProductBody), async (req: AuthRequest, res) => {
   try {
     const { id } = req.params;
-    const existing = await query(`SELECT * FROM gocart_product_get($1)`, [id]);
+    const existing = await query(`SELECT * FROM shopniro_product_get($1)`, [id]);
     if (existing.rows.length === 0) return res.status(404).json({ error: 'Product not found' });
 
     const current: any = existing.rows[0];
@@ -322,7 +322,7 @@ router.put('/:id', requireAuth, requireRole(['seller', 'admin']), validateParams
     }
 
     const result = await query(
-      `SELECT * FROM gocart_product_update($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      `SELECT * FROM shopniro_product_update($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
       [id, name, image, description, price, voucher, stock, productStatus, categoryId]
     );
     await query('UPDATE products SET size_gender = $2, sizes_json = $3::jsonb, size_chart_json = $4::jsonb, images_json = $5::jsonb, highlights_json = $6::jsonb, warranty_information = $7, return_policy = $8, video_url = $9 WHERE id = $1', [id, sizes.length ? sizeGender : null, JSON.stringify(sizes), JSON.stringify(sizeChart), JSON.stringify(images.length ? images : [image]), JSON.stringify(highlights), String(warrantyInformation).trim(), String(returnPolicy).trim(), videoUrl]);
@@ -360,7 +360,7 @@ router.put('/:id', requireAuth, requireRole(['seller', 'admin']), validateParams
 
 /**
  * PATCH /api/products/:id/status
- * Updates product status (via schema gocart_product_status_update)
+ * Updates product status (via schema shopniro_product_status_update)
  */
 router.patch('/:id/status', requireAuth, requireRole(['seller', 'admin']), validateParams(resourceIdParam), validateBody(productStatusBody), async (req: AuthRequest, res) => {
   try {
@@ -370,7 +370,7 @@ router.patch('/:id/status', requireAuth, requireRole(['seller', 'admin']), valid
       return res.status(400).json({ error: 'Valid status is required' });
     }
 
-    const result = await query(`SELECT * FROM gocart_product_status_update($1, $2)`, [id, status]);
+    const result = await query(`SELECT * FROM shopniro_product_status_update($1, $2)`, [id, status]);
     if (result.rows.length === 0) return res.status(404).json({ error: 'Product not found' });
     const row = result.rows[0];
 
@@ -394,12 +394,12 @@ router.patch('/:id/status', requireAuth, requireRole(['seller', 'admin']), valid
 
 /**
  * DELETE /api/products/:id
- * Delete a product (via schema gocart_product_delete)
+ * Delete a product (via schema shopniro_product_delete)
  */
 router.delete('/:id', requireAuth, requireRole(['seller', 'admin']), validateParams(resourceIdParam), async (req: AuthRequest, res) => {
   try {
     const { id } = req.params;
-    await query(`SELECT * FROM gocart_product_delete($1)`, [id]);
+    await query(`SELECT * FROM shopniro_product_delete($1)`, [id]);
     res.json({ success: true, message: 'Product deleted' });
   } catch (error: any) {
     req.log.error({ err: error }, 'Error deleting product:');

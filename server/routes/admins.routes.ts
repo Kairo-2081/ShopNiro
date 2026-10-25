@@ -16,7 +16,7 @@ router.use(requireRole(['admin']));
 
 /**
  * GET /api/admins
- * Returns all admins (via schema gocart_admins_list)
+ * Returns all admins (via schema shopniro_admins_list)
  */
 router.get('/', async (req, res) => {
   try {
@@ -41,7 +41,7 @@ router.get('/', async (req, res) => {
 
 /**
  * POST /api/admins
- * Creates a new admin (via schema gocart_admin_create)
+ * Creates a new admin (via schema shopniro_admin_create)
  */
 router.post('/', validateBody(createAdminBody), async (req, res) => {
   try {
@@ -57,7 +57,7 @@ router.post('/', validateBody(createAdminBody), async (req, res) => {
     const cleanEmail = email.trim().toLowerCase();
 
     // Check if user already exists with this email
-    const existing = await query(`SELECT * FROM gocart_auth_user_lookup($1, '')`, [cleanEmail]);
+    const existing = await query(`SELECT * FROM shopniro_auth_user_lookup($1, '')`, [cleanEmail]);
     if (existing.rows.length > 0) {
       return res.status(409).json({ error: 'An account with this email address already exists. Please log in instead.' });
     }
@@ -77,7 +77,7 @@ router.post('/', validateBody(createAdminBody), async (req, res) => {
     const addInfo = addr.Additional_Info || 'ShopNiro Operations Center';
 
     const result = await query(
-      `SELECT * FROM gocart_admin_create($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+      `SELECT * FROM shopniro_admin_create($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
       [id, username, name, cleanEmail, hashedPassword, phone, houseName, street, city, postalCode, addInfo]
     );
 
@@ -104,7 +104,7 @@ router.post('/', validateBody(createAdminBody), async (req, res) => {
 
 /**
  * GET /api/admins/users
- * Returns list of platform accounts (via schema gocart_admins_users_list)
+ * Returns list of platform accounts (via schema shopniro_admins_users_list)
  */
 router.get('/users', async (req, res) => {
   try {

@@ -11,7 +11,7 @@ const router = Router();
 
 /**
  * GET /api/reviews
- * Retrieve reviews (via schema gocart_reviews_by_product or gocart_reviews_list)
+ * Retrieve reviews (via schema shopniro_reviews_by_product or shopniro_reviews_list)
  */
 router.get('/', async (req, res) => {
   try {
@@ -52,7 +52,7 @@ router.get('/', async (req, res) => {
 
 /**
  * POST /api/reviews
- * Submit a review for a product (via schema gocart_review_create)
+ * Submit a review for a product (via schema shopniro_review_create)
  */
 router.post('/', requireAuth, validateBody(schemas.createReviewBody), async (req: AuthRequest, res) => {
   try {
@@ -70,7 +70,7 @@ router.post('/', requireAuth, validateBody(schemas.createReviewBody), async (req
     const revText = Review_text || '';
 
     const result = await query(
-      `SELECT * FROM gocart_review_create($1, $2, $3, $4, $5, $6)`,
+      `SELECT * FROM shopniro_review_create($1, $2, $3, $4, $5, $6)`,
       [id, Product_ID, Customer_ID, custName, revText, ratingNum]
     );
 

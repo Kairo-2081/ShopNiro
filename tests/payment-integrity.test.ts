@@ -83,7 +83,7 @@ const createSession = async (role: 'customer' | 'seller' | 'rider' | 'admin', en
   const token = generateToken({ userId, email: `${userId}@example.invalid`, username: userId, role, entityId });
   const decoded = verifyToken(token);
   await createTestUser(role, entityId);
-  await query('SELECT gocart_session_create($1, $2, $3)', [decoded.jti, userId, new Date(Date.now() + 60 * 60 * 1000).toISOString()]);
+  await query('SELECT shopniro_session_create($1, $2, $3)', [decoded.jti, userId, new Date(Date.now() + 60 * 60 * 1000).toISOString()]);
   return `shopniro_session=${encodeURIComponent(token)}`;
 };
 
