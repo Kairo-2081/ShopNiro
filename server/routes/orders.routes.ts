@@ -16,7 +16,7 @@ const router = Router();
 
 /**
  * GET /api/orders
- * Retrieve orders (via schema gocart_orders_list)
+ * Retrieve orders (via schema shopniro_orders_list)
  */
 router.get('/', requireAuth, async (req: AuthRequest, res) => {
   try {
@@ -125,7 +125,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
 
 /**
  * POST /api/orders
- * Checkout & place order using schema routine process_checkout or gocart_seed_row
+ * Checkout & place order using schema routine process_checkout or shopniro_seed_row
  */
 router.post('/', requireAuth, validateBody(schemas.createOrderBody), async (req: AuthRequest, res) => {
   try {
@@ -484,7 +484,7 @@ router.patch('/cancellation-requests/:requestId/review', requireAuth, validateBo
       return res.status(409).json({ error: 'The order has shipped and can no longer be cancelled.' });
     }
     if (decision === 'approved') {
-      await client.query('SELECT * FROM gocart_order_status_update($1, $2)', [request.order_id, 'cancelled']);
+      await client.query('SELECT * FROM shopniro_order_status_update($1, $2)', [request.order_id, 'cancelled']);
       await client.query(
         `SELECT product.id
          FROM products product
@@ -567,7 +567,7 @@ router.patch('/cancellation-requests/:requestId/review', requireAuth, validateBo
 
 /**
  * PATCH /api/orders/:id/status
- * Updates order status (via schema gocart_order_status_update)
+ * Updates order status (via schema shopniro_order_status_update)
  */
 router.patch('/:id/revert-failed-payment', requireAuth, validateParams(schemas.resourceIdParam), async (req: AuthRequest, res) => {
   let client: PoolClient | undefined;
@@ -643,13 +643,13 @@ router.patch('/:id/revert-failed-payment', requireAuth, validateParams(schemas.r
     );
 
     for (const item of items.rows) {
-      const existing = await client.query(`SELECT * FROM gocart_cart_existing($1, $2, $3)`, [req.user.entityId, item.product_id, item.size || '']);
+      const existing = await client.query(`SELECT * FROM shopniro_cart_existing($1, $2, $3)`, [req.user.entityId, item.product_id, item.size || '']);
       if (existing.rows.length > 0) {
         const currentItem: any = existing.rows[0];
-        await client.query(`SELECT * FROM gocart_cart_update($1, $2, $3)`, [currentItem.id, Number(currentItem.quantity) + Number(item.quantity), req.user.entityId]);
+        await client.query(`SELECT * FROM shopniro_cart_update($1, $2, $3)`, [currentItem.id, Number(currentItem.quantity) + Number(item.quantity), req.user.entityId]);
       } else {
         const cartId = `CART-${randomUUID()}`;
-        await client.query(`SELECT * FROM gocart_cart_create($1, $2, $3, $4, $5)`, [cartId, req.user.entityId, item.product_id, Number(item.quantity), item.size || '']);
+        await client.query(`SELECT * FROM shopniro_cart_create($1, $2, $3, $4, $5)`, [cartId, req.user.entityId, item.product_id, Number(item.quantity), item.size || '']);
       }
     }
 
@@ -716,7 +716,7 @@ router.patch('/:id/status', requireAuth, validateBody(schemas.orderStatusBody), 
           WHERE order_id = $1 AND seller_id = $2 AND status = 'processing'`,
           [id, actor.entityId]
         );
-        result = await query(`SELECT * FROM gocart_orders_list() WHERE id = $1`, [id]);
+        result = await query(`SELECT * FROM shopniro_orders_list() WHERE id = $1`, [id]);
       } else {
         const fulfillmentResult = await query(
           `UPDATE seller_fulfillments sf
@@ -751,13 +751,13 @@ router.patch('/:id/status', requireAuth, validateBody(schemas.orderStatusBody), 
           [deliveryId, fulfillment.id, confirmationCode, codAmount]
         );
         await query(`UPDATE orders SET status = 'shipped' WHERE id = $1 AND status NOT IN ('delivered', 'cancelled')`, [id]);
-        result = await query(`SELECT * FROM gocart_orders_list() WHERE id = $1`, [id]);
+        result = await query(`SELECT * FROM shopniro_orders_list() WHERE id = $1`, [id]);
       }
     } else if (actor.role === 'admin') {
       if (status === 'shipped' && existingOrder.payment_method !== 'cash_on_delivery' && existingOrder.payment_status !== 'paid') {
         return res.status(409).json({ error: 'Order payment is not confirmed.' });
       }
-      result = await query(`SELECT * FROM gocart_order_status_update($1, $2)`, [id, status]);
+      result = await query(`SELECT * FROM shopniro_order_status_update($1, $2)`, [id, status]);
     } else {
       return res.status(403).json({ error: 'Your role cannot update order status' });
     }

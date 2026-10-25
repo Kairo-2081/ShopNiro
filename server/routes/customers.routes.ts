@@ -32,7 +32,7 @@ const registrationRateLimit = rateLimit({
 
 /**
  * GET /api/customers
- * Returns all customers (via schema gocart_customers_list)
+ * Returns all customers (via schema shopniro_customers_list)
  */
 router.get('/', requireAuth, async (req: AuthRequest, res) => {
   try {
@@ -57,7 +57,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
 
 /**
  * POST /api/customers
- * Register a new customer (via schema gocart_customer_create)
+ * Register a new customer (via schema shopniro_customer_create)
  */
 router.post('/', registrationRateLimit, validateBody(customerRegisterBody), async (req, res) => {
   try {
@@ -76,7 +76,7 @@ router.post('/', registrationRateLimit, validateBody(customerRegisterBody), asyn
     const cleanEmail = email.trim().toLowerCase();
 
     // Check if user already exists with this email
-    const existing = await query(`SELECT * FROM gocart_auth_user_lookup($1, '')`, [cleanEmail]);
+    const existing = await query(`SELECT * FROM shopniro_auth_user_lookup($1, '')`, [cleanEmail]);
     if (existing.rows.length > 0) {
       return res.status(409).json({ error: 'An account with this email address already exists. Please log in instead.' });
     }
@@ -94,7 +94,7 @@ router.post('/', registrationRateLimit, validateBody(customerRegisterBody), asyn
     const { latitude, longitude } = getAddressCoordinates(addr);
 
     const result = await query(
-      `SELECT * FROM gocart_customer_create($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+      `SELECT * FROM shopniro_customer_create($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
       [id, username, name, cleanEmail, hashedPassword, phone, houseName, street, city, postalCode, addInfo, latitude, longitude]
     );
 
@@ -132,7 +132,7 @@ router.post('/', registrationRateLimit, validateBody(customerRegisterBody), asyn
 
 /**
  * PUT /api/customers/:id
- * Updates customer details (via schema gocart_customer_update)
+ * Updates customer details (via schema shopniro_customer_update)
  */
 router.put('/:id', requireAuth, validateParams(resourceIdParam), validateBody(customerUpdateBody), async (req: AuthRequest, res) => {
   try {
@@ -145,7 +145,7 @@ router.put('/:id', requireAuth, validateParams(resourceIdParam), validateBody(cu
     const addr = Address || {};
     const { latitude, longitude } = getAddressCoordinates(addr);
     const result = await query(
-      `SELECT * FROM gocart_customer_update($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+      `SELECT * FROM shopniro_customer_update($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
       [
         id,
         Name || null,
