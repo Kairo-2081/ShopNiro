@@ -92,17 +92,17 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   const sections: NavigationSection[] = isLoggedIn && currentRole === 'admin' && activeTab === 'admin-dashboard'
     ? [
         {
-          label: 'Governance',
+          label: t('governance'),
           items: [
-            { label: 'Governance Overview', icon: Activity, adminTab: 'overview' },
-            { label: 'Marketplace Metrics', icon: BarChart3, adminTab: 'metrics' },
-            { label: `Merchant Approvals (${adminSellerCount})`, icon: Store, adminTab: 'sellers' },
-            { label: `Category Registry (${adminCategoryCount})`, icon: FolderTree, adminTab: 'categories' },
-            { label: 'Rider Hiring', icon: Truck, adminTab: 'riders' },
-            { label: `Product Moderation (${adminProductCount})`, icon: Package, adminTab: 'products' },
-            { label: 'Online Payments', icon: Lock, adminTab: 'payments' },
-            { label: 'Order Cancellations', icon: RotateCcw, adminTab: 'cancellations' },
-            { label: 'Support Inbox', icon: LifeBuoy, adminTab: 'support' },
+            { label: t('governanceOverview'), icon: Activity, adminTab: 'overview' },
+            { label: t('marketplaceMetrics'), icon: BarChart3, adminTab: 'metrics' },
+            { label: t('merchantApprovalsCount', { count: adminSellerCount }), icon: Store, adminTab: 'sellers' },
+            { label: t('categoryRegistryCount', { count: adminCategoryCount }), icon: FolderTree, adminTab: 'categories' },
+            { label: t('riderHiring'), icon: Truck, adminTab: 'riders' },
+            { label: t('productModerationCount', { count: adminProductCount }), icon: Package, adminTab: 'products' },
+            { label: t('onlinePayments'), icon: Lock, adminTab: 'payments' },
+            { label: t('orderCancellations'), icon: RotateCcw, adminTab: 'cancellations' },
+            { label: t('supportInbox'), icon: LifeBuoy, adminTab: 'support' },
           ],
         },
         {
@@ -113,27 +113,27 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
     : isLoggedIn && currentRole === 'seller' && activeTab === 'seller-dashboard'
       ? [
           {
-            label: 'Seller studio',
+            label: t('sellerStudioSection'),
             items: [
-              { label: `Product Catalog (${sellerProductCount})`, icon: Package, sellerTab: 'products' },
-              { label: `Fulfillment Orders (${sellerOrderCount})`, icon: Truck, sellerTab: 'orders' },
-              { label: 'Sales Analytics', icon: BarChart3, sellerTab: 'analytics' },
-              { label: `Customer Reviews (${sellerReviewCount})`, icon: Star, sellerTab: 'reviews' },
-              { label: `Deals & Bundles (${sellerPromotionCount})`, icon: Tag, sellerTab: 'promotions' },
-              { label: 'COD remittances', icon: Wallet, sellerTab: 'wallet' },
+                { label: t('productCatalogCount', { count: sellerProductCount }), icon: Package, sellerTab: 'products' },
+                { label: t('fulfillmentOrdersCount', { count: sellerOrderCount }), icon: Truck, sellerTab: 'orders' },
+                { label: t('salesAnalytics'), icon: BarChart3, sellerTab: 'analytics' },
+                { label: t('customerReviewsCount', { count: sellerReviewCount }), icon: Star, sellerTab: 'reviews' },
+                { label: t('dealsBundlesCount', { count: sellerPromotionCount }), icon: Tag, sellerTab: 'promotions' },
+                { label: t('codRemittances'), icon: Wallet, sellerTab: 'wallet' },
             ],
           },
           {
             label: 'Marketplace',
             items: [
-              primaryItem('Preview storefront', ShoppingBag, 'storefront'),
+              primaryItem(t('previewStorefront'), ShoppingBag, 'storefront'),
               primaryItem(t('support'), LifeBuoy, 'support'),
             ],
           },
         ]
       : isLoggedIn && currentRole === 'customer'
         ? [{
-            label: 'Your marketplace',
+            label: t('yourMarketplace'),
             items: [
               primaryItem(t('shop'), ShoppingBag, 'storefront'),
               primaryItem(t('topCharts'), Flame, 'charts'),
@@ -145,7 +145,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
           }]
         : isLoggedIn && currentRole === 'seller'
           ? [{
-              label: 'Seller',
+              label: t('seller'),
               items: [
                 primaryItem(t('sellerStudio'), Store, 'seller-dashboard'),
                 primaryItem(t('storefront'), ShoppingBag, 'storefront'),
@@ -154,7 +154,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
             }]
           : isLoggedIn && currentRole === 'admin'
             ? [{
-                label: 'Administration',
+                label: t('administration'),
                 items: [
                   primaryItem(t('adminDashboard'), ShieldCheck, 'admin-dashboard'),
                   primaryItem(t('storefront'), ShoppingBag, 'storefront'),
@@ -163,7 +163,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
               }]
             : isLoggedIn && currentRole === 'rider'
               ? [{
-                  label: 'Delivery',
+                  label: t('deliveries'),
                   items: [
                     primaryItem(t('deliveries'), Truck, 'rider-dashboard'),
                     primaryItem(t('support'), LifeBuoy, 'support'),
@@ -171,7 +171,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
                 }]
               : [
                   {
-                    label: 'Explore',
+                    label: t('explore'),
                     items: [
                       primaryItem(t('browse'), ShoppingBag, 'storefront'),
                       primaryItem(t('topCharts'), Flame, 'charts'),
@@ -182,7 +182,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
                     ],
                   },
                   {
-                    label: 'Portals',
+                    label: t('portals'),
                     items: [
                       primaryItem(t('sellerStudio'), Store, 'seller-dashboard'),
                       primaryItem(t('adminDashboard'), ShieldCheck, 'admin-dashboard'),
@@ -210,7 +210,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   };
 
   const renderNavigation = () => (
-    <nav aria-label="Workspace navigation" className="space-y-6">
+    <nav aria-label={t('workspaceNavigation')} className="space-y-6">
       {sections.map((section) => (
         <section key={section.label} aria-label={section.label} className="space-y-1">
           <h2 className="px-3 text-[0.65rem] font-bold uppercase tracking-[0.14em] text-surface-500 dark:text-surface-400">
@@ -257,7 +257,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
           </div>
           <div className="mt-4 border-t border-[#80734f]/15 px-3 pt-4 text-xs text-surface-500 dark:border-white/10 dark:text-surface-400">
             <p className="font-semibold text-surface-700 dark:text-surface-200">ShopNiro</p>
-            <p className="mt-1">Marketplace workspace</p>
+            <p className="mt-1">{t('marketplaceWorkspace')}</p>
           </div>
         </div>
       </aside>
@@ -266,7 +266,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
         <div className="fixed inset-0 z-[60] md:hidden">
           <button
             type="button"
-            aria-label="Close navigation"
+            aria-label={t('closeNavigation')}
             tabIndex={-1}
             onClick={onClose}
             className="absolute inset-0 bg-black/45"
@@ -276,7 +276,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
             id="mobile-navigation-drawer"
             role="dialog"
             aria-modal="true"
-            aria-label="Navigation menu"
+            aria-label={t('navigationMenu')}
             tabIndex={-1}
             className="relative flex h-full w-[min(19rem,calc(100vw-3rem))] flex-col border-r border-[#80734f]/20 bg-[#f6f5ef] px-3 py-4 shadow-xl dark:border-white/10 dark:bg-[#10100f]"
           >
@@ -285,7 +285,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
               <button
                 type="button"
                 onClick={onClose}
-                aria-label="Close navigation"
+                aria-label={t('closeNavigation')}
                 className="grid h-10 w-10 place-items-center rounded-lg text-surface-600 hover:bg-surface-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a99b72] dark:text-surface-300 dark:hover:bg-[#181F2A]"
               >
                 <X aria-hidden="true" className="h-5 w-5" />
