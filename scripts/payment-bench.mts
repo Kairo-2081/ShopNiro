@@ -106,7 +106,7 @@ const makeSession = async (role: string, id: string) => {
   const token = generateToken({ userId: id, email: `${id}@example.invalid`, username: id, role, entityId: id });
   const decoded = verifyToken(token);
   await makeUser(role, id);
-  await query('SELECT gocart_session_create($1,$2,$3)', [decoded.jti, id, new Date(Date.now() + 3600_000).toISOString()]);
+  await query('SELECT shopniro_session_create($1,$2,$3)', [decoded.jti, id, new Date(Date.now() + 3600_000).toISOString()]);
   return `shopniro_session=${encodeURIComponent(token)}`;
 };
 

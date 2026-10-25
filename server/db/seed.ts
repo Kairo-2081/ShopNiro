@@ -46,16 +46,16 @@ export async function migrateExistingPasswordsToBcrypt() {
 }
 
 /**
- * Seed initial demo records using schema.sql routines: gocart_table_count and gocart_seed_row
+ * Seed initial demo records using schema.sql routines: shopniro_table_count and shopniro_seed_row
  */
 export async function seedDatabaseIfEmpty() {
   try {
     await ensureDatabaseSchema();
 
     const [adminCountResult, sellerCountResult, customerCountResult] = await Promise.all([
-      query(`SELECT gocart_table_count('admins') AS count`),
-      query(`SELECT gocart_table_count('sellers') AS count`),
-      query(`SELECT gocart_table_count('customers') AS count`),
+      query(`SELECT shopniro_table_count('admins') AS count`),
+      query(`SELECT shopniro_table_count('sellers') AS count`),
+      query(`SELECT shopniro_table_count('customers') AS count`),
     ]);
     const adminCount = Number(adminCountResult.rows[0]?.count || 0);
     const sellerCount = Number(sellerCountResult.rows[0]?.count || 0);
@@ -75,11 +75,11 @@ export async function seedDatabaseIfEmpty() {
     if (customerCount === 0) requireStrongSeedPassword('SHOPNIRO_SEED_CUSTOMER_PASSWORD', seedPasswords.customer);
 
     // 1. Categories
-    const catCountRes = await query(`SELECT gocart_table_count('categories') AS count`);
+    const catCountRes = await query(`SELECT shopniro_table_count('categories') AS count`);
     const catCount = Number(catCountRes.rows[0]?.count || 0);
     if (catCount === 0) {
       for (const cat of initialCategories) {
-        await query(`SELECT gocart_seed_row('categories', $1::jsonb)`, [
+        await query(`SELECT shopniro_seed_row('categories', $1::jsonb)`, [
           JSON.stringify({ id: cat.Category_ID, name: cat.Name }),
         ]);
       }
@@ -88,7 +88,7 @@ export async function seedDatabaseIfEmpty() {
     // 2. Admin
     if (adminCount === 0) {
       const hashedPassword = await hashPassword(seedPasswords.admin!);
-      await query(`SELECT gocart_seed_row('admins', $1::jsonb)`, [
+      await query(`SELECT shopniro_seed_row('admins', $1::jsonb)`, [
         JSON.stringify({
           id: initialAdmin.Admin_ID,
           username: initialAdmin.Username,
@@ -109,7 +109,7 @@ export async function seedDatabaseIfEmpty() {
     if (sellerCount === 0) {
       for (const seller of initialSellers) {
         const hashedPassword = await hashPassword(seedPasswords.seller!);
-        await query(`SELECT gocart_seed_row('sellers', $1::jsonb)`, [
+        await query(`SELECT shopniro_seed_row('sellers', $1::jsonb)`, [
           JSON.stringify({
             id: seller.Seller_ID,
             username: seller.Username,
@@ -134,7 +134,7 @@ export async function seedDatabaseIfEmpty() {
     if (customerCount === 0) {
       for (const cust of initialCustomers) {
         const hashedPassword = await hashPassword(seedPasswords.customer!);
-        await query(`SELECT gocart_seed_row('customers', $1::jsonb)`, [
+        await query(`SELECT shopniro_seed_row('customers', $1::jsonb)`, [
           JSON.stringify({
             id: cust.Customer_ID,
             username: cust.Username,
@@ -153,11 +153,11 @@ export async function seedDatabaseIfEmpty() {
     }
 
     // 5. Products
-    const prodCountRes = await query(`SELECT gocart_table_count('products') AS count`);
+    const prodCountRes = await query(`SELECT shopniro_table_count('products') AS count`);
     const prodCount = Number(prodCountRes.rows[0]?.count || 0);
     if (prodCount === 0) {
       for (const p of initialProducts) {
-        await query(`SELECT gocart_seed_row('products', $1::jsonb)`, [
+        await query(`SELECT shopniro_seed_row('products', $1::jsonb)`, [
           JSON.stringify({
             id: p.Product_ID,
             name: p.Name,
@@ -175,11 +175,11 @@ export async function seedDatabaseIfEmpty() {
     }
 
     // 6. Reviews
-    const revCountRes = await query(`SELECT gocart_table_count('reviews') AS count`);
+    const revCountRes = await query(`SELECT shopniro_table_count('reviews') AS count`);
     const revCount = Number(revCountRes.rows[0]?.count || 0);
     if (revCount === 0) {
       for (const r of initialReviews) {
-        await query(`SELECT gocart_seed_row('reviews', $1::jsonb)`, [
+        await query(`SELECT shopniro_seed_row('reviews', $1::jsonb)`, [
           JSON.stringify({
             id: r.Review_ID,
             product_id: r.Product_ID,
@@ -193,11 +193,11 @@ export async function seedDatabaseIfEmpty() {
     }
 
     // 7. Orders
-    const ordCountRes = await query(`SELECT gocart_table_count('orders') AS count`);
+    const ordCountRes = await query(`SELECT shopniro_table_count('orders') AS count`);
     const ordCount = Number(ordCountRes.rows[0]?.count || 0);
     if (ordCount === 0) {
       for (const o of initialOrders) {
-        await query(`SELECT gocart_seed_row('orders', $1::jsonb)`, [
+        await query(`SELECT shopniro_seed_row('orders', $1::jsonb)`, [
           JSON.stringify({
             id: o.Order_ID,
             tracking_id: o.Tracking_ID,

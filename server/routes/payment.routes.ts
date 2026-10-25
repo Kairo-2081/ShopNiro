@@ -393,7 +393,7 @@ router.get('/methods', async (req, res) => {
 
 /**
  * POST /api/payment/init
- * Initializes an SSLCommerz payment session for an order (via schema gocart_payment_create)
+ * Initializes an SSLCommerz payment session for an order (via schema shopniro_payment_create)
  */
 router.get('/simulator', async (req, res) => {
   if (!sslcommerz.isPaymentSimulatorEnabled()) return res.sendStatus(404);
@@ -544,7 +544,7 @@ router.post('/init', requireAuth, requireRole(['customer']), paymentInitRateLimi
       let ownsClaim = false;
       if (!existing) {
         await client.query(
-          `SELECT * FROM gocart_payment_create($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+          `SELECT * FROM shopniro_payment_create($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
           [paymentId, orderId, req.user!.entityId, finalAmountBDT, 'BDT', 'sslcommerz', finalPaymentMethod, transactionId, customerPhone || '']
         );
         // The request that creates the payment row owns the right to create its gateway session.
@@ -646,7 +646,7 @@ router.post('/init', requireAuth, requireRole(['customer']), paymentInitRateLimi
 
 /**
  * POST /api/payment/sslcommerz/validate
- * Validates SSLCommerz payment and updates via schema gocart_payment_update
+ * Validates SSLCommerz payment and updates via schema shopniro_payment_update
  */
 router.post('/sslcommerz/validate', requireAuth, requireRole(['customer']), validateBody(sslcommerzValidateBody), async (req: AuthRequest, res) => {
   try {
@@ -751,7 +751,7 @@ router.post('/sslcommerz/ipn', requireIpnToken, validateBody(sslcommerzIpnBody),
 
 /**
  * GET /api/payment/transactions
- * Retrieve payments list via schema gocart_payments_list
+ * Retrieve payments list via schema shopniro_payments_list
  */
 router.get('/transactions', requireAuth, requireRole(['admin']), async (req, res) => {
   try {

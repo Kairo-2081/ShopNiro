@@ -455,7 +455,7 @@ router.post('/chat', validateBody(aiChatBody), async (req, res) => {
     // Fetch active products to ground the assistant with live catalog context
     let liveProducts: any[] = [];
     try {
-      const prodRes = await query(`SELECT id, name, price, stock, voucher, category_id, seller_id FROM gocart_products_list() WHERE product_status = 'active' LIMIT 20`);
+      const prodRes = await query(`SELECT id, name, price, stock, voucher, category_id, seller_id FROM shopniro_products_list() WHERE product_status = 'active' LIMIT 20`);
       liveProducts = prodRes.rows;
     } catch (e) {
       // Ignore database context error, continue with default prompt

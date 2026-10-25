@@ -169,7 +169,7 @@ directApiRoutes.get('/db/status', requireAuth, requireRole(['admin']), async (_r
 
 directApiRoutes.get('/stats', requireAuth, requireRole(['admin']), async (_req, res) => {
   try {
-    const statsRes = await query('SELECT * FROM gocart_admin_dashboard_stats()');
+    const statsRes = await query('SELECT * FROM shopniro_admin_dashboard_stats()');
     const row = statsRes.rows[0] || {};
     res.json({
       totalCustomers: Number(row.total_customers || 0),
@@ -206,7 +206,7 @@ directApiRoutes.get('/admin/users', requireAuth, requireRole(['admin']), async (
 directApiRoutes.get('/analytics/trending-products', async (req, res) => {
   try {
     const limit = Number(req.query.limit) || 12;
-    const result = await query('SELECT * FROM gocart_trending_products($1)', [limit]);
+    const result = await query('SELECT * FROM shopniro_trending_products($1)', [limit]);
     res.json(result.rows);
   } catch (error: any) {
     console.error('Error fetching trending products:', error);
@@ -217,7 +217,7 @@ directApiRoutes.get('/analytics/trending-products', async (req, res) => {
 directApiRoutes.get('/analytics/top-rated-products', async (req, res) => {
   try {
     const limit = Number(req.query.limit) || 12;
-    const result = await query('SELECT * FROM gocart_top_rated_products($1)', [limit]);
+    const result = await query('SELECT * FROM shopniro_top_rated_products($1)', [limit]);
     res.json(result.rows);
   } catch (error: any) {
     console.error('Error fetching top rated products:', error);
@@ -228,7 +228,7 @@ directApiRoutes.get('/analytics/top-rated-products', async (req, res) => {
 directApiRoutes.get('/analytics/top-rated-sellers', async (req, res) => {
   try {
     const limit = Number(req.query.limit) || 3;
-    const result = await query('SELECT * FROM gocart_top_rated_sellers($1)', [limit]);
+    const result = await query('SELECT * FROM shopniro_top_rated_sellers($1)', [limit]);
     res.json(result.rows);
   } catch (error: any) {
     console.error('Error fetching top rated sellers:', error);

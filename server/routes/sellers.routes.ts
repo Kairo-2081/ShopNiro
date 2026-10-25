@@ -57,7 +57,7 @@ const registrationRateLimit = rateLimit({
 
 /**
  * GET /api/sellers
- * Returns list of all sellers (via schema gocart_sellers_list)
+ * Returns list of all sellers (via schema shopniro_sellers_list)
  */
 router.get('/', optionalAuth, async (req: AuthRequest, res) => {
   try {
@@ -92,7 +92,7 @@ router.get('/', optionalAuth, async (req: AuthRequest, res) => {
 
 /**
  * POST /api/sellers
- * Register new seller (via schema gocart_seller_create)
+ * Register new seller (via schema shopniro_seller_create)
  */
 router.post('/', registrationRateLimit, validateBody(sellerRegisterBody), async (req, res) => {
   let client: PoolClient | undefined;
@@ -131,7 +131,7 @@ router.post('/', registrationRateLimit, validateBody(sellerRegisterBody), async 
       return res.status(400).json({ error: 'Select a location and provide a street and city' });
     }
     // Check if user with this email already exists
-    const existing = await query(`SELECT * FROM gocart_auth_user_lookup($1, '')`, [cleanEmail]);
+    const existing = await query(`SELECT * FROM shopniro_auth_user_lookup($1, '')`, [cleanEmail]);
     if (existing.rows.length > 0) {
       return res.status(409).json({ error: 'An account with this email address already exists. Please log in instead.' });
     }
@@ -153,7 +153,7 @@ router.post('/', registrationRateLimit, validateBody(sellerRegisterBody), async 
     client = await pool.connect();
     await client.query('BEGIN');
     const result = await client.query(
-      `SELECT * FROM gocart_seller_create($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
+      `SELECT * FROM shopniro_seller_create($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)`,
       [id, username, Name, cleanEmail, hashedPassword, phone, logoUrl, desc, houseName, street, city, postalCode, addInfo]
     );
     await client.query(
@@ -339,7 +339,7 @@ router.put('/me/profile', requireAuth, requireRole(['seller']), validateBody(sel
     ]);
     await client.query('COMMIT');
     committed = true;
-    const profile = await query('SELECT * FROM gocart_seller_get($1)', [sellerId]);
+    const profile = await query('SELECT * FROM shopniro_seller_get($1)', [sellerId]);
     const seller = profile.rows[0];
     if (!seller) return res.status(404).json({ error: 'Seller profile not found.' });
     const documentResult = await query(
@@ -453,7 +453,7 @@ router.post('/me/payouts', requireAuth, requireRole(['seller']), validateBody(se
 
 /**
  * PATCH /api/sellers/:id/status
- * Approves or suspends a seller (via schema gocart_seller_status_update)
+ * Approves or suspends a seller (via schema shopniro_seller_status_update)
  */
 router.patch('/:id/status', requireAuth, requireRole(['admin']), validateParams(resourceIdParam), validateBody(sellerStatusBody), async (req: AuthRequest, res) => {
   try {

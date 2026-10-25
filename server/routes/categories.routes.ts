@@ -10,11 +10,11 @@ const router = Router();
 
 /**
  * GET /api/categories
- * Returns list of categories ordered by name (via schema gocart_categories_list)
+ * Returns list of categories ordered by name (via schema shopniro_categories_list)
  */
 router.get('/', async (req, res) => {
   try {
-    const result = await query(`SELECT * FROM gocart_categories_list()`);
+    const result = await query(`SELECT * FROM shopniro_categories_list()`);
     const formatted: Category[] = result.rows.map((c: any) => ({
       Category_ID: c.id,
       Name: c.name,
@@ -28,7 +28,7 @@ router.get('/', async (req, res) => {
 
 /**
  * POST /api/categories
- * Creates a new category (via schema gocart_category_create)
+ * Creates a new category (via schema shopniro_category_create)
  */
 router.post('/', requireAuth, requireRole(['admin']), validateBody(categoryBody), async (req: AuthRequest, res) => {
   try {
@@ -37,7 +37,7 @@ router.post('/', requireAuth, requireRole(['admin']), validateBody(categoryBody)
       return res.status(400).json({ error: 'Category Name is required' });
     }
     const id = newId('CAT');
-    const result = await query(`SELECT * FROM gocart_category_create($1, $2)`, [id, Name.trim()]);
+    const result = await query(`SELECT * FROM shopniro_category_create($1, $2)`, [id, Name.trim()]);
     const row = result.rows[0];
     res.status(201).json({ Category_ID: row.id, Name: row.name });
   } catch (error: any) {
@@ -48,7 +48,7 @@ router.post('/', requireAuth, requireRole(['admin']), validateBody(categoryBody)
 
 /**
  * PUT /api/categories/:id
- * Updates an existing category (via schema gocart_category_update)
+ * Updates an existing category (via schema shopniro_category_update)
  */
 router.put('/:id', requireAuth, requireRole(['admin']), validateParams(resourceIdParam), validateBody(categoryBody), async (req: AuthRequest, res) => {
   try {
@@ -57,7 +57,7 @@ router.put('/:id', requireAuth, requireRole(['admin']), validateParams(resourceI
     if (!Name || !Name.trim()) {
       return res.status(400).json({ error: 'Category Name cannot be empty' });
     }
-    const result = await query(`SELECT * FROM gocart_category_update($1, $2)`, [id, Name.trim()]);
+    const result = await query(`SELECT * FROM shopniro_category_update($1, $2)`, [id, Name.trim()]);
     const row = result.rows[0];
     res.json({ Category_ID: row?.id || id, Name: row?.name || Name.trim() });
   } catch (error: any) {
@@ -68,12 +68,12 @@ router.put('/:id', requireAuth, requireRole(['admin']), validateParams(resourceI
 
 /**
  * DELETE /api/categories/:id
- * Deletes a category (via schema gocart_category_delete)
+ * Deletes a category (via schema shopniro_category_delete)
  */
 router.delete('/:id', requireAuth, requireRole(['admin']), validateParams(resourceIdParam), async (req: AuthRequest, res) => {
   try {
     const { id } = req.params;
-    await query(`SELECT * FROM gocart_category_delete($1)`, [id]);
+    await query(`SELECT * FROM shopniro_category_delete($1)`, [id]);
     res.json({ success: true, message: 'Category deleted' });
   } catch (error: any) {
     req.log.error({ err: error }, 'Error deleting category:');

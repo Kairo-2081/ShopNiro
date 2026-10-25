@@ -1318,7 +1318,7 @@ DROP VIEW IF EXISTS category_performance CASCADE;
 DROP VIEW IF EXISTS top_rated_products CASCADE;
 DROP VIEW IF EXISTS top_customers CASCADE;
 DROP VIEW IF EXISTS trending_products CASCADE;
-DROP FUNCTION IF EXISTS gocart_top_sellers(INTEGER);
+DROP FUNCTION IF EXISTS shopniro_top_sellers(INTEGER);
 DROP VIEW IF EXISTS top_sellers CASCADE;
 
 -- Rank active products by lifetime units sold across all non-cancelled orders.
@@ -1415,14 +1415,14 @@ SELECT a.id, u.username, a.name, u.email, a.number,
 FROM admins a JOIN users u ON u.id = a.id AND u.role = 'admin';
 
 -- Category read and write operations used by the API.
-CREATE OR REPLACE FUNCTION gocart_categories_list()
+CREATE OR REPLACE FUNCTION shopniro_categories_list()
 RETURNS SETOF categories
 LANGUAGE SQL STABLE
 AS $$
     SELECT * FROM categories ORDER BY name ASC;
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_category_create(p_id VARCHAR, p_name TEXT)
+CREATE OR REPLACE FUNCTION shopniro_category_create(p_id VARCHAR, p_name TEXT)
 RETURNS SETOF categories
 LANGUAGE plpgsql
 AS $$
@@ -1433,7 +1433,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_category_update(p_id VARCHAR, p_name TEXT)
+CREATE OR REPLACE FUNCTION shopniro_category_update(p_id VARCHAR, p_name TEXT)
 RETURNS SETOF categories
 LANGUAGE plpgsql
 AS $$
@@ -1444,7 +1444,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_category_delete(p_id VARCHAR)
+CREATE OR REPLACE FUNCTION shopniro_category_delete(p_id VARCHAR)
 RETURNS TABLE(deleted_id VARCHAR)
 LANGUAGE plpgsql
 AS $$
@@ -1456,35 +1456,35 @@ END;
 $$;
 
 -- Drop prior composite return types before switching from base tables to profile views.
-DROP FUNCTION IF EXISTS gocart_sellers_list();
-DROP FUNCTION IF EXISTS gocart_seller_create(VARCHAR, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT);
-DROP FUNCTION IF EXISTS gocart_seller_status_update(VARCHAR, TEXT);
-DROP FUNCTION IF EXISTS gocart_admins_list();
-DROP FUNCTION IF EXISTS gocart_admin_create(VARCHAR, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT);
-DROP FUNCTION IF EXISTS gocart_customers_list();
-DROP FUNCTION IF EXISTS gocart_customer_create(VARCHAR, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT);
-DROP FUNCTION IF EXISTS gocart_customer_update(VARCHAR, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT);
-DROP FUNCTION IF EXISTS gocart_seller_get(VARCHAR);
-DROP FUNCTION IF EXISTS gocart_customer_get(VARCHAR);
-DROP FUNCTION IF EXISTS gocart_admin_get(VARCHAR);
-DROP FUNCTION IF EXISTS gocart_orders_list();
-DROP FUNCTION IF EXISTS gocart_order_get(VARCHAR);
-DROP FUNCTION IF EXISTS gocart_auth_admin_lookup(TEXT, VARCHAR);
-DROP FUNCTION IF EXISTS gocart_auth_seller_lookup(TEXT, VARCHAR);
-DROP FUNCTION IF EXISTS gocart_auth_customer_lookup(TEXT, VARCHAR);
-DROP FUNCTION IF EXISTS gocart_user_role_update(VARCHAR, VARCHAR);
-DROP FUNCTION IF EXISTS gocart_user_create(VARCHAR, VARCHAR, TEXT, VARCHAR, VARCHAR, VARCHAR, TEXT);
-DROP FUNCTION IF EXISTS gocart_user_create(VARCHAR, TEXT, VARCHAR, VARCHAR, VARCHAR, TEXT);
+DROP FUNCTION IF EXISTS shopniro_sellers_list();
+DROP FUNCTION IF EXISTS shopniro_seller_create(VARCHAR, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT);
+DROP FUNCTION IF EXISTS shopniro_seller_status_update(VARCHAR, TEXT);
+DROP FUNCTION IF EXISTS shopniro_admins_list();
+DROP FUNCTION IF EXISTS shopniro_admin_create(VARCHAR, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT);
+DROP FUNCTION IF EXISTS shopniro_customers_list();
+DROP FUNCTION IF EXISTS shopniro_customer_create(VARCHAR, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT);
+DROP FUNCTION IF EXISTS shopniro_customer_update(VARCHAR, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT);
+DROP FUNCTION IF EXISTS shopniro_seller_get(VARCHAR);
+DROP FUNCTION IF EXISTS shopniro_customer_get(VARCHAR);
+DROP FUNCTION IF EXISTS shopniro_admin_get(VARCHAR);
+DROP FUNCTION IF EXISTS shopniro_orders_list();
+DROP FUNCTION IF EXISTS shopniro_order_get(VARCHAR);
+DROP FUNCTION IF EXISTS shopniro_auth_admin_lookup(TEXT, VARCHAR);
+DROP FUNCTION IF EXISTS shopniro_auth_seller_lookup(TEXT, VARCHAR);
+DROP FUNCTION IF EXISTS shopniro_auth_customer_lookup(TEXT, VARCHAR);
+DROP FUNCTION IF EXISTS shopniro_user_role_update(VARCHAR, VARCHAR);
+DROP FUNCTION IF EXISTS shopniro_user_create(VARCHAR, VARCHAR, TEXT, VARCHAR, VARCHAR, VARCHAR, TEXT);
+DROP FUNCTION IF EXISTS shopniro_user_create(VARCHAR, TEXT, VARCHAR, VARCHAR, VARCHAR, TEXT);
 
 -- Seller listing, registration, and approval-status operations.
-CREATE OR REPLACE FUNCTION gocart_sellers_list()
+CREATE OR REPLACE FUNCTION shopniro_sellers_list()
 RETURNS SETOF seller_profiles
 LANGUAGE SQL STABLE
 AS $$
     SELECT * FROM seller_profiles ORDER BY created_at DESC;
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_seller_create(
+CREATE OR REPLACE FUNCTION shopniro_seller_create(
     p_id VARCHAR,
     p_username TEXT,
     p_name TEXT,
@@ -1522,7 +1522,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_seller_status_update(p_id VARCHAR, p_status TEXT)
+CREATE OR REPLACE FUNCTION shopniro_seller_status_update(p_id VARCHAR, p_status TEXT)
 RETURNS SETOF seller_profiles
 LANGUAGE plpgsql
 AS $$
@@ -1534,14 +1534,14 @@ END;
 $$;
 
 -- Admin listing, registration, and linked-user listing operations.
-CREATE OR REPLACE FUNCTION gocart_admins_list()
+CREATE OR REPLACE FUNCTION shopniro_admins_list()
 RETURNS SETOF admin_profiles
 LANGUAGE SQL STABLE
 AS $$
     SELECT * FROM admin_profiles ORDER BY created_at ASC;
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_admin_create(
+CREATE OR REPLACE FUNCTION shopniro_admin_create(
     p_id VARCHAR,
     p_username TEXT,
     p_name TEXT,
@@ -1575,7 +1575,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_admins_users_list()
+CREATE OR REPLACE FUNCTION shopniro_admins_users_list()
 RETURNS TABLE(id VARCHAR, username VARCHAR, email VARCHAR, role VARCHAR, entity_id VARCHAR, created_at TIMESTAMPTZ)
 LANGUAGE SQL STABLE
 AS $$
@@ -1585,14 +1585,14 @@ AS $$
 $$;
 
 -- Customer listing, registration, profile updates, and lookup operations.
-CREATE OR REPLACE FUNCTION gocart_customers_list()
+CREATE OR REPLACE FUNCTION shopniro_customers_list()
 RETURNS SETOF customer_profiles
 LANGUAGE SQL STABLE
 AS $$
     SELECT * FROM customer_profiles ORDER BY created_at ASC;
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_customer_create(
+CREATE OR REPLACE FUNCTION shopniro_customer_create(
     p_id VARCHAR,
     p_username TEXT,
     p_name TEXT,
@@ -1628,7 +1628,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_customer_update(
+CREATE OR REPLACE FUNCTION shopniro_customer_update(
     p_id VARCHAR,
     p_name TEXT,
     p_email TEXT,
@@ -1670,28 +1670,28 @@ END;
 $$;
 
 -- Product listing, lookup, creation, updates, status changes, and deletion.
-CREATE OR REPLACE FUNCTION gocart_products_list()
+CREATE OR REPLACE FUNCTION shopniro_products_list()
 RETURNS SETOF products
 LANGUAGE SQL STABLE
 AS $$
     SELECT * FROM products ORDER BY created_at DESC NULLS LAST, id DESC;
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_product_get(p_id VARCHAR)
+CREATE OR REPLACE FUNCTION shopniro_product_get(p_id VARCHAR)
 RETURNS SETOF products
 LANGUAGE SQL STABLE
 AS $$
     SELECT * FROM products WHERE id = p_id;
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_seller_get(p_id VARCHAR)
+CREATE OR REPLACE FUNCTION shopniro_seller_get(p_id VARCHAR)
 RETURNS SETOF seller_profiles
 LANGUAGE SQL STABLE
 AS $$
     SELECT * FROM seller_profiles WHERE id = p_id;
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_product_create(
+CREATE OR REPLACE FUNCTION shopniro_product_create(
     p_id VARCHAR,
     p_name TEXT,
     p_image TEXT,
@@ -1719,7 +1719,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_product_update(
+CREATE OR REPLACE FUNCTION shopniro_product_update(
     p_id VARCHAR,
     p_name TEXT,
     p_image TEXT,
@@ -1749,7 +1749,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_product_status_update(p_id VARCHAR, p_status TEXT)
+CREATE OR REPLACE FUNCTION shopniro_product_status_update(p_id VARCHAR, p_status TEXT)
 RETURNS SETOF products
 LANGUAGE plpgsql
 AS $$
@@ -1760,7 +1760,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_product_delete(p_id VARCHAR)
+CREATE OR REPLACE FUNCTION shopniro_product_delete(p_id VARCHAR)
 RETURNS TABLE(deleted_id VARCHAR)
 LANGUAGE plpgsql
 AS $$
@@ -1770,35 +1770,35 @@ END;
 $$;
 
 -- Cart reads and writes, including ownership-scoped updates and deletes.
-CREATE OR REPLACE FUNCTION gocart_cart_list(p_customer_id VARCHAR)
+CREATE OR REPLACE FUNCTION shopniro_cart_list(p_customer_id VARCHAR)
 RETURNS SETOF cart
 LANGUAGE SQL STABLE
 AS $$
     SELECT * FROM cart WHERE customer_id = p_customer_id;
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_active_product(p_product_id VARCHAR)
+CREATE OR REPLACE FUNCTION shopniro_active_product(p_product_id VARCHAR)
 RETURNS TABLE(id VARCHAR)
 LANGUAGE SQL STABLE
 AS $$
     SELECT p.id FROM products p WHERE p.id = p_product_id AND p.product_status = 'active';
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_cart_existing(p_customer_id VARCHAR, p_product_id VARCHAR)
+CREATE OR REPLACE FUNCTION shopniro_cart_existing(p_customer_id VARCHAR, p_product_id VARCHAR)
 RETURNS SETOF cart
 LANGUAGE SQL STABLE
 AS $$
     SELECT * FROM cart WHERE customer_id = p_customer_id AND product_id = p_product_id LIMIT 1;
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_cart_existing(p_customer_id VARCHAR, p_product_id VARCHAR, p_size VARCHAR)
+CREATE OR REPLACE FUNCTION shopniro_cart_existing(p_customer_id VARCHAR, p_product_id VARCHAR, p_size VARCHAR)
 RETURNS SETOF cart
 LANGUAGE SQL STABLE
 AS $$
     SELECT * FROM cart WHERE customer_id = p_customer_id AND product_id = p_product_id AND size = p_size LIMIT 1;
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_cart_create(
+CREATE OR REPLACE FUNCTION shopniro_cart_create(
     p_id VARCHAR,
     p_customer_id VARCHAR,
     p_product_id VARCHAR,
@@ -1815,7 +1815,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_cart_create(
+CREATE OR REPLACE FUNCTION shopniro_cart_create(
     p_id VARCHAR,
     p_customer_id VARCHAR,
     p_product_id VARCHAR,
@@ -1833,7 +1833,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_cart_update(p_id VARCHAR, p_quantity INTEGER, p_customer_id VARCHAR)
+CREATE OR REPLACE FUNCTION shopniro_cart_update(p_id VARCHAR, p_quantity INTEGER, p_customer_id VARCHAR)
 RETURNS SETOF cart
 LANGUAGE plpgsql
 AS $$
@@ -1845,7 +1845,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_cart_delete(p_id VARCHAR, p_customer_id VARCHAR)
+CREATE OR REPLACE FUNCTION shopniro_cart_delete(p_id VARCHAR, p_customer_id VARCHAR)
 RETURNS SETOF cart
 LANGUAGE plpgsql
 AS $$
@@ -1857,7 +1857,7 @@ END;
 $$;
 
 -- Order listing, lookup, and status update operations.
-CREATE OR REPLACE FUNCTION gocart_orders_list()
+CREATE OR REPLACE FUNCTION shopniro_orders_list()
 RETURNS TABLE(
     id VARCHAR, tracking_id VARCHAR, customer_id VARCHAR, items_json TEXT,
     subtotal NUMERIC, shipping_fee NUMERIC, status VARCHAR,
@@ -1884,7 +1884,7 @@ AS $$
     FROM orders o ORDER BY o.order_placed_at DESC;
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_order_get(p_id VARCHAR)
+CREATE OR REPLACE FUNCTION shopniro_order_get(p_id VARCHAR)
 RETURNS TABLE(
     id VARCHAR, tracking_id VARCHAR, customer_id VARCHAR, items_json TEXT,
     subtotal NUMERIC, shipping_fee NUMERIC, status VARCHAR,
@@ -1911,7 +1911,7 @@ AS $$
     FROM orders o WHERE o.id = p_id;
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_order_status_update(p_id VARCHAR, p_status TEXT)
+CREATE OR REPLACE FUNCTION shopniro_order_status_update(p_id VARCHAR, p_status TEXT)
 RETURNS SETOF orders
 LANGUAGE plpgsql
 AS $$
@@ -1923,21 +1923,21 @@ END;
 $$;
 
 -- Review listing and filtering by product or seller.
-CREATE OR REPLACE FUNCTION gocart_reviews_list()
+CREATE OR REPLACE FUNCTION shopniro_reviews_list()
 RETURNS SETOF reviews
 LANGUAGE SQL STABLE
 AS $$
     SELECT * FROM reviews ORDER BY created_at DESC;
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_reviews_by_product(p_product_id VARCHAR)
+CREATE OR REPLACE FUNCTION shopniro_reviews_by_product(p_product_id VARCHAR)
 RETURNS SETOF reviews
 LANGUAGE SQL STABLE
 AS $$
     SELECT * FROM reviews WHERE product_id = p_product_id ORDER BY created_at DESC;
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_reviews_by_seller(p_seller_id VARCHAR)
+CREATE OR REPLACE FUNCTION shopniro_reviews_by_seller(p_seller_id VARCHAR)
 RETURNS SETOF reviews
 LANGUAGE SQL STABLE
 AS $$
@@ -1948,14 +1948,14 @@ AS $$
 $$;
 
 -- Look up a customer profile by its entity ID.
-CREATE OR REPLACE FUNCTION gocart_customer_get(p_id VARCHAR)
+CREATE OR REPLACE FUNCTION shopniro_customer_get(p_id VARCHAR)
 RETURNS SETOF customer_profiles
 LANGUAGE SQL STABLE
 AS $$
     SELECT * FROM customer_profiles WHERE id = p_id;
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_review_create(
+CREATE OR REPLACE FUNCTION shopniro_review_create(
     p_id VARCHAR,
     p_product_id VARCHAR,
     p_customer_id VARCHAR,
@@ -1975,7 +1975,7 @@ END;
 $$;
 
 -- Authentication and profile lookups.
-CREATE OR REPLACE FUNCTION gocart_auth_user_lookup(p_identifier TEXT, p_id VARCHAR)
+CREATE OR REPLACE FUNCTION shopniro_auth_user_lookup(p_identifier TEXT, p_id VARCHAR)
 RETURNS SETOF users
 LANGUAGE SQL STABLE
 AS $$
@@ -1986,14 +1986,14 @@ AS $$
     LIMIT 1;
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_admin_get(p_id VARCHAR)
+CREATE OR REPLACE FUNCTION shopniro_admin_get(p_id VARCHAR)
 RETURNS SETOF admin_profiles
 LANGUAGE SQL STABLE
 AS $$
     SELECT * FROM admin_profiles WHERE id = p_id;
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_auth_password_update(p_role TEXT, p_id VARCHAR, p_password TEXT)
+CREATE OR REPLACE FUNCTION shopniro_auth_password_update(p_role TEXT, p_id VARCHAR, p_password TEXT)
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 AS $$
@@ -2010,14 +2010,14 @@ END;
 $$;
 
 -- Statistics queries, including their ordering and limits.
-CREATE OR REPLACE FUNCTION gocart_admin_dashboard_stats()
+CREATE OR REPLACE FUNCTION shopniro_admin_dashboard_stats()
 RETURNS SETOF admin_dashboard_stats
 LANGUAGE SQL STABLE
 AS $$
     SELECT * FROM admin_dashboard_stats;
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_top_rated_products(p_limit INTEGER DEFAULT 12)
+CREATE OR REPLACE FUNCTION shopniro_top_rated_products(p_limit INTEGER DEFAULT 12)
 RETURNS SETOF top_rated_products
 LANGUAGE SQL STABLE
 AS $$
@@ -2026,7 +2026,7 @@ AS $$
     LIMIT LEAST(GREATEST(COALESCE(p_limit, 3), 0), 3);
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_top_rated_sellers(p_limit INTEGER DEFAULT 3)
+CREATE OR REPLACE FUNCTION shopniro_top_rated_sellers(p_limit INTEGER DEFAULT 3)
 RETURNS SETOF top_rated_sellers
 LANGUAGE SQL STABLE
 AS $$
@@ -2035,7 +2035,7 @@ AS $$
     LIMIT LEAST(GREATEST(COALESCE(p_limit, 3), 0), 3);
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_trending_products(p_limit INTEGER DEFAULT 10)
+CREATE OR REPLACE FUNCTION shopniro_trending_products(p_limit INTEGER DEFAULT 10)
 RETURNS SETOF trending_products
 LANGUAGE SQL STABLE
 AS $$
@@ -2044,7 +2044,7 @@ AS $$
     LIMIT LEAST(GREATEST(COALESCE(p_limit, 3), 0), 3);
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_database_status()
+CREATE OR REPLACE FUNCTION shopniro_database_status()
 RETURNS TABLE(test INTEGER, db_name NAME, pg_version TEXT)
 LANGUAGE SQL STABLE
 AS $$
@@ -2052,7 +2052,7 @@ AS $$
 $$;
 
 -- User provisioning and seed helpers.
-CREATE OR REPLACE FUNCTION gocart_user_find(p_identifier VARCHAR, p_email VARCHAR, p_username VARCHAR)
+CREATE OR REPLACE FUNCTION shopniro_user_find(p_identifier VARCHAR, p_email VARCHAR, p_username VARCHAR)
 RETURNS SETOF users
 LANGUAGE SQL STABLE
 AS $$
@@ -2061,7 +2061,7 @@ AS $$
     LIMIT 1;
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_user_create(
+CREATE OR REPLACE FUNCTION shopniro_user_create(
     p_username VARCHAR, p_password TEXT, p_email VARCHAR,
     p_role VARCHAR, p_id VARCHAR, p_name TEXT, p_number TEXT,
     p_house_name TEXT, p_street TEXT, p_city TEXT, p_postal_code TEXT, p_additional_info TEXT
@@ -2091,7 +2091,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_table_count(p_table TEXT)
+CREATE OR REPLACE FUNCTION shopniro_table_count(p_table TEXT)
 RETURNS BIGINT
 LANGUAGE plpgsql STABLE
 AS $$
@@ -2109,7 +2109,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_seed_row(p_table TEXT, p_row JSONB)
+CREATE OR REPLACE FUNCTION shopniro_seed_row(p_table TEXT, p_row JSONB)
 RETURNS VOID
 LANGUAGE plpgsql
 AS $$
@@ -2158,7 +2158,7 @@ BEGIN
 END;
 $$;
 
-DROP FUNCTION IF EXISTS gocart_passwords_list();
+DROP FUNCTION IF EXISTS shopniro_passwords_list();
 
 -- Persist issued JWT IDs so sessions can be invalidated immediately on logout.
 CREATE TABLE IF NOT EXISTS auth_sessions (
@@ -2216,7 +2216,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_session_create(p_jti VARCHAR, p_user_id VARCHAR, p_expires_at TIMESTAMPTZ)
+CREATE OR REPLACE FUNCTION shopniro_session_create(p_jti VARCHAR, p_user_id VARCHAR, p_expires_at TIMESTAMPTZ)
 RETURNS VOID
 LANGUAGE plpgsql
 AS $$
@@ -2227,7 +2227,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_session_active(p_jti VARCHAR)
+CREATE OR REPLACE FUNCTION shopniro_session_active(p_jti VARCHAR)
 RETURNS BOOLEAN
 LANGUAGE SQL STABLE
 AS $$
@@ -2239,7 +2239,7 @@ AS $$
     );
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_session_revoke(p_jti VARCHAR)
+CREATE OR REPLACE FUNCTION shopniro_session_revoke(p_jti VARCHAR)
 RETURNS BOOLEAN
 LANGUAGE plpgsql
 AS $$
@@ -2253,7 +2253,7 @@ END;
 $$;
 
 -- Payment Functions
-CREATE OR REPLACE FUNCTION gocart_payment_create(
+CREATE OR REPLACE FUNCTION shopniro_payment_create(
     p_id VARCHAR, p_order_id VARCHAR, p_customer_id VARCHAR, p_amount NUMERIC,
     p_currency VARCHAR, p_gateway VARCHAR, p_payment_method VARCHAR,
     p_transaction_id VARCHAR, p_customer_phone VARCHAR
@@ -2274,7 +2274,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_payment_update(
+CREATE OR REPLACE FUNCTION shopniro_payment_update(
     p_tran_id VARCHAR, p_status VARCHAR, p_bank_tran_id VARCHAR,
     p_val_id VARCHAR, p_card_type VARCHAR, p_card_brand VARCHAR, p_card_issuer VARCHAR
 )
@@ -2296,7 +2296,7 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION gocart_payments_list(p_order_id VARCHAR DEFAULT NULL)
+CREATE OR REPLACE FUNCTION shopniro_payments_list(p_order_id VARCHAR DEFAULT NULL)
 RETURNS SETOF payments
 LANGUAGE SQL STABLE
 AS $$
