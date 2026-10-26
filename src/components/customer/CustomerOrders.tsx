@@ -2,23 +2,7 @@ import React from 'react';
 import { Customer, Order, OrderCancellationRequest, Product, RiderDelivery, Seller } from '../../types';
 import { api, formatCurrency, formatBDT, formatDate } from '../../lib/api';
 import { PaymentReceiptModal } from '../payment/PaymentReceiptModal';
-import {
-  Package,
-  Truck,
-  CheckCircle2,
-  Clock,
-  MapPin,
-  Search,
-  ChevronRight,
-  AlertCircle,
-  Radio,
-  Receipt,
-  ShieldCheck,
-  CreditCard,
-  Lock,
-  Navigation,
-  X,
-} from 'lucide-react';
+import { Package, Truck, CheckCircle2, Clock, MapPin, Search, AlertCircle, Radio, Receipt, X } from 'lucide-react';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 const LiveProductTrackingMap = React.lazy(() => import('../tracking/LiveProductTrackingMap').then((module) => ({ default: module.LiveProductTrackingMap })));

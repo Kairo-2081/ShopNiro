@@ -314,7 +314,6 @@ router.post('/apply', riderApplicationRateLimit, validateBody(riderApplyBody), a
     Profile_Image_File_Name,
     Has_CV,
     CV_Base64,
-    CV_File_Name,
     Experience,
     Previous_Jobs,
     Education,

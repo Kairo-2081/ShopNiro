@@ -100,7 +100,7 @@ router.post('/', registrationRateLimit, validateBody(sellerRegisterBody), async 
   try {
     const oauthRegistration = readOAuthRegistrationCookie(req);
     const { Name, Email, Password, Number: phoneNum, Address, Logo, Description, Username,
-      Business_Registration_Number, Payout_Method, Payout_Account, Identity_Document, Identity_Document_File_Name } = req.body;
+      Business_Registration_Number, Payout_Method, Payout_Account, Identity_Document } = req.body;
     if (!Name || !Email) {
       return res.status(400).json({ error: 'Name and Email are required' });
     }

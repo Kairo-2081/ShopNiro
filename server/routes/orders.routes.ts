@@ -4,12 +4,11 @@ import type { PoolClient } from 'pg';
 import { pool, query } from '../db/index.ts';
 import { validateBody, validateParams } from '../middleware/validate.ts';
 import * as schemas from '../validation/schemas.ts';
-import { requireAuth, requireRole, AuthRequest } from '../middleware/auth.ts';
+import { requireAuth, AuthRequest } from '../middleware/auth.ts';
 import { Order, ProductBundle } from '../../src/types.ts';
 import { processRefundQueue } from './payment.routes.ts';
 import { discountedPriceForVoucher, discountedUnitPrice, getVoucherRule, isVoucherExpired, normalizeVoucherCode } from '../../src/lib/vouchers.ts';
 import { calculateBundlePrices } from '../../src/lib/bundles.ts';
-import { publicMessage } from '../middleware/errorHandler.ts';
 import { newId, newTrackingId } from '../lib/ids.ts';
 
 const router = Router();
@@ -135,8 +134,6 @@ router.post('/', requireAuth, validateBody(schemas.createOrderBody), async (req:
       Applied_Voucher,
       Shipping_Address,
       Billing_Address,
-      Subtotal,
-      Shipping_Fee,
       Additional_Info,
     } = req.body;
     const paymentMethod = req.body?.paymentMethod === 'cash_on_delivery' ? 'cash_on_delivery' : 'online';

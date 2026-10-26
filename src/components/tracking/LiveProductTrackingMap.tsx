@@ -1,28 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import L from 'leaflet';
 import { CircleMarker, MapContainer, Polyline, Popup, TileLayer, Tooltip, useMap } from 'react-leaflet';
-import { Address, Order, Product, Customer, Seller } from '../../types';
-import { formatCurrency, formatBDT, formatDate } from '../../lib/api';
-import {
-  Package,
-  Truck,
-  MapPin,
-  Compass,
-  Radio,
-  Clock,
-  CheckCircle2,
-  ChevronRight,
-  ShieldCheck,
-  Search,
-  RefreshCw,
-  Phone,
-  Sparkles,
-  ArrowRight,
-  Maximize2,
-  X,
-  ExternalLink,
-  Navigation,
-} from 'lucide-react';
+import { Address, Order, Seller } from '../../types';
+import { formatCurrency } from '../../lib/api';
+import { Truck, MapPin, Radio, CheckCircle2, ShieldCheck, RefreshCw, Phone, X, Navigation } from 'lucide-react';
 
 interface TrackingCoordinates {
   lat: number;
@@ -172,7 +153,6 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
   const [selectedFulfillmentId, setSelectedFulfillmentId] = useState('');
   const [route, setRoute] = useState<RoadRoute | null>(null);
   const [routeStatus, setRouteStatus] = useState<RouteStatus>('unavailable');
-  const [searchQuery, setSearchQuery] = useState('');
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null);
   const [isSimulatingMovement, setIsSimulatingMovement] = useState(firstTrackableOrder?.Status === 'shipped');
   const [movementStep, setMovementStep] = useState(firstTrackableOrder?.Status === 'delivered' ? 1 : 0);
@@ -334,7 +314,6 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
   }, [activeOrder.Order_ID, activeOrder.Status, movementStep]);
 
   const stopsRemaining = Math.max(0, Math.round((1 - movementStep) * 4));
-  const etaMinutes = Math.max(0, Math.round((1 - movementStep) * 28));
 
   if (!hasTrackableOrder) {
     return (

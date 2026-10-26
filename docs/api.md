@@ -10,7 +10,6 @@ Routes are listed from `server/routes/*.ts`; prefixes come from the mounts in `s
 | GET | `/api/ready` | Public |
 | GET | `/api/db/status` | Admin |
 | GET | `/api/stats` | Admin |
-| GET | `/api/admin/users` | Admin |
 | GET | `/api/analytics/trending-products` | Public |
 | GET | `/api/analytics/top-rated-products` | Public |
 | GET | `/api/analytics/top-rated-sellers` | Public |
