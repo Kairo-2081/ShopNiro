@@ -3,7 +3,7 @@
 ## Project overview
 - This repository is a full-stack marketplace app for customers, sellers, admins, and riders.
 - The frontend is React + Vite in `src/`; the API/server is Express in `server/` and the app entrypoint is `server/index.ts`.
-- The database layer is PostgreSQL-based, with schema and seed logic in `schema.sql` and `server/db/seed.ts`.
+- The database layer is PostgreSQL-based. The immutable initial schema is `db/migrations/0001_baseline.sql`; all future schema changes are numbered migrations in `db/migrations/`.
 - See [README.md](README.md) for the product requirements and environment setup.
 
 ## Getting started
@@ -29,6 +29,7 @@
 - Auth and authorization are enforced server-side; changes to protected routes should preserve current cookie/JWT and role checks.
 - `server/middleware/auth.ts` is the canonical auth/JWT implementation. Frontend code must not import server auth modules.
 - Payment/refund/stock/wallet mutations must be transactional and idempotent when callbacks can be replayed.
+- Never change the database schema at application startup. Add a numbered migration, test it against an isolated database, and follow `README-DEPLOY.md` for staging and production rollout.
 - Paged APIs cap `limit` at 100 (default 50) and return array pages with `X-Has-More` metadata.
 
 ## Safe workflow for AI coding agents
@@ -36,11 +37,11 @@
 - For backend changes, update both the route logic and any client-side caller assumptions in `src/`.
 - For frontend changes, keep role-based UI flows consistent with the current app architecture and avoid bypassing the authentication guard patterns already in use.
 - Validate TypeScript changes with `npm run lint` when touching typed code.
-- If changing the database contract, look at `schema.sql` and the related seed/query patterns before modifying API responses.
+- If changing the database contract, add a numbered migration and look at the related seed/query patterns before modifying API responses.
 
 ## Relevant docs
 - [docs/api.md](docs/api.md), [docs/erd.md](docs/erd.md), [docs/flows.md](docs/flows.md)
 - [README.md](README.md)
-- [schema.sql](schema.sql)
+- [Frozen schema reference](db/migrations/0001_baseline.sql)
 - [docs/database-design.md](docs/database-design.md)
 - [docs/payouts.md](docs/payouts.md)

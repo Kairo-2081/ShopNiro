@@ -1,6 +1,4 @@
-import fs from 'fs';
-import path from 'path';
-import { query, pool } from './index.ts';
+import { query } from './index.ts';
 import { hashPassword, isBcryptHash } from './password.ts';
 import {
   initialCategories,
@@ -11,21 +9,6 @@ import {
   initialCustomers,
   initialAdmin,
 } from '../../src/data/seedData.ts';
-
-/**
- * Execute schema.sql to ensure all tables, views, triggers, and routines exist.
- * All database related things are defined exclusively in schema.sql.
- */
-export async function ensureDatabaseSchema() {
-  const schemaPath = path.join(process.cwd(), 'schema.sql');
-  if (!fs.existsSync(schemaPath)) {
-    throw new Error(`Database schema file not found: ${schemaPath}`);
-  }
-
-  const schemaSql = fs.readFileSync(schemaPath, 'utf8');
-  await pool.query(schemaSql);
-  console.log('Executed schema.sql successfully (tables, views, triggers, and routines verified)');
-}
 
 /**
  * Migrate plain-text passwords to bcrypt hashes using the schema routine
@@ -46,12 +29,10 @@ export async function migrateExistingPasswordsToBcrypt() {
 }
 
 /**
- * Seed initial demo records using schema.sql routines: shopniro_table_count and shopniro_seed_row
+ * Seed demo records into a database that has already been migrated.
  */
 export async function seedDatabaseIfEmpty() {
   try {
-    await ensureDatabaseSchema();
-
     const [adminCountResult, sellerCountResult, customerCountResult] = await Promise.all([
       query(`SELECT shopniro_table_count('admins') AS count`),
       query(`SELECT shopniro_table_count('sellers') AS count`),

@@ -34,7 +34,7 @@ Vercel supplies `VERCEL_URL` and `VERCEL_PROJECT_PRODUCTION_URL`; the API includ
 ## Deployment checks
 
 1. Configure secrets in the host dashboard, not in committed files.
-2. Apply any `schema.sql` change to the production database yourself, before or with the deploy (see "Changing `schema.sql`" below). The host does not apply it automatically.
+2. Apply pending database migrations to staging and production through the approved migration workflow (see "Adding a migration" below). The host does not apply them automatically.
 3. Confirm the frontend origin exactly matches `SHOPNIRO_PUBLIC_URL` and the API CORS allowlist.
 4. Deploy the API before the frontend when changing API contracts.
 5. Verify `/api/db/status`, sign in, load a protected page, and sign out in the deployed browser origin.
@@ -49,17 +49,17 @@ Vercel supplies `VERCEL_URL` and `VERCEL_PROJECT_PRODUCTION_URL`; the API includ
 14. Storage backups: the `storage-backup` job in the same workflow copies every Supabase Storage bucket through the S3-compatible API and encrypts the archive with the same age public key. It needs the `STORAGE_S3_ACCESS_KEY_ID` and `STORAGE_S3_SECRET_ACCESS_KEY` Actions secrets (Supabase dashboard, Storage, S3 connection, New access key). These keys can read and write all Storage objects but cannot touch the database. Create the private `seller-verification-documents` bucket before accepting seller applications; the upload code refuses to run without it. Decrypt with `age -d -i backup-key.txt -o storage.tar.gz shopniro-storage-DATE.tar.gz.age`, then extract with `tar -xzf`.
 15. Database TLS verification: by default the database connection is encrypted but the server certificate is not checked. To verify it, download Supabase's CA certificate (Dashboard, Database Settings, SSL Configuration, Download certificate) and set `DB_CA_CERT` on the host to the full PEM text (`-----BEGIN CERTIFICATE-----` through `-----END CERTIFICATE-----`). Redeploy and confirm the site loads a product page and `/api/ready` returns 200. If the connection fails, delete `DB_CA_CERT` to roll back; no code change is needed. Once verified, also set `DB_REQUIRE_TLS_VERIFY=true` so the server refuses to start without the certificate. For local development `DB_CA_CERT_PATH` can point at the downloaded `.crt` file. Do not turn on Supabase's "Enforce SSL" database setting as part of this step; it reboots the database and is unrelated.
 
-## Changing `schema.sql`
+## Adding a migration
 
-Production does not run `schema.sql` on its own. The server only does that at startup when `RUN_SCHEMA_ON_START=true`, and that variable is not set on the host. Merging a PR that changes `schema.sql` therefore changes nothing in the live database. If the new code depends on the change (a renamed or new function, a new column, a new table), the site breaks until the database is updated. A rename of the `gocart_*` functions to `shopniro_*` caused exactly this: the deployed code called functions that did not exist yet and every login failed.
+`db/migrations/0001_baseline.sql` is an immutable copy of the schema that existed when numbered migrations were introduced. Do not edit it or use `schema.sql` for new database changes. The application does not change the database schema at startup; use the migration runner and a backed-up, isolated database.
 
-Do this for every schema change:
+For every schema change:
 
-1. Make the change additive first. Create the new object next to the old one. Do not drop or rename anything the currently running version uses.
-2. Back up first: run the `backup.yml` workflow and wait for it to go green.
-3. Apply the new statements to the production database before merging the code that needs them. Use the Supabase SQL editor, or `psql "$DATABASE_URL" -f changes.sql` with the session pooler string. Wrap the statements in `BEGIN; ... COMMIT;` so a failure leaves nothing half-applied. Functions are idempotent with `CREATE OR REPLACE FUNCTION`.
-4. Test the change on a throwaway database built from the previous `schema.sql` before running it on production.
-5. Merge and deploy. Check `/api/ready`, sign in, load products, add to cart, and open an order.
-6. Only after the new version is confirmed working, remove the old objects in a separate step.
+1. Add a numbered `db/migrations/NNNN_description.sql` file. Include a short comment describing a manual rollback. Keep each migration focused. Files that cannot run in a transaction (for example, `CREATE INDEX CONCURRENTLY`) must begin with `-- migrate:no-transaction`.
+2. Make changes additive first. Deploy new columns or functions alongside old ones; remove old objects only in a later migration after application code no longer uses them.
+3. Add constraints as `NOT VALID`, repair existing data, then validate them in a later migration.
+4. Test against a disposable PostgreSQL database using `npm run migrate`, `npm run migrate:status`, `npm run lint`, and `npm test`. Never point migration tests at production or shared data.
+5. Apply migrations to staging first. Before production, run `backup.yml`, wait for a successful backup, and use the approved `migrate.yml` workflow with the production Environment approval. The workflow checks for a successful backup from the previous 24 hours before applying changes.
+6. Production is baselined, not rebuilt. After the migration workflow is merged, configure the GitHub Actions secret `MIGRATE_DATABASE_URL` with the production Session pooler URL and require approval for the `production` Environment. Run the workflow in `status` mode, then `baseline` once to record `0001`, and run `status` again. The baseline command records the current schema without executing the baseline SQL.
 
-Setting `RUN_SCHEMA_ON_START=true` would apply the whole file on every start. It is off on purpose; do not enable it without reviewing every statement in `schema.sql` against production data.
+Use the Session pooler URL for migration connections so the advisory lock remains held for the full run. Never enable schema application at server startup.
