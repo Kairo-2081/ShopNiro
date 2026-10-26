@@ -147,7 +147,7 @@ export default function App() {
   const [loginModalInitialTab, setLoginModalInitialTab] = React.useState<'login' | 'register'>('login');
   const [loginModalInitialRole, setLoginModalInitialRole] = React.useState<'customer' | 'seller' | 'rider'>('customer');
   const [authNotice, setAuthNotice] = React.useState<string | null>(null);
-  const [isValidatingAuth, setIsValidatingAuth] = React.useState<boolean>(false);
+  const [, setIsValidatingAuth] = React.useState<boolean>(false);
   const [paymentReceiptOrder, setPaymentReceiptOrder] = React.useState<Order | null>(null);
   const paymentReturnHandledRef = React.useRef(false);
 

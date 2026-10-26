@@ -1,22 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  X,
-  Send,
-  Sparkles,
-  Bot,
-  User,
-  RotateCcw,
-  Zap,
-  Brain,
-  ShoppingBag,
-  Store,
-  ShieldCheck,
-  ChevronDown,
-  Copy,
-  Check,
-  Minimize2,
-  Maximize2,
-} from 'lucide-react';
+import { X, Send, Sparkles, Bot, User, RotateCcw, Zap, Brain, ShoppingBag, Store, ChevronDown, Copy, Check, Minimize2, Maximize2 } from 'lucide-react';
 import { api } from '../../lib/api';
 
 export type ChatRole = 'shopping-assistant' | 'seller-advisor' | 'order-specialist' | 'complex-analyst';

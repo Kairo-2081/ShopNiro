@@ -285,15 +285,6 @@ router.post('/size-chart', requireAuth, requireRole(['seller', 'admin']), valida
   }
 });
 
-interface ChatMessagePart {
-  text: string;
-}
-
-interface ChatMessage {
-  role: 'user' | 'model';
-  parts: ChatMessagePart[];
-}
-
 /**
  * System Instructions tailored by role
  */

@@ -1,34 +1,10 @@
 import React from 'react';
 import { Seller, Product, Order, Category, Review, SellerStatus, ProductStatus, OrderCancellationRequest, SupportRequest } from '../../types';
 import { api, formatCurrency, formatBDT, formatDate } from '../../lib/api';
-import { apiUrl } from '../../apiConfig';
 import { RiderApplicationsPanel } from './RiderApplicationsPanel';
 import { AdminMarketplaceMetrics } from './AdminMarketplaceMetrics';
 import { Section } from '../Section';
-import {
-  BarChart3,
-  ShieldCheck,
-  Store,
-  FolderTree,
-  Package,
-  CheckCircle2,
-  Clock,
-  Plus,
-  Edit,
-  Trash2,
-  Activity,
-  Search,
-  CreditCard,
-  Lock,
-  RefreshCw,
-  Smartphone,
-  ExternalLink,
-  X,
-  AlertCircle,
-  Truck,
-  RotateCcw,
-  LifeBuoy,
-} from 'lucide-react';
+import { BarChart3, ShieldCheck, Store, FolderTree, Package, CheckCircle2, Clock, Plus, Edit, Trash2, Activity, Search, Lock, RefreshCw, ExternalLink, X, AlertCircle, Truck, RotateCcw, LifeBuoy } from 'lucide-react';
 
 const AdminOverviewAnalytics = React.lazy(() =>
   import('./AdminOverviewAnalytics').then(({ AdminOverviewAnalytics: Component }) => ({ default: Component }))
