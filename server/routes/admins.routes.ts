@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { query, mapAddress } from '../db/index.ts';
 import { hashPassword } from '../db/password.ts';
-import { requireAuth, requireRole, AuthRequest } from '../middleware/auth.ts';
+import { requireAuth, requireRole } from '../middleware/auth.ts';
 import { Admin } from '../../src/types.ts';
 import { publicMessage } from '../middleware/errorHandler.ts';
 import { newId } from '../lib/ids.ts';
@@ -76,12 +76,11 @@ router.post('/', validateBody(createAdminBody), async (req, res) => {
     const postalCode = addr.Postal_Code || '';
     const addInfo = addr.Additional_Info || 'ShopNiro Operations Center';
 
-    const result = await query(
+    await query(
       `SELECT * FROM shopniro_admin_create($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
       [id, username, name, cleanEmail, hashedPassword, phone, houseName, street, city, postalCode, addInfo]
     );
 
-    const a = result.rows[0];
     res.status(201).json({
       Admin_ID: id,
       Username: username,

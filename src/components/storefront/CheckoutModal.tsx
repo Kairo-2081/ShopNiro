@@ -1,26 +1,12 @@
 import React from 'react';
-import { Customer, CartItem, Address, Order, PaymentMethod, ProductBundle } from '../../types';
+import { Customer, CartItem, Address, Order, ProductBundle } from '../../types';
 import { api, formatCurrency, formatBDT } from '../../lib/api';
 import { PolicyLinks } from '../legal/PolicyLinks';
 import { calculateBundlePrices } from '../../lib/bundles';
 import { describeVoucher, discountedPriceForVoucher, discountedUnitPrice, getVoucherRule, isVoucherExpired, normalizeVoucherCode } from '../../lib/vouchers';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { SSLCommerzModal } from '../payment/SSLCommerzModal';
-import {
-  X,
-  CheckCircle2,
-  Truck,
-  ShieldCheck,
-  MapPin,
-  CreditCard,
-  ArrowRight,
-  Package,
-  Smartphone,
-  Banknote,
-  Lock,
-  Printer,
-  Sparkles,
-} from 'lucide-react';
+import { X, CheckCircle2, Truck, ShieldCheck, MapPin, CreditCard, ArrowRight, Package, Banknote, Lock, Sparkles } from 'lucide-react';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -68,9 +54,9 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     Longitude: currentCustomer.Address?.Longitude,
   });
 
-  const [useSameBilling, setUseSameBilling] = React.useState(true);
+  const [useSameBilling] = React.useState(true);
   const [acceptedPolicies, setAcceptedPolicies] = React.useState(false);
-  const [billingAddress, setBillingAddress] = React.useState<Address>({
+  const [billingAddress] = React.useState<Address>({
     Street: currentCustomer.Address?.Street || '',
     House_Name: currentCustomer.Address?.House_Name || '',
     City: currentCustomer.Address?.City || '',
@@ -170,7 +156,6 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     const unitPrice = matchesVoucher ? discountedPriceForVoucher(price, appliedVoucher) : price;
     return total + toCents(unitPrice) * item.Quantity;
   }, 0);
-  const voucherAdjustedSubtotal = fromCents(voucherAdjustedSubtotalCents);
   const voucherSavings = fromCents(Math.max(0, subtotalCents - voucherAdjustedSubtotalCents));
   const bundlePricing = calculateBundlePrices(cartItems.map((item) => {
     const product = item.Product;
@@ -184,7 +169,6 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   }), bundles);
   const bundleAdjustedSubtotalCents = cartItems.reduce((total, item) =>
     total + toCents(bundlePricing.unitPrices.get(item.Product_ID) ?? Number(item.Product?.Price) ?? 0) * item.Quantity, 0);
-  const bundleAdjustedSubtotal = fromCents(bundleAdjustedSubtotalCents);
   const bundleSavings = fromCents(Math.max(0, voucherAdjustedSubtotalCents - bundleAdjustedSubtotalCents));
   const cartDiscountEligible = subtotalCents >= 50000;
   const discountedSubtotalCents = cartItems.reduce((total, item) => {

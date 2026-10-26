@@ -2,19 +2,7 @@ import React from 'react';
 import { Customer, Address } from '../../types';
 import { formatBDT } from '../../lib/api';
 import { apiUrl } from '../../apiConfig';
-import {
-  X,
-  ShieldCheck,
-  CheckCircle2,
-  Lock,
-  ArrowRight,
-  Smartphone,
-  CreditCard,
-  Building2,
-  RefreshCw,
-  AlertCircle,
-  HelpCircle,
-} from 'lucide-react';
+import { X, ShieldCheck, CheckCircle2, Lock, ArrowRight, CreditCard, RefreshCw, AlertCircle, HelpCircle } from 'lucide-react';
 
 interface SSLCommerzModalProps {
   isOpen: boolean;
@@ -52,12 +40,6 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [failureStatus, setFailureStatus] = React.useState<'restoring' | 'restored' | 'restore-failed' | null>(null);
   const [paymentAmountBDT, setPaymentAmountBDT] = React.useState(orderTotal);
-
-  // Cards Flow State
-  const [cardNumber, setCardNumber] = React.useState('4242 •••• •••• 4242');
-  const [cardExpiry, setCardExpiry] = React.useState('12/28');
-  const [cardCvv, setCardCvv] = React.useState('888');
-  const [cardHolder, setCardHolder] = React.useState(customer.Name);
 
   // Reset or initialize state
   React.useEffect(() => {

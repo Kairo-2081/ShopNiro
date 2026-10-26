@@ -7,13 +7,7 @@ import {
   formatCurrency,
 } from '../../lib/api';
 import { Product } from '../../types';
-import {
-  TrendingUp,
-  Star,
-  Flame,
-  Sparkles,
-  ShoppingBag,
-} from 'lucide-react';
+import { Star, Flame, Sparkles, ShoppingBag } from 'lucide-react';
 
 interface MarketplaceTrendsTopChartsProps {
   onSelectProduct?: (product: Product) => void;
@@ -29,7 +23,7 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
   const [activeTab, setActiveTab] = useState<'trends' | 'top-rated' | 'new-arrivals'>('trends');
   const [trending, setTrending] = useState<TrendingProduct[]>([]);
   const [topRated, setTopRated] = useState<TopRatedProduct[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
 
   useEffect(() => {
     let isMounted = true;

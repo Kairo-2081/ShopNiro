@@ -1,43 +1,9 @@
 import React, { useState } from 'react';
-import { UserRole, Customer, Seller, Admin } from '../types';
+import { Customer, Seller, Admin } from '../types';
 import { shopNiroLogo } from '../lib/branding';
 import { OrbitGlobe } from './landing/OrbitGlobe';
 import { MarketplaceClosing, MarketplaceStat } from './MarketplaceClosing';
-import {
-  ShoppingBag,
-  SlidersHorizontal,
-  User,
-  Search,
-  ScanLine,
-  Zap,
-  Leaf,
-  Truck,
-  ArrowRight,
-  Sparkles,
-  Users,
-  Store,
-  ShieldCheck,
-  Lock,
-  CheckCircle2,
-  Clock,
-  Compass,
-  Star,
-  Tag,
-  Radio,
-  Package,
-  Layers,
-  Plus,
-  Check,
-  Sun,
-  Moon,
-  Ticket,
-  ChevronRight,
-  Shield,
-  Box,
-  BadgeCheck,
-  ShoppingBag as CartIcon,
-  Heart,
-} from 'lucide-react';
+import { ShoppingBag, SlidersHorizontal, User, Truck, ArrowRight, Sparkles, Users, Store, ShieldCheck, Compass, Tag, Radio, Package, Plus, Sun, Moon, Shield, BadgeCheck } from 'lucide-react';
 
 interface LandingPageProps {
   customers: Customer[];
