@@ -1,5 +1,6 @@
 import React from 'react';
 import { api } from '../lib/api';
+import { useLocale } from '../lib/i18n';
 
 interface OAuthProviderButtonsProps {
   role: 'customer' | 'seller' | 'rider' | 'login';
@@ -9,6 +10,7 @@ interface OAuthProviderButtonsProps {
 }
 
 export const OAuthProviderButtons: React.FC<OAuthProviderButtonsProps> = ({ role, mode, acceptedTerms = false, className = '' }) => {
+  const { t } = useLocale();
   const disabled = mode === 'sign up' && !acceptedTerms;
   const beginOAuth = (provider: 'google' | 'facebook') => {
     api.beginOAuth(provider, role === 'login' ? 'customer' : role, mode === 'sign up' && acceptedTerms);
@@ -18,7 +20,7 @@ export const OAuthProviderButtons: React.FC<OAuthProviderButtonsProps> = ({ role
   <div className={`space-y-3 ${className}`}>
     <div className="flex items-center gap-3 py-1 text-micro font-semibold uppercase tracking-wider text-surface-500 dark:text-surface-500">
       <span className="h-px flex-1 bg-surface-200 dark:bg-surface-700" />
-      <span>Or {mode} with</span>
+      <span>{mode === 'sign in' ? t('orSignInWith') : t('orSignUpWith')}</span>
       <span className="h-px flex-1 bg-surface-200 dark:bg-surface-700" />
     </div>
 
@@ -42,7 +44,7 @@ export const OAuthProviderButtons: React.FC<OAuthProviderButtonsProps> = ({ role
         Facebook
       </button>
     </div>
-    {disabled && <p className="text-center text-micro text-surface-500">Accept the Terms of Service and Privacy Policy above to continue.</p>}
+    {disabled && <p className="text-center text-micro text-surface-500">{t('acceptPoliciesToContinue')}</p>}
   </div>
   );
 };
