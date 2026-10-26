@@ -394,7 +394,7 @@ ALTER TABLE seller_wallet_entries ADD CONSTRAINT chk_seller_wallet_entry_type
 CREATE INDEX IF NOT EXISTS idx_seller_wallet_available ON seller_wallet_entries(seller_id, available_at);
 
 CREATE OR REPLACE FUNCTION platform_commission(p_subtotal NUMERIC) RETURNS NUMERIC
-LANGUAGE SQL IMMUTABLE AS $$
+LANGUAGE SQL IMMUTABLE SET search_path = public, pg_temp AS $$
     SELECT ROUND(p_subtotal * 0.15, 2);
 $$;
 
@@ -795,6 +795,7 @@ $$;
 CREATE OR REPLACE FUNCTION enforce_profile_role()
 RETURNS TRIGGER
 LANGUAGE plpgsql
+SET search_path = public, pg_temp
 AS $$
 DECLARE
     expected_role VARCHAR(32);
@@ -826,6 +827,7 @@ FOR EACH ROW EXECUTE FUNCTION enforce_profile_role();
 CREATE OR REPLACE FUNCTION prevent_user_role_change_with_profile()
 RETURNS TRIGGER
 LANGUAGE plpgsql
+SET search_path = public, pg_temp
 AS $$
 BEGIN
     IF NEW.role IS DISTINCT FROM OLD.role AND (
@@ -1017,7 +1019,7 @@ UPDATE seller_status_audit SET changed_at = CURRENT_TIMESTAMP WHERE changed_at I
 ALTER TABLE seller_status_audit ALTER COLUMN changed_at SET NOT NULL;
 
 CREATE OR REPLACE FUNCTION log_seller_status_change()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER SET search_path = public, pg_temp AS $$
 BEGIN
     IF OLD.status IS DISTINCT FROM NEW.status THEN
         INSERT INTO seller_status_audit (seller_id, old_status, new_status)
@@ -1046,7 +1048,7 @@ UPDATE order_status_audit SET changed_at = CURRENT_TIMESTAMP WHERE changed_at IS
 ALTER TABLE order_status_audit ALTER COLUMN changed_at SET NOT NULL;
 
 CREATE OR REPLACE FUNCTION log_order_status_change()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER SET search_path = public, pg_temp AS $$
 BEGIN
     IF OLD.status IS DISTINCT FROM NEW.status THEN
         INSERT INTO order_status_audit (order_id, old_status, new_status)
@@ -1064,7 +1066,7 @@ EXECUTE FUNCTION log_order_status_change();
 
 -- Serialize cart changes per customer and prevent quantities above inventory.
 CREATE OR REPLACE FUNCTION check_cart_stock()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER SET search_path = public, pg_temp AS $$
 DECLARE
     available_stock INTEGER;
 BEGIN
@@ -1100,7 +1102,7 @@ EXECUTE FUNCTION check_cart_stock();
 
 -- Reject product writes for sellers who are suspended or rejected.
 CREATE OR REPLACE FUNCTION enforce_seller_status_on_product()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER SET search_path = public, pg_temp AS $$
 DECLARE
     v_seller_status VARCHAR(32);
 BEGIN
@@ -1133,6 +1135,7 @@ CREATE OR REPLACE PROCEDURE process_checkout(
     p_additional_info TEXT
 )
 LANGUAGE plpgsql
+SET search_path = public, pg_temp
 AS $$
 DECLARE
     v_cart_count INTEGER;
@@ -1260,7 +1263,7 @@ END;
 $$;
 
 CREATE OR REPLACE FUNCTION expire_pending_online_orders(p_minutes INT DEFAULT 30) RETURNS INT
-LANGUAGE plpgsql AS $$
+LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
 DECLARE
     expired_order RECORD;
     expired_count INT := 0;
@@ -1418,6 +1421,7 @@ FROM admins a JOIN users u ON u.id = a.id AND u.role = 'admin';
 CREATE OR REPLACE FUNCTION shopniro_categories_list()
 RETURNS SETOF categories
 LANGUAGE SQL STABLE
+SET search_path = public, pg_temp
 AS $$
     SELECT * FROM categories ORDER BY name ASC;
 $$;
@@ -1425,6 +1429,7 @@ $$;
 CREATE OR REPLACE FUNCTION shopniro_category_create(p_id VARCHAR, p_name TEXT)
 RETURNS SETOF categories
 LANGUAGE plpgsql
+SET search_path = public, pg_temp
 AS $$
 BEGIN
     RETURN QUERY
@@ -1436,6 +1441,7 @@ $$;
 CREATE OR REPLACE FUNCTION shopniro_category_update(p_id VARCHAR, p_name TEXT)
 RETURNS SETOF categories
 LANGUAGE plpgsql
+SET search_path = public, pg_temp
 AS $$
 BEGIN
     RETURN QUERY
@@ -1447,6 +1453,7 @@ $$;
 CREATE OR REPLACE FUNCTION shopniro_category_delete(p_id VARCHAR)
 RETURNS TABLE(deleted_id VARCHAR)
 LANGUAGE plpgsql
+SET search_path = public, pg_temp
 AS $$
 BEGIN
     RETURN QUERY
@@ -1480,6 +1487,7 @@ DROP FUNCTION IF EXISTS shopniro_user_create(VARCHAR, TEXT, VARCHAR, VARCHAR, VA
 CREATE OR REPLACE FUNCTION shopniro_sellers_list()
 RETURNS SETOF seller_profiles
 LANGUAGE SQL STABLE
+SET search_path = public, pg_temp
 AS $$
     SELECT * FROM seller_profiles ORDER BY created_at DESC;
 $$;
@@ -1503,6 +1511,7 @@ CREATE OR REPLACE FUNCTION shopniro_seller_create(
 )
 RETURNS SETOF seller_profiles
 LANGUAGE plpgsql
+SET search_path = public, pg_temp
 AS $$
 BEGIN
     INSERT INTO users (id, username, password, email, role, created_at)
@@ -1525,6 +1534,7 @@ $$;
 CREATE OR REPLACE FUNCTION shopniro_seller_status_update(p_id VARCHAR, p_status TEXT)
 RETURNS SETOF seller_profiles
 LANGUAGE plpgsql
+SET search_path = public, pg_temp
 AS $$
 BEGIN
     UPDATE sellers SET status = p_status WHERE id = p_id;
@@ -1537,6 +1547,7 @@ $$;
 CREATE OR REPLACE FUNCTION shopniro_admins_list()
 RETURNS SETOF admin_profiles
 LANGUAGE SQL STABLE
+SET search_path = public, pg_temp
 AS $$
     SELECT * FROM admin_profiles ORDER BY created_at ASC;
 $$;
@@ -1556,6 +1567,7 @@ CREATE OR REPLACE FUNCTION shopniro_admin_create(
 )
 RETURNS SETOF admin_profiles
 LANGUAGE plpgsql
+SET search_path = public, pg_temp
 AS $$
 BEGIN
     INSERT INTO users (id, username, password, email, role, created_at)
@@ -1578,6 +1590,7 @@ $$;
 CREATE OR REPLACE FUNCTION shopniro_admins_users_list()
 RETURNS TABLE(id VARCHAR, username VARCHAR, email VARCHAR, role VARCHAR, entity_id VARCHAR, created_at TIMESTAMPTZ)
 LANGUAGE SQL STABLE
+SET search_path = public, pg_temp
 AS $$
     SELECT u.id, u.username, u.email, u.role, u.id, u.created_at
     FROM users u
@@ -1588,6 +1601,7 @@ $$;
 CREATE OR REPLACE FUNCTION shopniro_customers_list()
 RETURNS SETOF customer_profiles
 LANGUAGE SQL STABLE
+SET search_path = public, pg_temp
 AS $$
     SELECT * FROM customer_profiles ORDER BY created_at ASC;
 $$;
@@ -1609,6 +1623,7 @@ CREATE OR REPLACE FUNCTION shopniro_customer_create(
 )
 RETURNS SETOF customer_profiles
 LANGUAGE plpgsql
+SET search_path = public, pg_temp
 AS $$
 BEGIN
     INSERT INTO users (id, username, password, email, role, created_at)
@@ -1643,6 +1658,7 @@ CREATE OR REPLACE FUNCTION shopniro_customer_update(
 )
 RETURNS SETOF customer_profiles
 LANGUAGE plpgsql
+SET search_path = public, pg_temp
 AS $$
 BEGIN
     UPDATE customers
@@ -1673,6 +1689,7 @@ $$;
 CREATE OR REPLACE FUNCTION shopniro_products_list()
 RETURNS SETOF products
 LANGUAGE SQL STABLE
+SET search_path = public, pg_temp
 AS $$
     SELECT * FROM products ORDER BY created_at DESC NULLS LAST, id DESC;
 $$;
@@ -1680,6 +1697,7 @@ $$;
 CREATE OR REPLACE FUNCTION shopniro_product_get(p_id VARCHAR)
 RETURNS SETOF products
 LANGUAGE SQL STABLE
+SET search_path = public, pg_temp
 AS $$
     SELECT * FROM products WHERE id = p_id;
 $$;
@@ -1687,6 +1705,7 @@ $$;
 CREATE OR REPLACE FUNCTION shopniro_seller_get(p_id VARCHAR)
 RETURNS SETOF seller_profiles
 LANGUAGE SQL STABLE
+SET search_path = public, pg_temp
 AS $$
     SELECT * FROM seller_profiles WHERE id = p_id;
 $$;
@@ -1705,6 +1724,7 @@ CREATE OR REPLACE FUNCTION shopniro_product_create(
 )
 RETURNS SETOF products
 LANGUAGE plpgsql
+SET search_path = public, pg_temp
 AS $$
 BEGIN
     RETURN QUERY
@@ -1732,6 +1752,7 @@ CREATE OR REPLACE FUNCTION shopniro_product_update(
 )
 RETURNS SETOF products
 LANGUAGE plpgsql
+SET search_path = public, pg_temp
 AS $$
 BEGIN
     RETURN QUERY
@@ -1752,6 +1773,7 @@ $$;
 CREATE OR REPLACE FUNCTION shopniro_product_status_update(p_id VARCHAR, p_status TEXT)
 RETURNS SETOF products
 LANGUAGE plpgsql
+SET search_path = public, pg_temp
 AS $$
 BEGIN
     RETURN QUERY
@@ -1763,6 +1785,7 @@ $$;
 CREATE OR REPLACE FUNCTION shopniro_product_delete(p_id VARCHAR)
 RETURNS TABLE(deleted_id VARCHAR)
 LANGUAGE plpgsql
+SET search_path = public, pg_temp
 AS $$
 BEGIN
     RETURN QUERY DELETE FROM products WHERE id = p_id RETURNING products.id;
@@ -1773,6 +1796,7 @@ $$;
 CREATE OR REPLACE FUNCTION shopniro_cart_list(p_customer_id VARCHAR)
 RETURNS SETOF cart
 LANGUAGE SQL STABLE
+SET search_path = public, pg_temp
 AS $$
     SELECT * FROM cart WHERE customer_id = p_customer_id;
 $$;
@@ -1780,6 +1804,7 @@ $$;
 CREATE OR REPLACE FUNCTION shopniro_active_product(p_product_id VARCHAR)
 RETURNS TABLE(id VARCHAR)
 LANGUAGE SQL STABLE
+SET search_path = public, pg_temp
 AS $$
     SELECT p.id FROM products p WHERE p.id = p_product_id AND p.product_status = 'active';
 $$;
@@ -1787,6 +1812,7 @@ $$;
 CREATE OR REPLACE FUNCTION shopniro_cart_existing(p_customer_id VARCHAR, p_product_id VARCHAR)
 RETURNS SETOF cart
 LANGUAGE SQL STABLE
+SET search_path = public, pg_temp
 AS $$
     SELECT * FROM cart WHERE customer_id = p_customer_id AND product_id = p_product_id LIMIT 1;
 $$;
@@ -1794,6 +1820,7 @@ $$;
 CREATE OR REPLACE FUNCTION shopniro_cart_existing(p_customer_id VARCHAR, p_product_id VARCHAR, p_size VARCHAR)
 RETURNS SETOF cart
 LANGUAGE SQL STABLE
+SET search_path = public, pg_temp
 AS $$
     SELECT * FROM cart WHERE customer_id = p_customer_id AND product_id = p_product_id AND size = p_size LIMIT 1;
 $$;
@@ -1806,6 +1833,7 @@ CREATE OR REPLACE FUNCTION shopniro_cart_create(
 )
 RETURNS SETOF cart
 LANGUAGE plpgsql
+SET search_path = public, pg_temp
 AS $$
 BEGIN
     RETURN QUERY
@@ -1824,6 +1852,7 @@ CREATE OR REPLACE FUNCTION shopniro_cart_create(
 )
 RETURNS SETOF cart
 LANGUAGE plpgsql
+SET search_path = public, pg_temp
 AS $$
 BEGIN
     RETURN QUERY
@@ -1836,6 +1865,7 @@ $$;
 CREATE OR REPLACE FUNCTION shopniro_cart_update(p_id VARCHAR, p_quantity INTEGER, p_customer_id VARCHAR)
 RETURNS SETOF cart
 LANGUAGE plpgsql
+SET search_path = public, pg_temp
 AS $$
 BEGIN
     RETURN QUERY
@@ -1848,6 +1878,7 @@ $$;
 CREATE OR REPLACE FUNCTION shopniro_cart_delete(p_id VARCHAR, p_customer_id VARCHAR)
 RETURNS SETOF cart
 LANGUAGE plpgsql
+SET search_path = public, pg_temp
 AS $$
 BEGIN
     RETURN QUERY
@@ -1865,6 +1896,7 @@ RETURNS TABLE(
     additional_info TEXT, order_placed_at TIMESTAMPTZ
 )
 LANGUAGE SQL STABLE
+SET search_path = public, pg_temp
 AS $$
     SELECT o.id, o.tracking_id, o.customer_id,
            COALESCE((
@@ -1892,6 +1924,7 @@ RETURNS TABLE(
     additional_info TEXT, order_placed_at TIMESTAMPTZ
 )
 LANGUAGE SQL STABLE
+SET search_path = public, pg_temp
 AS $$
     SELECT o.id, o.tracking_id, o.customer_id,
            COALESCE((
@@ -1914,6 +1947,7 @@ $$;
 CREATE OR REPLACE FUNCTION shopniro_order_status_update(p_id VARCHAR, p_status TEXT)
 RETURNS SETOF orders
 LANGUAGE plpgsql
+SET search_path = public, pg_temp
 AS $$
 BEGIN
     RETURN QUERY
@@ -1926,6 +1960,7 @@ $$;
 CREATE OR REPLACE FUNCTION shopniro_reviews_list()
 RETURNS SETOF reviews
 LANGUAGE SQL STABLE
+SET search_path = public, pg_temp
 AS $$
     SELECT * FROM reviews ORDER BY created_at DESC;
 $$;
@@ -1933,6 +1968,7 @@ $$;
 CREATE OR REPLACE FUNCTION shopniro_reviews_by_product(p_product_id VARCHAR)
 RETURNS SETOF reviews
 LANGUAGE SQL STABLE
+SET search_path = public, pg_temp
 AS $$
     SELECT * FROM reviews WHERE product_id = p_product_id ORDER BY created_at DESC;
 $$;
@@ -1940,6 +1976,7 @@ $$;
 CREATE OR REPLACE FUNCTION shopniro_reviews_by_seller(p_seller_id VARCHAR)
 RETURNS SETOF reviews
 LANGUAGE SQL STABLE
+SET search_path = public, pg_temp
 AS $$
     SELECT r.* FROM reviews r
     JOIN products p ON p.id = r.product_id
@@ -1951,6 +1988,7 @@ $$;
 CREATE OR REPLACE FUNCTION shopniro_customer_get(p_id VARCHAR)
 RETURNS SETOF customer_profiles
 LANGUAGE SQL STABLE
+SET search_path = public, pg_temp
 AS $$
     SELECT * FROM customer_profiles WHERE id = p_id;
 $$;
@@ -1965,6 +2003,7 @@ CREATE OR REPLACE FUNCTION shopniro_review_create(
 )
 RETURNS SETOF reviews
 LANGUAGE plpgsql
+SET search_path = public, pg_temp
 AS $$
 BEGIN
     RETURN QUERY
@@ -1978,6 +2017,7 @@ $$;
 CREATE OR REPLACE FUNCTION shopniro_auth_user_lookup(p_identifier TEXT, p_id VARCHAR)
 RETURNS SETOF users
 LANGUAGE SQL STABLE
+SET search_path = public, pg_temp
 AS $$
     SELECT * FROM users
     WHERE LOWER(username) = LOWER(p_identifier)
@@ -1989,6 +2029,7 @@ $$;
 CREATE OR REPLACE FUNCTION shopniro_admin_get(p_id VARCHAR)
 RETURNS SETOF admin_profiles
 LANGUAGE SQL STABLE
+SET search_path = public, pg_temp
 AS $$
     SELECT * FROM admin_profiles WHERE id = p_id;
 $$;
@@ -1996,6 +2037,7 @@ $$;
 CREATE OR REPLACE FUNCTION shopniro_auth_password_update(p_role TEXT, p_id VARCHAR, p_password TEXT)
 RETURNS BOOLEAN
 LANGUAGE plpgsql
+SET search_path = public, pg_temp
 AS $$
 BEGIN
     CASE p_role
@@ -2013,6 +2055,7 @@ $$;
 CREATE OR REPLACE FUNCTION shopniro_admin_dashboard_stats()
 RETURNS SETOF admin_dashboard_stats
 LANGUAGE SQL STABLE
+SET search_path = public, pg_temp
 AS $$
     SELECT * FROM admin_dashboard_stats;
 $$;
@@ -2020,6 +2063,7 @@ $$;
 CREATE OR REPLACE FUNCTION shopniro_top_rated_products(p_limit INTEGER DEFAULT 12)
 RETURNS SETOF top_rated_products
 LANGUAGE SQL STABLE
+SET search_path = public, pg_temp
 AS $$
     SELECT * FROM top_rated_products
     ORDER BY average_rating DESC, total_reviews DESC, product_id
@@ -2029,6 +2073,7 @@ $$;
 CREATE OR REPLACE FUNCTION shopniro_top_rated_sellers(p_limit INTEGER DEFAULT 3)
 RETURNS SETOF top_rated_sellers
 LANGUAGE SQL STABLE
+SET search_path = public, pg_temp
 AS $$
     SELECT * FROM top_rated_sellers
     ORDER BY average_rating DESC, total_reviews DESC, seller_name
@@ -2038,6 +2083,7 @@ $$;
 CREATE OR REPLACE FUNCTION shopniro_trending_products(p_limit INTEGER DEFAULT 10)
 RETURNS SETOF trending_products
 LANGUAGE SQL STABLE
+SET search_path = public, pg_temp
 AS $$
     SELECT * FROM trending_products
     ORDER BY total_units_sold DESC, product_id
@@ -2047,6 +2093,7 @@ $$;
 CREATE OR REPLACE FUNCTION shopniro_database_status()
 RETURNS TABLE(test INTEGER, db_name NAME, pg_version TEXT)
 LANGUAGE SQL STABLE
+SET search_path = public, pg_temp
 AS $$
     SELECT 1, current_database(), version();
 $$;
@@ -2055,6 +2102,7 @@ $$;
 CREATE OR REPLACE FUNCTION shopniro_user_find(p_identifier VARCHAR, p_email VARCHAR, p_username VARCHAR)
 RETURNS SETOF users
 LANGUAGE SQL STABLE
+SET search_path = public, pg_temp
 AS $$
     SELECT * FROM users
     WHERE id = p_identifier OR email = p_email OR username = p_username
@@ -2068,6 +2116,7 @@ CREATE OR REPLACE FUNCTION shopniro_user_create(
 )
 RETURNS SETOF users
 LANGUAGE plpgsql
+SET search_path = public, pg_temp
 AS $$
 BEGIN
     INSERT INTO users (id, username, password, email, role, created_at)
@@ -2094,6 +2143,7 @@ $$;
 CREATE OR REPLACE FUNCTION shopniro_table_count(p_table TEXT)
 RETURNS BIGINT
 LANGUAGE plpgsql STABLE
+SET search_path = public, pg_temp
 AS $$
 BEGIN
     CASE p_table
@@ -2112,6 +2162,7 @@ $$;
 CREATE OR REPLACE FUNCTION shopniro_seed_row(p_table TEXT, p_row JSONB)
 RETURNS VOID
 LANGUAGE plpgsql
+SET search_path = public, pg_temp
 AS $$
 BEGIN
     CASE p_table
@@ -2219,6 +2270,7 @@ $$;
 CREATE OR REPLACE FUNCTION shopniro_session_create(p_jti VARCHAR, p_user_id VARCHAR, p_expires_at TIMESTAMPTZ)
 RETURNS VOID
 LANGUAGE plpgsql
+SET search_path = public, pg_temp
 AS $$
 BEGIN
     DELETE FROM auth_sessions WHERE expires_at <= CURRENT_TIMESTAMP;
@@ -2230,6 +2282,7 @@ $$;
 CREATE OR REPLACE FUNCTION shopniro_session_active(p_jti VARCHAR)
 RETURNS BOOLEAN
 LANGUAGE SQL STABLE
+SET search_path = public, pg_temp
 AS $$
     SELECT EXISTS (
         SELECT 1 FROM auth_sessions
@@ -2242,6 +2295,7 @@ $$;
 CREATE OR REPLACE FUNCTION shopniro_session_revoke(p_jti VARCHAR)
 RETURNS BOOLEAN
 LANGUAGE plpgsql
+SET search_path = public, pg_temp
 AS $$
 BEGIN
     UPDATE auth_sessions
@@ -2260,6 +2314,7 @@ CREATE OR REPLACE FUNCTION shopniro_payment_create(
 )
 RETURNS SETOF payments
 LANGUAGE plpgsql
+SET search_path = public, pg_temp
 AS $$
 BEGIN
     RETURN QUERY
@@ -2280,6 +2335,7 @@ CREATE OR REPLACE FUNCTION shopniro_payment_update(
 )
 RETURNS SETOF payments
 LANGUAGE plpgsql
+SET search_path = public, pg_temp
 AS $$
 BEGIN
     RETURN QUERY
@@ -2299,6 +2355,7 @@ $$;
 CREATE OR REPLACE FUNCTION shopniro_payments_list(p_order_id VARCHAR DEFAULT NULL)
 RETURNS SETOF payments
 LANGUAGE SQL STABLE
+SET search_path = public, pg_temp
 AS $$
     SELECT * FROM payments
     WHERE (p_order_id IS NULL OR order_id = p_order_id)
