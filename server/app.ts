@@ -188,21 +188,6 @@ directApiRoutes.get('/stats', requireAuth, requireRole(['admin']), async (_req, 
   }
 });
 
-directApiRoutes.get('/admin/users', requireAuth, requireRole(['admin']), async (req, res) => {
-  try {
-    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
-    const offset = Math.max(0, Number(req.query.offset) || 0);
-    const result = await query(`
-      SELECT id, username, email, role, id AS entity_id, created_at
-      FROM users ORDER BY created_at DESC, id DESC LIMIT $1 OFFSET $2
-    `, [limit + 1, offset]);
-    res.setHeader('X-Has-More', String(result.rows.length > limit));
-    res.json(result.rows);
-  } catch {
-    res.status(500).json({ error: 'Failed to fetch users' });
-  }
-});
-
 directApiRoutes.get('/analytics/trending-products', async (req, res) => {
   try {
     const limit = Number(req.query.limit) || 12;

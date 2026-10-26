@@ -1,16 +1,6 @@
 import React from 'react';
 import { UserRole, Customer, Seller, Admin, Rider } from '../types';
-import {
-  Users,
-  Store,
-  ShieldCheck,
-  LogIn,
-  LogOut,
-  UserPlus,
-  CheckCircle2,
-  Lock,
-  Truck,
-} from 'lucide-react';
+import { Store, LogIn, LogOut, UserPlus, CheckCircle2, Truck } from 'lucide-react';
 
 interface RoleSwitcherProps {
   isLoggedIn: boolean;

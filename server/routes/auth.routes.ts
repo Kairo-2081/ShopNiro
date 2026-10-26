@@ -4,17 +4,7 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import { pool, query, mapAddress } from '../db/index.ts';
 import { hashPassword, comparePassword, needsPasswordRehash } from '../db/password.ts';
 import { getUserProfileCompletion } from '../services/profileCompletion.service.ts';
-import {
-  requireAuth,
-  issueAuthCookie,
-  issueOAuthRegistrationCookie,
-  clearOAuthRegistrationCookie,
-  readOAuthRegistrationCookie,
-  clearAuthCookie,
-  optionalAuth,
-  AUTH_COOKIE_NAME,
-  AuthRequest,
-} from '../middleware/auth.ts';
+import { issueAuthCookie, issueOAuthRegistrationCookie, readOAuthRegistrationCookie, clearAuthCookie, optionalAuth, AUTH_COOKIE_NAME, AuthRequest } from '../middleware/auth.ts';
 
 import { validateBody } from '../middleware/validate.ts';
 import { emptyBody, loginBody, signupBody } from '../validation/schemas.ts';
