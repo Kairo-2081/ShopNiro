@@ -34,7 +34,7 @@ Vercel supplies `VERCEL_URL` and `VERCEL_PROJECT_PRODUCTION_URL`; the API includ
 ## Deployment checks
 
 1. Configure secrets in the host dashboard, not in committed files.
-2. Apply the updated `schema.sql` to existing databases to create the OAuth identity table.
+2. Apply any `schema.sql` change to the production database yourself, before or with the deploy (see "Changing `schema.sql`" below). The host does not apply it automatically.
 3. Confirm the frontend origin exactly matches `SHOPNIRO_PUBLIC_URL` and the API CORS allowlist.
 4. Deploy the API before the frontend when changing API contracts.
 5. Verify `/api/db/status`, sign in, load a protected page, and sign out in the deployed browser origin.
@@ -49,3 +49,17 @@ Vercel supplies `VERCEL_URL` and `VERCEL_PROJECT_PRODUCTION_URL`; the API includ
 14. Storage backups: the `storage-backup` job in the same workflow copies every Supabase Storage bucket through the S3-compatible API and encrypts the archive with the same age public key. It needs the `STORAGE_S3_ACCESS_KEY_ID` and `STORAGE_S3_SECRET_ACCESS_KEY` Actions secrets (Supabase dashboard, Storage, S3 connection, New access key). These keys can read and write all Storage objects but cannot touch the database. Create the private `seller-verification-documents` bucket before accepting seller applications; the upload code refuses to run without it. Decrypt with `age -d -i backup-key.txt -o storage.tar.gz shopniro-storage-DATE.tar.gz.age`, then extract with `tar -xzf`.
 15. Database TLS verification: by default the database connection is encrypted but the server certificate is not checked. To verify it, download Supabase's CA certificate (Dashboard, Database Settings, SSL Configuration, Download certificate) and set `DB_CA_CERT` on the host to the full PEM text (`-----BEGIN CERTIFICATE-----` through `-----END CERTIFICATE-----`). Redeploy and confirm the site loads a product page and `/api/ready` returns 200. If the connection fails, delete `DB_CA_CERT` to roll back; no code change is needed. Once verified, also set `DB_REQUIRE_TLS_VERIFY=true` so the server refuses to start without the certificate. For local development `DB_CA_CERT_PATH` can point at the downloaded `.crt` file. Do not turn on Supabase's "Enforce SSL" database setting as part of this step; it reboots the database and is unrelated.
 
+## Changing `schema.sql`
+
+Production does not run `schema.sql` on its own. The server only does that at startup when `RUN_SCHEMA_ON_START=true`, and that variable is not set on the host. Merging a PR that changes `schema.sql` therefore changes nothing in the live database. If the new code depends on the change (a renamed or new function, a new column, a new table), the site breaks until the database is updated. A rename of the `gocart_*` functions to `shopniro_*` caused exactly this: the deployed code called functions that did not exist yet and every login failed.
+
+Do this for every schema change:
+
+1. Make the change additive first. Create the new object next to the old one. Do not drop or rename anything the currently running version uses.
+2. Back up first: run the `backup.yml` workflow and wait for it to go green.
+3. Apply the new statements to the production database before merging the code that needs them. Use the Supabase SQL editor, or `psql "$DATABASE_URL" -f changes.sql` with the session pooler string. Wrap the statements in `BEGIN; ... COMMIT;` so a failure leaves nothing half-applied. Functions are idempotent with `CREATE OR REPLACE FUNCTION`.
+4. Test the change on a throwaway database built from the previous `schema.sql` before running it on production.
+5. Merge and deploy. Check `/api/ready`, sign in, load products, add to cart, and open an order.
+6. Only after the new version is confirmed working, remove the old objects in a separate step.
+
+Setting `RUN_SCHEMA_ON_START=true` would apply the whole file on every start. It is off on purpose; do not enable it without reviewing every statement in `schema.sql` against production data.
