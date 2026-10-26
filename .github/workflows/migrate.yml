@@ -1,0 +1,65 @@
+name: Database migrations
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Inspect migration status or apply pending migrations
+        required: true
+        type: choice
+        options:
+          - status
+          - apply
+          - baseline
+        default: status
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    env:
+      DATABASE_URL: ${{ secrets.MIGRATE_DATABASE_URL }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Require a recent successful backup before applying
+        if: inputs.mode == 'apply'
+        shell: bash
+        run: |
+          set -euo pipefail
+          recent_backup="$(gh run list --workflow backup.yml --limit 1 --json conclusion,createdAt)"
+          cutoff="$(date -u -d '24 hours ago' +%s)"
+          if ! jq -e --argjson cutoff "$cutoff" \
+            'length == 1 and .[0].conclusion == "success" and (.[0].createdAt | fromdateiso8601) >= $cutoff' \
+            <<< "$recent_backup" >/dev/null; then
+            echo "::error::The latest backup.yml run did not succeed within the last 24 hours."
+            exit 1
+          fi
+
+      - name: Show migration status
+        if: inputs.mode == 'status'
+        run: npm run migrate:status
+
+      - name: Apply pending migrations
+        if: inputs.mode == 'apply'
+        run: npm run migrate
+
+      - name: Record the existing schema baseline
+        if: inputs.mode == 'baseline'
+        run: npm run migrate -- --baseline 0001
