@@ -4,11 +4,12 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: Inspect migration status or apply pending migrations
+        description: Inspect status, check for schema drift, apply pending migrations, or record the baseline
         required: true
         type: choice
         options:
           - status
+          - drift
           - apply
           - baseline
         default: status
@@ -22,8 +23,25 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     timeout-minutes: 15
+    services:
+      # A throwaway database the drift check builds from the migration files. Same major version as
+      # Supabase so catalog output is comparable.
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: reference
+          POSTGRES_USER: reference
+          POSTGRES_PASSWORD: reference
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U reference -d reference"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
     env:
       DATABASE_URL: ${{ secrets.MIGRATE_DATABASE_URL }}
+      REFERENCE_DATABASE_URL: postgresql://reference:reference@127.0.0.1:5432/reference
       GH_TOKEN: ${{ github.token }}
     steps:
       - name: Check out repository
@@ -56,10 +74,20 @@ jobs:
         if: inputs.mode == 'status'
         run: npm run migrate:status
 
+      - name: Build a reference database from the migration files
+        if: inputs.mode == 'drift' || inputs.mode == 'baseline'
+        env:
+          DATABASE_URL: ${{ env.REFERENCE_DATABASE_URL }}
+        run: npm run migrate
+
+      - name: Compare the live database with the reference
+        if: inputs.mode == 'drift' || inputs.mode == 'baseline'
+        run: npm run migrate:drift -- --reference "$REFERENCE_DATABASE_URL" --full
+
       - name: Apply pending migrations
         if: inputs.mode == 'apply'
         run: npm run migrate
 
-      - name: Record the existing schema baseline
+      - name: Record the existing schema baseline (only reached when the drift check passed)
         if: inputs.mode == 'baseline'
         run: npm run migrate -- --baseline 0001
