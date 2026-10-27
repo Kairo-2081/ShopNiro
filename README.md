@@ -29,7 +29,7 @@ API routes, entity relationships, and request flows: [docs/api.md](docs/api.md),
 
 5. For existing databases, migrate password hashes once per database before deploying strict bcrypt-only login: set `DATABASE_URL` to that database and run `npm run migrate:passwords`. Check `SELECT count(*) FROM users WHERE password NOT LIKE '$2%';` returns `0`. Never run migrations against a database unless you have selected and backed it up intentionally.
 
-6. Tests require `DATABASE_URL` pointing to an isolated disposable PostgreSQL database initialized with `schema.sql`; never use production or shared Supabase data. Run `npm test`, `npm run lint`, and `npm run build`. CI provisions a temporary PostgreSQL 16 service. The password migration script also requires an explicit `DATABASE_URL` and does not use `SUPABASE_DB_URL`.
+6. Tests require `DATABASE_URL` pointing to an isolated disposable PostgreSQL database migrated with `npm run migrate`; never use production or shared Supabase data. Run `npm test`, `npm run lint`, and `npm run build`. CI provisions a temporary PostgreSQL 16 service. The password migration script also requires an explicit `DATABASE_URL` and does not use `SUPABASE_DB_URL`.
 
    Payment latency and idempotency benchmarks (`npm run bench:payments`) are described in [docs/benchmarks.md](docs/benchmarks.md).
 

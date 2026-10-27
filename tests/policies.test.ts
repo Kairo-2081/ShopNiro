@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import test from 'node:test';
 import { BUSINESS } from '../src/components/legal/business.ts';
 import { POLICIES, policyByPath } from '../src/components/legal/policies.ts';
@@ -19,7 +19,11 @@ test('policy text quotes the same numbers the code enforces', () => {
   const checkout = readFileSync('src/components/storefront/CheckoutModal.tsx', 'utf8');
   assert.match(checkout, new RegExp(`subtotal >= ${BUSINESS.freeShippingThresholdBDT}\\b`), 'free-shipping threshold');
 
-  const schema = readFileSync('schema.sql', 'utf8');
+  const schema = readdirSync('db/migrations')
+    .filter((name) => name.endsWith('.sql'))
+    .sort()
+    .map((name) => readFileSync(`db/migrations/${name}`, 'utf8'))
+    .join('\n');
   assert.match(
     schema,
     new RegExp(`expire_pending_online_orders\\(p_minutes INT DEFAULT ${BUSINESS.unpaidOnlineOrderMinutes}\\)`),

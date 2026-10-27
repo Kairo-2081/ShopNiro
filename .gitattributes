@@ -1,0 +1,3 @@
+# Migration checksums are computed over the exact bytes, so line endings must never be rewritten.
+db/migrations/*.sql text eol=lf
+schema.sql text eol=lf

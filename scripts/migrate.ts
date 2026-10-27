@@ -103,6 +103,13 @@ function validateAppliedMigrations(migrations: Migration[], applied: AppliedMigr
 const displayName = (migration: Pick<Migration, 'version' | 'name'>) =>
   `${migration.version}_${migration.name}`;
 
+async function hasApplicationTables(client: Client): Promise<boolean> {
+  const result = await client.query<{ exists: boolean }>(
+    "SELECT to_regclass('public.users') IS NOT NULL AS exists"
+  );
+  return Boolean(result.rows[0]?.exists);
+}
+
 async function ensureMigrationTable(client: Client) {
   await client.query(`
     CREATE TABLE IF NOT EXISTS public.schema_migrations (
@@ -161,6 +168,14 @@ export async function runMigrations({
     const pending = migrations.filter((migration) =>
       !applied.some((entry) => entry.version === migration.version)
     );
+    if (mode === 'apply' && applied.length === 0 && (await hasApplicationTables(client))) {
+      throw new Error(
+        'This database already has application tables but no migration history. ' +
+          'Refusing to run the baseline over an existing schema. Run npm run migrate:drift against a ' +
+          'freshly migrated reference database, and only when it reports no drift record the baseline ' +
+          'with npm run migrate -- --baseline 0001.'
+      );
+    }
     if (mode === 'status' || mode === 'dry-run') {
       return {
         mode,
@@ -216,7 +231,7 @@ export async function runMigrations({
 
 function parseArguments(args: string[]): { mode: MigrationMode; baselineVersion?: string } {
   if (args.includes('--help')) {
-    console.log('Usage: npm run migrate [--status | --dry-run | --baseline <version>]');
+    console.log('Usage: npm run migrate [--status | --dry-run | --baseline <version>]\nSee also: npm run migrate:drift -- --help');
     process.exit(0);
   }
   if (args.length === 0) return { mode: 'apply' };
