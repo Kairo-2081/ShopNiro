@@ -4,17 +4,13 @@ import http from 'node:http';
 import path from 'node:path';
 import { createServer as createViteServer } from 'vite';
 import { app } from './app.ts';
-import { ensureDatabaseSchema, seedDatabaseIfEmpty } from './db/seed.ts';
+import { seedDatabaseIfEmpty } from './db/seed.ts';
 import { startRefundProcessor } from './routes/payment.routes.ts';
 
 const PORT = Number(process.env.PORT) || 3000;
 
 async function startServer() {
   try {
-    const shouldRunSchemaOnStart = process.env.RUN_SCHEMA_ON_START === 'true';
-    if (shouldRunSchemaOnStart) {
-      await ensureDatabaseSchema();
-    }
     if (process.env.SEED_ON_START === 'true' && process.env.NODE_ENV !== 'production') {
       await seedDatabaseIfEmpty();
     }

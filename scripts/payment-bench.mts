@@ -10,7 +10,7 @@
 //   starve       old 'submitted' refunds queued ahead of new 'requested' ones: how many new ones get initiated
 //
 // Environment:
-//   DATABASE_URL     required. Must be a disposable local PostgreSQL database initialised with schema.sql.
+//   DATABASE_URL     required. Must be a disposable local PostgreSQL database built with npm run migrate.
 //   REPO_ROOT        optional. Benchmark another checkout (for example a git worktree of an older commit).
 //   TRIALS           trials for init/refund/dupvalidate (default 100)
 //   REPS, SIZES      load: repetitions per size (default 5) and checkout counts (default 10,20,40,80)
@@ -45,7 +45,7 @@ if (!MODES.includes(BENCH)) {
 // Refuse to run against anything but a local database: this script writes test rows.
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
-  console.error('DATABASE_URL is required (a disposable local PostgreSQL database initialised with schema.sql).');
+  console.error('DATABASE_URL is required (a disposable local PostgreSQL database built with npm run migrate).');
   process.exit(2);
 }
 const databaseHost = new URL(databaseUrl).hostname;

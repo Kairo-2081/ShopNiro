@@ -50,7 +50,7 @@ jobs:
         run: npm ci
 
       - name: Initialize test database
-        run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f schema.sql
+        run: npm run migrate
 
       - name: Lint TypeScript
         run: npm run lint

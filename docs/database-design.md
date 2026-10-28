@@ -1,6 +1,6 @@
 # Database Design
 
-ShopNiro uses PostgreSQL. DDL, indexes, constraints, compatibility migrations, views, triggers, and routines are maintained in [`schema.sql`](../schema.sql).
+ShopNiro uses PostgreSQL. `db/migrations/0001_baseline.sql` is the frozen initial schema. All future DDL, indexes, constraints, views, triggers, and routines are added as numbered files in `db/migrations/` and applied by `npm run migrate`.
 
 ## Core Relationships
 
@@ -17,5 +17,5 @@ ShopNiro uses PostgreSQL. DDL, indexes, constraints, compatibility migrations, v
 - `process_checkout` validates and decrements stock inside a database transaction.
 - Failed online checkout restores stock and cart contents atomically; COD orders cannot use that rollback.
 - Order lists query base tables with filters and bounded `LIMIT`/`OFFSET` pagination.
-- Run the schema only against the intended database. Integration tests require an isolated `DATABASE_URL`; never point them at production or shared application data.
+- Run migrations only against the intended database. Integration tests require an isolated `DATABASE_URL`; never point them at production or shared application data.
 - Migrate existing plaintext passwords explicitly with `npm run migrate:passwords` for each database before deploying strict bcrypt-only login behavior.
