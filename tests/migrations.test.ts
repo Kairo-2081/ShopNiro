@@ -131,10 +131,7 @@ test('migration runner applies, verifies, and baselines schemas safely', {
         ADD CONSTRAINT chk_payments_order_required CHECK (order_id IS NOT NULL) NOT VALID;
     `);
 
-    const firstRun = await runMigrations({ client: freshClient }).catch((error: unknown) => {
-      console.dir(error, { depth: null });
-      throw error;
-    });
+    const firstRun = await runMigrations({ client: freshClient });
     assert.equal(firstRun.pending.length, 0);
 
     const migratedValues = await freshClient.query<{
@@ -228,23 +225,10 @@ test('migration runner applies, verifies, and baselines schemas safely', {
 
     const referenceClient = await createScratchDatabase(scratchDatabaseNames[2]);
     await runMigrations({ client: referenceClient });
-    const freshFingerprint = await readFingerprint(freshClient);
-    const referenceFingerprint = await readFingerprint(referenceClient);
-    const schemaComparison = compareFingerprints(freshFingerprint, referenceFingerprint);
-    const [freshCancellationConstraints, referenceCancellationConstraints] = await Promise.all([
-      freshClient.query(`
-        SELECT conname, contype, pg_get_constraintdef(oid) AS definition
-        FROM pg_constraint
-        WHERE conrelid = 'public.order_cancellation_requests'::regclass
-        ORDER BY conname
-      `),
-      referenceClient.query(`
-        SELECT conname, contype, pg_get_constraintdef(oid) AS definition
-        FROM pg_constraint
-        WHERE conrelid = 'public.order_cancellation_requests'::regclass
-        ORDER BY conname
-      `),
-    ]);
+    const schemaComparison = compareFingerprints(
+      await readFingerprint(freshClient),
+      await readFingerprint(referenceClient)
+    );
     assert.deepEqual(schemaComparison.missing, []);
     assert.deepEqual(schemaComparison.extra, []);
     assert.deepEqual(
@@ -252,14 +236,7 @@ test('migration runner applies, verifies, and baselines schemas safely', {
       [
         'constraint payments.chk_payments_order_required',
         'constraint payments.fk_payments_customer',
-      ],
-      JSON.stringify({
-        differences: schemaComparison.different,
-        freshFingerprint: [...freshFingerprint].filter(([key]) => key.includes('order_cancellation_requests')),
-        referenceFingerprint: [...referenceFingerprint].filter(([key]) => key.includes('order_cancellation_requests')),
-        freshCancellationConstraints: freshCancellationConstraints.rows,
-        referenceCancellationConstraints: referenceCancellationConstraints.rows,
-      }, null, 2)
+      ]
     );
 
     const reconciledConstraints = await freshClient.query<{ conname: string; convalidated: boolean }>(`
