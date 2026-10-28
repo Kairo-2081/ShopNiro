@@ -30,12 +30,12 @@ export interface DriftReport {
  */
 export async function readFingerprint(client: Client): Promise<Fingerprint> {
   const result = await client.query<{ kind: string; name: string; definition: string }>(`
-    SELECT 'table' AS kind, c.relname AS name, 'table' AS definition
+    SELECT 'table' AS kind, c.relname::text AS name, 'table' AS definition
     FROM pg_class c
     WHERE c.relnamespace = 'public'::regnamespace AND c.relkind = 'r'
       AND c.relname NOT IN ('schema_migrations', 'schema_migration_adoptions')
     UNION ALL
-    SELECT 'column', c.relname || '.' || a.attname,
+    SELECT 'column', c.relname::text || '.' || a.attname::text,
            format_type(a.atttypid, a.atttypmod)
              || CASE WHEN a.attnotnull THEN ' not null' ELSE '' END
              || COALESCE(' default ' || pg_get_expr(d.adbin, d.adrelid), '')
@@ -46,26 +46,28 @@ export async function readFingerprint(client: Client): Promise<Fingerprint> {
       AND c.relname NOT IN ('schema_migrations', 'schema_migration_adoptions')
       AND a.attnum > 0 AND NOT a.attisdropped
     UNION ALL
-    SELECT 'constraint', c.conrelid::regclass::text || '.' || c.conname, pg_get_constraintdef(c.oid)
+    SELECT 'constraint', c.conrelid::regclass::text || '.' || c.conname::text, pg_get_constraintdef(c.oid)
     FROM pg_constraint c
     WHERE c.connamespace = 'public'::regnamespace AND c.conrelid <> 0
       AND c.conrelid::regclass::text NOT IN ('schema_migrations', 'schema_migration_adoptions')
     UNION ALL
-    SELECT 'index', i.tablename || '.' || i.indexname, i.indexdef
+    SELECT 'index', i.tablename::text || '.' || i.indexname::text, i.indexdef
     FROM pg_indexes i
     WHERE i.schemaname = 'public' AND i.tablename NOT IN ('schema_migrations', 'schema_migration_adoptions')
     UNION ALL
-    SELECT 'function', p.oid::regprocedure::text, pg_get_functiondef(p.oid)
+    -- Older function bodies may retain Windows line endings in prosrc.
+    SELECT 'function', p.oid::regprocedure::text,
+           replace(replace(pg_get_functiondef(p.oid), E'\\r\\n', E'\\n'), E'\\r', E'\\n')
     FROM pg_proc p
     WHERE p.pronamespace = 'public'::regnamespace AND p.prokind IN ('f', 'p')
     UNION ALL
-    SELECT 'trigger', t.tgrelid::regclass::text || '.' || t.tgname, pg_get_triggerdef(t.oid)
+    SELECT 'trigger', t.tgrelid::regclass::text || '.' || t.tgname::text, pg_get_triggerdef(t.oid)
     FROM pg_trigger t
     JOIN pg_class c ON c.oid = t.tgrelid
     WHERE NOT t.tgisinternal AND c.relnamespace = 'public'::regnamespace
       AND c.relname NOT IN ('schema_migrations', 'schema_migration_adoptions')
     UNION ALL
-    SELECT 'view', v.viewname, v.definition
+    SELECT 'view', v.viewname::text, v.definition
     FROM pg_views v
     WHERE v.schemaname = 'public'
   `);
