@@ -115,7 +115,24 @@ jobs:
           mkdir storage
           for b in $buckets; do
             echo "bucket: $b"
-            aws s3 sync "s3://$b" "storage/$b" --endpoint-url "$STORAGE_S3_ENDPOINT" --only-show-errors
+            mkdir -p "storage/$b"
+            # One GetObject per key. `aws s3 sync` (aws-cli 2.38 on the current runner image) fails every
+            # download against Supabase's S3 endpoint with an empty error, while plain GetObject works.
+            aws s3api list-objects-v2 --bucket "$b" --endpoint-url "$STORAGE_S3_ENDPOINT" \
+              --query 'Contents[].Key' --output json > "keys-$b.json"
+            expected=$(jq '[(. // [])[] | select(endswith("/") | not)] | length' "keys-$b.json")
+            jq -r '(. // [])[] | select(endswith("/") | not)' "keys-$b.json" | while IFS= read -r key; do
+              case "$key" in /* | ../* | */../* | */..) echo "refusing unsafe key: $key" >&2; exit 1 ;; esac
+              mkdir -p "storage/$b/$(dirname "$key")"
+              aws s3api get-object --bucket "$b" --key "$key" "storage/$b/$key" \
+                --endpoint-url "$STORAGE_S3_ENDPOINT" > /dev/null
+            done
+            actual=$(find "storage/$b" -type f | wc -l)
+            echo "$b: $actual of $expected objects copied"
+            if [ "$actual" -ne "$expected" ]; then
+              echo "bucket $b: copied $actual objects but it lists $expected" >&2; exit 1
+            fi
+            rm -f "keys-$b.json"
           done
           find storage -type f | wc -l
           tar -czf storage.tar.gz storage
