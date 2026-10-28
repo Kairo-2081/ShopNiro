@@ -460,7 +460,15 @@ BEGIN
         FOR item IN SELECT * FROM _shopniro_saved_checks
         LOOP
             constraint_definition := item.definition;
-            IF item.relation_oid = 'public.orders'::regclass AND item.conname = 'chk_orders_status' THEN
+            IF item.relation_oid = 'public.orders'::regclass
+                AND item.conname = 'chk_orders_payment_status' THEN
+                constraint_definition :=
+                    'CHECK (payment_status IN (''pending'', ''paid'', ''refunded'', ''expired''))';
+            ELSIF item.relation_oid = 'public.payments'::regclass
+                AND item.conname = 'chk_payments_status' THEN
+                constraint_definition :=
+                    'CHECK (status IN (''PENDING'', ''VALIDATED'', ''EXPIRED'', ''REFUNDED''))';
+            ELSIF item.relation_oid = 'public.orders'::regclass AND item.conname = 'chk_orders_status' THEN
                 constraint_definition :=
                     'CHECK (status IN (''placed'', ''processing'', ''shipped'', ''delivered'', ''cancelled''))';
             ELSIF item.relation_oid = 'public.products'::regclass AND item.conname = 'chk_products_status' THEN
