@@ -55,7 +55,9 @@ export async function readFingerprint(client: Client): Promise<Fingerprint> {
     FROM pg_indexes i
     WHERE i.schemaname = 'public' AND i.tablename NOT IN ('schema_migrations', 'schema_migration_adoptions')
     UNION ALL
-    SELECT 'function', p.oid::regprocedure::text, pg_get_functiondef(p.oid)
+    -- Older function bodies may retain Windows line endings in prosrc.
+    SELECT 'function', p.oid::regprocedure::text,
+           replace(replace(pg_get_functiondef(p.oid), E'\\r\\n', E'\\n'), E'\\r', E'\\n')
     FROM pg_proc p
     WHERE p.pronamespace = 'public'::regnamespace AND p.prokind IN ('f', 'p')
     UNION ALL

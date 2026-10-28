@@ -7,6 +7,7 @@ import { test } from 'node:test';
 import pg, { type Client } from 'pg';
 import { buildDatabaseSsl } from '../server/db/ssl.ts';
 import { runMigrations } from '../scripts/migrate.ts';
+import { compareFingerprints, readFingerprint } from '../scripts/schema-drift.ts';
 
 const { Client: PgClient } = pg;
 const databaseUrl = process.env.DATABASE_URL;
@@ -28,9 +29,11 @@ test('migration runner applies, verifies, and baselines schemas safely', {
   const scratchDatabaseNames = [
     `shopniro_migration_test_${randomUUID().replaceAll('-', '')}`,
     `shopniro_baseline_test_${randomUUID().replaceAll('-', '')}`,
+    `shopniro_reference_test_${randomUUID().replaceAll('-', '')}`,
   ];
   const tempMigrations = await mkdtemp(path.join(tmpdir(), 'shopniro-migrations-'));
   const baselineMigrations = await mkdtemp(path.join(tmpdir(), 'shopniro-baseline-migrations-'));
+  const reconciledMigrations = await mkdtemp(path.join(tmpdir(), 'shopniro-reconciled-migrations-'));
   const migrationDirectory = path.resolve(process.cwd(), 'db/migrations');
   const connectedClients: Client[] = [];
   let adminConnected = false;
@@ -55,6 +58,7 @@ test('migration runner applies, verifies, and baselines schemas safely', {
       '0001_baseline',
       '0002_reconcile_missing_constraints',
       '0003_validate_reconciled_constraints',
+      '0004_reconcile_column_types',
     ]);
 
     await cp(path.join(migrationDirectory, '0001_baseline.sql'), path.join(baselineMigrations, '0001_baseline.sql'));
@@ -73,8 +77,160 @@ test('migration runner applies, verifies, and baselines schemas safely', {
       ALTER TABLE users DROP CONSTRAINT users_username_key;
     `);
 
+    for (const filename of [
+      '0001_baseline.sql',
+      '0002_reconcile_missing_constraints.sql',
+      '0003_validate_reconciled_constraints.sql',
+    ]) {
+      await cp(path.join(migrationDirectory, filename), path.join(reconciledMigrations, filename));
+    }
+    await runMigrations({ client: freshClient, directory: reconciledMigrations });
+
+    await freshClient.query(`
+      GRANT SELECT ON public.customer_profiles TO PUBLIC;
+      GRANT SELECT (username) ON public.seller_profiles TO PUBLIC;
+      REVOKE EXECUTE ON FUNCTION public.shopniro_customer_get(character varying) FROM PUBLIC;
+      ALTER TABLE public.orders
+        ALTER COLUMN payment_method TYPE text,
+        ALTER COLUMN payment_method DROP NOT NULL,
+        ALTER COLUMN payment_status TYPE text,
+        ALTER COLUMN payment_status DROP NOT NULL;
+      ALTER TABLE public.payments
+        ALTER COLUMN amount TYPE numeric,
+        ALTER COLUMN gateway TYPE text,
+        ALTER COLUMN created_at DROP DEFAULT,
+        ALTER COLUMN created_at TYPE timestamp without time zone
+          USING created_at AT TIME ZONE 'UTC',
+        ALTER COLUMN created_at SET DEFAULT CURRENT_TIMESTAMP;
+      INSERT INTO public.customers (id, name)
+        VALUES ('CUST-MIGRATION-TEST', 'Migration test customer');
+      INSERT INTO public.orders (
+        id, tracking_id, customer_id, items_json, subtotal, shipping_address_json, billing_address_json,
+        payment_status, payment_method
+      ) VALUES (
+        'ORDER-MIGRATION-TEST', 'TRACK-MIGRATION-TEST', 'CUST-MIGRATION-TEST', '[]', 3000,
+        '{}', '{}', NULL, NULL
+      );
+      INSERT INTO public.payments (
+        id, order_id, customer_id, amount, payment_method, transaction_id, status, created_at
+      ) VALUES (
+        'PAY-ORPHAN-TEST', NULL, 'MISSING-CUSTOMER-TEST', 3000,
+        'sslcommerz', 'TXN-ORPHAN-TEST', 'VALIDATED', '2024-01-01 12:00:00'
+      );
+      ALTER TABLE public.payments DROP CONSTRAINT fk_payments_customer;
+      ALTER TABLE public.payments
+        ADD CONSTRAINT fk_payments_customer
+        FOREIGN KEY (customer_id) REFERENCES public.customers(id) ON DELETE RESTRICT NOT VALID;
+      ALTER TABLE public.payments DROP CONSTRAINT chk_payments_order_required;
+      ALTER TABLE public.payments
+        ADD CONSTRAINT chk_payments_order_required CHECK (order_id IS NOT NULL) NOT VALID;
+    `);
+
     const firstRun = await runMigrations({ client: freshClient });
     assert.equal(firstRun.pending.length, 0);
+
+    const migratedValues = await freshClient.query<{
+      payment_method: string;
+      payment_status: string;
+      payment_amount: string;
+      payment_gateway: string;
+      payment_created_type: string;
+      payment_created_utc: string;
+      orphan_order_id: string | null;
+      orphan_customer_id: string;
+      orphan_status: string;
+    }>(`
+      SELECT o.payment_method, o.payment_status,
+             p.amount::text AS payment_amount, p.gateway AS payment_gateway,
+             pg_typeof(p.created_at)::text AS payment_created_type,
+             to_char(p.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS') AS payment_created_utc,
+             orphan.order_id AS orphan_order_id, orphan.customer_id AS orphan_customer_id,
+             orphan.status AS orphan_status
+      FROM public.orders o
+      CROSS JOIN public.payments p
+      JOIN public.payments orphan ON orphan.id = 'PAY-ORPHAN-TEST'
+      WHERE o.id = 'ORDER-MIGRATION-TEST' AND p.id = 'PAY-ORPHAN-TEST'
+    `);
+    assert.deepEqual(migratedValues.rows[0], {
+      payment_method: 'unknown',
+      payment_status: 'pending',
+      payment_amount: '3000.00',
+      payment_gateway: 'sslcommerz',
+      payment_created_type: 'timestamp with time zone',
+      payment_created_utc: '2024-01-01 12:00:00',
+      orphan_order_id: null,
+      orphan_customer_id: 'MISSING-CUSTOMER-TEST',
+      orphan_status: 'VALIDATED',
+    });
+
+    const restoredObjects = await freshClient.query<{
+      view_count: string;
+      profile_function_count: string;
+      review_check_validated: boolean;
+      public_view_select: boolean;
+      public_column_select: boolean;
+      public_function_execute: boolean;
+      payment_customer_fk_validated: boolean;
+      payment_order_check_validated: boolean;
+    }>(`
+      SELECT
+        (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+         WHERE n.nspname = 'public' AND c.relkind = 'v') AS view_count,
+        (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+         WHERE n.nspname = 'public' AND p.prorettype = 'public.customer_profiles'::regclass) AS profile_function_count,
+        (SELECT convalidated FROM pg_constraint
+         WHERE conrelid = 'public.reviews'::regclass AND conname = 'reviews_rating_check')
+          AS review_check_validated,
+        EXISTS (
+          SELECT 1 FROM pg_class c
+          CROSS JOIN LATERAL aclexplode(c.relacl) acl
+          WHERE c.oid = 'public.customer_profiles'::regclass
+            AND acl.grantee = 0 AND acl.privilege_type = 'SELECT'
+        ) AS public_view_select,
+        EXISTS (
+          SELECT 1 FROM pg_class c
+          JOIN pg_attribute a ON a.attrelid = c.oid AND a.attname = 'username'
+          CROSS JOIN LATERAL aclexplode(a.attacl) acl
+          WHERE c.oid = 'public.seller_profiles'::regclass
+            AND acl.grantee = 0 AND acl.privilege_type = 'SELECT'
+        ) AS public_column_select,
+        EXISTS (
+          SELECT 1 FROM pg_proc p
+          CROSS JOIN LATERAL aclexplode(COALESCE(p.proacl, acldefault('f', p.proowner))) acl
+          WHERE p.oid = 'public.shopniro_customer_get(character varying)'::regprocedure
+            AND acl.grantee = 0 AND acl.privilege_type = 'EXECUTE'
+        ) AS public_function_execute,
+        (SELECT convalidated FROM pg_constraint
+         WHERE conrelid = 'public.payments'::regclass AND conname = 'fk_payments_customer')
+          AS payment_customer_fk_validated,
+        (SELECT convalidated FROM pg_constraint
+         WHERE conrelid = 'public.payments'::regclass AND conname = 'chk_payments_order_required')
+          AS payment_order_check_validated
+    `);
+    assert.equal(Number(restoredObjects.rows[0]?.view_count), 7);
+    assert.ok(Number(restoredObjects.rows[0]?.profile_function_count) > 0);
+    assert.equal(restoredObjects.rows[0]?.review_check_validated, true);
+    assert.equal(restoredObjects.rows[0]?.public_view_select, true);
+    assert.equal(restoredObjects.rows[0]?.public_column_select, true);
+    assert.equal(restoredObjects.rows[0]?.public_function_execute, false);
+    assert.equal(restoredObjects.rows[0]?.payment_customer_fk_validated, false);
+    assert.equal(restoredObjects.rows[0]?.payment_order_check_validated, false);
+
+    const referenceClient = await createScratchDatabase(scratchDatabaseNames[2]);
+    await runMigrations({ client: referenceClient });
+    const schemaComparison = compareFingerprints(
+      await readFingerprint(freshClient),
+      await readFingerprint(referenceClient)
+    );
+    assert.deepEqual(schemaComparison.missing, []);
+    assert.deepEqual(schemaComparison.extra, []);
+    assert.deepEqual(
+      schemaComparison.different.map((difference) => difference.key),
+      [
+        'constraint payments.chk_payments_order_required',
+        'constraint payments.fk_payments_customer',
+      ]
+    );
 
     const reconciledConstraints = await freshClient.query<{ conname: string; convalidated: boolean }>(`
       SELECT conname, convalidated
@@ -149,5 +305,6 @@ test('migration runner applies, verifies, and baselines schemas safely', {
     }
     await rm(tempMigrations, { recursive: true, force: true });
     await rm(baselineMigrations, { recursive: true, force: true });
+    await rm(reconciledMigrations, { recursive: true, force: true });
   }
 });
