@@ -239,7 +239,8 @@ test('migration runner applies, verifies, and baselines schemas safely', {
       [
         'constraint payments.chk_payments_order_required',
         'constraint payments.fk_payments_customer',
-      ]
+      ],
+      JSON.stringify(schemaComparison.different, null, 2)
     );
 
     const reconciledConstraints = await freshClient.query<{ conname: string; convalidated: boolean }>(`
