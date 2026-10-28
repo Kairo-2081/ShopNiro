@@ -102,6 +102,11 @@ test('migration runner applies, verifies, and baselines schemas safely', {
         ALTER COLUMN created_at TYPE timestamp without time zone
           USING created_at AT TIME ZONE 'UTC',
         ALTER COLUMN created_at SET DEFAULT CURRENT_TIMESTAMP;
+      INSERT INTO public.users (id, username, password, email, role)
+        VALUES (
+          'CUST-MIGRATION-TEST', 'migration-test-user', 'test-password',
+          'migration-test@example.invalid', 'customer'
+        );
       INSERT INTO public.customers (id, name)
         VALUES ('CUST-MIGRATION-TEST', 'Migration test customer');
       INSERT INTO public.orders (
