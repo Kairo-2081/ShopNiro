@@ -104,6 +104,18 @@ jobs:
       - name: Install age
         run: sudo apt-get update -qq && sudo apt-get install -y -qq age
 
+      - name: Diagnose storage download failure
+        continue-on-error: true
+        run: |
+          set +e
+          aws --version 2>&1 | sed 's/^/::notice title=awscli::/'
+          key=$(aws s3api list-objects-v2 --bucket product-images --endpoint-url "$STORAGE_S3_ENDPOINT" --max-items 1 --query 'Contents[0].Key' --output text 2>&1)
+          echo "::notice title=first key::$key"
+          aws s3api get-object --bucket product-images --key "$key" /tmp/probe.bin --endpoint-url "$STORAGE_S3_ENDPOINT" --debug > /tmp/debug.txt 2>&1
+          echo "::notice title=get-object exit::$?"
+          # Only response-side lines: request headers contain the signature and must not be printed.
+          grep -E "Response status|Response headers|Response body|HTTP/1\.1 [0-9]|botocore.parsers.*(Response|error)|Error|error" /tmp/debug.txt | grep -v -i -E "authorization|x-amz-security|credential|signature" | head -25 | sed 's/^/::error title=debug::/'
+
       - name: Copy every Storage bucket
         run: |
           set -euo pipefail
