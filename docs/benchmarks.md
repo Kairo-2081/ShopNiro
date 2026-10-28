@@ -5,11 +5,11 @@ concurrency. The SSLCommerz gateway is stubbed (default 120 ms per init call), s
 
 ## Run it
 
-You need a disposable local PostgreSQL database initialised with `schema.sql` (the same setup as `npm test`):
+You need a disposable local PostgreSQL database built with `npm run migrate` (the same setup as `npm test`):
 
 ```sh
 export DATABASE_URL=postgresql://shopniro_test:shopniro_test_password@127.0.0.1:5432/shopniro_bench
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f schema.sql
+npm run migrate
 
 npm run bench:payments -- load          # p95 of POST /api/payment/init at 10/20/40/80 simultaneous checkouts
 npm run bench:payments -- starve        # do new refunds get initiated behind a backlog of old submitted ones
@@ -30,7 +30,7 @@ non-local `DATABASE_URL`, because it inserts test customers, orders, payments an
 
 ## Compare two commits
 
-Use a worktree for the older commit, link `node_modules`, and point `REPO_ROOT` at it. Apply the newer `schema.sql`
+Use a worktree for the older commit, link `node_modules`, and point `REPO_ROOT` at it. Apply the newer migrations
 to the benchmark database first; the added columns are nullable, so older code ignores them.
 
 ```sh

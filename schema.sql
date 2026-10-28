@@ -1,3 +1,4 @@
+-- Frozen baseline snapshot. Add all future schema changes as new files in db/migrations/.
 -- Data-preserving application schema with legacy normalization migrations. Demo data is seeded separately with hashed passwords.
 
 -- USERS TABLE (Global Authentication & Identity)
