@@ -53,6 +53,7 @@ test('adoption records the real starting schema without claiming the baseline wa
       '0002_reconcile_missing_constraints',
       '0003_validate_reconciled_constraints',
       '0004_reconcile_column_types',
+      '0005_align_column_defaults',
     ]);
 
     const baselineHistory = await client.query<{ count: number }>(
@@ -65,6 +66,7 @@ test('adoption records the real starting schema without claiming the baseline wa
       '0002_reconcile_missing_constraints',
       '0003_validate_reconciled_constraints',
       '0004_reconcile_column_types',
+      '0005_align_column_defaults',
     ]);
     assert.equal(applied.adopted, '0001_baseline');
     assert.deepEqual(applied.pending, []);
