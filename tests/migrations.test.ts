@@ -131,7 +131,10 @@ test('migration runner applies, verifies, and baselines schemas safely', {
         ADD CONSTRAINT chk_payments_order_required CHECK (order_id IS NOT NULL) NOT VALID;
     `);
 
-    const firstRun = await runMigrations({ client: freshClient });
+    const firstRun = await runMigrations({ client: freshClient }).catch((error: unknown) => {
+      console.dir(error, { depth: null });
+      throw error;
+    });
     assert.equal(firstRun.pending.length, 0);
 
     const migratedValues = await freshClient.query<{
