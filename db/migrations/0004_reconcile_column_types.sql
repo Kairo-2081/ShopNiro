@@ -133,19 +133,22 @@ BEGIN
         END IF;
     END LOOP;
 
+    -- Money columns that were plain numeric can carry floating point noise (production has an order
+    -- subtotal of 183.58999999999997). Differences below a millionth are noise and are rounded to the cent
+    -- by the type change; anything larger is a real fractional amount and still needs a human decision.
     FOR item IN
         SELECT * FROM _shopniro_type_targets
         WHERE target_type = 'numeric(10,2)'
     LOOP
         EXECUTE format(
             'SELECT count(*) FROM public.%I WHERE %I IS NOT NULL AND '
-            '(%I::numeric <> round(%I::numeric, 2) OR abs(%I::numeric) >= 100000000 '
+            '(abs(%I::numeric - round(%I::numeric, 2)) > 0.000001 OR abs(%I::numeric) >= 100000000 '
             'OR %I::text IN (''NaN'', ''Infinity'', ''-Infinity''))',
             item.table_name, item.column_name, item.column_name, item.column_name,
             item.column_name, item.column_name
         ) INTO pending_count;
         IF pending_count > 0 THEN
-            RAISE EXCEPTION 'Cannot convert %.% to numeric(10,2): % values need rounding or exceed its range',
+            RAISE EXCEPTION 'Cannot convert %.% to numeric(10,2): % values carry real fractional cents or exceed its range',
                 item.table_name, item.column_name, pending_count;
         END IF;
     END LOOP;
@@ -398,6 +401,24 @@ BEGIN
                   AND t.column_name = a.attname
           );
 
+        -- A trigger declared UPDATE OF <column> or with a WHEN clause blocks changing the type of the
+        -- columns it names (production has users.trigger_prevent_user_role_change). Drop and recreate it.
+        CREATE TEMP TABLE _shopniro_saved_triggers ON COMMIT DROP AS
+        SELECT t.oid AS old_oid, t.tgrelid::regclass::text AS relation_name, t.tgname AS trigger_name,
+               pg_get_triggerdef(t.oid) AS definition
+        FROM pg_trigger t
+        JOIN pg_class relation ON relation.oid = t.tgrelid
+        JOIN _shopniro_type_targets target ON target.table_name = relation.relname
+        WHERE relation.relnamespace = 'public'::regnamespace
+          AND NOT t.tgisinternal
+          AND (cardinality(t.tgattr::int2[]) > 0 OR t.tgqual IS NOT NULL)
+        GROUP BY t.oid, t.tgrelid, t.tgname;
+
+        FOR item IN SELECT relation_name, trigger_name FROM _shopniro_saved_triggers
+        LOOP
+            EXECUTE format('DROP TRIGGER %I ON %s', item.trigger_name, item.relation_name);
+        END LOOP;
+
         FOR item IN SELECT schema_name, view_name FROM _shopniro_saved_views
         LOOP
             IF to_regclass(format('%I.%I', item.schema_name, item.view_name)) IS NOT NULL THEN
@@ -506,6 +527,11 @@ BEGIN
                     item.relation_oid::regclass, item.conname
                 );
             END IF;
+        END LOOP;
+
+        FOR item IN SELECT * FROM _shopniro_saved_triggers ORDER BY old_oid
+        LOOP
+            EXECUTE item.definition;
         END LOOP;
 
         LOOP
