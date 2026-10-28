@@ -92,7 +92,15 @@ test('the drift check reports missing, different and extra objects', { skip, tim
     await reference.query(createLineEndingProbe('\n'));
     await live.query(createLineEndingProbe('\r\n'));
 
-    const clean = compareFingerprints(await readFingerprint(live), await readFingerprint(reference));
+    const referenceFingerprint = await readFingerprint(reference);
+    assert.ok(referenceFingerprint.has(
+      'constraint order_cancellation_requests.order_cancellation_requests_order_id_key'
+    ));
+    assert.ok(referenceFingerprint.has(
+      'constraint order_cancellation_requests.order_cancellation_requests_order_id_fkey'
+    ));
+
+    const clean = compareFingerprints(await readFingerprint(live), referenceFingerprint);
     assert.equal(hasDrift(clean, true), false, 'two databases built from the same files match exactly');
 
     // The kinds of drift production actually has: a lost foreign key, a looser column, an extra index.
