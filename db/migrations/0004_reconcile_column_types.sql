@@ -266,8 +266,8 @@ BEGIN
               AND dependency.refclassid = 'pg_type'::regclass
               AND dependency.refobjid IN (
                   SELECT relation.reltype
-                  FROM _shopniro_saved_views saved_view
-                  JOIN pg_class relation ON relation.oid = saved_view.old_oid
+                  FROM _shopniro_saved_views saved_view_row
+                  JOIN pg_class relation ON relation.oid = saved_view_row.old_oid
               )
               AND routine_namespace.nspname <> 'public'
         ) THEN
