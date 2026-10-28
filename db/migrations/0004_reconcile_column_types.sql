@@ -657,12 +657,12 @@ BEGIN
                 FOR acl_role IN SELECT rolname FROM pg_roles WHERE rolname <> current_user
                 LOOP
                     EXECUTE format(
-                        'REVOKE ALL ON VIEW %I.%I FROM %I',
+                        'REVOKE ALL ON TABLE %I.%I FROM %I',
                         saved_view.schema_name, saved_view.view_name, acl_role
                     );
                 END LOOP;
                 EXECUTE format(
-                    'REVOKE ALL ON VIEW %I.%I FROM PUBLIC',
+                    'REVOKE ALL ON TABLE %I.%I FROM PUBLIC',
                     saved_view.schema_name, saved_view.view_name
                 );
 
@@ -673,7 +673,7 @@ BEGIN
                       AND grantee_name <> owner_name
                 LOOP
                     grant_sql := format(
-                        'GRANT %s ON VIEW %I.%I TO %s%s',
+                        'GRANT %s ON TABLE %I.%I TO %s%s',
                         view_acl.privilege_type,
                         saved_view.schema_name,
                         saved_view.view_name,
@@ -691,7 +691,7 @@ BEGIN
                       AND grantee_name <> owner_name
                 LOOP
                     EXECUTE format(
-                        'GRANT %s (%I) ON VIEW %I.%I TO %s%s',
+                        'GRANT %s (%I) ON TABLE %I.%I TO %s%s',
                         view_acl.privilege_type,
                         view_acl.column_name,
                         saved_view.schema_name,
