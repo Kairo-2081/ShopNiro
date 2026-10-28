@@ -50,10 +50,45 @@ test('migration runner applies, verifies, and baselines schemas safely', {
     adminConnected = true;
     const freshClient = await createScratchDatabase(scratchDatabaseNames[0]);
     const beforeRun = await runMigrations({ client: freshClient, mode: 'status' });
-    assert.deepEqual(beforeRun.pending, ['0001_baseline']);
+    assert.deepEqual(beforeRun.pending, [
+      '0001_baseline',
+      '0002_reconcile_missing_constraints',
+      '0003_validate_reconciled_constraints',
+    ]);
+
+    await freshClient.query(`
+      ALTER TABLE cart DROP CONSTRAINT cart_customer_id_fkey;
+      ALTER TABLE cart DROP CONSTRAINT cart_product_id_fkey;
+      ALTER TABLE orders DROP CONSTRAINT orders_customer_id_fkey;
+      ALTER TABLE products DROP CONSTRAINT products_category_id_fkey;
+      ALTER TABLE products DROP CONSTRAINT products_seller_id_fkey;
+      ALTER TABLE reviews DROP CONSTRAINT reviews_customer_id_fkey;
+      ALTER TABLE reviews DROP CONSTRAINT reviews_product_id_fkey;
+      ALTER TABLE reviews DROP CONSTRAINT reviews_rating_check;
+      ALTER TABLE users DROP CONSTRAINT users_username_key;
+    `);
 
     const firstRun = await runMigrations({ client: freshClient });
     assert.equal(firstRun.pending.length, 0);
+
+    const reconciledConstraints = await freshClient.query<{ conname: string; convalidated: boolean }>(`
+      SELECT conname, convalidated
+      FROM pg_constraint
+      WHERE conname = ANY($1::text[])
+      ORDER BY conname
+    `, [[
+      'cart_customer_id_fkey',
+      'cart_product_id_fkey',
+      'orders_customer_id_fkey',
+      'products_category_id_fkey',
+      'products_seller_id_fkey',
+      'reviews_customer_id_fkey',
+      'reviews_product_id_fkey',
+      'reviews_rating_check',
+      'users_username_key',
+    ]]);
+    assert.equal(reconciledConstraints.rows.length, 9);
+    assert.ok(reconciledConstraints.rows.every((constraint) => constraint.convalidated));
 
     const schemaCounts = await freshClient.query<{
       table_count: string;
