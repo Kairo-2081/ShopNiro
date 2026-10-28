@@ -116,17 +116,17 @@ test('migration runner applies, verifies, and baselines schemas safely', {
         'ORDER-MIGRATION-TEST', 'TRACK-MIGRATION-TEST', 'CUST-MIGRATION-TEST', '[]', 3000,
         '{}', '{}', NULL, NULL
       );
+      ALTER TABLE public.payments DROP CONSTRAINT fk_payments_customer;
+      ALTER TABLE public.payments DROP CONSTRAINT chk_payments_order_required;
       INSERT INTO public.payments (
         id, order_id, customer_id, amount, payment_method, transaction_id, status, created_at
       ) VALUES (
         'PAY-ORPHAN-TEST', NULL, 'MISSING-CUSTOMER-TEST', 3000,
         'sslcommerz', 'TXN-ORPHAN-TEST', 'VALIDATED', '2024-01-01 12:00:00'
       );
-      ALTER TABLE public.payments DROP CONSTRAINT fk_payments_customer;
       ALTER TABLE public.payments
         ADD CONSTRAINT fk_payments_customer
         FOREIGN KEY (customer_id) REFERENCES public.customers(id) ON DELETE RESTRICT NOT VALID;
-      ALTER TABLE public.payments DROP CONSTRAINT chk_payments_order_required;
       ALTER TABLE public.payments
         ADD CONSTRAINT chk_payments_order_required CHECK (order_id IS NOT NULL) NOT VALID;
     `);
