@@ -4,12 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: Inspect status, check for schema drift, apply pending migrations, or record the baseline
+        description: Inspect status, check drift, adopt a reviewed existing schema, apply migrations, or record a clean baseline
         required: true
         type: choice
         options:
           - status
           - drift
+          - adopt
           - apply
           - baseline
         default: status
@@ -56,8 +57,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Require a recent successful backup before applying
-        if: inputs.mode == 'apply'
+      - name: Require a recent successful backup before adoption or apply
+        if: inputs.mode == 'adopt' || inputs.mode == 'apply'
         shell: bash
         run: |
           set -euo pipefail
@@ -87,6 +88,10 @@ jobs:
       - name: Apply pending migrations
         if: inputs.mode == 'apply'
         run: npm run migrate
+
+      - name: Record reviewed existing schema as the adoption starting point
+        if: inputs.mode == 'adopt'
+        run: npm run migrate -- --adopt 0001
 
       - name: Record the existing schema baseline (only reached when the drift check passed)
         if: inputs.mode == 'baseline'
