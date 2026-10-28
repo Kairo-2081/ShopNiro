@@ -30,6 +30,7 @@ test('migration runner applies, verifies, and baselines schemas safely', {
     `shopniro_baseline_test_${randomUUID().replaceAll('-', '')}`,
   ];
   const tempMigrations = await mkdtemp(path.join(tmpdir(), 'shopniro-migrations-'));
+  const baselineMigrations = await mkdtemp(path.join(tmpdir(), 'shopniro-baseline-migrations-'));
   const migrationDirectory = path.resolve(process.cwd(), 'db/migrations');
   const connectedClients: Client[] = [];
   let adminConnected = false;
@@ -55,6 +56,10 @@ test('migration runner applies, verifies, and baselines schemas safely', {
       '0002_reconcile_missing_constraints',
       '0003_validate_reconciled_constraints',
     ]);
+
+    await cp(path.join(migrationDirectory, '0001_baseline.sql'), path.join(baselineMigrations, '0001_baseline.sql'));
+    const baselineOnly = await runMigrations({ client: freshClient, directory: baselineMigrations });
+    assert.deepEqual(baselineOnly.applied, ['0001_baseline']);
 
     await freshClient.query(`
       ALTER TABLE cart DROP CONSTRAINT cart_customer_id_fkey;
@@ -143,5 +148,6 @@ test('migration runner applies, verifies, and baselines schemas safely', {
       await admin.end();
     }
     await rm(tempMigrations, { recursive: true, force: true });
+    await rm(baselineMigrations, { recursive: true, force: true });
   }
 });
