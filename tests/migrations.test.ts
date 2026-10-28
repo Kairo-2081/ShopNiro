@@ -228,10 +228,9 @@ test('migration runner applies, verifies, and baselines schemas safely', {
 
     const referenceClient = await createScratchDatabase(scratchDatabaseNames[2]);
     await runMigrations({ client: referenceClient });
-    const schemaComparison = compareFingerprints(
-      await readFingerprint(freshClient),
-      await readFingerprint(referenceClient)
-    );
+    const freshFingerprint = await readFingerprint(freshClient);
+    const referenceFingerprint = await readFingerprint(referenceClient);
+    const schemaComparison = compareFingerprints(freshFingerprint, referenceFingerprint);
     const [freshCancellationConstraints, referenceCancellationConstraints] = await Promise.all([
       freshClient.query(`
         SELECT conname, contype, pg_get_constraintdef(oid) AS definition
@@ -256,6 +255,8 @@ test('migration runner applies, verifies, and baselines schemas safely', {
       ],
       JSON.stringify({
         differences: schemaComparison.different,
+        freshFingerprint: [...freshFingerprint].filter(([key]) => key.includes('order_cancellation_requests')),
+        referenceFingerprint: [...referenceFingerprint].filter(([key]) => key.includes('order_cancellation_requests')),
         freshCancellationConstraints: freshCancellationConstraints.rows,
         referenceCancellationConstraints: referenceCancellationConstraints.rows,
       }, null, 2)
