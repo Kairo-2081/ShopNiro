@@ -185,7 +185,9 @@ test('migration runner applies, verifies, and baselines schemas safely', {
         (SELECT count(*) FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
          WHERE n.nspname = 'public' AND c.relkind = 'v') AS view_count,
         (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-         WHERE n.nspname = 'public' AND p.prorettype = 'public.customer_profiles'::regclass) AS profile_function_count,
+         WHERE n.nspname = 'public' AND p.prorettype = (
+           SELECT reltype FROM pg_class WHERE oid = 'public.customer_profiles'::regclass
+         )) AS profile_function_count,
         (SELECT convalidated FROM pg_constraint
          WHERE conrelid = 'public.reviews'::regclass AND conname = 'reviews_rating_check')
           AS review_check_validated,
