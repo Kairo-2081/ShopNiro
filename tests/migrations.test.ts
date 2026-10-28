@@ -59,6 +59,7 @@ test('migration runner applies, verifies, and baselines schemas safely', {
       '0002_reconcile_missing_constraints',
       '0003_validate_reconciled_constraints',
       '0004_reconcile_column_types',
+      '0005_align_column_defaults',
     ]);
 
     await cp(path.join(migrationDirectory, '0001_baseline.sql'), path.join(baselineMigrations, '0001_baseline.sql'));
