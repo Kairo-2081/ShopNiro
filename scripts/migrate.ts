@@ -321,7 +321,7 @@ export async function runMigrations({
       !applied.some((entry) => entry.version === migration.version) &&
       !(adoption && migration.version === adoption.baseline_version)
     );
-    if (mode === 'apply' && applied.length === 0 && (await hasApplicationTables(client))) {
+    if (mode === 'apply' && applied.length === 0 && !adoption && (await hasApplicationTables(client))) {
       throw new Error(
         'This database already has application tables but no migration history. ' +
         'Refusing to run the baseline over an existing schema. If the existing schema was reviewed ' +
