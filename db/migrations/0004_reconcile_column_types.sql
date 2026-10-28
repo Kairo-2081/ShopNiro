@@ -796,7 +796,7 @@ BEGIN
                         saved_routine.signature,
                         CASE WHEN routine_acl.grantee_name = 'PUBLIC' THEN 'PUBLIC'
                              ELSE format('%I', routine_acl.grantee_name) END,
-                        CASE WHEN routine_acl.is_grantable THEN ' WITH GRANT OPTION' ELSE ''
+                        CASE WHEN routine_acl.is_grantable THEN ' WITH GRANT OPTION' ELSE '' END
                     );
                     EXECUTE grant_sql;
                 END LOOP;
