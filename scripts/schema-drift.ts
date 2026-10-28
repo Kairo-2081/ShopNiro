@@ -32,7 +32,8 @@ export async function readFingerprint(client: Client): Promise<Fingerprint> {
   const result = await client.query<{ kind: string; name: string; definition: string }>(`
     SELECT 'table' AS kind, c.relname AS name, 'table' AS definition
     FROM pg_class c
-    WHERE c.relnamespace = 'public'::regnamespace AND c.relkind = 'r' AND c.relname <> 'schema_migrations'
+    WHERE c.relnamespace = 'public'::regnamespace AND c.relkind = 'r'
+      AND c.relname NOT IN ('schema_migrations', 'schema_migration_adoptions')
     UNION ALL
     SELECT 'column', c.relname || '.' || a.attname,
            format_type(a.atttypid, a.atttypmod)
@@ -41,17 +42,18 @@ export async function readFingerprint(client: Client): Promise<Fingerprint> {
     FROM pg_attribute a
     JOIN pg_class c ON c.oid = a.attrelid
     LEFT JOIN pg_attrdef d ON d.adrelid = a.attrelid AND d.adnum = a.attnum
-    WHERE c.relnamespace = 'public'::regnamespace AND c.relkind = 'r' AND c.relname <> 'schema_migrations'
+    WHERE c.relnamespace = 'public'::regnamespace AND c.relkind = 'r'
+      AND c.relname NOT IN ('schema_migrations', 'schema_migration_adoptions')
       AND a.attnum > 0 AND NOT a.attisdropped
     UNION ALL
     SELECT 'constraint', c.conrelid::regclass::text || '.' || c.conname, pg_get_constraintdef(c.oid)
     FROM pg_constraint c
     WHERE c.connamespace = 'public'::regnamespace AND c.conrelid <> 0
-      AND c.conrelid::regclass::text <> 'schema_migrations'
+      AND c.conrelid::regclass::text NOT IN ('schema_migrations', 'schema_migration_adoptions')
     UNION ALL
     SELECT 'index', i.tablename || '.' || i.indexname, i.indexdef
     FROM pg_indexes i
-    WHERE i.schemaname = 'public' AND i.tablename <> 'schema_migrations'
+    WHERE i.schemaname = 'public' AND i.tablename NOT IN ('schema_migrations', 'schema_migration_adoptions')
     UNION ALL
     SELECT 'function', p.oid::regprocedure::text, pg_get_functiondef(p.oid)
     FROM pg_proc p
@@ -60,7 +62,8 @@ export async function readFingerprint(client: Client): Promise<Fingerprint> {
     SELECT 'trigger', t.tgrelid::regclass::text || '.' || t.tgname, pg_get_triggerdef(t.oid)
     FROM pg_trigger t
     JOIN pg_class c ON c.oid = t.tgrelid
-    WHERE NOT t.tgisinternal AND c.relnamespace = 'public'::regnamespace AND c.relname <> 'schema_migrations'
+    WHERE NOT t.tgisinternal AND c.relnamespace = 'public'::regnamespace
+      AND c.relname NOT IN ('schema_migrations', 'schema_migration_adoptions')
     UNION ALL
     SELECT 'view', v.viewname, v.definition
     FROM pg_views v

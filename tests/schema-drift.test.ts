@@ -29,6 +29,51 @@ test('a database with application tables and no history is never migrated blindl
   });
 });
 
+test('adoption records the real starting schema without claiming the baseline was applied', { skip, timeout: 120_000 }, async () => {
+  await withScratchDatabases(1, async ([client]) => {
+    const baseline = await readFile(path.resolve(process.cwd(), 'db/migrations/0001_baseline.sql'), 'utf8');
+    await client.query(baseline);
+    await client.query(`
+      ALTER TABLE cart DROP CONSTRAINT cart_customer_id_fkey;
+      ALTER TABLE cart DROP CONSTRAINT cart_product_id_fkey;
+      ALTER TABLE orders DROP CONSTRAINT orders_customer_id_fkey;
+      ALTER TABLE products DROP CONSTRAINT products_category_id_fkey;
+      ALTER TABLE products DROP CONSTRAINT products_seller_id_fkey;
+      ALTER TABLE reviews DROP CONSTRAINT reviews_customer_id_fkey;
+      ALTER TABLE reviews DROP CONSTRAINT reviews_product_id_fkey;
+      ALTER TABLE reviews DROP CONSTRAINT reviews_rating_check;
+      ALTER TABLE users DROP CONSTRAINT users_username_key;
+    `);
+
+    await assert.rejects(runMigrations({ client }), /already has application tables but no migration history/);
+    const adopted = await runMigrations({ client, mode: 'adopt', baselineVersion: '0001' });
+    assert.deepEqual(adopted.applied, []);
+    assert.equal(adopted.adopted, '0001_baseline');
+    assert.deepEqual(adopted.pending, ['0002_reconcile_missing_constraints', '0003_validate_reconciled_constraints']);
+
+    const baselineHistory = await client.query<{ count: number }>(
+      "SELECT count(*)::int AS count FROM public.schema_migrations WHERE version = '0001'"
+    );
+    assert.equal(baselineHistory.rows[0]?.count, 0, 'adoption must not record the baseline as applied');
+
+    const applied = await runMigrations({ client });
+    assert.deepEqual(applied.applied, ['0002_reconcile_missing_constraints', '0003_validate_reconciled_constraints']);
+    assert.equal(applied.adopted, '0001_baseline');
+    assert.deepEqual(applied.pending, []);
+
+    const schemaMetadata = await client.query<{ adoption_table: string | null }>(
+      "SELECT to_regclass('public.schema_migration_adoptions')::text AS adoption_table"
+    );
+    assert.equal(schemaMetadata.rows[0]?.adoption_table, 'schema_migration_adoptions');
+
+    await client.query('CREATE INDEX idx_untracked_adoption_drift ON public.users (created_at)');
+    await assert.rejects(
+      runMigrations({ client, mode: 'status' }),
+      /live schema changed outside the migration runner since adoption/
+    );
+  });
+});
+
 test('the drift check reports missing, different and extra objects', { skip, timeout: 120_000 }, async () => {
   await withScratchDatabases(2, async ([reference, live]) => {
     await runMigrations({ client: reference });
