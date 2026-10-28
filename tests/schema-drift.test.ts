@@ -49,7 +49,11 @@ test('adoption records the real starting schema without claiming the baseline wa
     const adopted = await runMigrations({ client, mode: 'adopt', baselineVersion: '0001' });
     assert.deepEqual(adopted.applied, []);
     assert.equal(adopted.adopted, '0001_baseline');
-    assert.deepEqual(adopted.pending, ['0002_reconcile_missing_constraints', '0003_validate_reconciled_constraints']);
+    assert.deepEqual(adopted.pending, [
+      '0002_reconcile_missing_constraints',
+      '0003_validate_reconciled_constraints',
+      '0004_reconcile_column_types',
+    ]);
 
     const baselineHistory = await client.query<{ count: number }>(
       "SELECT count(*)::int AS count FROM public.schema_migrations WHERE version = '0001'"
@@ -57,7 +61,11 @@ test('adoption records the real starting schema without claiming the baseline wa
     assert.equal(baselineHistory.rows[0]?.count, 0, 'adoption must not record the baseline as applied');
 
     const applied = await runMigrations({ client });
-    assert.deepEqual(applied.applied, ['0002_reconcile_missing_constraints', '0003_validate_reconciled_constraints']);
+    assert.deepEqual(applied.applied, [
+      '0002_reconcile_missing_constraints',
+      '0003_validate_reconciled_constraints',
+      '0004_reconcile_column_types',
+    ]);
     assert.equal(applied.adopted, '0001_baseline');
     assert.deepEqual(applied.pending, []);
 
@@ -78,6 +86,11 @@ test('the drift check reports missing, different and extra objects', { skip, tim
   await withScratchDatabases(2, async ([reference, live]) => {
     await runMigrations({ client: reference });
     await runMigrations({ client: live });
+
+    const createLineEndingProbe = (lineEnding: string) =>
+      `CREATE FUNCTION public.line_ending_probe() RETURNS integer LANGUAGE SQL AS $function$${lineEnding}  SELECT 1;${lineEnding}$function$`;
+    await reference.query(createLineEndingProbe('\n'));
+    await live.query(createLineEndingProbe('\r\n'));
 
     const clean = compareFingerprints(await readFingerprint(live), await readFingerprint(reference));
     assert.equal(hasDrift(clean, true), false, 'two databases built from the same files match exactly');
