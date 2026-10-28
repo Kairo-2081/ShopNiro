@@ -46,9 +46,9 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ currentCustome
         new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }),
         'shopniro-data-export.json',
       );
-      setDataRightsMessage('Your data export is ready.');
+      setDataRightsMessage(t('dataExportReady'));
     } catch (error) {
-      setDataRightsError(error instanceof Error ? error.message : 'Could not export your data.');
+      setDataRightsError(error instanceof Error ? error.message : t('exportError'));
     } finally {
       setIsExporting(false);
     }
@@ -59,16 +59,16 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ currentCustome
     setDataRightsError(null);
     setDataRightsMessage(null);
     if (confirmationEmail.trim().toLowerCase() !== currentCustomer.Email.trim().toLowerCase()) {
-      setDataRightsError('Enter your account email exactly to confirm deletion.');
+      setDataRightsError(t('confirmEmailForDeletion'));
       return;
     }
     setIsDeleting(true);
     try {
-      const result = await api.deleteCustomerAccount(confirmationEmail);
-      setDataRightsMessage(result.message);
+      await api.deleteCustomerAccount(confirmationEmail);
+      setDataRightsMessage(t('accountDeleted'));
       onAccountDeleted();
     } catch (error) {
-      setDataRightsError(error instanceof Error ? error.message : 'Could not delete your account.');
+      setDataRightsError(error instanceof Error ? error.message : t('deleteError'));
     } finally {
       setIsDeleting(false);
     }
@@ -130,7 +130,7 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ currentCustome
           </div>
           <div>
             <h1 className="text-xl font-black text-surface-900 dark:text-white">{t('customerAccountAddress')}</h1>
-            <p className="text-xs text-surface-500 dark:text-surface-400 font-mono">ID: {currentCustomer.Customer_ID}</p>
+            <p className="text-xs text-surface-500 dark:text-surface-400 font-mono">{t('identifier')}: {currentCustomer.Customer_ID}</p>
           </div>
         </div>
       </div>
@@ -311,9 +311,9 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ currentCustome
 
       <section aria-labelledby="customer-data-rights-title" className="bg-white dark:bg-[#12161D] p-6 md:p-8 rounded-3xl border border-brand-100 dark:border-surface-800 shadow-xl space-y-5">
         <div>
-          <h2 id="customer-data-rights-title" className="text-sm font-bold text-surface-900 dark:text-white">Your data and account</h2>
+          <h2 id="customer-data-rights-title" className="text-sm font-bold text-surface-900 dark:text-white">{t('dataAndAccount')}</h2>
           <p className="mt-2 text-xs leading-relaxed text-surface-600 dark:text-surface-400">
-            Export a copy of your account data or delete your account. Active orders must be completed or cancelled first. Order and payment records needed for fulfilment, accounting, refunds or disputes may be retained with profile and address details removed.
+            {t('dataRightsDescription')}
           </p>
         </div>
         {dataRightsError && <p role="alert" className="rounded-xl border border-danger-200 bg-danger-50 p-3 text-sm text-danger-700 dark:border-danger-900 dark:bg-danger-950/40 dark:text-danger-300">{dataRightsError}</p>}
@@ -324,11 +324,11 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ currentCustome
           disabled={isExporting}
           className="min-h-11 rounded-full border border-brand-300 px-5 py-2 text-xs font-bold text-brand-700 transition-colors hover:bg-brand-50 disabled:opacity-60 dark:border-brand-700 dark:text-brand-300 dark:hover:bg-brand-950/40"
         >
-          {isExporting ? 'Preparing export…' : 'Download my data'}
+          {isExporting ? t('preparingExport') : t('downloadMyData')}
         </button>
         <form onSubmit={handleDeleteAccount} className="space-y-3 border-t border-surface-100 pt-4 dark:border-surface-800">
           <label htmlFor="delete-account-email" className="block text-xs font-semibold text-surface-700 dark:text-surface-300">
-            To delete your account, enter {currentCustomer.Email}
+            {t('deleteAccountPrompt')} {currentCustomer.Email}
           </label>
           <input
             id="delete-account-email"
@@ -344,7 +344,7 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ currentCustome
             disabled={isDeleting || isExporting}
             className="min-h-11 rounded-full bg-danger-700 px-5 py-2 text-xs font-bold text-white transition-colors hover:bg-danger-600 disabled:opacity-60"
           >
-            {isDeleting ? 'Deleting account…' : 'Delete my account'}
+            {isDeleting ? t('deletingAccount') : t('deleteMyAccount')}
           </button>
         </form>
       </section>
