@@ -232,6 +232,20 @@ test('migration runner applies, verifies, and baselines schemas safely', {
       await readFingerprint(freshClient),
       await readFingerprint(referenceClient)
     );
+    const [freshCancellationConstraints, referenceCancellationConstraints] = await Promise.all([
+      freshClient.query(`
+        SELECT conname, contype, pg_get_constraintdef(oid) AS definition
+        FROM pg_constraint
+        WHERE conrelid = 'public.order_cancellation_requests'::regclass
+        ORDER BY conname
+      `),
+      referenceClient.query(`
+        SELECT conname, contype, pg_get_constraintdef(oid) AS definition
+        FROM pg_constraint
+        WHERE conrelid = 'public.order_cancellation_requests'::regclass
+        ORDER BY conname
+      `),
+    ]);
     assert.deepEqual(schemaComparison.missing, []);
     assert.deepEqual(schemaComparison.extra, []);
     assert.deepEqual(
@@ -240,7 +254,11 @@ test('migration runner applies, verifies, and baselines schemas safely', {
         'constraint payments.chk_payments_order_required',
         'constraint payments.fk_payments_customer',
       ],
-      JSON.stringify(schemaComparison.different, null, 2)
+      JSON.stringify({
+        differences: schemaComparison.different,
+        freshCancellationConstraints: freshCancellationConstraints.rows,
+        referenceCancellationConstraints: referenceCancellationConstraints.rows,
+      }, null, 2)
     );
 
     const reconciledConstraints = await freshClient.query<{ conname: string; convalidated: boolean }>(`
