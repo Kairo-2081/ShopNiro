@@ -10,7 +10,7 @@ const { Client: PgClient } = pg;
 const migrationsDirectory = path.resolve(process.cwd(), 'db/migrations');
 const lockName = 'shopniro:schema-migrations';
 
-type MigrationMode = 'apply' | 'status' | 'dry-run' | 'baseline' | 'adopt';
+type MigrationMode = 'apply' | 'status' | 'dry-run' | 'baseline' | 'adopt' | 'refresh-adoption';
 
 interface Migration {
   version: string;
@@ -207,6 +207,75 @@ async function verifyAdoptedFingerprint(client: Client, adoption: SchemaAdoption
   }
 }
 
+const MAX_LEGACY_NAME_LENGTH = 63;
+
+/**
+ * Early versions of the fingerprint reader truncated object names to 63 characters (a `name`-typed
+ * UNION branch), kept Windows line endings inside function bodies, and had no way to say that a
+ * constraint had since been validated. This reduces a fingerprint to a form in which those three
+ * artifacts cannot hide or invent a real change.
+ */
+function legacyComparable(snapshot: Record<string, string>, stored: boolean): Map<string, string[]> {
+  // Two long names can share their first 63 characters, so one legacy key may stand for several
+  // objects. Collect every definition under the key.
+  const grouped = new Map<string, string[]>();
+  for (const [fullKey, definition] of Object.entries(snapshot)) {
+    const space = fullKey.indexOf(' ');
+    const kind = fullKey.slice(0, space);
+    const name = fullKey.slice(space + 1).slice(0, MAX_LEGACY_NAME_LENGTH);
+    let value = definition.replace(/\r\n?/g, '\n');
+    // Validating a constraint is the one change this refresh exists to accept, and only from the
+    // stored side: a constraint that became NOT VALID since adoption is a real change.
+    if (stored && kind === 'constraint') value = value.replace(/ NOT VALID$/, '');
+    const key = `${kind} ${name}`;
+    grouped.set(key, [...(grouped.get(key) ?? []), value]);
+  }
+  return grouped;
+}
+
+async function refreshAdoptedFingerprint(client: Client, adoption: SchemaAdoption): Promise<void> {
+  const current = canonicalFingerprint(await readFingerprint(client));
+  const before = legacyComparable(adoption.fingerprint, true);
+  const after = legacyComparable(current.snapshot, false);
+  const changes: string[] = [];
+  for (const [key, definitions] of after) {
+    const recorded = before.get(key);
+    if (!recorded) {
+      changes.push(`added: ${key}`);
+      continue;
+    }
+    // A stored 63-character key may have lost all but one of several colliding objects, because the
+    // record was a JSON object. Accept a subset there; anywhere else the sets must be equal.
+    const truncated = key.slice(key.indexOf(' ') + 1).length === MAX_LEGACY_NAME_LENGTH;
+    const sameSet = recorded.length === definitions.length && recorded.every((value) => definitions.includes(value));
+    const subset = recorded.every((value) => definitions.includes(value));
+    if (!(truncated ? subset : sameSet)) changes.push(`changed: ${key}`);
+  }
+  for (const key of before.keys()) if (!after.has(key)) changes.push(`removed: ${key}`);
+  if (changes.length > 0) {
+    throw new Error(
+      'Refusing to refresh the adopted schema record: the live schema changed in ways other than validating ' +
+        `constraints.\n${changes.slice(0, 40).join('\n')}${changes.length > 40 ? `\n... ${changes.length - 40} more` : ''}`
+    );
+  }
+  await client.query('BEGIN');
+  try {
+    const result = await client.query(
+      `UPDATE public.schema_migration_adoptions
+       SET fingerprint_checksum = $2, fingerprint = $3::jsonb
+       WHERE baseline_version = $1 AND fingerprint_checksum = $4`,
+      [adoption.baseline_version, current.checksum, JSON.stringify(current.snapshot), adoption.fingerprint_checksum]
+    );
+    if (result.rowCount !== 1) throw new Error('The adopted schema record changed during the refresh.');
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK').catch((rollbackError: unknown) => {
+      console.error('Failed to roll back adoption refresh:', rollbackError);
+    });
+    throw error;
+  }
+}
+
 async function updateAdoptedFingerprint(client: Client, baselineVersion: string): Promise<void> {
   const current = canonicalFingerprint(await readFingerprint(client));
   const result = await client.query(
@@ -311,6 +380,20 @@ export async function runMigrations({
       };
     }
 
+    if (mode === 'refresh-adoption') {
+      if (!adoption) throw new Error('This database has no adopted starting schema to refresh.');
+      await refreshAdoptedFingerprint(client, adoption);
+      return {
+        mode,
+        applied: applied.map((entry) => `${entry.version}_${entry.name}`),
+        pending: migrations
+          .filter((migration) => !applied.some((entry) => entry.version === migration.version))
+          .filter((migration) => migration.version !== adoption.baseline_version)
+          .map(displayName),
+        adopted: `${adoption.baseline_version}_${adoption.baseline_name}`,
+      };
+    }
+
     if (adoption) {
       const baseline = validateSchemaAdoption(migrations, applied, adoption);
       await verifyAdoptedFingerprint(client, adoption);
@@ -397,8 +480,9 @@ export async function runMigrations({
 function parseArguments(args: string[]): { mode: MigrationMode; baselineVersion?: string } {
   if (args.includes('--help')) {
     console.log(
-      'Usage: npm run migrate [--status | --dry-run | --baseline <version> | --adopt <version>]\n' +
+      'Usage: npm run migrate [--status | --dry-run | --baseline <version> | --adopt <version> | --refresh-adoption]\n' +
         'Adopt records the reviewed current schema as the starting fingerprint without claiming it matches the baseline.\n' +
+        'Refresh-adoption re-records the fingerprint after constraints were validated by hand; any other change is refused.\n' +
         'See also: npm run migrate:drift -- --help'
     );
     process.exit(0);
@@ -409,10 +493,11 @@ function parseArguments(args: string[]): { mode: MigrationMode; baselineVersion?
   if (args.length === 2 && args[0] === '--baseline' && /^\d{4}$/.test(args[1])) {
     return { mode: 'baseline', baselineVersion: args[1] };
   }
+  if (args.length === 1 && args[0] === '--refresh-adoption') return { mode: 'refresh-adoption' };
   if (args.length === 2 && args[0] === '--adopt' && /^\d{4}$/.test(args[1])) {
     return { mode: 'adopt', baselineVersion: args[1] };
   }
-  throw new Error('Expected no flags, --status, --dry-run, --baseline <version>, or --adopt <version>.');
+  throw new Error('Expected no flags, --status, --dry-run, --baseline <version>, --adopt <version>, or --refresh-adoption.');
 }
 
 function printReport(report: MigrationReport) {
