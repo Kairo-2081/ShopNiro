@@ -11,6 +11,7 @@ on:
           - status
           - drift
           - adopt
+          - refresh-adoption
           - apply
           - baseline
         default: status
@@ -58,7 +59,7 @@ jobs:
         run: npm ci
 
       - name: Require a recent successful backup before adoption or apply
-        if: inputs.mode == 'adopt' || inputs.mode == 'apply'
+        if: inputs.mode == 'adopt' || inputs.mode == 'refresh-adoption' || inputs.mode == 'apply'
         shell: bash
         run: |
           set -euo pipefail
@@ -92,6 +93,10 @@ jobs:
       - name: Record reviewed existing schema as the adoption starting point
         if: inputs.mode == 'adopt'
         run: npm run migrate -- --adopt 0001
+
+      - name: Re-record the adoption fingerprint after constraints were validated by hand
+        if: inputs.mode == 'refresh-adoption'
+        run: npm run migrate -- --refresh-adoption
 
       - name: Record the existing schema baseline (only reached when the drift check passed)
         if: inputs.mode == 'baseline'
