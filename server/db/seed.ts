@@ -183,7 +183,6 @@ export async function seedDatabaseIfEmpty() {
             id: o.Order_ID,
             tracking_id: o.Tracking_ID,
             customer_id: o.Customer_ID,
-            items_json: JSON.stringify(o.Items),
             subtotal: o.Subtotal,
             shipping_fee: o.Shipping_Fee,
             status: o.Status,
@@ -192,6 +191,24 @@ export async function seedDatabaseIfEmpty() {
             additional_info: o.Additional_Info || '',
           }),
         ]);
+        if (o.Items.length) {
+          await query(`
+            INSERT INTO order_items (
+              order_id, product_id, seller_id, product_id_snapshot, seller_id_snapshot,
+              product_name, unit_price, quantity, image, size
+            )
+            SELECT $1, NULLIF(item.value->>'Product_ID', ''), NULLIF(item.value->>'Seller_ID', ''),
+              COALESCE(NULLIF(item.value->>'Product_ID', ''), 'deleted-product'),
+              COALESCE(NULLIF(item.value->>'Seller_ID', ''), 'deleted-seller'),
+              COALESCE(item.value->>'Name', 'Archived product'),
+              COALESCE((item.value->>'Price')::NUMERIC, 0),
+              GREATEST(COALESCE((item.value->>'Quantity')::INTEGER, 1), 1),
+              NULLIF(item.value->>'Image', ''),
+              COALESCE(item.value->>'Size', '')
+            FROM jsonb_array_elements($2::jsonb) AS item(value)
+            ON CONFLICT DO NOTHING
+          `, [o.Order_ID, JSON.stringify(o.Items)]);
+        }
       }
     }
   } catch (err) {

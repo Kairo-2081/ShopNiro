@@ -243,20 +243,7 @@ router.post('/', requireAuth, validateBody(schemas.createOrderBody), async (req:
           subtotal = COALESCE((
             SELECT SUM(oi.unit_price * oi.quantity) FROM order_items oi
             WHERE oi.order_id = sf.order_id AND oi.seller_id_snapshot = sf.seller_id
-          ), 0),
-          items_json = COALESCE((
-            SELECT jsonb_agg(jsonb_build_object(
-              'Product_ID', oi.product_id_snapshot,
-              'Name', oi.product_name,
-              'Price', oi.unit_price,
-              'Quantity', oi.quantity,
-              'Image', COALESCE(oi.image, ''),
-              'Size', NULLIF(oi.size, ''),
-              'Seller_ID', oi.seller_id_snapshot
-            ) ORDER BY oi.order_item_id)
-            FROM order_items oi
-            WHERE oi.order_id = sf.order_id AND oi.seller_id_snapshot = sf.seller_id
-          ), '[]'::jsonb)
+          ), 0)
         WHERE sf.order_id = $1
       `, [id]);
       const itemsResult = await client.query(`
@@ -269,16 +256,8 @@ router.post('/', requireAuth, validateBody(schemas.createOrderBody), async (req:
         0
       );
       await client.query(`
-        UPDATE orders SET subtotal = $2, items_json = $3, applied_voucher = $4, payment_method = $5 WHERE id = $1
-      `, [id, finalSubtotal, JSON.stringify(orderedItems.map((item: any) => ({
-        Product_ID: item.product_id_snapshot,
-        Seller_ID: item.seller_id_snapshot,
-        Name: item.product_name,
-        Price: Number(item.unit_price),
-        Quantity: Number(item.quantity),
-        Image: item.image || '',
-        Size: item.size || undefined,
-      }))), recordedPromotions, paymentMethod]);
+        UPDATE orders SET subtotal = $2, applied_voucher = $3, payment_method = $4 WHERE id = $1
+      `, [id, finalSubtotal, recordedPromotions, paymentMethod]);
       await client.query('COMMIT');
     } catch (error: any) {
       await client.query('ROLLBACK').catch(() => {});

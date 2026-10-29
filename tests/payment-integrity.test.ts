@@ -147,15 +147,14 @@ const createOnlinePayment = async () => {
 const createOrder = async (customerId: string, orderId: string) => {
   await query(`
     INSERT INTO orders (
-      id, tracking_id, customer_id, items_json, subtotal, shipping_fee, status,
+      id, tracking_id, customer_id, subtotal, shipping_fee, status,
       shipping_address_json, billing_address_json, payment_status, payment_method,
       transaction_id, applied_voucher, order_placed_at
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
   `, [
     orderId,
     `TRK-${randomUUID().replaceAll('-', '').slice(0, 10)}`,
     customerId,
-    JSON.stringify([]),
     100,
     0,
     'placed',
@@ -177,9 +176,9 @@ const createCodDelivery = async (customerId: string, orderId: string, riderId: s
   await query('INSERT INTO sellers (id, name, status) VALUES ($1, $2, $3)', [sellerId, 'Test Seller', 'approved']);
   await createTestUser('rider', riderId);
   await query(`
-    INSERT INTO seller_fulfillments (id, order_id, seller_id, items_json, subtotal, status)
-    VALUES ($1, $2, $3, $4, $5, $6)
-  `, [fulfillmentId, orderId, sellerId, JSON.stringify([]), 100, 'processing']);
+    INSERT INTO seller_fulfillments (id, order_id, seller_id, subtotal, status)
+    VALUES ($1, $2, $3, $4, $5)
+  `, [fulfillmentId, orderId, sellerId, 100, 'processing']);
   await query(`
     INSERT INTO riders (id, name, number, status) VALUES ($1, $2, $3, $4)
   `, [riderId, 'Test Rider', '01700000000', 'approved']);
@@ -239,8 +238,8 @@ dbTest('plaintext stored passwords are rejected with the same message as unknown
     await createTestUser('seller', sellerId);
     await query('INSERT INTO sellers (id, name, status) VALUES ($1, $2, $3)', [sellerId, 'Refund Ledger Seller', 'approved']);
     await query(`
-      INSERT INTO seller_fulfillments (id, order_id, seller_id, items_json, subtotal, status)
-      VALUES ($1, $2, $3, '[]'::jsonb, 100, 'delivered')
+      INSERT INTO seller_fulfillments (id, order_id, seller_id, subtotal, status)
+      VALUES ($1, $2, $3, 100, 'delivered')
     `, [fulfillmentId, orderId, sellerId]);
     await query(`
       INSERT INTO seller_wallet_entries (id, seller_id, entry_type, amount, reference_id, description)

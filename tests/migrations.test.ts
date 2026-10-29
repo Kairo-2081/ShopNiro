@@ -112,10 +112,10 @@ test('migration runner applies, verifies, and baselines schemas safely', {
       INSERT INTO public.customers (id, name)
         VALUES ('CUST-MIGRATION-TEST', 'Migration test customer');
       INSERT INTO public.orders (
-        id, tracking_id, customer_id, items_json, subtotal, shipping_address_json, billing_address_json,
+        id, tracking_id, customer_id, subtotal, shipping_address_json, billing_address_json,
         payment_status, payment_method
       ) VALUES (
-        'ORDER-MIGRATION-TEST', 'TRACK-MIGRATION-TEST', 'CUST-MIGRATION-TEST', '[]', 3000,
+        'ORDER-MIGRATION-TEST', 'TRACK-MIGRATION-TEST', 'CUST-MIGRATION-TEST', 3000,
         '{}', '{}', NULL, NULL
       );
       ALTER TABLE public.payments DROP CONSTRAINT fk_payments_customer;
