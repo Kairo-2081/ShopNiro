@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { test } from 'node:test';
@@ -120,5 +121,61 @@ test('the drift check reports missing, different and extra objects', { skip, tim
     assert.equal(hasDrift(drifted), true);
     assert.equal(hasDrift({ missing: [], different: [], extra: ['index x'] }), false, 'extras alone only fail in strict mode');
     assert.equal(hasDrift({ missing: [], different: [], extra: ['index x'] }, true), true);
+  });
+});
+
+test('refreshing the adoption accepts a legacy-format record and validated constraints, and nothing else', { skip, timeout: 120_000 }, async () => {
+  await withScratchDatabases(1, async ([client]) => {
+    const baseline = await readFile(path.resolve(process.cwd(), 'db/migrations/0001_baseline.sql'), 'utf8');
+    await client.query(baseline);
+    await client.query('ALTER TABLE users ADD CONSTRAINT chk_refresh_probe CHECK (length(username) > 0) NOT VALID');
+    await runMigrations({ client, mode: 'adopt', baselineVersion: '0001' });
+
+    // Rewrite the record the way the first fingerprint reader wrote it: names cut to 63 characters and
+    // function bodies with Windows line endings.
+    const record = await client.query<{ fingerprint: Record<string, string> }>(
+      'SELECT fingerprint FROM public.schema_migration_adoptions'
+    );
+    const legacy: Record<string, string> = {};
+    for (const [key, definition] of Object.entries(record.rows[0].fingerprint)) {
+      const space = key.indexOf(' ');
+      legacy[`${key.slice(0, space)} ${key.slice(space + 1).slice(0, 63)}`] = key.startsWith('function ')
+        ? definition.replace(/\n/g, '\r\n')
+        : definition;
+    }
+    const legacyChecksum = createHash('sha256')
+      .update(JSON.stringify(Object.entries(legacy).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))))
+      .digest('hex');
+    await client.query(
+      'UPDATE public.schema_migration_adoptions SET fingerprint = $1::jsonb, fingerprint_checksum = $2',
+      [JSON.stringify(legacy), legacyChecksum]
+    );
+    await client.query('ALTER TABLE users VALIDATE CONSTRAINT chk_refresh_probe');
+
+    await assert.rejects(runMigrations({ client, mode: 'status' }), /live schema changed outside the migration runner/);
+    const refreshed = await runMigrations({ client, mode: 'refresh-adoption' });
+    assert.equal(refreshed.adopted, '0001_baseline');
+    assert.deepEqual(refreshed.applied, []);
+    await runMigrations({ client, mode: 'status' });
+
+    // A real change is refused and leaves the record untouched.
+    await client.query('CREATE INDEX idx_refresh_probe ON public.users (created_at)');
+    const before = await client.query('SELECT fingerprint_checksum FROM public.schema_migration_adoptions');
+    await assert.rejects(
+      runMigrations({ client, mode: 'refresh-adoption' }),
+      /added: index users\.idx_refresh_probe/
+    );
+    const after = await client.query('SELECT fingerprint_checksum FROM public.schema_migration_adoptions');
+    assert.equal(after.rows[0].fingerprint_checksum, before.rows[0].fingerprint_checksum);
+  });
+});
+
+test('a constraint that became NOT VALID since adoption is a real change and cannot be refreshed away', { skip, timeout: 120_000 }, async () => {
+  await withScratchDatabases(1, async ([client]) => {
+    const baseline = await readFile(path.resolve(process.cwd(), 'db/migrations/0001_baseline.sql'), 'utf8');
+    await client.query(baseline);
+    await runMigrations({ client, mode: 'adopt', baselineVersion: '0001' });
+    await client.query('ALTER TABLE users ADD CONSTRAINT chk_late_probe CHECK (length(username) > 0) NOT VALID');
+    await assert.rejects(runMigrations({ client, mode: 'refresh-adoption' }), /added: constraint users\.chk_late_probe/);
   });
 });
