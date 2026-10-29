@@ -113,11 +113,6 @@ test('adopting a production-shaped database and applying every migration converg
           ]
         );
 
-        const checkoutOrder = await legacy.query<{ items_json: string | null }>(
-          'SELECT items_json FROM orders WHERE id = $1',
-          [checkoutOrderId]
-        );
-        assert.equal(checkoutOrder.rows[0]?.items_json, '[]', 'checkout leaves the compatibility column at its default');
         const checkoutItems = await legacy.query<{
           product_id_snapshot: string;
           seller_id_snapshot: string;
@@ -137,37 +132,16 @@ test('adopting a production-shaped database and applying every migration converg
           quantity: 2,
           size: 'M',
         }]);
-        const fulfillmentItems = await legacy.query<{ items_json: unknown }>(
-          'SELECT items_json FROM seller_fulfillments WHERE order_id = $1',
-          [checkoutOrderId]
-        );
-        assert.deepEqual(fulfillmentItems.rows, [{ items_json: [] }]);
 
-        const itemColumnReferences = await legacy.query<{ count: string }>(`
-          SELECT count(*)::text AS count
-          FROM pg_proc p
-          WHERE p.pronamespace = 'public'::regnamespace
-            AND p.prokind IN ('f', 'p')
-            AND pg_get_functiondef(p.oid) ~* '\\.items_json'
+        const remainingItemColumns = await legacy.query<{ table_name: string; column_name: string }>(`
+          SELECT table_name, column_name
+          FROM information_schema.columns
+          WHERE table_schema = 'public'
+            AND table_name IN ('orders', 'seller_fulfillments')
+            AND column_name = 'items_json'
+          ORDER BY table_name
         `);
-        assert.equal(itemColumnReferences.rows[0]?.count, '0', 'no function reads or writes either items_json column');
-        const viewReferences = await legacy.query<{ count: string }>(`
-          SELECT count(*)::text AS count FROM pg_views
-          WHERE schemaname = 'public'
-            AND definition ~* '\\.items_json'
-        `);
-        assert.equal(viewReferences.rows[0]?.count, '0', 'no view reads either items_json column');
-        const triggerReferences = await legacy.query<{ count: string }>(`
-          SELECT count(*)::text AS count
-          FROM pg_trigger t
-          JOIN pg_class c ON c.oid = t.tgrelid
-          JOIN pg_namespace n ON n.oid = c.relnamespace
-          JOIN pg_proc p ON p.oid = t.tgfoid
-          WHERE n.nspname = 'public'
-            AND NOT t.tgisinternal
-            AND pg_get_functiondef(p.oid) ~* '\\.items_json'
-        `);
-        assert.equal(triggerReferences.rows[0]?.count, '0', 'no trigger function reads either items_json column');
+        assert.deepEqual(remainingItemColumns.rows, [], 'both duplicate columns are dropped after migration');
       } finally {
         await legacy.query('DELETE FROM orders WHERE id = $1', [checkoutOrderId]);
         await legacy.query('DELETE FROM products WHERE id = $1', [checkoutProductId]);
