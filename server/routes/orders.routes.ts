@@ -10,6 +10,7 @@ import { processRefundQueue } from './payment.routes.ts';
 import { discountedPriceForVoucher, discountedUnitPrice, getVoucherRule, isVoucherExpired, normalizeVoucherCode } from '../../src/lib/vouchers.ts';
 import { calculateBundlePrices } from '../../src/lib/bundles.ts';
 import { newId, newTrackingId } from '../lib/ids.ts';
+import { orderItemsForFulfillmentSql, orderItemsForOrderSql } from '../lib/orderItems.ts';
 
 const router = Router();
 
@@ -37,18 +38,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
     const offset = Math.max(0, Number(req.query.offset) || 0);
     const result = await query(`
       SELECT o.id, o.tracking_id, o.customer_id,
-        COALESCE((
-          SELECT json_agg(json_build_object(
-            'Product_ID', item.product_id_snapshot,
-            'Name', item.product_name,
-            'Price', item.unit_price,
-            'Quantity', item.quantity,
-            'Image', COALESCE(item.image, ''),
-            'Size', NULLIF(item.size, ''),
-            'Seller_ID', item.seller_id_snapshot
-          ) ORDER BY item.order_item_id)::TEXT
-          FROM order_items item WHERE item.order_id = o.id
-        ), o.items_json, '[]') AS items_json,
+        ${orderItemsForOrderSql} AS items,
         o.subtotal, o.shipping_fee, o.status, o.payment_status, o.payment_method,
         o.transaction_id, o.applied_voucher, o.shipping_address_json,
         o.billing_address_json, o.additional_info, o.order_placed_at
@@ -67,7 +57,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
       Order_ID: o.id,
       Tracking_ID: o.tracking_id || '',
       Customer_ID: o.customer_id,
-      Items: typeof o.items_json === 'string' ? JSON.parse(o.items_json) : (o.items_json || []),
+      Items: o.items,
       Subtotal: Number(o.subtotal),
       Shipping_Fee: Number(o.shipping_fee),
       Status: o.status as any,
@@ -85,7 +75,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
     const orderIds = formatted.map((order) => order.Order_ID);
     if (orderIds.length > 0) {
       const fulfillmentResult = await query(
-        `SELECT sf.id, sf.order_id, sf.seller_id, s.name AS seller_name, sf.items_json, sf.status,
+        `SELECT sf.id, sf.order_id, sf.seller_id, s.name AS seller_name, ${orderItemsForFulfillmentSql} AS items, sf.status,
           rd.rider_id, r.name AS rider_name, r.number AS rider_number, rd.status AS delivery_status
         FROM seller_fulfillments sf
         JOIN sellers s ON s.id = sf.seller_id
@@ -103,7 +93,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res) => {
           Seller_ID: fulfillment.seller_id,
           Seller_Name: fulfillment.seller_name,
           Status: fulfillment.status,
-          Items: typeof fulfillment.items_json === 'string' ? JSON.parse(fulfillment.items_json) : fulfillment.items_json || [],
+          Items: fulfillment.items,
           Rider_ID: fulfillment.rider_id || undefined,
           Rider_Name: fulfillment.rider_name || undefined,
           Rider_Number: fulfillment.rider_number || undefined,
@@ -377,7 +367,8 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res) => {
   try {
     const result = await query(
       `SELECT o.id, o.customer_id, o.status, o.payment_status, o.payment_method,
-          o.transaction_id, o.subtotal, o.shipping_fee, o.tracking_id, o.items_json,
+          o.transaction_id, o.subtotal, o.shipping_fee, o.tracking_id,
+          ${orderItemsForOrderSql} AS items,
           o.shipping_address_json, o.billing_address_json, o.applied_voucher,
           o.order_placed_at, o.additional_info
        FROM orders o WHERE o.id = $1 AND o.customer_id = $2`,
@@ -389,7 +380,7 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res) => {
       Order_ID: order.id,
       Tracking_ID: order.tracking_id || '',
       Customer_ID: order.customer_id,
-      Items: typeof order.items_json === 'string' ? JSON.parse(order.items_json) : (order.items_json || []),
+      Items: order.items,
       Subtotal: Number(order.subtotal),
       Shipping_Fee: Number(order.shipping_fee),
       Status: order.status,
@@ -762,12 +753,16 @@ router.patch('/:id/status', requireAuth, validateBody(schemas.orderStatusBody), 
     const paymentRow = await query(
       'SELECT payment_status, payment_method FROM orders WHERE id = $1', [id]
     );
+    const itemsResult = await query(
+      `SELECT ${orderItemsForOrderSql} AS items FROM orders o WHERE o.id = $1`,
+      [id]
+    );
     const o = { ...result.rows[0], ...paymentRow.rows[0] };
     res.json({
       Order_ID: o.id,
       Tracking_ID: o.tracking_id || '',
       Customer_ID: o.customer_id,
-      Items: typeof o.items_json === 'string' ? JSON.parse(o.items_json) : (o.items_json || []),
+      Items: itemsResult.rows[0].items,
       Subtotal: Number(o.subtotal),
       Shipping_Fee: Number(o.shipping_fee),
       Status: o.status as any,

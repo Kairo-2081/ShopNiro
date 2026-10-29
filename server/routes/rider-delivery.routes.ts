@@ -5,6 +5,7 @@ import { requireCronSecret } from '../middleware/cronAuth.ts';
 import { newId } from '../lib/ids.ts';
 import { validateBody, validateParams } from '../middleware/validate.ts';
 import { deliveryReviewBody, resourceIdParam, riderLocationBody, riderWithdrawalBody, withdrawalStatusBody } from '../validation/schemas.ts';
+import { orderItemsForFulfillmentSql } from '../lib/orderItems.ts';
 
 const router = Router();
 
@@ -85,7 +86,8 @@ router.get('/deliveries', requireAuth, requireRole(['rider']), requireApprovedRi
 
     const result = await query(`
       SELECT rd.id AS delivery_id, rd.status AS delivery_status, rd.confirmation_code, rd.cod_amount, rd.cod_collected,
-        rd.rider_id, sf.id AS fulfillment_id, sf.order_id, sf.seller_id, sf.items_json,
+        rd.rider_id, sf.id AS fulfillment_id, sf.order_id, sf.seller_id,
+        ${orderItemsForFulfillmentSql} AS items,
         sf.subtotal AS fulfillment_subtotal, s.name AS seller_name,
         s.address_latitude AS pickup_latitude, s.address_longitude AS pickup_longitude,
         o.shipping_address_json, o.payment_method, c.name AS customer_name, c.number AS customer_number
@@ -111,7 +113,7 @@ router.get('/deliveries', requireAuth, requireRole(['rider']), requireApprovedRi
         COD_Amount: Number(row.cod_amount) || 0,
         COD_Collected: Boolean(row.cod_collected),
         Distance_KM: hasPickup ? haversineKm(Number(currentLatitude), Number(currentLongitude), Number(row.pickup_latitude), Number(row.pickup_longitude)) : null,
-        Items: parseJson(row.items_json),
+        Items: row.items,
         Shipping_Address: parseJson(row.shipping_address_json),
         Payment_Method: row.payment_method,
         Customer_Name: row.customer_name,
@@ -368,7 +370,8 @@ router.get('/customer-deliveries', requireAuth, requireRole(['customer']), async
     const result = await query(`
       SELECT rd.id AS delivery_id, rd.status AS delivery_status,
         rd.cod_amount, rd.cod_collected, sf.order_id, sf.id AS fulfillment_id,
-        sf.seller_id, s.name AS seller_name, sf.items_json, sf.status AS fulfillment_status,
+        sf.seller_id, s.name AS seller_name, ${orderItemsForFulfillmentSql} AS items,
+        sf.status AS fulfillment_status,
         o.shipping_address_json, o.payment_method, r.id AS rider_id, r.name AS rider_name, r.number AS rider_number,
         rv.id AS review_id
       FROM orders o
@@ -392,7 +395,7 @@ router.get('/customer-deliveries', requireAuth, requireRole(['customer']), async
       Status: row.delivery_status,
       COD_Amount: Number(row.cod_amount) || 0,
       COD_Collected: Boolean(row.cod_collected),
-      Items: parseJson(row.items_json),
+      Items: row.items,
       Shipping_Address: parseJson(row.shipping_address_json),
       Payment_Method: row.payment_method,
       Customer_Name: '',
