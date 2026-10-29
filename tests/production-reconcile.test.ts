@@ -58,6 +58,125 @@ test('adopting a production-shaped database and applying every migration converg
       assert.deepEqual((await runMigrations({ client: legacy, mode: 'status' })).pending, []);
       assert.deepEqual((await legacy.query(privilegeQuery)).rows, privilegesBefore, 'privileges are unchanged');
 
+      const checkoutSuffix = randomUUID().replaceAll('-', '');
+      const checkoutCustomerId = `CUST-CHECKOUT-${checkoutSuffix}`;
+      const checkoutSellerId = `SELLER-CHECKOUT-${checkoutSuffix}`;
+      const checkoutCategoryId = `CATEGORY-CHECKOUT-${checkoutSuffix}`;
+      const checkoutProductId = `PRODUCT-CHECKOUT-${checkoutSuffix}`;
+      const checkoutOrderId = `ORDER-CHECKOUT-${checkoutSuffix}`;
+      try {
+        await legacy.query(`
+          INSERT INTO users (id, username, password, email, role)
+          VALUES ($1, $2, 'test-password', $3, 'customer'),
+                 ($4, $5, 'test-password', $6, 'seller')
+        `, [
+          checkoutCustomerId,
+          `user-${checkoutCustomerId}`,
+          `${checkoutCustomerId}@example.invalid`,
+          checkoutSellerId,
+          `user-${checkoutSellerId}`,
+          `${checkoutSellerId}@example.invalid`,
+        ]);
+        await legacy.query('INSERT INTO customers (id, name) VALUES ($1, $2)', [
+          checkoutCustomerId, 'Checkout test customer',
+        ]);
+        await legacy.query('INSERT INTO sellers (id, name, status) VALUES ($1, $2, $3)', [
+          checkoutSellerId, 'Checkout test seller', 'approved',
+        ]);
+        await legacy.query('INSERT INTO categories (id, name) VALUES ($1, $1)', [checkoutCategoryId]);
+        await legacy.query(`
+          INSERT INTO products (id, name, price, stock, category_id, seller_id)
+          VALUES ($1, 'Checkout test product', 15.50, 4, $2, $3)
+        `, [
+          checkoutProductId,
+          checkoutCategoryId,
+          checkoutSellerId,
+        ]);
+        await legacy.query(`
+          INSERT INTO cart (id, customer_id, product_id, quantity, size)
+          VALUES ($1, $2, $3, 2, 'M')
+        `, [
+          checkoutOrderId,
+          checkoutCustomerId,
+          checkoutProductId,
+        ]);
+        await legacy.query(
+          `CALL process_checkout($1, $2, $3, $4, $5, $6, $7)`,
+          [
+            checkoutOrderId,
+            `TRACK-${checkoutOrderId}`,
+            checkoutCustomerId,
+            5,
+            '{}',
+            '{}',
+            '',
+          ]
+        );
+
+        const checkoutOrder = await legacy.query<{ items_json: string | null }>(
+          'SELECT items_json FROM orders WHERE id = $1',
+          [checkoutOrderId]
+        );
+        assert.equal(checkoutOrder.rows[0]?.items_json, '[]', 'checkout leaves the compatibility column at its default');
+        const checkoutItems = await legacy.query<{
+          product_id_snapshot: string;
+          seller_id_snapshot: string;
+          product_name: string;
+          unit_price: string;
+          quantity: number;
+          size: string;
+        }>(`
+          SELECT product_id_snapshot, seller_id_snapshot, product_name, unit_price::text, quantity, size
+          FROM order_items WHERE order_id = $1 ORDER BY order_item_id
+        `, [checkoutOrderId]);
+        assert.deepEqual(checkoutItems.rows, [{
+          product_id_snapshot: checkoutProductId,
+          seller_id_snapshot: checkoutSellerId,
+          product_name: 'Checkout test product',
+          unit_price: '15.50',
+          quantity: 2,
+          size: 'M',
+        }]);
+        const fulfillmentItems = await legacy.query<{ items_json: unknown }>(
+          'SELECT items_json FROM seller_fulfillments WHERE order_id = $1',
+          [checkoutOrderId]
+        );
+        assert.deepEqual(fulfillmentItems.rows, [{ items_json: [] }]);
+
+        const itemColumnReferences = await legacy.query<{ count: string }>(`
+          SELECT count(*)::text AS count
+          FROM pg_proc p
+          WHERE p.pronamespace = 'public'::regnamespace
+            AND p.prokind IN ('f', 'p')
+            AND pg_get_functiondef(p.oid) ~* '\\.items_json'
+        `);
+        assert.equal(itemColumnReferences.rows[0]?.count, '0', 'no function reads or writes either items_json column');
+        const viewReferences = await legacy.query<{ count: string }>(`
+          SELECT count(*)::text AS count FROM pg_views
+          WHERE schemaname = 'public'
+            AND definition ~* '\\.items_json'
+        `);
+        assert.equal(viewReferences.rows[0]?.count, '0', 'no view reads either items_json column');
+        const triggerReferences = await legacy.query<{ count: string }>(`
+          SELECT count(*)::text AS count
+          FROM pg_trigger t
+          JOIN pg_class c ON c.oid = t.tgrelid
+          JOIN pg_namespace n ON n.oid = c.relnamespace
+          JOIN pg_proc p ON p.oid = t.tgfoid
+          WHERE n.nspname = 'public'
+            AND NOT t.tgisinternal
+            AND pg_get_functiondef(p.oid) ~* '\\.items_json'
+        `);
+        assert.equal(triggerReferences.rows[0]?.count, '0', 'no trigger function reads either items_json column');
+      } finally {
+        await legacy.query('DELETE FROM orders WHERE id = $1', [checkoutOrderId]);
+        await legacy.query('DELETE FROM products WHERE id = $1', [checkoutProductId]);
+        await legacy.query('DELETE FROM categories WHERE id = $1', [checkoutCategoryId]);
+        await legacy.query('DELETE FROM sellers WHERE id = $1', [checkoutSellerId]);
+        await legacy.query('DELETE FROM customers WHERE id = $1', [checkoutCustomerId]);
+        await legacy.query('DELETE FROM users WHERE id = ANY($1::varchar[])', [[checkoutCustomerId, checkoutSellerId]]);
+      }
+
       const after = compareFingerprints(await readFingerprint(legacy), await readFingerprint(reference));
       assert.deepEqual(after.missing, []);
       // The only differences left are the two payment constraints whose historical row needs a human decision.
