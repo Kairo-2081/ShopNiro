@@ -17,8 +17,8 @@ const sandbox = async (work: (client: import('pg').PoolClient, ids: { customer: 
     await client.query(`INSERT INTO users (id, username, password, email, role) VALUES ($1, $1, '!x', $2, 'customer')`, [customer, `${customer}@example.invalid`]);
     await client.query('INSERT INTO customers (id, name) VALUES ($1, $2)', [customer, 'Constraint Test']);
     await client.query(
-      `INSERT INTO orders (id, tracking_id, customer_id, items_json, subtotal, shipping_fee, shipping_address_json, billing_address_json)
-       VALUES ($1, $2, $3, '[]', 100, 5, '{}', '{}')`,
+      `INSERT INTO orders (id, tracking_id, customer_id, subtotal, shipping_fee, shipping_address_json, billing_address_json)
+       VALUES ($1, $2, $3, 100, 5, '{}', '{}')`,
       [order, `TRK-${randomUUID()}`, customer]
     );
     await work(client, { customer, order });
