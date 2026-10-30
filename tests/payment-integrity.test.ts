@@ -261,7 +261,9 @@ dbTest('plaintext stored passwords are rejected with the same message as unknown
 
     const getRefundStatus = mock.method(sslcommerz, 'getRefundStatus', async () => ({ status: 'refunded' }));
     const result = await processRefundQueue();
-    assert.equal(result.completed, 1);
+    // The queue works on every submitted refund in the database, so a leftover row from an earlier run on the
+    // same database must not fail this test. The assertions below check this test's own rows.
+    assert.ok(result.completed >= 1);
     const order = await query('SELECT payment_status FROM orders WHERE id = $1', [orderId]);
     const payment = await query('SELECT status FROM payments WHERE id = $1', [paymentId]);
     const refund = await query('SELECT status FROM refunds WHERE id = $1', [refundId]);
