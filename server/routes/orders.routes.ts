@@ -10,7 +10,7 @@ import { processRefundQueue } from './payment.routes.ts';
 import { getVoucherRule, isVoucherExpired, normalizeVoucherCode } from '../../src/lib/vouchers.ts';
 import { newId, newTrackingId } from '../lib/ids.ts';
 import { orderItemsForFulfillmentSql, orderItemsForOrderSql } from '../lib/orderItems.ts';
-import { calculateCheckoutPricing, calculateLineItemsSubtotal, calculateOrderTotal } from '../lib/orderPricing.ts';
+import { calculateCheckoutPricing, calculateLineItemsSubtotal, calculateOrderTotal } from '../../src/lib/checkoutPricing.ts';
 
 const router = Router();
 
