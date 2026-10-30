@@ -2,8 +2,8 @@ import React from 'react';
 import { Customer, CartItem, Address, Order, ProductBundle } from '../../types';
 import { api, formatCurrency, formatBDT } from '../../lib/api';
 import { PolicyLinks } from '../legal/PolicyLinks';
-import { calculateBundlePrices } from '../../lib/bundles';
-import { describeVoucher, discountedPriceForVoucher, discountedUnitPrice, getVoucherRule, isVoucherExpired, normalizeVoucherCode } from '../../lib/vouchers';
+import { calculateCheckoutPricing, calculateOrderTotal, fromPaisa } from '../../lib/checkoutPricing';
+import { describeVoucher, getVoucherRule, isVoucherExpired, normalizeVoucherCode } from '../../lib/vouchers';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { SSLCommerzModal } from '../payment/SSLCommerzModal';
 import { X, CheckCircle2, Truck, ShieldCheck, MapPin, CreditCard, ArrowRight, Package, Banknote, Lock, Sparkles } from 'lucide-react';
@@ -83,8 +83,6 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [pendingOrderId, setPendingOrderId] = React.useState('');
   const [pendingOrderTotal, setPendingOrderTotal] = React.useState(0);
   const submissionInProgressRef = React.useRef(false);
-  const toCents = (amount: number) => Math.round((Number(amount) || 0) * 100);
-  const fromCents = (amount: number) => amount / 100;
   const dialogRef = useFocusTrap<HTMLDivElement>(isOpen);
 
   React.useEffect(() => {
@@ -141,50 +139,35 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
   if (!isOpen) return null;
 
-  const subtotalCents = cartItems.reduce((total, item) =>
-    total + toCents(Number(item.Product?.Price) || 0) * item.Quantity, 0);
-  const subtotal = fromCents(subtotalCents);
-
-  const voucherAdjustedSubtotalCents = cartItems.reduce((total, item) => {
-    const product = item.Product;
-    const matchesVoucher = Boolean(
-      appliedVoucher && product?.Voucher &&
-      normalizeVoucherCode(product.Voucher) === appliedVoucher &&
-      !isVoucherExpired(product.Voucher_Expires_At)
-    );
-    const price = Number(product?.Price) || 0;
-    const unitPrice = matchesVoucher ? discountedPriceForVoucher(price, appliedVoucher) : price;
-    return total + toCents(unitPrice) * item.Quantity;
-  }, 0);
-  const voucherSavings = fromCents(Math.max(0, subtotalCents - voucherAdjustedSubtotalCents));
-  const bundlePricing = calculateBundlePrices(cartItems.map((item) => {
-    const product = item.Product;
-    const matchesVoucher = Boolean(product?.Voucher && appliedVoucher && normalizeVoucherCode(product.Voucher) === appliedVoucher && !isVoucherExpired(product.Voucher_Expires_At));
-    const price = Number(product?.Price) || 0;
-    return {
+  const eligibleVoucherProductIds = new Set(cartItems
+    .filter((item) => Boolean(
+      appliedVoucher && item.Product?.Voucher &&
+      normalizeVoucherCode(item.Product.Voucher) === appliedVoucher &&
+      !isVoucherExpired(item.Product.Voucher_Expires_At)
+    ))
+    .map((item) => item.Product_ID));
+  const pricing = calculateCheckoutPricing(
+    cartItems.map((item) => ({
       Product_ID: item.Product_ID,
-      Price: matchesVoucher ? discountedPriceForVoucher(price, appliedVoucher) : price,
+      Price: Number(item.Product?.Price) || 0,
       Quantity: item.Quantity,
-    };
-  }), bundles);
-  const bundleAdjustedSubtotalCents = cartItems.reduce((total, item) =>
-    total + toCents(bundlePricing.unitPrices.get(item.Product_ID) ?? Number(item.Product?.Price) ?? 0) * item.Quantity, 0);
-  const bundleSavings = fromCents(Math.max(0, voucherAdjustedSubtotalCents - bundleAdjustedSubtotalCents));
-  const cartDiscountEligible = subtotalCents >= 50000;
-  const discountedSubtotalCents = cartItems.reduce((total, item) => {
-    const bundleUnitPrice = bundlePricing.unitPrices.get(item.Product_ID) ?? Number(item.Product?.Price) ?? 0;
-    const finalUnitPrice = cartDiscountEligible ? discountedUnitPrice(bundleUnitPrice, 5) : bundleUnitPrice;
-    return total + toCents(finalUnitPrice) * item.Quantity;
-  }, 0);
-  const discountedSubtotal = fromCents(discountedSubtotalCents);
-  const cartSavings = fromCents(Math.max(0, bundleAdjustedSubtotalCents - discountedSubtotalCents));
-  const shippingFee = subtotal === 0 || subtotal >= 400 ? 0 : 5.0;
-  const grandTotal = fromCents(discountedSubtotalCents + toCents(shippingFee));
+    })),
+    eligibleVoucherProductIds,
+    appliedVoucher,
+    bundles
+  );
+  const bundlePricing = { appliedBundleIds: pricing.appliedBundleIds };
+  const subtotal = fromPaisa(pricing.originalSubtotalCents);
+  const voucherSavings = fromPaisa(Math.max(0, pricing.originalSubtotalCents - pricing.voucherSubtotalCents));
+  const bundleSavings = fromPaisa(Math.max(0, pricing.voucherSubtotalCents - pricing.bundleSubtotalCents));
+  const cartDiscountEligible = pricing.cartDiscountEligible;
+  const discountedSubtotal = pricing.subtotal;
+  const cartSavings = fromPaisa(Math.max(0, pricing.bundleSubtotalCents - pricing.subtotalCents));
+  const shippingFee = pricing.shippingFee;
+  const grandTotal = calculateOrderTotal(pricing.subtotal, pricing.shippingFee);
   const grandTotalBDT = grandTotal;
-  const getCartItemFinalUnitPrice = (item: CartItem) => {
-    const bundleUnitPrice = bundlePricing.unitPrices.get(item.Product_ID) ?? Number(item.Product?.Price) ?? 0;
-    return cartDiscountEligible ? discountedUnitPrice(bundleUnitPrice, 5) : bundleUnitPrice;
-  };
+  const getCartItemFinalUnitPrice = (item: CartItem) =>
+    pricing.unitPrices.get(item.Product_ID) ?? (Number(item.Product?.Price) || 0);
 
   const applyVoucher = () => {
     const code = normalizeVoucherCode(voucherInput);
