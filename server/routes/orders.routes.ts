@@ -7,10 +7,10 @@ import * as schemas from '../validation/schemas.ts';
 import { requireAuth, AuthRequest } from '../middleware/auth.ts';
 import { Order, ProductBundle } from '../../src/types.ts';
 import { processRefundQueue } from './payment.routes.ts';
-import { discountedPriceForVoucher, discountedUnitPrice, getVoucherRule, isVoucherExpired, normalizeVoucherCode } from '../../src/lib/vouchers.ts';
-import { calculateBundlePrices } from '../../src/lib/bundles.ts';
+import { getVoucherRule, isVoucherExpired, normalizeVoucherCode } from '../../src/lib/vouchers.ts';
 import { newId, newTrackingId } from '../lib/ids.ts';
 import { orderItemsForFulfillmentSql, orderItemsForOrderSql } from '../lib/orderItems.ts';
+import { calculateCheckoutPricing, calculateLineItemsSubtotal, calculateOrderTotal } from '../lib/orderPricing.ts';
 
 const router = Router();
 
@@ -184,9 +184,6 @@ router.post('/', requireAuth, validateBody(schemas.createOrderBody), async (req:
       }
     }
     const eligibleProductIds = new Set(activeEligibleProducts.map((product: any) => product.id));
-    const originalSubtotal = cartProducts.rows.reduce((total: number, product: any) => total + (Number(product.price) || 0) * Number(product.quantity), 0);
-    const cartDiscountEligible = originalSubtotal >= 500;
-    const shippingFee = originalSubtotal >= 400 ? 0 : 5;
     const requestedBundleIds = appliedCodes.filter((code: string) => code.startsWith('BUNDLE:')).map((code: string) => code.slice('BUNDLE:'.length));
     const bundleRows = requestedBundleIds.length ? await query(`
       SELECT id, seller_id, name, product_ids_json, discount_percent, ends_at, active
@@ -202,20 +199,19 @@ router.post('/', requireAuth, validateBody(schemas.createOrderBody), async (req:
       Ends_At: bundle.ends_at ? new Date(bundle.ends_at).toISOString() : undefined,
       Active: Boolean(bundle.active),
     }));
-    const bundlePricing = calculateBundlePrices(cartProducts.rows.map((product: any) => ({
+    const checkoutPricing = calculateCheckoutPricing(cartProducts.rows.map((product: any) => ({
       Product_ID: product.id,
-      Price: eligibleProductIds.has(product.id) ? discountedPriceForVoucher(Number(product.price) || 0, voucherCode) : Number(product.price) || 0,
+      Price: Number(product.price),
       Quantity: Number(product.quantity) || 0,
-    })), activeBundles);
+    })), eligibleProductIds, voucherCode, activeBundles);
     const pricingRows = cartProducts.rows.map((product: any) => {
-      const originalPrice = Number(product.price) || 0;
-      const voucherPrice = eligibleProductIds.has(product.id) ? discountedPriceForVoucher(originalPrice, voucherCode) : originalPrice;
-      const bundlePrice = bundlePricing.unitPrices.get(product.id) ?? voucherPrice;
-      const unitPrice = cartDiscountEligible ? discountedUnitPrice(bundlePrice, 5) : bundlePrice;
+      const unitPrice = checkoutPricing.unitPrices.get(product.id);
+      if (unitPrice === undefined) throw new Error(`Missing calculated price for product ${product.id}.`);
       return { product_id: product.id, unit_price: unitPrice };
     });
 
-    const recordedPromotions = [voucherCode, ...bundlePricing.appliedBundleIds.map((bundleId) => `BUNDLE:${bundleId}`), cartDiscountEligible ? 'CART5' : ''].filter(Boolean).join('+');
+    const recordedPromotions = [voucherCode, ...checkoutPricing.appliedBundleIds.map((bundleId) => `BUNDLE:${bundleId}`), checkoutPricing.cartDiscountEligible ? 'CART5' : ''].filter(Boolean).join('+');
+    const shippingFee = checkoutPricing.shippingFee;
     const client = await pool.connect();
     let orderedItems: any[] = [];
     let finalSubtotal = 0;
@@ -251,10 +247,10 @@ router.post('/', requireAuth, validateBody(schemas.createOrderBody), async (req:
         FROM order_items WHERE order_id = $1 ORDER BY order_item_id
       `, [id]);
       orderedItems = itemsResult.rows;
-      finalSubtotal = orderedItems.reduce(
-        (total: number, item: any) => total + Number(item.unit_price) * Number(item.quantity),
-        0
-      );
+      finalSubtotal = calculateLineItemsSubtotal(orderedItems.map((item: any) => ({
+        unitPrice: item.unit_price,
+        quantity: Number(item.quantity),
+      })));
       await client.query(`
         UPDATE orders SET subtotal = $2, applied_voucher = $3, payment_method = $4 WHERE id = $1
       `, [id, finalSubtotal, recordedPromotions, paymentMethod]);
@@ -489,7 +485,7 @@ router.patch('/cancellation-requests/:requestId/review', requireAuth, validateBo
             `INSERT INTO refunds (id, order_id, amount, method, status, gateway_ref, processed_by)
              VALUES ($1, $2, $3, 'manual_cash', 'completed', 'manual-cash-return', $4)
              ON CONFLICT DO NOTHING`,
-            [`REF-${randomUUID()}`, request.order_id, Number(request.subtotal) + Number(request.shipping_fee), req.user!.entityId]
+            [`REF-${randomUUID()}`, request.order_id, calculateOrderTotal(request.subtotal, request.shipping_fee), req.user!.entityId]
           );
           await client.query("UPDATE orders SET payment_status = 'refunded' WHERE id = $1", [request.order_id]);
           await client.query("UPDATE payments SET status = 'REFUNDED', updated_at = CURRENT_TIMESTAMP WHERE order_id = $1", [request.order_id]);
@@ -502,7 +498,7 @@ router.patch('/cancellation-requests/:requestId/review', requireAuth, validateBo
             `INSERT INTO refunds (id, order_id, payment_id, amount, method, status)
              VALUES ($1, $2, $3, $4, 'sslcommerz', 'requested')
              ON CONFLICT DO NOTHING`,
-            [`REF-${randomUUID()}`, request.order_id, payment.rows[0].id, Number(request.subtotal) + Number(request.shipping_fee)]
+            [`REF-${randomUUID()}`, request.order_id, payment.rows[0].id, calculateOrderTotal(request.subtotal, request.shipping_fee)]
           );
         }
       }

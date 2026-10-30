@@ -7,6 +7,7 @@ import { GatewayError, sslcommerz } from '../services/sslcommerz.service.ts';
 import { publicMessage } from '../middleware/errorHandler.ts';
 import { validateBody } from '../middleware/validate.ts';
 import { gatewayReturnBody, paymentInitBody, simulatorCompleteBody, sslcommerzIpnBody, sslcommerzValidateBody } from '../validation/schemas.ts';
+import { calculateOrderTotal } from '../lib/orderPricing.ts';
 
 const router = Router();
 const paymentInitRateLimit = rateLimit({
@@ -530,7 +531,7 @@ router.post('/init', requireAuth, requireRole(['customer']), paymentInitRateLimi
       const existing = existingResult.rows[0];
       const finalAmountBDT = existing
         ? Number(existing.amount)
-        : Number(order.subtotal) + Number(order.shipping_fee);
+        : calculateOrderTotal(order.subtotal, order.shipping_fee);
       if (!Number.isFinite(finalAmountBDT) || finalAmountBDT <= 0) {
         await client.query('ROLLBACK');
         return res.status(400).json({ error: 'Order total is invalid.' });
