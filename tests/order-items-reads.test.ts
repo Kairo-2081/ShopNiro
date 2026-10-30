@@ -88,7 +88,7 @@ const itemJson = (item: FixtureItem) => ({
   Seller_ID: item.sellerId,
 });
 
-dbTest('order and fulfillment endpoints preserve stored item JSON when reading order_items', { timeout: 30_000 }, async () => {
+dbTest('order and fulfillment endpoints preserve the order_items payload shape', { timeout: 30_000 }, async () => {
   const suffix = randomUUID();
   const customerId = `OI-CUST-${suffix}`;
   const sellerA = `OI-SELLER-A-${suffix}`;
@@ -96,6 +96,8 @@ dbTest('order and fulfillment endpoints preserve stored item JSON when reading o
   const riderId = `OI-RIDER-${suffix}`;
   const orderIds = [`OI-ORD-MULTI-${suffix}`, `OI-ORD-SIZES-${suffix}`, `OI-ORD-LEGACY-${suffix}`];
   const fulfillments: Array<{ id: string; orderId: string; sellerId: string }> = [];
+  const expectedOrderItems = new Map<string, unknown[]>();
+  const expectedFulfillmentItems = new Map<string, unknown[]>();
   const sessionJtis: string[] = [];
 
   try {
@@ -143,16 +145,16 @@ dbTest('order and fulfillment endpoints preserve stored item JSON when reading o
     for (const order of orders) {
       await query(`
         INSERT INTO orders (
-          id, tracking_id, customer_id, items_json, subtotal, shipping_fee,
+          id, tracking_id, customer_id, subtotal, shipping_fee,
           shipping_address_json, billing_address_json
-        ) VALUES ($1, $2, $3, $4, $5, 0, '{}', '{}')
+        ) VALUES ($1, $2, $3, $4, 0, '{}', '{}')
       `, [
         order.id,
         `TRK-${order.id}`,
         customerId,
-        JSON.stringify(order.items.map(itemJson)),
         order.items.reduce((total, item) => total + item.price * item.quantity, 0),
       ]);
+      expectedOrderItems.set(order.id, order.items.map(itemJson));
 
       for (const item of order.items) {
         await query(`
@@ -170,14 +172,14 @@ dbTest('order and fulfillment endpoints preserve stored item JSON when reading o
       for (const [sellerId, sellerItems] of bySeller) {
         const fulfillmentId = `OI-FUL-${randomUUID()}`;
         fulfillments.push({ id: fulfillmentId, orderId: order.id, sellerId });
+        expectedFulfillmentItems.set(fulfillmentId, sellerItems.map(itemJson));
         await query(`
-          INSERT INTO seller_fulfillments (id, order_id, seller_id, items_json, subtotal)
-          VALUES ($1, $2, $3, $4, $5)
+          INSERT INTO seller_fulfillments (id, order_id, seller_id, subtotal)
+          VALUES ($1, $2, $3, $4)
         `, [
           fulfillmentId,
           order.id,
           sellerId,
-          JSON.stringify(sellerItems.map(itemJson)),
           sellerItems.reduce((total, item) => total + item.price * item.quantity, 0),
         ]);
         await query(`
@@ -187,53 +189,42 @@ dbTest('order and fulfillment endpoints preserve stored item JSON when reading o
       }
     }
 
-    const storedOrderItems = new Map<string, unknown[]>();
-    for (const id of orderIds) {
-      const result = await query('SELECT items_json FROM orders WHERE id = $1', [id]);
-      storedOrderItems.set(id, JSON.parse(result.rows[0].items_json));
-    }
-    const storedFulfillmentItems = new Map<string, unknown[]>();
-    for (const fulfillment of fulfillments) {
-      const result = await query('SELECT items_json FROM seller_fulfillments WHERE id = $1', [fulfillment.id]);
-      storedFulfillmentItems.set(fulfillment.id, result.rows[0].items_json);
-    }
-
     const customerOrders = await request('/api/orders', customerSession.cookie);
     assert.equal(customerOrders.status, 200);
     assert.equal(customerOrders.body.length, orderIds.length);
     for (const order of customerOrders.body) {
-      assert.deepEqual(order.Items, storedOrderItems.get(order.Order_ID));
+      assert.deepEqual(order.Items, expectedOrderItems.get(order.Order_ID));
       for (const fulfillment of order.Fulfillments) {
-        assert.deepEqual(fulfillment.Items, storedFulfillmentItems.get(fulfillment.Fulfillment_ID));
+        assert.deepEqual(fulfillment.Items, expectedFulfillmentItems.get(fulfillment.Fulfillment_ID));
       }
     }
 
     for (const orderId of orderIds) {
       const detail = await request(`/api/orders/${orderId}`, customerSession.cookie);
       assert.equal(detail.status, 200);
-      assert.deepEqual(detail.body.Items, storedOrderItems.get(orderId));
+      assert.deepEqual(detail.body.Items, expectedOrderItems.get(orderId));
     }
 
     const sellerOrders = await request(`/api/orders?sellerId=${encodeURIComponent(sellerA)}`, sellerSession.cookie);
     assert.equal(sellerOrders.status, 200);
     assert.equal(sellerOrders.body.length, orderIds.length);
     for (const order of sellerOrders.body) {
-      assert.deepEqual(order.Items, storedOrderItems.get(order.Order_ID));
+      assert.deepEqual(order.Items, expectedOrderItems.get(order.Order_ID));
       for (const fulfillment of order.Fulfillments) {
-        assert.deepEqual(fulfillment.Items, storedFulfillmentItems.get(fulfillment.Fulfillment_ID));
+        assert.deepEqual(fulfillment.Items, expectedFulfillmentItems.get(fulfillment.Fulfillment_ID));
       }
     }
 
     const riderDeliveries = await request('/api/riders/deliveries', riderSession.cookie);
     assert.equal(riderDeliveries.status, 200);
     for (const delivery of riderDeliveries.body) {
-      assert.deepEqual(delivery.Items, storedFulfillmentItems.get(delivery.Seller_Fulfillment_ID));
+      assert.deepEqual(delivery.Items, expectedFulfillmentItems.get(delivery.Seller_Fulfillment_ID));
     }
 
     const customerDeliveries = await request('/api/riders/customer-deliveries', customerSession.cookie);
     assert.equal(customerDeliveries.status, 200);
     for (const delivery of customerDeliveries.body) {
-      assert.deepEqual(delivery.Items, storedFulfillmentItems.get(delivery.Seller_Fulfillment_ID));
+      assert.deepEqual(delivery.Items, expectedFulfillmentItems.get(delivery.Seller_Fulfillment_ID));
     }
   } finally {
     if (sessionJtis.length) await query('DELETE FROM auth_sessions WHERE jti = ANY($1::varchar[])', [sessionJtis]);
