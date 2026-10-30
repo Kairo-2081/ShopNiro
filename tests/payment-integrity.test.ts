@@ -4,6 +4,7 @@ import express from 'express';
 import { request as httpRequest, Server } from 'node:http';
 import { randomUUID } from 'node:crypto';
 import { pool, query } from '../server/db/index.ts';
+import { calculateOrderTotal } from '../server/lib/orderPricing.ts';
 
 process.env.JWT_SECRET ??= 'test-payment-integrity-secret-at-least-32-characters';
 if (process.env.CI && !process.env.DATABASE_URL) throw new Error('DATABASE_URL required in CI');
@@ -410,7 +411,7 @@ dbTest('plaintext stored passwords are rejected with the same message as unknown
 
   dbTest('concurrent payment initialization reuses one transaction and gateway session', async (t) => {
     process.env.SSLCOMMERZ_IPN_TOKEN ??= 'test-payment-integrity-ipn-token';
-    const fixture = await createCheckoutFixture();
+    const fixture = await createCheckoutFixture(1, 10, 123.45);
     const order = await placeCartOrder(fixture, 'online');
     const initPayment = t.mock.method(sslcommerz, 'initPayment', async () => ({
       status: 'SUCCESS',
@@ -425,8 +426,12 @@ dbTest('plaintext stored passwords are rejected with the same message as unknown
     assert.equal(responses[0].body.tran_id, responses[1].body.tran_id);
     assert.deepEqual(responses[0].body.session, responses[1].body.session);
     assert.equal(initPayment.mock.callCount(), 1);
+    const expectedAmount = calculateOrderTotal(order.Subtotal, order.Shipping_Fee);
+    assert.equal(initPayment.mock.calls[0].arguments[0].total_amount, expectedAmount);
     const pendingPayments = await query("SELECT COUNT(*)::integer AS count FROM payments WHERE order_id = $1 AND status = 'PENDING'", [order.Order_ID]);
     assert.equal(pendingPayments.rows[0].count, 1);
+    const payment = await query("SELECT amount FROM payments WHERE order_id = $1 AND status = 'PENDING'", [order.Order_ID]);
+    assert.equal(Number(payment.rows[0].amount), expectedAmount);
   });
 
   dbTest('payment init does not hold a database connection while the gateway call is in flight', async (t) => {
