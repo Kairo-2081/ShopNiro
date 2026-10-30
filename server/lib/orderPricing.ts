@@ -16,6 +16,12 @@ export interface CheckoutPricingResult {
   appliedBundleIds: string[];
 }
 
+// Checkout rules, in paisa. They live here so the numbers are named and changed in one place.
+export const FREE_SHIPPING_THRESHOLD_CENTS = 40_000;
+export const CART_DISCOUNT_THRESHOLD_CENTS = 50_000;
+export const SHIPPING_FEE_CENTS = 500;
+export const CART_DISCOUNT_PERCENT = 5;
+
 const toCents = (amount: number | string): number => {
   const numericAmount = Number(amount);
   if (!Number.isFinite(numericAmount)) {
@@ -42,8 +48,9 @@ export const calculateCheckoutPricing = (
     (total, item) => total + toCents(item.Price) * item.Quantity,
     0
   );
-  const cartDiscountEligible = originalSubtotalCents >= 50_000;
-  const shippingFeeCents = originalSubtotalCents === 0 || originalSubtotalCents >= 40_000 ? 0 : 500;
+  const cartDiscountEligible = originalSubtotalCents >= CART_DISCOUNT_THRESHOLD_CENTS;
+  const shippingFeeCents =
+    originalSubtotalCents === 0 || originalSubtotalCents >= FREE_SHIPPING_THRESHOLD_CENTS ? 0 : SHIPPING_FEE_CENTS;
   const voucherPrices = items.map((item) => ({
     Product_ID: item.Product_ID,
     Price: eligibleVoucherProductIds.has(item.Product_ID)
@@ -57,7 +64,7 @@ export const calculateCheckoutPricing = (
 
   items.forEach((item) => {
     const bundlePrice = bundlePricing.unitPrices.get(item.Product_ID) ?? item.Price;
-    const discountedPrice = cartDiscountEligible ? discountedUnitPrice(bundlePrice, 5) : bundlePrice;
+    const discountedPrice = cartDiscountEligible ? discountedUnitPrice(bundlePrice, CART_DISCOUNT_PERCENT) : bundlePrice;
     const unitPriceCents = toCents(discountedPrice);
     unitPrices.set(item.Product_ID, fromCents(unitPriceCents));
     subtotalCents += unitPriceCents * item.Quantity;
