@@ -613,7 +613,8 @@ dbTest('plaintext stored passwords are rejected with the same message as unknown
     `, [`PAY-${randomUUID()}`, validatedOrder.Order_ID, validated.customerId, 200, `SSLCZ-${randomUUID().replaceAll('-', '').toUpperCase()}`]);
 
     const firstRun = await query('SELECT expire_pending_online_orders(30) AS expired');
-    assert.equal(Number(firstRun.rows[0].expired), 1);
+    // The function sweeps every old unpaid online order in the database, so a reused database can hold others.
+    assert.ok(Number(firstRun.rows[0].expired) >= 1);
 
     const expired = await query('SELECT status, payment_status FROM orders WHERE id = $1', [expirableOrder.Order_ID]);
     const fulfillment = await query('SELECT status FROM seller_fulfillments WHERE order_id = $1', [expirableOrder.Order_ID]);

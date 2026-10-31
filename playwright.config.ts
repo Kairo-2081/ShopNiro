@@ -34,6 +34,8 @@ export default defineConfig({
       PORT: String(port),
       VITE_API_URL: `http://127.0.0.1:${port}`,
       APP_URL: `http://127.0.0.1:${port}`,
+      // Built-in fake gateway (refused outside development and test); no network and no real gateway.
+      PAYMENT_SIMULATOR: 'true',
     },
   },
 });
