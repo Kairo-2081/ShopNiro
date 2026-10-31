@@ -82,8 +82,48 @@ export async function countOrders() {
 export async function clearCartAndOrders() {
   await withDb(async (client) => {
     await client.query('DELETE FROM cart WHERE customer_id = $1', [E2E.customer.id]);
-    await client.query('DELETE FROM seller_fulfillments WHERE order_id IN (SELECT id FROM orders WHERE customer_id = $1)', [E2E.customer.id]);
-    await client.query('DELETE FROM order_items WHERE order_id IN (SELECT id FROM orders WHERE customer_id = $1)', [E2E.customer.id]);
+    // Children first: every table with a foreign key to orders, refunds before payments.
+    for (const table of ['refunds', 'order_cancellation_requests', 'order_status_audit', 'payments', 'seller_fulfillments', 'order_items']) {
+      await client.query(`DELETE FROM ${table} WHERE order_id IN (SELECT id FROM orders WHERE customer_id = $1)`, [E2E.customer.id]);
+    }
     await client.query('DELETE FROM orders WHERE customer_id = $1', [E2E.customer.id]);
+    // Orders take stock; put it back so every test starts from the seeded quantity.
+    await client.query('UPDATE products SET stock = 100 WHERE seller_id = $1', [E2E.seller.id]);
+  });
+}
+
+export async function cartQuantity(productId: string): Promise<number> {
+  return withDb(async (client) => {
+    const { rows } = await client.query('SELECT COALESCE(SUM(quantity), 0)::int AS n FROM cart WHERE customer_id = $1 AND product_id = $2', [E2E.customer.id, productId]);
+    return rows[0].n as number;
+  });
+}
+
+export async function productStock(productId: string): Promise<number> {
+  return withDb(async (client) => {
+    const { rows } = await client.query('SELECT stock FROM products WHERE id = $1', [productId]);
+    return rows[0].stock as number;
+  });
+}
+
+export async function latestPayment() {
+  return withDb(async (client) => {
+    const { rows } = await client.query(
+      `SELECT p.status, p.amount::float8 AS amount, p.payment_method FROM payments p
+         JOIN orders o ON o.id = p.order_id WHERE o.customer_id = $1 ORDER BY o.order_placed_at DESC LIMIT 1`,
+      [E2E.customer.id]
+    );
+    return rows[0] as { status: string; amount: number; payment_method: string } | undefined;
+  });
+}
+
+/** Make the customer's latest payment look older than the server's 30-minute gateway-confirmation window. */
+export async function ageLatestPayment(minutes: number) {
+  await withDb(async (client) => {
+    await client.query(
+      `UPDATE payments SET created_at = created_at - ($2 || ' minutes')::interval
+         WHERE order_id IN (SELECT id FROM orders WHERE customer_id = $1)`,
+      [E2E.customer.id, String(minutes)]
+    );
   });
 }
