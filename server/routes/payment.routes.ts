@@ -7,7 +7,7 @@ import { GatewayError, sslcommerz } from '../services/sslcommerz.service.ts';
 import { publicMessage } from '../middleware/errorHandler.ts';
 import { validateBody } from '../middleware/validate.ts';
 import { gatewayReturnBody, paymentInitBody, simulatorCompleteBody, sslcommerzIpnBody, sslcommerzValidateBody } from '../validation/schemas.ts';
-import { calculateOrderTotal } from '../lib/orderPricing.ts';
+import { calculateOrderTotal } from '../../src/lib/checkoutPricing.ts';
 
 const router = Router();
 const paymentInitRateLimit = rateLimit({

@@ -1,6 +1,7 @@
 import React from 'react';
 import { CartItem } from '../../types';
 import { formatCurrency } from '../../lib/api';
+import { calculateLineItemsSubtotal, calculateOrderTotal, fromPaisa, shippingFeeCentsFor, toPaisa, FREE_SHIPPING_THRESHOLD_CENTS } from '../../lib/checkoutPricing';
 import { X, Trash2, Plus, Minus, ShoppingCart, ArrowRight, ShieldCheck } from 'lucide-react';
 
 interface CartDrawerProps {
@@ -39,13 +40,13 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
 
   if (!shouldRender) return null;
 
-  const subtotal = cartItems.reduce((acc, item) => {
-    const price = Number(item.Product?.Price) || 0;
-    return acc + price * item.Quantity;
-  }, 0);
-
-  const shippingFee = subtotal >= 400 ? 0 : subtotal > 0 ? 5.0 : 0;
-  const total = subtotal + shippingFee;
+  const subtotal = calculateLineItemsSubtotal(cartItems.map((item) => ({
+    unitPrice: Number(item.Product?.Price) || 0,
+    quantity: item.Quantity,
+  })));
+  const shippingFee = fromPaisa(shippingFeeCentsFor(toPaisa(subtotal)));
+  const freeShippingThreshold = fromPaisa(FREE_SHIPPING_THRESHOLD_CENTS);
+  const total = calculateOrderTotal(subtotal, shippingFee);
 
   return (
     <div
@@ -209,20 +210,20 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                   )}
                 </span>
               </div>
-              {subtotal > 0 && subtotal < 400 && (
+              {subtotal > 0 && subtotal < freeShippingThreshold && (
                 <div className="space-y-2 pt-1">
                   <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-zinc-400">
                     <span>Free shipping progress</span>
-                    <span>{Math.min(100, Math.round((subtotal / 400) * 100))}%</span>
+                    <span>{Math.min(100, Math.round((subtotal / freeShippingThreshold) * 100))}%</span>
                   </div>
                   <div className="h-2 w-full rounded-full bg-slate-200 dark:bg-zinc-800 overflow-hidden">
                     <div
                       className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-sky-500 transition-all duration-500"
-                      style={{ width: `${Math.min(100, (subtotal / 400) * 100)}%` }}
+                      style={{ width: `${Math.min(100, (subtotal / freeShippingThreshold) * 100)}%` }}
                     />
                   </div>
                   <p className="text-[11px] text-slate-500 dark:text-zinc-400 italic">
-                    Add {formatCurrency(400 - subtotal)} more for free shipping!
+                    Add {formatCurrency(freeShippingThreshold - subtotal)} more for free shipping!
                   </p>
                 </div>
               )}
