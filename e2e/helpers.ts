@@ -116,14 +116,3 @@ export async function latestPayment() {
     return rows[0] as { status: string; amount: number; payment_method: string } | undefined;
   });
 }
-
-/** Make the customer's latest payment look older than the server's 30-minute gateway-confirmation window. */
-export async function ageLatestPayment(minutes: number) {
-  await withDb(async (client) => {
-    await client.query(
-      `UPDATE payments SET created_at = created_at - ($2 || ' minutes')::interval
-         WHERE order_id IN (SELECT id FROM orders WHERE customer_id = $1)`,
-      [E2E.customer.id, String(minutes)]
-    );
-  });
-}
