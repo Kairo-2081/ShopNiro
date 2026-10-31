@@ -74,6 +74,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   return (
     <div
       ref={cardRef}
+      data-testid="product-card"
+      data-product-id={product.Product_ID}
       role="button"
       tabIndex={0}
       aria-label={`View details for ${product.Name}`}

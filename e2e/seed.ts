@@ -1,0 +1,66 @@
+// Seeds a throwaway database for the browser checkout tests. Refuses to touch anything that is not local.
+import pg from 'pg';
+import bcrypt from 'bcryptjs';
+
+export const E2E = {
+  customer: { id: 'E2E-CUST', username: 'e2e-customer', email: 'e2e-customer@example.test', password: 'E2e-password-1!' },
+  seller: { id: 'E2E-SELL' },
+  products: {
+    blanket: { id: 'E2E-P-BLANKET', name: 'E2E Linen Blanket', price: 68 },
+    dripper: { id: 'E2E-P-DRIPPER', name: 'E2E Ceramic Dripper', price: 45 },
+    lamp: { id: 'E2E-P-LAMP', name: 'E2E Desk Lamp', price: 300 },
+    voucher: { id: 'E2E-P-VOUCHER', name: 'E2E Voucher Mug', price: 100, code: 'SAVE20' },
+  },
+} as const;
+
+export function assertLocalDatabase(url: string | undefined): string {
+  if (!url) throw new Error('DATABASE_URL is required for the e2e tests.');
+  const host = new URL(url).hostname;
+  if (!['localhost', '127.0.0.1', '::1', '[::1]'].includes(host)) {
+    throw new Error(`Refusing to run e2e tests against a non-local database (${host}).`);
+  }
+  return url;
+}
+
+export async function seedDatabase(databaseUrl: string): Promise<void> {
+  const pool = new pg.Pool({ connectionString: assertLocalDatabase(databaseUrl) });
+  try {
+    await pool.query('BEGIN');
+    // Wipe in dependency order so the suite can run any number of times on the same database.
+    for (const table of ['payments', 'seller_fulfillments', 'order_items', 'orders', 'cart', 'products', 'categories', 'customers', 'sellers', 'users']) {
+      await pool.query(`DELETE FROM ${table}`).catch(() => undefined);
+    }
+    const hash = await bcrypt.hash(E2E.customer.password, 4);
+    await pool.query(
+      `INSERT INTO users (id, username, password, email, role) VALUES
+         ($1, $2, $3, $4, 'customer'),
+         ($5, 'e2e-seller', 'x', 'e2e-seller@example.test', 'seller')`,
+      [E2E.customer.id, E2E.customer.username, hash, E2E.customer.email, E2E.seller.id]
+    );
+    await pool.query(
+      `INSERT INTO customers (id, name, number, address_house_name, address_street, address_city, address_postal_code, address_latitude, address_longitude)
+       VALUES ($1, 'E2E Customer', '01700000000', 'House 1', 'Road 1', 'Dhaka', '1207', 23.78, 90.4)`,
+      [E2E.customer.id]
+    );
+    await pool.query(`INSERT INTO sellers (id, name, status) VALUES ($1, 'E2E Seller', 'approved')`, [E2E.seller.id]);
+    await pool.query(`INSERT INTO categories (id, name) VALUES ('E2E-CAT', 'E2E Category')`);
+    for (const product of Object.values(E2E.products)) {
+      await pool.query(
+        `INSERT INTO products (id, name, price, stock, category_id, seller_id, voucher)
+         VALUES ($1, $2, $3, 100, 'E2E-CAT', $4, $5)`,
+        [product.id, product.name, product.price, E2E.seller.id, 'code' in product ? product.code : '']
+      );
+    }
+    await pool.query('COMMIT');
+  } catch (error) {
+    await pool.query('ROLLBACK').catch(() => undefined);
+    throw error;
+  } finally {
+    await pool.end();
+  }
+}
+
+// Allow `tsx e2e/seed.ts` for manual use.
+if (process.argv[1]?.endsWith('seed.ts')) {
+  seedDatabase(process.env.DATABASE_URL ?? '').then(() => console.log('e2e database seeded'));
+}
