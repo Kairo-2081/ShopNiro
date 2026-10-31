@@ -1,3 +1,4 @@
+import { FREE_SHIPPING_THRESHOLD_CENTS } from '../src/lib/checkoutPricing.ts';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import test from 'node:test';
@@ -16,8 +17,7 @@ test('all four policy pages exist with unique paths', () => {
 });
 
 test('policy text quotes the same numbers the code enforces', () => {
-  const checkout = readFileSync('src/components/storefront/CheckoutModal.tsx', 'utf8');
-  assert.match(checkout, new RegExp(`subtotal >= ${BUSINESS.freeShippingThresholdBDT}\\b`), 'free-shipping threshold');
+  assert.equal(FREE_SHIPPING_THRESHOLD_CENTS, BUSINESS.freeShippingThresholdBDT * 100, 'free-shipping threshold');
 
   const schema = readdirSync('db/migrations')
     .filter((name) => name.endsWith('.sql'))

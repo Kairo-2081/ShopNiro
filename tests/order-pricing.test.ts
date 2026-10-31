@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { calculateCheckoutPricing, calculateLineItemsSubtotal, calculateOrderTotal } from '../server/lib/orderPricing.ts';
+import { calculateCheckoutPricing, calculateLineItemsSubtotal, calculateOrderTotal } from '../src/lib/checkoutPricing.ts';
 import { calculateBundlePrices } from '../src/lib/bundles.ts';
 import { discountedPriceForVoucher, discountedUnitPrice } from '../src/lib/vouchers.ts';
 import type { ProductBundle } from '../src/types.ts';
@@ -149,4 +149,45 @@ test('centralised pricing matches the previous inline pricing on random carts', 
     }
   }
   assert.equal(zeroCartDifferences, 0, 'random carts never have a zero subtotal, so shipping must match exactly');
+});
+
+// --- Shared-module guards -------------------------------------------------
+
+import { platformCommission, shippingFeeCentsFor } from '../src/lib/checkoutPricing.ts';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { join } from 'node:path';
+
+test('platformCommission matches the SQL platform_commission() function', async () => {
+  const { Pool } = await import('pg');
+  const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+  try {
+    for (const subtotal of [0, 0.01, 0.03, 9.99, 10.05, 199.95, 241, 399.995 - 0.005, 722, 12345.67]) {
+      const { rows } = await pool.query('SELECT platform_commission($1::numeric) AS c', [subtotal.toFixed(2)]);
+      assert.equal(platformCommission(subtotal), Number(rows[0].c), `subtotal ${subtotal}`);
+    }
+  } finally {
+    await pool.end();
+  }
+});
+
+test('shippingFeeCentsFor: empty cart free, below 400 pays 5, 400 and above free', () => {
+  assert.equal(shippingFeeCentsFor(0), 0);
+  assert.equal(shippingFeeCentsFor(1), 500);
+  assert.equal(shippingFeeCentsFor(39_999), 500);
+  assert.equal(shippingFeeCentsFor(40_000), 0);
+});
+
+test('pricing thresholds and rates are not re-implemented outside the shared module', () => {
+  const walk = (dir: string): string[] => readdirSync(dir).flatMap((name) => {
+    const full = join(dir, name);
+    return statSync(full).isDirectory() ? walk(full) : /\.(ts|tsx)$/.test(name) ? [full] : [];
+  });
+  const patterns = [/subtotal\w*\s*>=?\s*(400|500)\b/i, /\b(40000|50000)\b/, /\*\s*0\.15\b/, /\?\s*0\s*:\s*5(\.0)?\b/];
+  const offenders: string[] = [];
+  for (const file of [...walk('src/components'), ...walk('server/routes')]) {
+    readFileSync(file, 'utf8').split('\n').forEach((line, index) => {
+      if (patterns.some((pattern) => pattern.test(line))) offenders.push(`${file}:${index + 1}: ${line.trim()}`);
+    });
+  }
+  assert.deepEqual(offenders, []);
 });

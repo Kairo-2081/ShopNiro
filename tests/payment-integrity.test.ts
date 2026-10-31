@@ -4,7 +4,7 @@ import express from 'express';
 import { request as httpRequest, Server } from 'node:http';
 import { randomUUID } from 'node:crypto';
 import { pool, query } from '../server/db/index.ts';
-import { calculateOrderTotal } from '../server/lib/orderPricing.ts';
+import { calculateOrderTotal } from '../src/lib/checkoutPricing.ts';
 
 process.env.JWT_SECRET ??= 'test-payment-integrity-secret-at-least-32-characters';
 if (process.env.CI && !process.env.DATABASE_URL) throw new Error('DATABASE_URL required in CI');
