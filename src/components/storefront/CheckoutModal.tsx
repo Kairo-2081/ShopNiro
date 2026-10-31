@@ -776,7 +776,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     <div className="flex justify-between font-black text-sm text-slate-900 dark:text-white pt-1">
                       <span>Total Amount Payable</span>
                       <div className="text-right">
-                        <span className="text-blue-600 dark:text-sky-400 text-base block font-black">
+                        <span data-testid="checkout-total" className="text-blue-600 dark:text-sky-400 text-base block font-black">
                           {formatBDT(grandTotalBDT)}
                         </span>
                       </div>
