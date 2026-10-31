@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test';
 import { E2E } from './seed.ts';
 import {
-  ageLatestPayment, blockNonLocalTraffic, cartQuantity, clearCartAndOrders, latestOrder, latestPayment, openCheckout, openStorefront,
+  blockNonLocalTraffic, cartQuantity, clearCartAndOrders, latestOrder, latestPayment, openCheckout, openStorefront,
   parseMoney, productStock, seedCart,
 } from './helpers.ts';
 
@@ -40,38 +40,28 @@ test('paying online through the gateway marks the order paid for the amount show
   expect(await cartQuantity(blanket.id), 'a paid order empties the cart').toBe(0);
 });
 
-// The server refuses to restore the cart while a gateway confirmation could still arrive (30 minutes).
-// These tests pin both sides of that rule, so a change to it is deliberate.
-test('leaving the gateway early keeps the order on hold and tells the customer to wait', async ({ page }) => {
+// When the gateway sends the customer back as failed or cancelled, the cart and stock come back at once.
+// The order is kept as cancelled and the payment as expired, so a late confirmation can still be refunded.
+test('a failed gateway payment returns the items to the cart and the stock at once', async ({ page }) => {
   const stockBefore = await productStock(blanket.id);
   await startBkashPayment(page);
-  await page.getByRole('link', { name: 'Simulate failed payment' }).click();
-
-  await expect(page.getByText(/Payment is still being confirmed/)).toBeVisible();
-  expect((await latestOrder())?.payment_status).toBe('pending');
-  expect(await cartQuantity(blanket.id)).toBe(0);
-  expect(await productStock(blanket.id)).toBe(stockBefore - 1);
-});
-
-test('a failed payment after the confirmation window returns the items to the cart and the stock', async ({ page }) => {
-  const stockBefore = await productStock(blanket.id);
-  await startBkashPayment(page);
-  await ageLatestPayment(31);
   await page.getByRole('link', { name: 'Simulate failed payment' }).click();
 
   await expect(page.getByText(/Payment failed\. Your items are back in your cart/)).toBeVisible();
-  expect((await latestOrder())?.payment_status).not.toBe('paid');
+  const order = await latestOrder();
+  expect(order?.payment_status).toBe('expired');
+  expect((await latestPayment())?.status).toBe('EXPIRED');
   expect(await cartQuantity(blanket.id)).toBe(1);
   expect(await productStock(blanket.id)).toBe(stockBefore);
 });
 
-test('cancelling at the gateway after the window also restores the cart', async ({ page }) => {
+test('cancelling at the gateway also restores the cart at once', async ({ page }) => {
   await startBkashPayment(page);
-  await ageLatestPayment(31);
   await page.getByRole('link', { name: 'Cancel payment' }).click();
 
   await expect(page.getByText(/Payment cancelled\. Your items are back in your cart/)).toBeVisible();
   expect(await cartQuantity(blanket.id)).toBe(1);
+  expect((await latestOrder())?.payment_status).toBe('expired');
 });
 
 test('wrong demo details are rejected and the order stays unpaid', async ({ page }) => {
