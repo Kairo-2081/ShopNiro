@@ -397,6 +397,11 @@ export const riderApplyBody = z.object({
 
 export const riderProfileBody = z.object(riderCommon);
 
+/** Sent by the app when the gateway sent the customer back as failed or cancelled; absent for other callers. */
+export const revertFailedPaymentBody = z.object({
+  reason: z.enum(['failed', 'cancelled']).optional().catch(undefined),
+});
+
 /** For routes that read nothing from the body (logout, cron triggers): whatever arrives is discarded. */
 export const emptyBody = z.object({});
 

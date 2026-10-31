@@ -76,13 +76,15 @@ const finalizeSslCommerzPayment = async (tranId: string, valId: string) => {
   const payment = paymentResult.rows[0];
   if (!payment?.order_id) throw new GatewayError('Payment record not found. Restart checkout and try again.');
 
-  const validation = payment.status === 'PENDING'
+  // An EXPIRED payment is one the customer left or the expiry job closed. If the gateway confirms it late, the
+  // money was really taken, so it is validated and refunded below instead of being turned away.
+  const validation = ['PENDING', 'EXPIRED'].includes(payment.status)
     ? await sslcommerz.validatePayment(valId, tranId, Number(payment.amount))
     : undefined;
   if (validation && (!validation.ok || !validation.raw)) {
     throw new GatewayError('SSLCommerz could not verify this payment.');
   }
-  if (!['PENDING', 'VALIDATED'].includes(payment.status)) {
+  if (!['PENDING', 'VALIDATED', 'EXPIRED'].includes(payment.status)) {
     throw new GatewayError('Payment is already finalized.');
   }
 
@@ -98,7 +100,7 @@ const finalizeSslCommerzPayment = async (tranId: string, valId: string) => {
     if (!currentPayment || currentPayment.order_id !== payment.order_id) {
       throw new GatewayError('Payment record changed during verification.');
     }
-    if (!['PENDING', 'VALIDATED'].includes(currentPayment.status)) {
+    if (!['PENDING', 'VALIDATED', 'EXPIRED'].includes(currentPayment.status)) {
       throw new GatewayError('Payment is already finalized.');
     }
 
@@ -111,11 +113,11 @@ const finalizeSslCommerzPayment = async (tranId: string, valId: string) => {
     if (!order) throw new GatewayError('The order no longer exists.');
 
     const validationData = validation?.raw;
-    if (currentPayment.status === 'PENDING') {
+    if (['PENDING', 'EXPIRED'].includes(currentPayment.status)) {
       await client.query(
         `UPDATE payments SET status = 'VALIDATED', bank_tran_id = $2, val_id = $3,
           card_type = $4, card_brand = $5, card_issuer = $6, updated_at = CURRENT_TIMESTAMP
-         WHERE id = $1 AND status = 'PENDING'`,
+         WHERE id = $1 AND status IN ('PENDING', 'EXPIRED')`,
         [currentPayment.id, validationData?.bank_tran_id || '', validationData?.val_id || valId,
           validationData?.card_type || '', validationData?.card_brand || '', validationData?.card_issuer || '']
       );

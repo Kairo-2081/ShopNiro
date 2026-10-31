@@ -594,9 +594,10 @@ export const api = {
     }),
   getOrder: async (orderId: string): Promise<Order> =>
     fetchJson<Order>(`/api/orders/${encodeURIComponent(orderId)}`),
-  revertFailedOnlinePayment: async (orderId: string): Promise<{ success: boolean; order_id: string; restored_to_cart: boolean }> =>
+  revertFailedOnlinePayment: async (orderId: string, reason?: 'failed' | 'cancelled'): Promise<{ success: boolean; order_id: string; restored_to_cart: boolean }> =>
     fetchJson<{ success: boolean; order_id: string; restored_to_cart: boolean }>(`/api/orders/${encodeURIComponent(orderId)}/revert-failed-payment`, {
       method: 'PATCH',
+      body: JSON.stringify(reason ? { reason } : {}),
     }),
   updateOrderStatus: async (orderId: string, Status: OrderStatus | string): Promise<Order> =>
     fetchJson<Order>(`/api/orders/${encodeURIComponent(orderId)}/status`, {
