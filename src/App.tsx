@@ -517,7 +517,7 @@ export default function App() {
     if (paymentStatus === 'failed' || paymentStatus === 'cancelled') {
       void (async () => {
         try {
-          await api.revertFailedOnlinePayment(orderId);
+          await api.revertFailedOnlinePayment(orderId, paymentStatus === 'cancelled' ? 'cancelled' : 'failed');
           const [updatedCart, updatedProducts] = await Promise.all([
             api.getCart(selectedCustomer.Customer_ID),
             api.getProducts(),
