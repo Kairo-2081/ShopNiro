@@ -532,12 +532,16 @@ router.patch('/cancellation-requests/:requestId/review', requireAuth, validateBo
  * PATCH /api/orders/:id/status
  * Updates order status (via schema shopniro_order_status_update)
  */
-router.patch('/:id/revert-failed-payment', requireAuth, validateParams(schemas.resourceIdParam), async (req: AuthRequest, res) => {
+router.patch('/:id/revert-failed-payment', requireAuth, validateParams(schemas.resourceIdParam), validateBody(schemas.revertFailedPaymentBody), async (req: AuthRequest, res) => {
   let client: PoolClient | undefined;
   try {
     if (req.user?.role !== 'customer') {
       return res.status(403).json({ error: 'Only customers can revert a failed online payment.' });
     }
+    // The app sends a reason when the gateway itself sent the customer back as failed or cancelled. The session is
+    // over, so there is no reason to wait out the confirmation window. The order and payment are then kept (cancelled
+    // and expired) instead of deleted, so a confirmation that still arrives late is recognised and refunded.
+    const gatewayExit = req.body?.reason === 'failed' || req.body?.reason === 'cancelled';
 
     client = await pool.connect();
     await client.query('BEGIN');
@@ -564,7 +568,7 @@ router.patch('/:id/revert-failed-payment', requireAuth, validateParams(schemas.r
       await client.query('ROLLBACK');
       return res.status(409).json({ error: 'This payment was already completed. The order was not returned to the cart.' });
     }
-    if (paymentResult.rows.some((payment) => payment.status === 'PENDING' && payment.within_ipn_window)) {
+    if (!gatewayExit && paymentResult.rows.some((payment) => payment.status === 'PENDING' && payment.within_ipn_window)) {
       await client.query('ROLLBACK');
       return res.status(409).json({ error: 'Payment is still being confirmed. Please wait before restoring this order to your cart.' });
     }
@@ -616,8 +620,14 @@ router.patch('/:id/revert-failed-payment', requireAuth, validateParams(schemas.r
       }
     }
 
-    await client.query(`DELETE FROM payments WHERE order_id = $1`, [order.id]);
-    await client.query(`DELETE FROM orders WHERE id = $1 AND customer_id = $2`, [order.id, req.user.entityId]);
+    if (gatewayExit) {
+      await client.query(`UPDATE payments SET status = 'EXPIRED', updated_at = CURRENT_TIMESTAMP WHERE order_id = $1 AND status = 'PENDING'`, [order.id]);
+      await client.query(`UPDATE seller_fulfillments SET status = 'cancelled' WHERE order_id = $1`, [order.id]);
+      await client.query(`UPDATE orders SET status = 'cancelled', payment_status = 'expired' WHERE id = $1 AND customer_id = $2`, [order.id, req.user.entityId]);
+    } else {
+      await client.query(`DELETE FROM payments WHERE order_id = $1`, [order.id]);
+      await client.query(`DELETE FROM orders WHERE id = $1 AND customer_id = $2`, [order.id, req.user.entityId]);
+    }
     await client.query('COMMIT');
 
     res.json({

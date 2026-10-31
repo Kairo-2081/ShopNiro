@@ -638,6 +638,60 @@ dbTest('plaintext stored passwords are rejected with the same message as unknown
     assert.equal(Number(stockAfterReplay.rows[0].stock), 10);
   });
 
+  dbTest('leaving the gateway restores the cart at once but keeps the order and payment records', async () => {
+    const { fixture, order, transactionId } = await createOnlinePayment();
+    const stockBefore = Number((await query('SELECT stock FROM products WHERE id = $1', [fixture.productId])).rows[0].stock);
+
+    const response = await request(server, `/api/orders/${order.Order_ID}/revert-failed-payment`, 'PATCH', { reason: 'cancelled' }, fixture.customerCookie);
+    assert.equal(response.status, 200, JSON.stringify(response.body));
+
+    const stockAfter = Number((await query('SELECT stock FROM products WHERE id = $1', [fixture.productId])).rows[0].stock);
+    assert.ok(stockAfter > stockBefore, 'stock is returned');
+    const cart = await query('SELECT COALESCE(SUM(quantity), 0)::int AS n FROM cart WHERE customer_id = $1 AND product_id = $2', [fixture.customerId, fixture.productId]);
+    assert.ok(cart.rows[0].n > 0, 'items are back in the cart');
+    const kept = await query('SELECT status, payment_status FROM orders WHERE id = $1', [order.Order_ID]);
+    assert.deepEqual(kept.rows[0], { status: 'cancelled', payment_status: 'expired' });
+    const payment = await query('SELECT status FROM payments WHERE transaction_id = $1', [transactionId]);
+    assert.equal(payment.rows[0].status, 'EXPIRED');
+  });
+
+  dbTest('a late gateway confirmation after the customer left is validated and refunded once', async (t) => {
+    const { fixture, order, transactionId, validationId, amount } = await createOnlinePayment();
+    const reverted = await request(server, `/api/orders/${order.Order_ID}/revert-failed-payment`, 'PATCH', { reason: 'failed' }, fixture.customerCookie);
+    assert.equal(reverted.status, 200, JSON.stringify(reverted.body));
+    const stockAfterRevert = Number((await query('SELECT stock FROM products WHERE id = $1', [fixture.productId])).rows[0].stock);
+
+    t.mock.method(globalThis, 'fetch', async () => new Response(JSON.stringify({
+      status: 'VALID', tran_id: transactionId, val_id: validationId, amount: amount.toFixed(2), currency: 'BDT',
+    }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const late = await request(server, '/api/payment/sslcommerz/validate', 'POST', { tran_id: transactionId, val_id: validationId }, fixture.customerCookie);
+      assert.equal(late.status, 200, JSON.stringify(late.body));
+      assert.equal(late.body.status, 'REFUND_PENDING');
+    }
+
+    const payment = await query('SELECT status FROM payments WHERE transaction_id = $1', [transactionId]);
+    assert.equal(payment.rows[0].status, 'VALIDATED');
+    const refunds = await query('SELECT amount, method, duplicate_payment FROM refunds WHERE order_id = $1', [order.Order_ID]);
+    assert.equal(refunds.rows.length, 1, 'replaying the confirmation does not queue a second refund');
+    assert.equal(Number(refunds.rows[0].amount), amount);
+    const storedOrder = await query('SELECT status, payment_status FROM orders WHERE id = $1', [order.Order_ID]);
+    assert.deepEqual(storedOrder.rows[0], { status: 'cancelled', payment_status: 'expired' }, 'the order is never marked paid');
+    const stock = Number((await query('SELECT stock FROM products WHERE id = $1', [fixture.productId])).rows[0].stock);
+    assert.equal(stock, stockAfterRevert, 'stock is not taken again');
+  });
+
+  dbTest('without a gateway reason, or with an unknown one, the confirmation window still applies', async () => {
+    for (const body of [undefined, { reason: 'because' }]) {
+      const { fixture, order } = await createOnlinePayment();
+      const response = await request(server, `/api/orders/${order.Order_ID}/revert-failed-payment`, 'PATCH', body, fixture.customerCookie);
+      assert.equal(response.status, 409);
+      const kept = await query('SELECT status, payment_status FROM orders WHERE id = $1', [order.Order_ID]);
+      assert.deepEqual(kept.rows[0], { status: 'placed', payment_status: 'pending' });
+    }
+  });
+
   dbTest('the sixth payment initialization attempt in one minute is rate limited', async () => {
     const customerId = `CUSTOMER-${randomUUID()}`;
     const orderId = `ORD-${randomUUID()}`;
