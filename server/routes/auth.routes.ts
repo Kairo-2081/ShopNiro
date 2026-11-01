@@ -10,9 +10,11 @@ import { validateBody } from '../middleware/validate.ts';
 import { emptyBody, loginBody, signupBody } from '../validation/schemas.ts';
 
 const router = Router();
+// The browser tests sign in several roles from one address; they raise this through the environment.
+const loginAttemptLimit = Number(process.env.LOGIN_RATE_LIMIT_MAX) >= 1 ? Math.floor(Number(process.env.LOGIN_RATE_LIMIT_MAX)) : 5;
 const loginRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 5,
+  limit: loginAttemptLimit,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
   message: { error: 'Too many sign-in attempts. Try again in 15 minutes.' },
