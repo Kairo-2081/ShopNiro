@@ -1,7 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
-import { assertLocalDatabase } from './e2e/seed.ts';
+import { assertTestDatabase, resolveTarget } from './e2e/target.ts';
 
-assertLocalDatabase(process.env.DATABASE_URL);
+// Local by default. E2E_BASE_URL switches to staging, and the guards in e2e/target.ts refuse anything else.
+const target = resolveTarget(process.env);
+assertTestDatabase(process.env.DATABASE_URL, target);
 
 const port = Number(process.env.E2E_PORT) || 3100;
 
@@ -14,7 +16,7 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: {
-    baseURL: `http://127.0.0.1:${port}`,
+    baseURL: target.baseURL,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     storageState: 'e2e/.auth/customer.json',
@@ -25,7 +27,8 @@ export default defineConfig({
     // 360 px is the narrowest width the roadmap asks for (a small Android phone).
     { name: 'narrow', use: { ...devices['Pixel 5'], viewport: { width: 360, height: 740 } } },
   ],
-  webServer: {
+  // Against staging the site is already running, so there is nothing to start.
+  webServer: target.remote ? undefined : {
     command: 'npx tsx server/index.ts',
     url: `http://127.0.0.1:${port}/api/ready`,
     timeout: 120_000,
