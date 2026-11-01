@@ -485,10 +485,10 @@ router.patch('/:id/status', requireAuth, requireRole(['admin']), validateParams(
     }
 
     await query(`
-      UPDATE sellers SET status = $1,
-        identity_verified = CASE WHEN $1 = 'approved' THEN $2 ELSE identity_verified END,
-        documents_reviewed = CASE WHEN $1 = 'approved' THEN $3 ELSE documents_reviewed END,
-        payout_verified = CASE WHEN $1 = 'approved' THEN $4 ELSE payout_verified END
+      UPDATE sellers SET status = $1::text,
+        identity_verified = CASE WHEN $1::text = 'approved' THEN $2 ELSE identity_verified END,
+        documents_reviewed = CASE WHEN $1::text = 'approved' THEN $3 ELSE documents_reviewed END,
+        payout_verified = CASE WHEN $1::text = 'approved' THEN $4 ELSE payout_verified END
       WHERE id = $5
     `, [status, identityVerified === true, documentsReviewed === true, payoutVerified === true, id]);
     if (status === 'approved' || status === 'rejected') {

@@ -86,8 +86,8 @@ router.patch('/requests/:id/status', requireAuth, requireRole(['admin']), valida
   }
   try {
     const result = await query(
-      `UPDATE support_requests SET status = $2, admin_notes = $3, updated_at = CURRENT_TIMESTAMP,
-        resolved_at = CASE WHEN $2 = 'resolved' THEN CURRENT_TIMESTAMP ELSE NULL END
+      `UPDATE support_requests SET status = $2::text, admin_notes = $3, updated_at = CURRENT_TIMESTAMP,
+        resolved_at = CASE WHEN $2::text = 'resolved' THEN CURRENT_TIMESTAMP ELSE NULL END
        WHERE id = $1 RETURNING id, status`,
       [req.params.id, status, adminNotes]
     );
