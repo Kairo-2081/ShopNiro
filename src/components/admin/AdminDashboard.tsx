@@ -237,6 +237,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     { title: 'Review Sentiment', value: `${avgSentiment.toFixed(2)} / 5.0`, sub: `Based on ${reviews.length} reviews`, accent: 'from-amber-400 to-orange-500' },
   ];
 
+  // Approving a seller needs the verification checklist, so every Approve button opens the review panel with the
+  // checklist pre-filled from what is on file. The panel's own "Approve seller" button is the only one that approves.
+  const openSellerReview = (seller: Seller) => {
+    setSellerChecklist({
+      identityVerified: Boolean(seller.Identity_Verified),
+      documentsReviewed: Boolean(seller.Documents_Reviewed),
+      payoutVerified: Boolean(seller.Payout_Verified),
+    });
+    setSelectedSellerId(seller.Seller_ID);
+  };
+
   const handleSellerStatusChange = async (seller: Seller, status: SellerStatus) => {
     setUpdatingSellerId(seller.Seller_ID);
     try {
@@ -590,11 +601,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           {seller.Status !== 'approved' && (
                             <button
                               type="button"
-                              onClick={() => void handleSellerStatusChange(seller, 'approved')}
+                              onClick={() => openSellerReview(seller)}
                               disabled={updatingSellerId === seller.Seller_ID}
                               className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-full text-[10px] font-bold transition-all cursor-pointer shadow-sm shadow-emerald-500/20"
                             >
-                              {updatingSellerId === seller.Seller_ID ? 'Updating...' : 'Approve'}
+                              Review &amp; approve
                             </button>
                           )}
                           {seller.Status !== 'suspended' && (
@@ -737,14 +748,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           />
                           <button
                             type="button"
-                            onClick={() => {
-                              setSellerChecklist({
-                                identityVerified: Boolean(seller.Identity_Verified),
-                                documentsReviewed: Boolean(seller.Documents_Reviewed),
-                                payoutVerified: Boolean(seller.Payout_Verified),
-                              });
-                              setSelectedSellerId(seller.Seller_ID);
-                            }}
+                            onClick={() => openSellerReview(seller)}
                             aria-label={`View ${seller.Name} application details`}
                             className="text-left rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                           >
@@ -783,18 +787,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           {seller.Status !== 'approved' && (
                             <button
                               type="button"
-                              onClick={() => {
-                                setSellerChecklist({
-                                  identityVerified: Boolean(seller.Identity_Verified),
-                                  documentsReviewed: Boolean(seller.Documents_Reviewed),
-                                  payoutVerified: Boolean(seller.Payout_Verified),
-                                });
-                                setSelectedSellerId(seller.Seller_ID);
-                              }}
+                              onClick={() => openSellerReview(seller)}
                               disabled={updatingSellerId === seller.Seller_ID}
                               className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-full text-xs font-bold transition-all cursor-pointer shadow-sm shadow-emerald-500/20"
                             >
-                              {updatingSellerId === seller.Seller_ID ? 'Updating...' : 'Approve'}
+                              Review &amp; approve
                             </button>
                           )}
                           {seller.Status !== 'rejected' && seller.Status === 'pending' && (
