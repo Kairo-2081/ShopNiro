@@ -1,13 +1,17 @@
 import { expect, type Page } from '@playwright/test';
 import pg from 'pg';
-import { E2E, assertLocalDatabase } from './seed.ts';
+import { E2E } from './seed.ts';
+import { assertTestDatabase, resolveTarget } from './target.ts';
 
-/** Fail loudly if the page ever talks to a host other than the local test server. */
+/** Refuse every host except the one under test (the local server, or the staging site), so a test can never reach production. */
 export async function blockNonLocalTraffic(page: Page) {
+  const target = resolveTarget(process.env);
   await page.route('**/*', (route) => {
     const url = new URL(route.request().url());
-    const local = ['127.0.0.1', 'localhost'].includes(url.hostname) || ['data:', 'blob:'].includes(url.protocol);
-    if (local) return route.continue();
+    const allowed = ['127.0.0.1', 'localhost'].includes(url.hostname)
+      || (target.remote && url.hostname === target.hostname)
+      || ['data:', 'blob:'].includes(url.protocol);
+    if (allowed) return route.continue();
     // Fonts, maps and analytics are irrelevant here; refusing them keeps the test offline and safe.
     return route.abort();
   });
@@ -51,7 +55,7 @@ export async function openCheckout(page: Page) {
 export const parseMoney = (text: string): number => Number(text.replace(/[^0-9.]/g, ''));
 
 export async function withDb<T>(run: (client: pg.Client) => Promise<T>): Promise<T> {
-  const client = new pg.Client({ connectionString: assertLocalDatabase(process.env.DATABASE_URL) });
+  const client = new pg.Client({ connectionString: assertTestDatabase(process.env.DATABASE_URL, resolveTarget(process.env)) });
   await client.connect();
   try {
     return await run(client);

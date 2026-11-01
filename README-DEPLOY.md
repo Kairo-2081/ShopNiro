@@ -31,10 +31,41 @@ Vercel supplies `VERCEL_URL` and `VERCEL_PROJECT_PRODUCTION_URL`; the API includ
 - `SENTRY_DSN`: enables server error tracking. Unset means Sentry is off. Every 5xx response is reported with its `requestId`.
 - `CSP_ENFORCE`: `true` makes the Content-Security-Policy enforcing. Unset or any other value keeps it report-only (violations appear in the browser console, nothing is blocked). Production only.
 
+## Environments and the safe deploy path
+
+There are two stacks. They share nothing: not a database, a secret, a storage bucket or a gateway account.
+
+| | Staging | Production |
+|---|---|---|
+| Git branch | `staging` | `main` |
+| Host service | its own web service, auto-deploy from `staging` | the existing service |
+| Database | its own Supabase project, fake data only | the production project |
+| Payment gateway | sandbox credentials | sandbox now, live credentials at launch |
+| Email | `RESEND_API_KEY` unset, so nothing is sent | configured |
+| GitHub Environment | `staging` (no approval) | `production` (approval required) |
+
+Set up staging once:
+
+1. Create a second Supabase project. Never restore a production dump into it, because it would hold real customers' details.
+2. Create the same storage buckets (`seller-verification-documents` private, `product-images` public).
+3. Create a second web service from this repository that deploys the `staging` branch. Give it its own `DATABASE_URL`, `JWT_SECRET`, `CRON_SECRET`, `SSLCOMMERZ_IPN_TOKEN`, `SUPABASE_SERVICE_ROLE_KEY` and `SHOPNIRO_PUBLIC_URL`. A `JWT_SECRET` shared with production would let a staging login token work there.
+4. Build the staging frontend with `VITE_API_URL` set to the staging API. Without it the browser build calls the production API (`src/apiConfig.ts`). The `wiring` browser test fails if any API call leaves the site under test.
+5. Set `LOGIN_RATE_LIMIT_MAX=100` on the staging service only. The browser suite signs several roles in from one address. The general API limit (120 requests a minute per address) also applies on a deployed host, so a run that fails with 429 responses means the limit was hit, not that a feature broke.
+6. In GitHub create the `staging` Environment with the secret `MIGRATE_DATABASE_URL` (staging Session pooler URL) and `E2E_DATABASE_URL` (the staging database URL), and the variables `STAGING_URL` and `STAGING_DB_IDENTITY` (`user@host:port/database`, no password). Keep `MIGRATE_DATABASE_URL` in the `production` Environment pointing at production, with required reviewers.
+
+The path a change takes:
+
+1. A feature branch opens a pull request into `main`. CI runs `validate` and `e2e` on throwaway databases.
+2. Merge it into `staging`. The staging service deploys it.
+3. If it contains a migration, run **Database migrations** with target `staging` and mode `apply`, then `drift`.
+4. Run **Staging browser tests**. They seed and empty the staging database, so the suite refuses any database that is not exactly the one named in `STAGING_DB_IDENTITY`, refuses the production site, and skips the online-payment cases (they need the built-in simulator, which only runs locally). Click through the changed screen once by hand.
+5. Merge to `main`. For a migration, run `backup.yml`, wait for it to succeed, then run **Database migrations** with target `production`; the workflow stops unless a backup succeeded in the last 24 hours. Deploy the API before the frontend when the contract changes.
+6. After the deploy, check `/api/ready` and sign in once. Migrations only roll forward, so on a problem fix forward.
+
 ## Deployment checks
 
 1. Configure secrets in the host dashboard, not in committed files.
-2. Apply pending database migrations to staging and production through the approved migration workflow (see "Adding a migration" below). The host does not apply them automatically.
+2. Apply pending database migrations to staging first, then production, through the approved migration workflow (see "Environments and the safe deploy path" above and "Adding a migration" below). The host does not apply them automatically.
 3. Confirm the frontend origin exactly matches `SHOPNIRO_PUBLIC_URL` and the API CORS allowlist.
 4. Deploy the API before the frontend when changing API contracts.
 5. Verify `/api/db/status`, sign in, load a protected page, and sign out in the deployed browser origin.
