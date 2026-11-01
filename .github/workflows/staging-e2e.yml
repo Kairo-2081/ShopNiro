@@ -1,0 +1,67 @@
+name: Staging browser tests
+
+# Runs the browser suite against the deployed staging site instead of a throwaway local server. Start it by hand
+# after staging has deployed the branch and any migration has been applied there (migrate.yml, target staging).
+#
+# Settings in the `staging` GitHub Environment:
+#   Variable  STAGING_URL          https URL of the staging site, for example https://shopniro-staging.onrender.com
+#   Variable  STAGING_DB_IDENTITY  the staging database as user@host:port/database, no password. The suite seeds and
+#                                  empties tables, so it refuses any database that does not match this exactly.
+#   Secret    E2E_DATABASE_URL     connection URL of the STAGING database (never the production one)
+# Settings on the staging site itself: LOGIN_RATE_LIMIT_MAX=100 (the suite signs several roles in from one address).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 30
+    env:
+      E2E_BASE_URL: ${{ vars.STAGING_URL }}
+      E2E_TARGET: staging
+      E2E_STAGING_DB_IDENTITY: ${{ vars.STAGING_DB_IDENTITY }}
+      DATABASE_URL: ${{ secrets.E2E_DATABASE_URL }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Wake the staging site and wait until it answers
+        shell: bash
+        run: |
+          set -euo pipefail
+          # A free-tier host sleeps; the first request can take a minute.
+          for i in $(seq 1 30); do
+            if curl -fsS --max-time 20 "$E2E_BASE_URL/api/ready" >/dev/null; then echo "ready after $i tries"; exit 0; fi
+            sleep 10
+          done
+          echo "::error::$E2E_BASE_URL/api/ready did not answer within 5 minutes."
+          exit 1
+
+      - name: Run the browser tests
+        run: npm run e2e
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: staging-playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

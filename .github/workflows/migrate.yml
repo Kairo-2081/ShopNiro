@@ -3,6 +3,14 @@ name: Database migrations
 on:
   workflow_dispatch:
     inputs:
+      target:
+        description: Which database to run against. Staging first; production needs the Environment approval.
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+        default: staging
       mode:
         description: Inspect status, check drift, adopt a reviewed existing schema, apply migrations, or record a clean baseline
         required: true
@@ -23,7 +31,8 @@ permissions:
 jobs:
   migrate:
     runs-on: ubuntu-latest
-    environment: production
+    # Each GitHub Environment holds its own MIGRATE_DATABASE_URL, so the same secret name reaches a different database.
+    environment: ${{ inputs.target }}
     timeout-minutes: 15
     services:
       # A throwaway database the drift check builds from the migration files. Same major version as
@@ -58,8 +67,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Stop if this Environment has no database URL
+        shell: bash
+        run: |
+          if [ -z "$DATABASE_URL" ]; then
+            echo "::error::The '${{ inputs.target }}' Environment has no MIGRATE_DATABASE_URL secret."
+            exit 1
+          fi
+
       - name: Require a recent successful backup before adoption or apply
-        if: inputs.mode == 'adopt' || inputs.mode == 'refresh-adoption' || inputs.mode == 'apply'
+        # Production only: the staging database holds fake data and is rebuilt from the migration files.
+        if: inputs.target == 'production' && (inputs.mode == 'adopt' || inputs.mode == 'refresh-adoption' || inputs.mode == 'apply')
         shell: bash
         run: |
           set -euo pipefail
