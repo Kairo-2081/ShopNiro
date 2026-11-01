@@ -1,11 +1,16 @@
 import { expect, test, type Page } from '@playwright/test';
 import { E2E } from './seed.ts';
+import { resolveTarget } from './target.ts';
 import {
   blockNonLocalTraffic, cartQuantity, clearCartAndOrders, latestOrder, latestPayment, openCheckout, openStorefront,
   parseMoney, productStock, seedCart,
 } from './helpers.ts';
 
 const { blanket } = E2E.products;
+
+// The built-in fake gateway only runs in development and test. A deployed staging site talks to the gateway's real
+// sandbox pages, which a test cannot drive, so these cases run on the local server only.
+test.skip(resolveTarget(process.env).remote, 'needs the built-in payment simulator, which only runs locally');
 
 test.beforeEach(async ({ page }) => {
   await clearCartAndOrders();

@@ -1,5 +1,6 @@
 // Seeds a throwaway database for the browser checkout tests. Refuses to touch anything that is not local.
 import pg from 'pg';
+import { assertTestDatabase, resolveTarget } from './target.ts';
 import bcrypt from 'bcryptjs';
 
 export const E2E = {
@@ -17,17 +18,8 @@ export const E2E = {
   },
 } as const;
 
-export function assertLocalDatabase(url: string | undefined): string {
-  if (!url) throw new Error('DATABASE_URL is required for the e2e tests.');
-  const host = new URL(url).hostname;
-  if (!['localhost', '127.0.0.1', '::1', '[::1]'].includes(host)) {
-    throw new Error(`Refusing to run e2e tests against a non-local database (${host}).`);
-  }
-  return url;
-}
-
 export async function seedDatabase(databaseUrl: string): Promise<void> {
-  const pool = new pg.Pool({ connectionString: assertLocalDatabase(databaseUrl) });
+  const pool = new pg.Pool({ connectionString: assertTestDatabase(databaseUrl, resolveTarget(process.env)) });
   try {
     await pool.query('BEGIN');
     // Start from nothing so the suite can run any number of times. CASCADE also clears every table that points

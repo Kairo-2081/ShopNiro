@@ -1,6 +1,7 @@
 import { request } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 import { E2E, seedDatabase } from './seed.ts';
+import { resolveTarget } from './target.ts';
 
 export const AUTH = {
   customer: 'e2e/.auth/customer.json',
@@ -20,7 +21,7 @@ export async function resetWorld() {
   // Sign each role in once here and let the tests reuse the sessions. The server limits sign-ins per address
   // (the test server raises the limit through LOGIN_RATE_LIMIT_MAX), so tests never sign in through the form
   // except the ones that are about signing in.
-  const baseURL = `http://127.0.0.1:${Number(process.env.E2E_PORT) || 3100}`;
+  const baseURL = resolveTarget(process.env).baseURL;
   mkdirSync('e2e/.auth', { recursive: true });
   const logins: Array<[keyof typeof AUTH, string, string, string]> = [
     ['customer', E2E.customer.username, E2E.customer.password, 'customer'],
