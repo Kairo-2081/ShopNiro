@@ -22,6 +22,8 @@ export default defineConfig({
   projects: [
     { name: 'desktop', use: { ...devices['Desktop Chrome'] } },
     { name: 'phone', use: { ...devices['Pixel 5'] } },
+    // 360 px is the narrowest width the roadmap asks for (a small Android phone).
+    { name: 'narrow', use: { ...devices['Pixel 5'], viewport: { width: 360, height: 740 } } },
   ],
   webServer: {
     command: 'npx tsx server/index.ts',
@@ -36,6 +38,8 @@ export default defineConfig({
       APP_URL: `http://127.0.0.1:${port}`,
       // Built-in fake gateway (refused outside development and test); no network and no real gateway.
       PAYMENT_SIMULATOR: 'true',
+      // Several roles sign in from one address; the default of 5 per 15 minutes would block the suite.
+      LOGIN_RATE_LIMIT_MAX: '100',
     },
   },
 });
