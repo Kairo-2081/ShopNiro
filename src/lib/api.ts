@@ -21,6 +21,7 @@ import {
   SupportRequest,
 } from '../types';
 import { apiUrl } from '../apiConfig';
+import { money } from './format';
 
 const ANALYTICS_SESSION_KEY = 'shopniro_analytics_session';
 const PUBLIC_CATALOG_CACHE_TTL = 30_000;
@@ -587,10 +588,11 @@ export const api = {
     Shipping_Fee: number;
     Additional_Info?: string;
     Currency?: string;
-  }): Promise<Order> =>
+  }, idempotencyKey?: string): Promise<Order> =>
     fetchJson<Order>('/api/orders', {
       method: 'POST',
       body: JSON.stringify(orderData),
+      headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : undefined,
     }),
   getOrder: async (orderId: string): Promise<Order> =>
     fetchJson<Order>(`/api/orders/${encodeURIComponent(orderId)}`),
@@ -747,14 +749,11 @@ export const api = {
 
 
 export function formatCurrency(amount: number): string {
-  return formatBDT(amount);
+  return money(amount);
 }
 
 export function formatBDT(amount: number): string {
-  return `৳ ${new Intl.NumberFormat('en-BD', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(amount)}`;
+  return money(amount);
 }
 
 export function formatDate(dateString?: string): string {
@@ -822,4 +821,3 @@ export async function fetchTopRatedSellers(limit: number = 3): Promise<TopRatedS
 export async function fetchRelatedProducts(productId: string, limit: number = 3): Promise<RelatedProduct[]> {
   return fetchJson<RelatedProduct[]>(`/api/analytics/related-products?productId=${encodeURIComponent(productId)}&limit=${limit}`);
 }
-

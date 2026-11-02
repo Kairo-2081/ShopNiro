@@ -5,6 +5,8 @@ import { Section } from '../Section';
 import { api, formatCurrency } from '../../lib/api';
 import { discountedPriceForVoucher, getVoucherCountdownLabel, isVoucherExpired } from '../../lib/vouchers';
 import { Search, SlidersHorizontal, ShoppingBag, ArrowUpDown, X, Check, Truck, Tag } from 'lucide-react';
+import { money } from '../../lib/format';
+import { useLocale } from '../../lib/i18n';
 
 const MarketplaceTrendsTopCharts = React.lazy(() => import('./MarketplaceTrendsTopCharts').then((module) => ({ default: module.MarketplaceTrendsTopCharts })));
 
@@ -14,6 +16,8 @@ interface StorefrontProps {
   sellers: Seller[];
   reviews: Review[];
   isLoading?: boolean;
+  loadError?: string | null;
+  onRetryProducts?: () => void;
   hasMoreProducts?: boolean;
   isLoadingMoreProducts?: boolean;
   onLoadMoreProducts?: () => void;
@@ -30,6 +34,8 @@ export const Storefront: React.FC<StorefrontProps> = ({
   sellers,
   reviews,
   isLoading = false,
+  loadError = null,
+  onRetryProducts,
   hasMoreProducts = false,
   isLoadingMoreProducts = false,
   onLoadMoreProducts,
@@ -39,6 +45,7 @@ export const Storefront: React.FC<StorefrontProps> = ({
   onSelectProduct,
   onAddToCart,
 }) => {
+  const { t } = useLocale();
   const [searchQuery, setSearchQuery] = React.useState('');
   const deferredSearchQuery = React.useDeferredValue(searchQuery);
   const [stockFilter, setStockFilter] = React.useState<'all' | 'inStock'>('all');
@@ -150,7 +157,7 @@ export const Storefront: React.FC<StorefrontProps> = ({
   );
 
   return (
-    <div className="space-y-8 pb-16 text-slate-900 dark:text-zinc-100">
+    <div className="space-y-8 pb-24 text-surface-900 dark:text-surface-100 md:pb-16">
       {/* Search & Hero Banner matching the landing page theme */}
       <div className="text-white rounded-[32px] p-6 md:p-8 border border-[#d0c8a5]/20 shadow-[0_36px_80px_rgba(9,9,7,0.42)] relative overflow-hidden bg-[radial-gradient(circle_at_20%_15%,rgba(208,200,165,0.22),transparent_18%),radial-gradient(circle_at_82%_12%,rgba(119,119,90,0.5),transparent_22%),linear-gradient(135deg,#77775a_0%,#514c38_23%,#292820_52%,#11110f_100%)]">
         {/* Soft atmospheric glow */}
@@ -159,30 +166,30 @@ export const Storefront: React.FC<StorefrontProps> = ({
         <div className="relative z-10 space-y-5 max-w-3xl">
           <div>
             <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-white leading-tight">
-              Shop smart,{' '}
-              <span className="italic font-serif font-normal text-sky-400">
-                ship fast.
+              {t('shopSmart')}{' '}
+              <span className="italic font-serif font-normal text-brand-400">
+                {t('shipFast')}
               </span>
             </h1>
-            <p className="text-zinc-400 text-xs md:text-sm mt-2 leading-relaxed">
-              Explore authentic merchandise across categories with real-time stock levels, verified reviews, and instant order tracking.
+            <p className="text-surface-400 text-xs md:text-sm mt-2 leading-relaxed">
+              {t('catalogIntro')}
             </p>
           </div>
 
           {/* Search Bar matching Landing Page Radar Search */}
           <div className="relative">
-            <Search className="w-5 h-5 text-zinc-500 absolute left-4 top-1/2 -translate-y-1/2" />
+            <Search className="w-5 h-5 text-surface-500 absolute left-4 top-1/2 -translate-y-1/2" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search products by title, specs, category, or merchant..."
-              className="luxury-input w-full pl-12 pr-10 py-3 bg-[#181F2A] border rounded-xl text-white placeholder-zinc-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] text-sm shadow-inner"
+              className="luxury-input w-full pl-12 pr-10 py-3 bg-[#181F2A] border rounded-xl text-white placeholder-surface-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] text-sm shadow-inner"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-zinc-400 hover:text-white rounded-lg transition-colors cursor-pointer"
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-surface-400 hover:text-white rounded-lg transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -198,12 +205,12 @@ export const Storefront: React.FC<StorefrontProps> = ({
           <div className="flex flex-wrap items-center gap-4 text-xs">
             {/* Sorting Dropdown */}
             <div className="flex items-center gap-2">
-              <ArrowUpDown className="w-3.5 h-3.5 text-slate-500 dark:text-zinc-400" />
-              <span className="text-slate-600 dark:text-zinc-400 font-medium">Sort By:</span>
+              <ArrowUpDown className="w-3.5 h-3.5 text-surface-500 dark:text-surface-400" />
+              <span className="text-surface-600 dark:text-surface-400 font-medium">Sort By:</span>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as StorefrontSort)}
-                className="luxury-input bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-lg px-3 text-xs font-semibold text-slate-800 dark:text-zinc-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] cursor-pointer"
+                className="luxury-input bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-lg px-3 text-xs font-semibold text-surface-800 dark:text-surface-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] cursor-pointer"
               >
                 <option value="featured">Featured / Default</option>
                 <option value="price-asc">Price: Low to High</option>
@@ -214,9 +221,9 @@ export const Storefront: React.FC<StorefrontProps> = ({
             </div>
 
             {/* Price Slider */}
-            <div className="flex items-center gap-2 pl-3 border-l border-slate-200 dark:border-zinc-800">
-              <SlidersHorizontal className="w-3.5 h-3.5 text-slate-500 dark:text-zinc-400" />
-              <span className="text-slate-600 dark:text-zinc-400 font-medium">Max:</span>
+            <div className="flex items-center gap-2 pl-3 border-l border-surface-200 dark:border-surface-800">
+              <SlidersHorizontal className="w-3.5 h-3.5 text-surface-500 dark:text-surface-400" />
+              <span className="text-surface-600 dark:text-surface-400 font-medium">Max:</span>
               <span className="font-bold text-[#80734f] dark:text-[#d0c8a5]">{formatCurrency(maxPrice)}</span>
               <input
                 type="range"
@@ -236,8 +243,8 @@ export const Storefront: React.FC<StorefrontProps> = ({
               onClick={() => setStockFilter(stockFilter === 'all' ? 'inStock' : 'all')}
               className={`luxury-control px-3 rounded-full text-xs cursor-pointer ${
                 stockFilter === 'inStock'
-                  ? 'bg-emerald-600 text-white font-bold shadow-xs'
-                  : 'bg-slate-100 dark:bg-[#181F2A] text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+                  ? 'bg-success-600 text-white font-bold shadow-xs'
+                  : 'bg-surface-100 dark:bg-[#181F2A] text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white'
               }`}
             >
               {stockFilter === 'inStock' ? (
@@ -259,7 +266,7 @@ export const Storefront: React.FC<StorefrontProps> = ({
                   setStockFilter('all');
                   setSortBy('featured');
                 }}
-                className="luxury-control min-h-9 px-3 rounded-full text-slate-600 hover:text-[#555541] dark:text-zinc-400 dark:hover:text-[#d0c8a5] hover:bg-[#d0c8a5]/15 dark:hover:bg-[#a99b72]/15 font-medium cursor-pointer"
+                className="luxury-control min-h-9 px-3 rounded-full text-surface-600 hover:text-[#555541] dark:text-surface-400 dark:hover:text-[#d0c8a5] hover:bg-[#d0c8a5]/15 dark:hover:bg-[#a99b72]/15 font-medium cursor-pointer"
                 title="Reset all filters"
               >
                 Reset
@@ -269,35 +276,35 @@ export const Storefront: React.FC<StorefrontProps> = ({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl border border-emerald-200 bg-emerald-50/80 px-4 py-3 text-xs text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/25 dark:text-emerald-200">
-        <span className="inline-flex items-center gap-2 font-semibold"><Truck className="h-4 w-4" />Free shipping on orders of ৳400+</span>
-        <span className="inline-flex items-center gap-2"><Tag className="h-3.5 w-3.5" />Automatic 5% cart savings at ৳500+</span>
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl border border-success-200 bg-success-50/80 px-4 py-3 text-xs text-success-900 dark:border-success-900/60 dark:bg-success-950/25 dark:text-success-200">
+        <span className="inline-flex items-center gap-2 font-semibold"><Truck className="h-4 w-4" />Free shipping on orders of {money(400)}+</span>
+        <span className="inline-flex items-center gap-2"><Tag className="h-3.5 w-3.5" />Automatic 5% cart savings at {money(500)}+</span>
       </div>
 
       {(featuredDeals.length > 0 || visibleBundles.length > 0) && (
-        <section aria-labelledby="offers-bundles-title" className="space-y-5 border-y border-amber-200 py-5 dark:border-amber-900/60">
+        <section aria-labelledby="offers-bundles-title" className="space-y-5 border-y border-warning-200 py-5 dark:border-warning-900/60">
           <header className="flex flex-wrap items-end justify-between gap-2">
             <div>
-              <h2 id="offers-bundles-title" className="text-lg font-black text-slate-900 dark:text-white">Offers &amp; Bundles</h2>
-              <p className="text-xs text-slate-500 dark:text-zinc-400">Active voucher offers and seller bundle savings.</p>
+              <h2 id="offers-bundles-title" className="text-lg font-black text-surface-900 dark:text-white">Offers &amp; Bundles</h2>
+              <p className="text-xs text-surface-500 dark:text-surface-400">Active voucher offers and seller bundle savings.</p>
             </div>
-            <Tag className="h-5 w-5 text-amber-600 dark:text-amber-300" />
+            <Tag className="h-5 w-5 text-warning-600 dark:text-warning-300" />
           </header>
           {featuredDeals.length > 0 && (
             <div className="space-y-2">
-              <h3 className="text-xs font-bold uppercase text-amber-800 dark:text-amber-300">Featured offers</h3>
+              <h3 className="text-xs font-bold uppercase text-warning-800 dark:text-warning-300">Featured offers</h3>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {featuredDeals.map((product) => {
                   const countdown = getVoucherCountdownLabel(product.Voucher_Expires_At);
                   return (
-                    <article key={product.Product_ID} className="flex min-w-0 items-center gap-3 border-l-2 border-amber-400 bg-white/70 p-3 dark:bg-[#12161D]/70">
+                    <article key={product.Product_ID} className="flex min-w-0 items-center gap-3 border-l-2 border-warning-400 bg-white/70 p-3 dark:bg-[#12161D]/70">
                       <img src={product.Image} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover" loading="lazy" />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-bold text-slate-900 dark:text-white">{product.Name}</p>
-                        <p className="text-[10px] font-semibold text-amber-700 dark:text-amber-300">{product.Voucher}{countdown ? ` · ${countdown}` : ''}</p>
-                        <p className="text-[11px] font-bold text-slate-700 dark:text-zinc-200">{formatCurrency(discountedPriceForVoucher(product.Price, product.Voucher))}</p>
+                        <p className="truncate text-xs font-bold text-surface-900 dark:text-white">{product.Name}</p>
+                        <p className="text-micro font-semibold text-warning-700 dark:text-warning-300">{product.Voucher}{countdown ? ` · ${countdown}` : ''}</p>
+                        <p className="text-micro font-bold text-surface-700 dark:text-surface-200">{formatCurrency(discountedPriceForVoucher(product.Price, product.Voucher))}</p>
                       </div>
-                      <button type="button" onClick={() => onSelectProduct(product)} className="shrink-0 text-[10px] font-bold text-blue-700 hover:underline dark:text-sky-300">View</button>
+                      <button type="button" onClick={() => onSelectProduct(product)} className="shrink-0 text-micro font-bold text-brand-700 hover:underline dark:text-brand-300">View</button>
                     </article>
                   );
                 })}
@@ -306,7 +313,7 @@ export const Storefront: React.FC<StorefrontProps> = ({
           )}
           {visibleBundles.length > 0 && (
             <div className="space-y-2">
-              <h3 className="text-xs font-bold uppercase text-amber-800 dark:text-amber-300">Bundle offers</h3>
+              <h3 className="text-xs font-bold uppercase text-warning-800 dark:text-warning-300">Bundle offers</h3>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 {visibleBundles.map((bundle) => {
                   const bundleProducts = bundle.Product_IDs.map((productId) => products.find((product) => product.Product_ID === productId)).filter((product): product is Product => Boolean(product));
@@ -314,16 +321,16 @@ export const Storefront: React.FC<StorefrontProps> = ({
                   const bundlePrice = bundleSubtotal * (1 - bundle.Discount_Percent / 100);
                   const firstProduct = bundleProducts[0];
                   return (
-                    <article key={bundle.Bundle_ID} className="flex min-w-0 items-center gap-3 border-l-2 border-emerald-500 bg-white/70 p-3 dark:bg-[#12161D]/70">
+                    <article key={bundle.Bundle_ID} className="flex min-w-0 items-center gap-3 border-l-2 border-success-500 bg-white/70 p-3 dark:bg-[#12161D]/70">
                       <div className="flex shrink-0 -space-x-3">
                         {bundleProducts.slice(0, 3).map((product) => <img key={product.Product_ID} src={product.Image} alt="" className="h-12 w-12 rounded-full border-2 border-white object-cover dark:border-[#12161D]" loading="lazy" />)}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-bold text-slate-900 dark:text-white">{bundle.Name}</p>
-                        <p className="truncate text-[10px] text-slate-500 dark:text-zinc-400">{bundleProducts.map((product) => product.Name).join(' + ')}</p>
-                        <p className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-300">{bundle.Discount_Percent}% off together · {formatCurrency(bundlePrice)}</p>
+                        <p className="truncate text-xs font-bold text-surface-900 dark:text-white">{bundle.Name}</p>
+                        <p className="truncate text-micro text-surface-500 dark:text-surface-400">{bundleProducts.map((product) => product.Name).join(' + ')}</p>
+                        <p className="text-micro font-semibold text-success-700 dark:text-success-300">{bundle.Discount_Percent}% off together · {formatCurrency(bundlePrice)}</p>
                       </div>
-                      {firstProduct && <button type="button" onClick={() => onSelectProduct(firstProduct)} className="shrink-0 text-[10px] font-bold text-blue-700 hover:underline dark:text-sky-300">View bundle</button>}
+                      {firstProduct && <button type="button" onClick={() => onSelectProduct(firstProduct)} className="shrink-0 text-micro font-bold text-brand-700 hover:underline dark:text-brand-300">View bundle</button>}
                     </article>
                   );
                 })}
@@ -344,7 +351,13 @@ export const Storefront: React.FC<StorefrontProps> = ({
 
       {/* Product Grid Header */}
       {/* Product Grid */}
-      <Section title="All Catalog Products" description={`Showing ${filteredProducts.length} verified listings`} className="space-y-5 pt-2" headingAs="h3" headingClassName="text-lg font-black text-slate-900 dark:text-white">
+      <Section title={t('allProducts')} description={`${filteredProducts.length} ${t('showingListings')}`} className="space-y-5 pt-2" headingAs="h3" headingClassName="text-lg font-black text-surface-900 dark:text-white">
+      {!isLoading && loadError && filteredProducts.length > 0 && (
+        <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-danger-300 bg-danger-50 p-4 text-sm text-danger-800 dark:border-danger-900 dark:bg-danger-950/40 dark:text-danger-200">
+          <span>{loadError}</span>
+          {onRetryProducts && <button type="button" onClick={onRetryProducts} className="min-h-11 rounded-lg border border-danger-500/40 px-4 font-bold">{t('retry')}</button>}
+        </div>
+      )}
       {isLoading ? (
         <div role="status" aria-label="Loading products" aria-busy="true" className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {Array.from({ length: 8 }, (_, index) => (
@@ -362,14 +375,20 @@ export const Storefront: React.FC<StorefrontProps> = ({
             </div>
           ))}
         </div>
+      ) : filteredProducts.length === 0 && loadError ? (
+        <div role="alert" className="space-y-4 rounded-3xl border border-danger-300 bg-danger-50 p-8 text-center text-danger-800 dark:border-danger-900 dark:bg-danger-950/40 dark:text-danger-200">
+          <h3 className="text-lg font-bold">Marketplace products are unavailable</h3>
+          <p className="text-sm">{loadError}</p>
+          {onRetryProducts && <button type="button" onClick={onRetryProducts} className="min-h-11 rounded-full bg-danger-700 px-5 font-bold text-white">{t('retry')}</button>}
+        </div>
       ) : filteredProducts.length === 0 ? (
-        <div className="text-center py-20 bg-white dark:bg-[#12161D] rounded-3xl border border-sky-100 dark:border-zinc-800 p-8 space-y-4 shadow-xl">
-          <div className="w-16 h-16 bg-slate-100 dark:bg-[#181F2A] rounded-2xl flex items-center justify-center mx-auto text-slate-400 dark:text-zinc-500">
+        <div className="text-center py-20 bg-white dark:bg-[#12161D] rounded-3xl border border-brand-100 dark:border-surface-800 p-8 space-y-4 shadow-xl">
+          <div className="w-16 h-16 bg-surface-100 dark:bg-[#181F2A] rounded-2xl flex items-center justify-center mx-auto text-surface-400 dark:text-surface-500">
             <ShoppingBag className="w-8 h-8" />
           </div>
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white">No products found</h3>
-          <p className="text-xs text-slate-500 dark:text-zinc-400 max-w-sm mx-auto">
-            Try adjusting your search query, price filter, or stock filter.
+          <h3 className="text-lg font-bold text-surface-900 dark:text-white">{t('noProducts')}</h3>
+          <p className="text-sm text-surface-700 dark:text-surface-300 max-w-sm mx-auto">
+            {t('adjustFilters')}
           </p>
           <button
             onClick={() => {
@@ -380,7 +399,7 @@ export const Storefront: React.FC<StorefrontProps> = ({
             }}
             className="premium-button rounded-full px-5 py-2.5 text-xs font-bold text-white transition-all cursor-pointer"
           >
-            Reset Catalog Filters
+            {t('resetFilters')}
           </button>
         </div>
       ) : (

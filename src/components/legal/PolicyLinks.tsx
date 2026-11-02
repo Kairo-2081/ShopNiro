@@ -18,7 +18,7 @@ export const PolicyLinks: React.FC<PolicyLinksProps> = ({ ids, className }) => {
             href={policy.path}
             target="_blank"
             rel="noopener noreferrer"
-            className={className ?? 'font-semibold text-blue-600 underline dark:text-sky-400'}
+            className={className ?? 'font-semibold text-brand-600 underline dark:text-brand-400'}
           >
             {policy.title}
           </a>

@@ -37,7 +37,7 @@ const AnimatedStat: React.FC<{ stat: MarketplaceStat; index: number }> = ({ stat
   return (
     <dd
       aria-label={stat.value.toLocaleString()}
-      className="font-display text-2xl sm:text-3xl leading-none text-slate-900 dark:text-white tabular-nums"
+      className="font-display text-2xl sm:text-3xl leading-none text-surface-900 dark:text-white tabular-nums"
     >
       {displayValue.toLocaleString()}
     </dd>
@@ -63,10 +63,10 @@ export const MarketplaceClosing: React.FC<MarketplaceClosingProps> = ({ stats })
 
     <div className="min-w-0 flex-1 space-y-4">
       <div>
-        <p className="text-[10px] font-bold tracking-[0.16em] uppercase text-[#77775a] dark:text-[#d0c8a5]">
+        <p className="text-micro font-bold tracking-[0.16em] uppercase text-[#77775a] dark:text-[#d0c8a5]">
           ShopNiro
         </p>
-        <h2 className="mt-1 text-2xl sm:text-3xl text-slate-900 dark:text-white">
+        <h2 className="mt-1 text-2xl sm:text-3xl text-surface-900 dark:text-white">
           Shop Smart. Ship Fast.
         </h2>
       </div>
@@ -78,7 +78,7 @@ export const MarketplaceClosing: React.FC<MarketplaceClosingProps> = ({ stats })
             className={`min-w-0 px-2 first:pl-0 ${index > 0 ? 'border-l border-[#d0c8a5]/25' : ''}`}
           >
             <AnimatedStat stat={stat} index={index} />
-            <dt className="mt-1.5 text-[10px] sm:text-xs leading-snug text-slate-600 dark:text-zinc-400">
+            <dt className="mt-1.5 text-micro sm:text-xs leading-snug text-surface-600 dark:text-surface-400">
               {stat.label}
             </dt>
           </div>

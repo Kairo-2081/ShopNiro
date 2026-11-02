@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { randomInt, randomUUID } from 'node:crypto';
+import { createHash, randomInt, randomUUID } from 'node:crypto';
 import type { PoolClient } from 'pg';
 import { pool, query } from '../db/index.ts';
 import { validateBody, validateParams } from '../middleware/validate.ts';
@@ -127,6 +127,7 @@ router.post('/', requireAuth, validateBody(schemas.createOrderBody), async (req:
       Additional_Info,
     } = req.body;
     const paymentMethod = req.body?.paymentMethod === 'cash_on_delivery' ? 'cash_on_delivery' : 'online';
+    const idempotencyKey = req.get('Idempotency-Key')?.trim() || null;
     const forbiddenPaymentFields = ['Payment_Status', 'payment_status', 'Payment_Method', 'payment_method', 'Transaction_ID', 'transaction_id'];
     const suppliedForbiddenPaymentFields = forbiddenPaymentFields.filter((field) => Object.prototype.hasOwnProperty.call(req.body, field));
     if (suppliedForbiddenPaymentFields.length) {
@@ -137,6 +138,36 @@ router.post('/', requireAuth, validateBody(schemas.createOrderBody), async (req:
     }
     if (Customer_ID !== req.user!.entityId) {
       return res.status(403).json({ error: 'You can only place orders for your own account.' });
+    }
+    if (idempotencyKey && (idempotencyKey.length > 128 || !/^[A-Za-z0-9._:-]+$/.test(idempotencyKey))) {
+      return res.status(400).json({ error: 'Idempotency-Key must be 1–128 letters, numbers, dots, underscores, colons, or hyphens.' });
+    }
+
+    const requestHash = idempotencyKey
+      ? createHash('sha256').update(JSON.stringify({
+        Customer_ID,
+        Items,
+        Applied_Voucher,
+        Shipping_Address,
+        Billing_Address,
+        Additional_Info,
+        paymentMethod,
+      })).digest('hex')
+      : null;
+    if (idempotencyKey && requestHash) {
+      const previousRequest = await query(
+        `SELECT request_hash, response_json FROM checkout_idempotency
+         WHERE customer_id = $1 AND idempotency_key = $2`,
+        [Customer_ID, idempotencyKey]
+      );
+      if (previousRequest.rows.length) {
+        const previous = previousRequest.rows[0];
+        if (previous.request_hash !== requestHash) {
+          return res.status(409).json({ error: 'This idempotency key was already used for a different checkout request.' });
+        }
+        if (previous.response_json) return res.status(200).json(previous.response_json);
+        return res.status(409).json({ error: 'This checkout request is already being processed. Retry with the same key.' });
+      }
     }
 
     const Tracking_ID = newTrackingId();
@@ -215,8 +246,32 @@ router.post('/', requireAuth, validateBody(schemas.createOrderBody), async (req:
     const client = await pool.connect();
     let orderedItems: any[] = [];
     let finalSubtotal = 0;
+    let newOrder: Order;
     try {
       await client.query('BEGIN');
+      if (idempotencyKey && requestHash) {
+        const claim = await client.query(
+          `INSERT INTO checkout_idempotency (customer_id, idempotency_key, request_hash)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (customer_id, idempotency_key) DO NOTHING
+           RETURNING idempotency_key`,
+          [Customer_ID, idempotencyKey, requestHash]
+        );
+        if (!claim.rowCount) {
+          const previousRequest = await client.query(
+            `SELECT request_hash, response_json FROM checkout_idempotency
+             WHERE customer_id = $1 AND idempotency_key = $2`,
+            [Customer_ID, idempotencyKey]
+          );
+          await client.query('ROLLBACK');
+          const previous = previousRequest.rows[0];
+          if (!previous || previous.request_hash !== requestHash) {
+            return res.status(409).json({ error: 'This idempotency key was already used for a different checkout request.' });
+          }
+          if (previous.response_json) return res.status(200).json(previous.response_json);
+          return res.status(409).json({ error: 'This checkout request is already being processed. Retry with the same key.' });
+        }
+      }
       await client.query(`CALL process_checkout($1, $2, $3, $4, $5, $6, $7)`, [
         id,
         Tracking_ID,
@@ -251,9 +306,43 @@ router.post('/', requireAuth, validateBody(schemas.createOrderBody), async (req:
         unitPrice: item.unit_price,
         quantity: Number(item.quantity),
       })));
+      newOrder = {
+        Order_ID: id,
+        Tracking_ID,
+        Customer_ID,
+        Items: orderedItems.map((item: any) => ({
+          Product_ID: item.product_id_snapshot,
+          Seller_ID: item.seller_id_snapshot,
+          Name: item.product_name,
+          Price: Number(item.unit_price),
+          Quantity: Number(item.quantity),
+          Image: item.image || '',
+          Size: item.size || undefined,
+        })),
+        Subtotal: finalSubtotal,
+        Shipping_Fee: shippingFee,
+        Status: 'placed',
+        Payment_Status: 'pending',
+        Payment_Method: paymentMethod,
+        Transaction_ID: '',
+        Applied_Voucher: recordedPromotions || undefined,
+        Currency: 'BDT',
+        Shipping_Address,
+        Billing_Address: Billing_Address || Shipping_Address,
+        Order_Placed_At: orderPlacedAt,
+        Additional_Info: addInfo,
+      };
       await client.query(`
         UPDATE orders SET subtotal = $2, applied_voucher = $3, payment_method = $4 WHERE id = $1
       `, [id, finalSubtotal, recordedPromotions, paymentMethod]);
+      if (idempotencyKey) {
+        await client.query(
+          `UPDATE checkout_idempotency
+           SET order_id = $3, response_json = $4::jsonb
+           WHERE customer_id = $1 AND idempotency_key = $2`,
+          [Customer_ID, idempotencyKey, id, JSON.stringify(newOrder)]
+        );
+      }
       await client.query('COMMIT');
     } catch (error: any) {
       await client.query('ROLLBACK').catch(() => {});
@@ -263,33 +352,6 @@ router.post('/', requireAuth, validateBody(schemas.createOrderBody), async (req:
     } finally {
       client.release();
     }
-
-    const newOrder: Order = {
-      Order_ID: id,
-      Tracking_ID,
-      Customer_ID,
-      Items: orderedItems.map((item: any) => ({
-        Product_ID: item.product_id_snapshot,
-        Seller_ID: item.seller_id_snapshot,
-        Name: item.product_name,
-        Price: Number(item.unit_price),
-        Quantity: Number(item.quantity),
-        Image: item.image || '',
-        Size: item.size || undefined,
-      })),
-      Subtotal: finalSubtotal,
-      Shipping_Fee: shippingFee,
-      Status: 'placed',
-      Payment_Status: 'pending',
-      Payment_Method: paymentMethod,
-      Transaction_ID: '',
-      Applied_Voucher: recordedPromotions || undefined,
-      Currency: 'BDT',
-      Shipping_Address,
-      Billing_Address: Billing_Address || Shipping_Address,
-      Order_Placed_At: orderPlacedAt,
-      Additional_Info: addInfo,
-    };
 
     res.status(201).json(newOrder);
   } catch (error: any) {

@@ -17,7 +17,7 @@ export const Section: React.FC<SectionProps> = ({
   children,
   className = 'space-y-4',
   headingAs: Heading = 'h2',
-  headingClassName = 'text-lg font-bold text-slate-900 dark:text-white',
+  headingClassName = 'text-lg font-bold text-surface-900 dark:text-white',
 }) => {
   const headingId = React.useId();
 
@@ -26,7 +26,7 @@ export const Section: React.FC<SectionProps> = ({
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <Heading id={headingId} className={headingClassName}>{title}</Heading>
-          {description && <p className="mt-1 text-xs text-slate-500 dark:text-zinc-400">{description}</p>}
+          {description && <p className="mt-1 text-xs text-surface-500 dark:text-surface-400">{description}</p>}
         </div>
         {action}
       </header>
