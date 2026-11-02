@@ -562,7 +562,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     <button
                       type="button"
                       aria-pressed={paymentMethod === 'bkash'}
-                      aria-label="Pay with bKash"
+                      aria-label="Select bKash as payment method"
                       onClick={() => setPaymentMethod('bkash')}
                       className={`w-full text-left p-4 rounded-2xl border-2 transition-all cursor-pointer relative overflow-hidden flex flex-col justify-between ${
                         paymentMethod === 'bkash'
@@ -600,7 +600,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     <button
                       type="button"
                       aria-pressed={paymentMethod === 'nagad'}
-                      aria-label="Pay with Nagad"
+                      aria-label="Select Nagad as payment method"
                       onClick={() => setPaymentMethod('nagad')}
                       className={`w-full text-left p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
                         paymentMethod === 'nagad'
@@ -634,7 +634,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     <button
                       type="button"
                       aria-pressed={paymentMethod === 'rocket'}
-                      aria-label="Pay with Rocket"
+                      aria-label="Select Rocket as payment method"
                       onClick={() => setPaymentMethod('rocket')}
                       className={`w-full text-left p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
                         paymentMethod === 'rocket'
@@ -666,7 +666,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     <button
                       type="button"
                       aria-pressed={paymentMethod === 'visa_mastercard'}
-                      aria-label="Pay with card or net banking"
+                      aria-label="Select card or net banking as payment method"
                       onClick={() => setPaymentMethod('visa_mastercard')}
                       className={`w-full text-left p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
                         paymentMethod === 'visa_mastercard'
@@ -698,7 +698,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     <button
                       type="button"
                       aria-pressed={paymentMethod === 'cash_on_delivery'}
-                      aria-label="Pay by cash on delivery"
+                      aria-label="Select cash on delivery as payment method"
                       onClick={() => setPaymentMethod('cash_on_delivery')}
                       className={`sm:col-span-2 w-full text-left p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-wrap items-center justify-between gap-3 ${
                         paymentMethod === 'cash_on_delivery'
