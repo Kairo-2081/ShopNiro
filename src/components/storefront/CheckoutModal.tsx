@@ -7,6 +7,8 @@ import { describeVoucher, getVoucherRule, isVoucherExpired, normalizeVoucherCode
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { SSLCommerzModal } from '../payment/SSLCommerzModal';
 import { X, CheckCircle2, Truck, ShieldCheck, MapPin, CreditCard, ArrowRight, Package, Banknote, Lock, Sparkles } from 'lucide-react';
+import { money } from '../../lib/format';
+import { useLocale } from '../../lib/i18n';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -17,19 +19,21 @@ interface CheckoutModalProps {
   isLoadingCart?: boolean;
   onRefreshCart: () => Promise<void>;
   onNotify: (message: string, tone?: 'success' | 'error' | 'info') => void;
-  onPlaceOrder: (orderData: {
-    Customer_ID: string;
-    Items: any[];
-    Applied_Voucher?: string;
-    Shipping_Address: Address;
-    Billing_Address: Address;
-    Subtotal: number;
-    Shipping_Fee: number;
-    Additional_Info?: string;
-    paymentMethod: 'cash_on_delivery' | 'online';
-    Currency?: string;
-  }) => Promise<Order>;
+  onPlaceOrder: (orderData: CheckoutOrderData, idempotencyKey: string) => Promise<Order>;
   onOrderSuccess: (order: Order) => void;
+}
+
+interface CheckoutOrderData {
+  Customer_ID: string;
+  Items: any[];
+  Applied_Voucher?: string;
+  Shipping_Address: Address;
+  Billing_Address: Address;
+  Subtotal: number;
+  Shipping_Fee: number;
+  Additional_Info?: string;
+  paymentMethod: 'cash_on_delivery' | 'online';
+  Currency?: string;
 }
 
 export const CheckoutModal: React.FC<CheckoutModalProps> = ({
@@ -44,6 +48,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   onPlaceOrder,
   onOrderSuccess,
 }) => {
+  const { t } = useLocale();
   const [shippingAddress, setShippingAddress] = React.useState<Address>({
     Street: currentCustomer.Address?.Street || '',
     House_Name: currentCustomer.Address?.House_Name || '',
@@ -83,6 +88,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [pendingOrderId, setPendingOrderId] = React.useState('');
   const [pendingOrderTotal, setPendingOrderTotal] = React.useState(0);
   const submissionInProgressRef = React.useRef(false);
+  const idempotencyRequestRef = React.useRef<{ fingerprint: string; key: string } | null>(null);
   const dialogRef = useFocusTrap<HTMLDivElement>(isOpen);
 
   React.useEffect(() => {
@@ -109,6 +115,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       setAppliedVoucher('');
       setVoucherError('');
       submissionInProgressRef.current = false;
+      idempotencyRequestRef.current = null;
     }
   }, [isOpen]);
 
@@ -234,6 +241,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     if (!pendingOrderId) return false;
     try {
       await api.revertFailedOnlinePayment(pendingOrderId);
+      idempotencyRequestRef.current = null;
       try {
         await onRefreshCart();
       } catch (refreshError) {
@@ -271,7 +279,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         Size: item.Size,
       }));
 
-      return await onPlaceOrder({
+      const orderData: CheckoutOrderData = {
         Customer_ID: currentCustomer.Customer_ID,
         Items: orderItems,
         Applied_Voucher: [appliedVoucher, ...bundlePricing.appliedBundleIds.map((bundleId) => `BUNDLE:${bundleId}`), cartSavings > 0 ? 'CART5' : ''].filter(Boolean).join('+') || undefined,
@@ -282,7 +290,12 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         Additional_Info: additionalNotes,
         paymentMethod: paymentMethod === 'cash_on_delivery' ? 'cash_on_delivery' : 'online',
         Currency: 'BDT',
-      });
+      };
+      const fingerprint = JSON.stringify(orderData);
+      if (!idempotencyRequestRef.current || idempotencyRequestRef.current.fingerprint !== fingerprint) {
+        idempotencyRequestRef.current = { fingerprint, key: window.crypto.randomUUID() };
+      }
+      return await onPlaceOrder(orderData, idempotencyRequestRef.current.key);
     } catch (err: any) {
       onNotify(err.message || 'Failed to place order', 'error');
     } finally {
@@ -315,22 +328,22 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   return (
     <>
       <div className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-black/75 p-2 backdrop-blur-xs animate-in fade-in duration-150 sm:items-center sm:p-4">
-        <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="checkout-modal-title" tabIndex={-1} className="premium-surface my-2 flex max-h-[calc(100dvh-1rem)] w-full max-w-3xl flex-col overflow-hidden rounded-xl shadow-2xl sm:my-6 sm:max-h-[92vh]">
+        <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="checkout-modal-title" tabIndex={-1} onKeyDown={(event) => { if (event.key === 'Escape') onClose(); }} className="premium-surface my-2 flex max-h-[calc(100dvh-1rem)] w-full max-w-3xl flex-col overflow-hidden rounded-xl shadow-2xl sm:my-6 sm:max-h-[92vh]">
           {/* Header */}
-          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/50 px-4 py-3 dark:border-zinc-800 dark:bg-[#161C24]/80 sm:px-6 sm:py-4">
+          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-surface-100 bg-surface-50/50 px-4 py-3 dark:border-surface-800 dark:bg-[#161C24]/80 sm:px-6 sm:py-4">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-blue-600/10 dark:bg-blue-950 flex items-center justify-center text-blue-600 dark:text-sky-400">
+              <div className="w-8 h-8 rounded-full bg-brand-600/10 dark:bg-brand-950 flex items-center justify-center text-brand-600 dark:text-brand-400">
                 <Truck className="w-4 h-4" />
               </div>
               <div>
-                <h2 id="checkout-modal-title" className="font-bold text-slate-900 dark:text-white text-base">Direct Checkout &amp; Payment</h2>
-                <p className="text-[10px] text-slate-400">SSLCOMMERZ Secured Gateway • bKash • COD</p>
+                <h2 id="checkout-modal-title" className="font-bold text-surface-900 dark:text-white text-base">Direct Checkout &amp; Payment</h2>
+                <p className="text-micro text-surface-400">SSLCOMMERZ Secured Gateway • bKash • COD</p>
               </div>
             </div>
             <button
               onClick={onClose}
               aria-label="Close checkout"
-              className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5]"
+              className="grid h-11 w-11 place-items-center rounded-full text-surface-600 hover:text-surface-900 dark:text-surface-300 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5]"
             >
               <X className="w-5 h-5" />
             </button>
@@ -341,29 +354,29 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             {createdOrder ? (
               /* Order Success State matching the live waypoint card with SSLCommerz bKash badge */
               <div className="text-center py-8 space-y-6 max-w-lg mx-auto animate-in zoom-in-95 duration-200">
-                <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-950/60 rounded-full flex items-center justify-center mx-auto text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 shadow-lg">
+                <div className="w-20 h-20 bg-success-100 dark:bg-success-950/60 rounded-full flex items-center justify-center mx-auto text-success-600 dark:text-success-400 border border-success-200 dark:border-success-800 shadow-lg">
                   <CheckCircle2 className="w-10 h-10" />
                 </div>
 
                 <div>
-                  <h3 className="text-2xl font-black text-slate-900 dark:text-white">Order Placed</h3>
-                  <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
-                    Thank you, <strong className="text-slate-800 dark:text-zinc-200">{currentCustomer.Name}</strong>. Your order is pending until the authorized payment or delivery lifecycle is completed.
+                  <h3 className="text-2xl font-black text-surface-900 dark:text-white">Order Placed</h3>
+                  <p className="text-xs text-surface-500 dark:text-surface-400 mt-1">
+                    Thank you, <strong className="text-surface-800 dark:text-surface-200">{currentCustomer.Name}</strong>. Your order is pending until the authorized payment or delivery lifecycle is completed.
                   </p>
                 </div>
 
                 {/* Payment Verification Card */}
-                <div className="p-4 rounded-3xl bg-slate-50 dark:bg-[#161C24] border border-slate-200 dark:border-zinc-800 text-left text-xs space-y-2.5">
-                  <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-zinc-800">
-                    <span className="font-bold text-slate-700 dark:text-zinc-300 flex items-center gap-1.5">
-                      <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                <div className="p-4 rounded-3xl bg-surface-50 dark:bg-[#161C24] border border-surface-200 dark:border-surface-800 text-left text-xs space-y-2.5">
+                  <div className="flex items-center justify-between pb-2 border-b border-surface-200 dark:border-surface-800">
+                    <span className="font-bold text-surface-700 dark:text-surface-300 flex items-center gap-1.5">
+                      <ShieldCheck className="w-4 h-4 text-success-500" />
                       Payment Status:
                     </span>
                     <span
-                      className={`px-3 py-1 rounded-full text-[11px] font-bold uppercase ${
+                      className={`px-3 py-1 rounded-full text-micro font-bold uppercase ${
                         createdOrder.Payment_Status === 'paid'
-                          ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
-                          : 'bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800'
+                          ? 'bg-success-100 dark:bg-success-950/80 text-success-700 dark:text-success-300 border border-success-300 dark:border-success-800'
+                          : 'bg-warning-100 dark:bg-warning-950/80 text-warning-700 dark:text-warning-300 border border-warning-300 dark:border-warning-800'
                       }`}
                     >
                       {createdOrder.Payment_Status === 'paid' ? 'PAID & VERIFIED' : 'CASH ON DELIVERY (PENDING)'}
@@ -371,38 +384,38 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   </div>
 
                   <div className="flex justify-between">
-                    <span className="text-slate-500 dark:text-zinc-400">Channel / Gateway:</span>
-                    <span className="font-bold text-slate-800 dark:text-zinc-200">
+                    <span className="text-surface-500 dark:text-surface-400">Channel / Gateway:</span>
+                    <span className="font-bold text-surface-800 dark:text-surface-200">
                       {createdOrder.Payment_Method?.toUpperCase()} · {createdOrder.Payment_Status === 'paid' ? 'SSLCommerz' : 'Awaiting authorized collection'}
                     </span>
                   </div>
 
                   {createdOrder.Transaction_ID && (
                     <div className="flex justify-between">
-                      <span className="text-slate-500 dark:text-zinc-400">Transaction ID:</span>
-                      <span className="font-mono font-bold text-blue-600 dark:text-sky-400">
+                      <span className="text-surface-500 dark:text-surface-400">Transaction ID:</span>
+                      <span className="font-mono font-bold text-brand-600 dark:text-brand-400">
                         {createdOrder.Transaction_ID}
                       </span>
                     </div>
                   )}
 
                   <div className="flex justify-between">
-                    <span className="text-slate-500 dark:text-zinc-400">Total BDT Paid:</span>
-                    <span className="font-black text-slate-900 dark:text-white text-sm">
+                    <span className="text-surface-500 dark:text-surface-400">Total BDT Paid:</span>
+                    <span className="font-black text-surface-900 dark:text-white text-sm">
                       {formatCurrency(createdOrder.Subtotal + createdOrder.Shipping_Fee)}
                     </span>
                   </div>
                 </div>
 
                 {/* Tracking ID is assigned at placement; live tracking starts after shipment. */}
-                <div className="p-5 rounded-3xl bg-[#0F1D2B] border border-blue-900/60 text-center space-y-2 shadow-xl">
-                  <span className="text-[10px] uppercase tracking-widest font-extrabold text-sky-400 block">
+                <div className="p-5 rounded-3xl bg-[#0F1D2B] border border-brand-900/60 text-center space-y-2 shadow-xl">
+                  <span className="text-micro uppercase tracking-widest font-extrabold text-brand-400 block">
                     ORDER TRACKING ID
                   </span>
                   <div className="text-2xl font-black font-mono text-white tracking-widest">
                     {createdOrder.Tracking_ID}
                   </div>
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-600 text-white text-[10px] font-bold">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-600 text-white text-micro font-bold">
                     <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
                     <span>AWAITING VENDOR DISPATCH</span>
                   </div>
@@ -417,7 +430,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     }}
                     className="premium-button flex-1 rounded-full py-3.5 text-xs font-bold text-white transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
-                    <Package className="w-4 h-4 text-amber-300" />
+                    <Package className="w-4 h-4 text-warning-300" />
                     <span>View Order Status</span>
                   </button>
                 </div>
@@ -425,83 +438,100 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             ) : (
               /* Checkout Form */
               <form onSubmit={handleOpenPaymentOrSubmit} className="space-y-6">
+                <nav aria-label="Checkout steps">
+                  <ol className="grid grid-cols-3 gap-2 text-center text-xs font-bold">
+                    {[['1', t('address')], ['2', t('payment')], ['3', t('review')]].map(([number, label]) => (
+                      <li key={number} className="rounded-full border border-brand-200 bg-brand-50 px-2 py-2 text-brand-800 dark:border-brand-800 dark:bg-brand-950/50 dark:text-brand-200">
+                        <span className="mr-1">{number}.</span>{label}
+                      </li>
+                    ))}
+                  </ol>
+                </nav>
                 {/* Customer Info */}
-                                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs dark:border-zinc-800 dark:bg-[#161C24]">
+                                  <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-surface-200 bg-surface-50 p-4 text-xs dark:border-surface-800 dark:bg-[#161C24]">
                   <div>
-                    <span className="text-slate-400 dark:text-zinc-500 block font-bold text-[10px] uppercase tracking-wider">
+                    <span className="text-surface-400 dark:text-surface-500 block font-bold text-micro uppercase tracking-wider">
                       Purchasing Customer
                     </span>
-                    <span className="font-bold text-slate-900 dark:text-white text-sm">{currentCustomer.Name}</span>
-                    <span className="text-slate-500 dark:text-zinc-400 block">
+                    <span className="font-bold text-surface-900 dark:text-white text-sm">{currentCustomer.Name}</span>
+                    <span className="text-surface-500 dark:text-surface-400 block">
                       {currentCustomer.Email} • {currentCustomer.Number}
                     </span>
                   </div>
-                  <span className="bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-sky-300 font-mono text-[11px] font-bold px-3 py-1 rounded-full border border-blue-200 dark:border-blue-900">
+                  <span className="bg-brand-100 dark:bg-brand-950 text-brand-700 dark:text-brand-300 font-mono text-micro font-bold px-3 py-1 rounded-full border border-brand-200 dark:border-brand-900">
                     {currentCustomer.Customer_ID}
                   </span>
                 </div>
 
                 {/* Shipping Address Form */}
                 <div className="space-y-4">
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-blue-600 dark:text-sky-400" />
-                    Shipping Destination Address
+                  <h3 className="text-sm font-bold text-surface-900 dark:text-white flex items-center gap-2">
+                    <MapPin className="w-4 h-4 text-brand-600 dark:text-brand-400" />
+                    1. {t('shippingAddress')}
                   </h3>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                     <div>
-                      <label className="block text-slate-600 dark:text-zinc-400 mb-1 font-medium">House / Apartment / Unit</label>
+                      <label htmlFor="checkout-house" className="block text-surface-700 dark:text-surface-300 mb-1 font-medium">House / Apartment / Unit</label>
                       <input
+                        id="checkout-house"
                         type="text"
                         required
+                        autoComplete="address-line2"
                         value={shippingAddress.House_Name}
                         onChange={(e) => setShippingAddress({ ...shippingAddress, House_Name: e.target.value })}
                         placeholder="e.g. Apt 4B or Road 11, Block D"
-                        className="luxury-input w-full p-2.5 bg-white dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40 text-slate-900 dark:text-white"
+                        className="luxury-input w-full p-2.5 bg-white dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-warning-500/40 text-surface-900 dark:text-white"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-slate-600 dark:text-zinc-400 mb-1 font-medium">Street Address</label>
+                      <label htmlFor="checkout-street" className="block text-surface-700 dark:text-surface-300 mb-1 font-medium">Street Address</label>
                       <input
+                        id="checkout-street"
                         type="text"
                         required
+                        autoComplete="street-address"
                         value={shippingAddress.Street}
                         onChange={(e) => setShippingAddress({ ...shippingAddress, Street: e.target.value, Latitude: undefined, Longitude: undefined })}
                         placeholder="e.g. Banani, Gulshan, or Dhanmondi"
-                        className="luxury-input w-full p-2.5 bg-white dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40 text-slate-900 dark:text-white"
+                        className="luxury-input w-full p-2.5 bg-white dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-warning-500/40 text-surface-900 dark:text-white"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-slate-600 dark:text-zinc-400 mb-1 font-medium">City</label>
+                      <label htmlFor="checkout-city" className="block text-surface-700 dark:text-surface-300 mb-1 font-medium">City</label>
                       <input
+                        id="checkout-city"
                         type="text"
                         required
+                        autoComplete="address-level2"
                         value={shippingAddress.City}
                         onChange={(e) => setShippingAddress({ ...shippingAddress, City: e.target.value, Latitude: undefined, Longitude: undefined })}
                         placeholder="e.g. Dhaka or Chittagong"
-                        className="luxury-input w-full p-2.5 bg-white dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40 text-slate-900 dark:text-white"
+                        className="luxury-input w-full p-2.5 bg-white dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-warning-500/40 text-surface-900 dark:text-white"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-slate-600 dark:text-zinc-400 mb-1 font-medium">Postal / ZIP Code</label>
+                      <label htmlFor="checkout-postal" className="block text-surface-700 dark:text-surface-300 mb-1 font-medium">Postal / ZIP Code</label>
                       <input
+                        id="checkout-postal"
                         type="text"
                         required
+                        autoComplete="postal-code"
                         value={shippingAddress.Postal_Code}
                         onChange={(e) => setShippingAddress({ ...shippingAddress, Postal_Code: e.target.value })}
                         placeholder="e.g. 1213"
-                        className="luxury-input w-full p-2.5 bg-white dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40 text-slate-900 dark:text-white"
+                        className="luxury-input w-full p-2.5 bg-white dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-warning-500/40 text-surface-900 dark:text-white"
                       />
                     </div>
                   </div>
 
                   <div>
                                           <div className="flex flex-wrap items-center justify-between gap-2">
-                      <label htmlFor="delivery-instructions" className="block text-slate-600 dark:text-zinc-400 font-medium text-xs">Delivery Instructions</label>
-                      <button type="button" onClick={() => void suggestDeliveryInstructions()} disabled={isSuggestingInstructions} className="inline-flex items-center gap-1.5 rounded-lg border border-blue-300 px-3 py-2 text-xs font-bold text-blue-700 disabled:opacity-50 dark:border-blue-900 dark:text-sky-300"><Sparkles className="h-3.5 w-3.5" />{isSuggestingInstructions ? 'Suggesting...' : 'Suggest with AI'}</button>
+                      <label htmlFor="delivery-instructions" className="block text-surface-600 dark:text-surface-400 font-medium text-xs">Delivery Instructions</label>
+                      <button type="button" onClick={() => void suggestDeliveryInstructions()} disabled={isSuggestingInstructions} className="inline-flex items-center gap-1.5 rounded-lg border border-brand-300 px-3 py-2 text-xs font-bold text-brand-700 disabled:opacity-50 dark:border-brand-900 dark:text-brand-300"><Sparkles className="h-3.5 w-3.5" />{isSuggestingInstructions ? 'Suggesting...' : 'Suggest with AI'}</button>
                     </div>
                     <textarea
                       id="delivery-instructions"
@@ -509,32 +539,35 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       value={additionalNotes}
                       onChange={(e) => setAdditionalNotes(e.target.value)}
                       placeholder="Add access details or preferences for your rider"
-                      className="luxury-input w-full p-2.5 bg-white dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40 text-xs text-slate-900 dark:text-white"
+                      className="luxury-input w-full p-2.5 bg-white dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-warning-500/40 text-xs text-surface-900 dark:text-white"
                     />
-                    {instructionError && <p role="alert" className="text-xs text-rose-600 dark:text-rose-300">{instructionError}</p>}
+                    {instructionError && <p role="alert" className="text-xs text-danger-600 dark:text-danger-300">{instructionError}</p>}
                   </div>
                 </div>
 
                 {/* Payment Method Selector */}
                 <div className="space-y-3 pt-2">
                   <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                      <Lock className="w-4 h-4 text-emerald-500" />
-                      Select Payment Method (SSLCOMMERZ Gateway)
+                    <h3 className="text-sm font-bold text-surface-900 dark:text-white flex items-center gap-2">
+                      <Lock className="w-4 h-4 text-success-500" />
+                      2. {t('paymentMethod')}
                     </h3>
-                    <span className="max-w-full whitespace-normal rounded-full border border-sky-800 bg-sky-950/80 px-2 py-1 text-[10px] font-bold uppercase leading-tight text-sky-400">
+                    <span className="max-w-full whitespace-normal rounded-full border border-brand-800 bg-brand-950/80 px-2 py-1 text-micro font-bold uppercase leading-tight text-brand-400">
                       All prices shown in Bangladeshi Taka
                     </span>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {/* bKash Radio Card */}
-                    <div
+                    <button
+                      type="button"
+                      aria-pressed={paymentMethod === 'bkash'}
+                      aria-label="Select bKash as payment method"
                       onClick={() => setPaymentMethod('bkash')}
-                      className={`p-4 rounded-2xl border-2 transition-all cursor-pointer relative overflow-hidden flex flex-col justify-between ${
+                      className={`w-full text-left p-4 rounded-2xl border-2 transition-all cursor-pointer relative overflow-hidden flex flex-col justify-between ${
                         paymentMethod === 'bkash'
                           ? 'border-[#E2136E] bg-pink-50/40 dark:bg-pink-950/20 shadow-md shadow-[#E2136E]/10'
-                          : 'border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#161C24] hover:border-pink-300'
+                          : 'border-surface-200 dark:border-surface-800 bg-white dark:bg-[#161C24] hover:border-pink-300'
                       }`}
                     >
                       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -543,33 +576,36 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                             ব
                           </div>
                           <div className="min-w-0">
-                            <span className="font-black text-xs text-slate-900 dark:text-white block">
+                            <span className="font-black text-xs text-surface-900 dark:text-white block">
                               bKash Mobile Banking
                             </span>
-                            <span className="text-[10px] text-pink-600 dark:text-pink-400 font-bold block">
+                            <span className="text-micro text-pink-600 dark:text-pink-400 font-bold block">
                               via SSLCOMMERZ
                             </span>
                           </div>
                         </div>
 
-                        <span className="px-2 py-0.5 rounded-full bg-[#E2136E] text-white text-[9px] font-black uppercase tracking-wider">
+                        <span className="px-2 py-0.5 rounded-full bg-[#E2136E] text-white text-micro font-black uppercase tracking-wider">
                           Recommended
                         </span>
                       </div>
 
-                      <div className="mt-3 pt-2 border-t border-slate-100 dark:border-zinc-800/80 flex items-center justify-between text-[11px]">
-                        <span className="text-slate-500 dark:text-zinc-400">Pay Instant via PIN &amp; OTP</span>
+                      <div className="mt-3 pt-2 border-t border-surface-100 dark:border-surface-800/80 flex items-center justify-between text-micro">
+                        <span className="text-surface-500 dark:text-surface-400">Pay Instant via PIN &amp; OTP</span>
                         <span className="font-black text-[#E2136E]">{formatBDT(grandTotalBDT)}</span>
                       </div>
-                    </div>
+                    </button>
 
                     {/* Nagad Radio Card */}
-                    <div
+                    <button
+                      type="button"
+                      aria-pressed={paymentMethod === 'nagad'}
+                      aria-label="Select Nagad as payment method"
                       onClick={() => setPaymentMethod('nagad')}
-                      className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
+                      className={`w-full text-left p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
                         paymentMethod === 'nagad'
-                          ? 'border-[#F7941D] bg-orange-50/40 dark:bg-orange-950/20 shadow-md shadow-[#F7941D]/10'
-                          : 'border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#161C24] hover:border-orange-300'
+                          ? 'border-[#F7941D] bg-warning-50/40 dark:bg-warning-950/20 shadow-md shadow-[#F7941D]/10'
+                          : 'border-surface-200 dark:border-surface-800 bg-white dark:bg-[#161C24] hover:border-warning-300'
                       }`}
                     >
                       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -578,29 +614,32 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                             না
                           </div>
                           <div className="min-w-0">
-                            <span className="font-bold text-xs text-slate-900 dark:text-white block">
+                            <span className="font-bold text-xs text-surface-900 dark:text-white block">
                               Nagad Digital Payment
                             </span>
-                            <span className="text-[10px] text-orange-600 dark:text-orange-400 font-bold block">
+                            <span className="text-micro text-warning-600 dark:text-warning-400 font-bold block">
                               Post Office Digital Banking
                             </span>
                           </div>
                         </div>
                       </div>
 
-                      <div className="mt-3 pt-2 border-t border-slate-100 dark:border-zinc-800/80 flex items-center justify-between text-[11px]">
-                        <span className="text-slate-500 dark:text-zinc-400">Nagad MFS via SSLCommerz</span>
+                      <div className="mt-3 pt-2 border-t border-surface-100 dark:border-surface-800/80 flex items-center justify-between text-micro">
+                        <span className="text-surface-500 dark:text-surface-400">Nagad MFS via SSLCommerz</span>
                         <span className="font-black text-[#F7941D]">{formatBDT(grandTotalBDT)}</span>
                       </div>
-                    </div>
+                    </button>
 
                     {/* Rocket Radio Card */}
-                    <div
+                    <button
+                      type="button"
+                      aria-pressed={paymentMethod === 'rocket'}
+                      aria-label="Select Rocket as payment method"
                       onClick={() => setPaymentMethod('rocket')}
-                      className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
+                      className={`w-full text-left p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
                         paymentMethod === 'rocket'
-                          ? 'border-[#8C3494] bg-purple-50/40 dark:bg-purple-950/20'
-                          : 'border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#161C24] hover:border-purple-300'
+                          ? 'border-[#8C3494] bg-brand-50/40 dark:bg-brand-950/20'
+                          : 'border-surface-200 dark:border-surface-800 bg-white dark:bg-[#161C24] hover:border-brand-300'
                       }`}
                     >
                       <div className="flex min-w-0 items-center gap-2.5">
@@ -608,28 +647,31 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                           DBBL
                         </div>
                         <div className="min-w-0">
-                          <span className="font-bold text-xs text-slate-900 dark:text-white block">
+                          <span className="font-bold text-xs text-surface-900 dark:text-white block">
                             Rocket (DBBL MFS)
                           </span>
-                          <span className="text-[10px] text-purple-600 dark:text-purple-400 font-medium block">
+                          <span className="text-micro text-brand-600 dark:text-brand-400 font-medium block">
                             Dutch-Bangla Bank Gateway
                           </span>
                         </div>
                       </div>
 
-                      <div className="mt-3 pt-2 border-t border-slate-100 dark:border-zinc-800/80 flex items-center justify-between text-[11px]">
-                        <span className="text-slate-500 dark:text-zinc-400">Rocket Account PIN</span>
+                      <div className="mt-3 pt-2 border-t border-surface-100 dark:border-surface-800/80 flex items-center justify-between text-micro">
+                        <span className="text-surface-500 dark:text-surface-400">Rocket Account PIN</span>
                         <span className="font-black text-[#8C3494]">{formatBDT(grandTotalBDT)}</span>
                       </div>
-                    </div>
+                    </button>
 
                     {/* Credit/Debit Cards Radio Card */}
-                    <div
+                    <button
+                      type="button"
+                      aria-pressed={paymentMethod === 'visa_mastercard'}
+                      aria-label="Select card or net banking as payment method"
                       onClick={() => setPaymentMethod('visa_mastercard')}
-                      className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
+                      className={`w-full text-left p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
                         paymentMethod === 'visa_mastercard'
-                          ? 'border-blue-600 bg-blue-50/40 dark:bg-blue-950/20 shadow-md shadow-blue-600/10'
-                          : 'border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#161C24] hover:border-blue-300'
+                          ? 'border-brand-600 bg-brand-50/40 dark:bg-brand-950/20 shadow-md shadow-brand-600/10'
+                          : 'border-surface-200 dark:border-surface-800 bg-white dark:bg-[#161C24] hover:border-brand-300'
                       }`}
                     >
                       <div className="flex items-center gap-2.5">
@@ -637,60 +679,63 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                           <CreditCard className="w-4 h-4" />
                         </div>
                         <div>
-                          <span className="font-bold text-xs text-slate-900 dark:text-white block">
+                          <span className="font-bold text-xs text-surface-900 dark:text-white block">
                             Cards / Net Banking
                           </span>
-                          <span className="text-[10px] text-blue-600 dark:text-sky-400 font-medium block">
+                          <span className="text-micro text-brand-600 dark:text-brand-400 font-medium block">
                             Visa • Mastercard • Amex
                           </span>
                         </div>
                       </div>
 
-                      <div className="mt-3 pt-2 border-t border-slate-100 dark:border-zinc-800/80 flex items-center justify-between text-[11px]">
-                        <span className="text-slate-500 dark:text-zinc-400">SSLCommerz 3D Secure</span>
-                        <span className="font-black text-blue-600 dark:text-sky-400">{formatCurrency(grandTotal)}</span>
+                      <div className="mt-3 pt-2 border-t border-surface-100 dark:border-surface-800/80 flex items-center justify-between text-micro">
+                        <span className="text-surface-500 dark:text-surface-400">SSLCommerz 3D Secure</span>
+                        <span className="font-black text-brand-600 dark:text-brand-400">{formatCurrency(grandTotal)}</span>
                       </div>
-                    </div>
+                    </button>
 
                     {/* Cash on Delivery Card */}
-                    <div
+                    <button
+                      type="button"
+                      aria-pressed={paymentMethod === 'cash_on_delivery'}
+                      aria-label="Select cash on delivery as payment method"
                       onClick={() => setPaymentMethod('cash_on_delivery')}
-                      className={`sm:col-span-2 p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-wrap items-center justify-between gap-3 ${
+                      className={`sm:col-span-2 w-full text-left p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-wrap items-center justify-between gap-3 ${
                         paymentMethod === 'cash_on_delivery'
-                          ? 'border-emerald-500 bg-emerald-50/40 dark:bg-emerald-950/20 shadow-md shadow-emerald-500/10'
-                          : 'border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#161C24] hover:border-emerald-300'
+                          ? 'border-success-500 bg-success-50/40 dark:bg-success-950/20 shadow-md shadow-success-500/10'
+                          : 'border-surface-200 dark:border-surface-800 bg-white dark:bg-[#161C24] hover:border-success-300'
                       }`}
                     >
                       <div className="flex min-w-0 items-center gap-2.5">
-                        <div className="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+                        <div className="w-9 h-9 rounded-xl bg-success-600 text-white flex items-center justify-center shadow-xs">
                           <Banknote className="w-4 h-4" />
                         </div>
                         <div className="min-w-0">
-                          <span className="font-bold text-xs text-slate-900 dark:text-white block">
+                          <span className="font-bold text-xs text-surface-900 dark:text-white block">
                             Cash on Delivery (COD)
                           </span>
-                          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium block">
+                          <span className="text-micro text-success-600 dark:text-success-400 font-medium block">
                             Pay in cash when dispatch courier delivers the package
                           </span>
                         </div>
                       </div>
 
-                      <span className="font-black text-xs text-slate-900 dark:text-white">
+                      <span className="font-black text-xs text-surface-900 dark:text-white">
                         {formatBDT(grandTotalBDT)}
                       </span>
-                    </div>
+                    </button>
                   </div>
                 </div>
 
                 {/* Order Items & Fee Summary */}
                 <div className="p-4 rounded-3xl bg-[#a99b72]/[0.07] dark:bg-[#161C24] border border-[#a99b72]/25 dark:border-[#a99b72]/20 space-y-3">
                   <h4 className="font-bold text-xs uppercase tracking-wider text-[#80734f] dark:text-[#d0c8a5]">
-                    Order Summary ({isLoadingCart ? 'Loading cart' : `${cartItems.length} Products`})
+                    3. {t('reviewOrder')} ({isLoadingCart ? 'Loading cart' : `${cartItems.length} products`})
                   </h4>
 
-                  <div className="space-y-2 rounded-xl border border-[#a99b72]/20 bg-white/70 p-3 dark:border-zinc-700 dark:bg-[#12161D]">
-                    <label htmlFor="checkout-voucher" className="block text-xs font-semibold text-slate-700 dark:text-zinc-300">Product voucher code</label>
-                    {isLoadingBundles && <div role="status" className="flex items-center gap-2 text-[10px] text-slate-500 dark:text-zinc-400"><span className="premium-skeleton h-3 w-28 rounded-full" /><span className="sr-only">Checking bundle offers</span></div>}
+                  <div className="space-y-2 rounded-xl border border-[#a99b72]/20 bg-white/70 p-3 dark:border-surface-700 dark:bg-[#12161D]">
+                    <label htmlFor="checkout-voucher" className="block text-xs font-semibold text-surface-700 dark:text-surface-300">Product voucher code</label>
+                    {isLoadingBundles && <div role="status" className="flex items-center gap-2 text-micro text-surface-500 dark:text-surface-400"><span className="premium-skeleton h-3 w-28 rounded-full" /><span className="sr-only">Checking bundle offers</span></div>}
                     <div className="flex flex-wrap gap-2">
                       <input
                         id="checkout-voucher"
@@ -699,21 +744,21 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                         onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); applyVoucher(); } }}
                         placeholder="e.g. SAVE20"
                         aria-invalid={Boolean(voucherError)}
-                        className="luxury-input min-w-0 flex-[1_1_8rem] rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs uppercase text-slate-900 placeholder:normal-case placeholder:text-slate-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40 dark:border-zinc-700 dark:bg-[#181F2A] dark:text-white"
+                        className="luxury-input min-w-0 flex-[1_1_8rem] rounded-lg border border-surface-300 bg-white px-3 py-2 text-xs uppercase text-surface-900 placeholder:normal-case placeholder:text-surface-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-warning-500/40 dark:border-surface-700 dark:bg-[#181F2A] dark:text-white"
                       />
                       <button type="button" onClick={applyVoucher} className="premium-button rounded-lg px-4 py-2 text-xs font-bold text-white">Apply</button>
-                      {appliedVoucher && <button type="button" onClick={() => { setAppliedVoucher(''); setVoucherInput(''); setVoucherError(''); }} className="shrink-0 rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 dark:border-zinc-700 dark:text-zinc-200">Remove</button>}
+                      {appliedVoucher && <button type="button" onClick={() => { setAppliedVoucher(''); setVoucherInput(''); setVoucherError(''); }} className="shrink-0 rounded-lg border border-surface-300 px-3 py-2 text-xs font-semibold text-surface-700 dark:border-surface-700 dark:text-surface-200">Remove</button>}
                     </div>
-                    {voucherError && <p role="alert" className="text-xs text-rose-700 dark:text-rose-300">{voucherError}</p>}
-                    {appliedVoucher && <p role="status" className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">{appliedVoucher} applied: {describeVoucher(appliedVoucher)}</p>}
+                    {voucherError && <p role="alert" className="text-xs text-danger-700 dark:text-danger-300">{voucherError}</p>}
+                    {appliedVoucher && <p role="status" className="text-xs font-semibold text-success-700 dark:text-success-300">{appliedVoucher} applied: {describeVoucher(appliedVoucher)}</p>}
                     {bundlePricing.appliedBundleIds.map((bundleId) => {
                       const bundle = bundles.find((item) => item.Bundle_ID === bundleId);
-                      return <p key={bundleId} role="status" className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">{bundle?.Name || 'Bundle offer'} applied: {bundle?.Discount_Percent}% off together.</p>;
+                      return <p key={bundleId} role="status" className="text-xs font-semibold text-success-700 dark:text-success-300">{bundle?.Name || 'Bundle offer'} applied: {bundle?.Discount_Percent}% off together.</p>;
                     })}
                     {cartDiscountEligible ? (
-                      <p role="status" className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">CART5 applied: 5% off your ৳500+ cart.</p>
+                      <p role="status" className="text-xs font-semibold text-success-700 dark:text-success-300">CART5 applied: 5% off your {money(500)}+ cart.</p>
                     ) : (
-                      <p className="text-[10px] text-slate-500 dark:text-zinc-400">Add {formatCurrency(Math.max(0, 500 - subtotal))} more for 5% off your cart.</p>
+                      <p className="text-micro text-surface-500 dark:text-surface-400">Add {formatCurrency(Math.max(0, 500 - subtotal))} more for 5% off your cart.</p>
                     )}
                   </div>
 
@@ -727,56 +772,56 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       const finalLinePrice = getCartItemFinalUnitPrice(item) * item.Quantity;
                       return (
                       <div key={item.Cart_ID} className="flex justify-between items-center text-xs">
-                        <span className="min-w-0 truncate max-w-[240px] text-slate-700 dark:text-zinc-300">
+                        <span className="min-w-0 truncate max-w-[240px] text-surface-700 dark:text-surface-300">
                           {item.Quantity}x {item.Product?.Name}
-                          {item.Product?.Voucher && !isVoucherExpired(item.Product.Voucher_Expires_At) && <span className="ml-1 text-[10px] text-blue-600 dark:text-sky-400">Code {item.Product.Voucher}</span>}
+                          {item.Product?.Voucher && !isVoucherExpired(item.Product.Voucher_Expires_At) && <span className="ml-1 text-micro text-brand-600 dark:text-brand-400">Code {item.Product.Voucher}</span>}
                         </span>
-                        <span className="flex shrink-0 items-center gap-1.5 font-bold text-slate-900 dark:text-white">
-                          {finalLinePrice < originalLinePrice && <span className="text-[10px] font-medium text-slate-500 line-through dark:text-zinc-500">{formatCurrency(originalLinePrice)}</span>}
+                        <span className="flex shrink-0 items-center gap-1.5 font-bold text-surface-900 dark:text-white">
+                          {finalLinePrice < originalLinePrice && <span className="text-micro font-medium text-surface-500 line-through dark:text-surface-500">{formatCurrency(originalLinePrice)}</span>}
                           {formatCurrency(finalLinePrice)}
                         </span>
                       </div>
                     );})}
                   </div>
 
-                  <div className="pt-2 border-t border-blue-200/60 dark:border-zinc-800 text-xs space-y-1">
-                    <div className="flex justify-between text-slate-600 dark:text-zinc-400">
+                  <div className="pt-2 border-t border-brand-200/60 dark:border-surface-800 text-xs space-y-1">
+                    <div className="flex justify-between text-surface-600 dark:text-surface-400">
                       <span>Product subtotal</span>
                       <span>{formatCurrency(subtotal)}</span>
                     </div>
                     {voucherSavings > 0 && <>
-                      <div className="flex justify-between font-semibold text-emerald-700 dark:text-emerald-300">
+                      <div className="flex justify-between font-semibold text-success-700 dark:text-success-300">
                         <span>Coupon savings</span>
                         <span>-{formatCurrency(voucherSavings)}</span>
                       </div>
                     </>}
                     {bundleSavings > 0 && (
-                      <div className="flex justify-between font-semibold text-emerald-700 dark:text-emerald-300">
+                      <div className="flex justify-between font-semibold text-success-700 dark:text-success-300">
                         <span>Bundle savings</span>
                         <span>-{formatCurrency(bundleSavings)}</span>
                       </div>
                     )}
                     {cartSavings > 0 && (
-                      <div className="flex justify-between font-semibold text-emerald-700 dark:text-emerald-300">
+                      <div className="flex justify-between font-semibold text-success-700 dark:text-success-300">
                         <span>Cart savings (CART5)</span>
                         <span>-{formatCurrency(cartSavings)}</span>
                       </div>
                     )}
                     {(voucherSavings > 0 || bundleSavings > 0 || cartSavings > 0) && (
-                      <div className="flex justify-between text-slate-600 dark:text-zinc-400">
+                      <div className="flex justify-between text-surface-600 dark:text-surface-400">
                         <span>Subtotal after promotions</span>
                         <span>{formatCurrency(discountedSubtotal)}</span>
                       </div>
                     )}
-                    <div className="flex justify-between text-slate-600 dark:text-zinc-400">
+                    <div className="flex justify-between text-surface-600 dark:text-surface-400">
                       <span>Shipping Fee</span>
                       <span>{shippingFee === 0 ? 'FREE' : formatCurrency(shippingFee)}</span>
                     </div>
-                    <p className="text-[10px] text-slate-500 dark:text-zinc-400">Free shipping on product subtotals of ৳400 or more.</p>
-                    <div className="flex justify-between font-black text-sm text-slate-900 dark:text-white pt-1">
+                    <p className="text-micro text-surface-700 dark:text-surface-300">Free shipping on product subtotals of {money(400)} or more.</p>
+                    <div className="flex justify-between font-black text-sm text-surface-900 dark:text-white pt-1">
                       <span>Total Amount Payable</span>
                       <div className="text-right">
-                        <span data-testid="checkout-total" className="text-blue-600 dark:text-sky-400 text-base block font-black">
+                        <span data-testid="checkout-total" className="text-brand-600 dark:text-brand-400 text-base block font-black">
                           {formatBDT(grandTotalBDT)}
                         </span>
                       </div>
@@ -784,7 +829,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   </div>
                 </div>
 
-                <label className="flex items-start gap-2 text-[11px] text-slate-600 dark:text-zinc-400 cursor-pointer">
+                <label className="flex items-start gap-2 text-micro text-surface-600 dark:text-surface-400 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={acceptedPolicies}
@@ -796,11 +841,15 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   </span>
                 </label>
 
-                <div className="flex flex-col-reverse items-stretch gap-2 border-t border-slate-200 pt-3 dark:border-zinc-800 sm:flex-row sm:items-center sm:justify-end sm:gap-3 sm:border-0 sm:pt-2">
+                <div className="sticky bottom-0 -mx-4 -mb-4 flex flex-col-reverse items-stretch gap-2 border-t border-surface-200 bg-white/95 p-4 pt-3 shadow-[0_-8px_24px_rgba(20,20,16,0.08)] backdrop-blur-md dark:border-surface-800 dark:bg-[#12161D]/95 sm:-mx-6 sm:-mb-6 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:p-6">
+                  <p className="flex items-center justify-between gap-3 text-sm font-bold text-surface-900 dark:text-white sm:mr-auto">
+                    <span>Total</span>
+                    <span className="tabular-nums">{money(grandTotalBDT)}</span>
+                  </p>
                   <button
                     type="button"
                     onClick={onClose}
-                    className="w-full rounded-full px-5 py-3 text-center text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-zinc-800 sm:w-auto sm:py-2.5 sm:text-xs"
+                    className="min-h-11 w-full rounded-full px-5 text-center text-sm font-semibold text-surface-700 transition-colors hover:bg-surface-100 dark:text-surface-300 dark:hover:bg-surface-800 sm:w-auto sm:py-2.5 sm:text-xs"
                   >
                     Cancel
                   </button>
@@ -815,7 +864,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                         : paymentMethod === 'rocket'
                         ? 'bg-[#8C3494] hover:bg-[#77287e] shadow-[#8C3494]/30'
                         : paymentMethod === 'cash_on_delivery'
-                        ? 'bg-emerald-600 hover:bg-emerald-500 shadow-emerald-600/30'
+                        ? 'bg-success-600 hover:bg-success-500 shadow-success-600/30'
                           : 'premium-button'
                     }`}
                   >
@@ -861,4 +910,3 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     </>
   );
 };
-

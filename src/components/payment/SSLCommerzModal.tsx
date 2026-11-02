@@ -1,6 +1,7 @@
 import React from 'react';
 import { Customer, Address } from '../../types';
 import { formatBDT } from '../../lib/api';
+import { api } from '../../lib/api';
 import { apiUrl } from '../../apiConfig';
 import { X, ShieldCheck, CheckCircle2, Lock, ArrowRight, CreditCard, RefreshCw, AlertCircle, HelpCircle } from 'lucide-react';
 
@@ -40,6 +41,17 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [failureStatus, setFailureStatus] = React.useState<'restoring' | 'restored' | 'restore-failed' | null>(null);
   const [paymentAmountBDT, setPaymentAmountBDT] = React.useState(orderTotal);
+  const [isSandbox, setIsSandbox] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+    api.getPaymentMethods().then((settings) => {
+      setIsSandbox(Boolean(settings.isSandbox));
+    }).catch((error: unknown) => {
+      console.error('Could not load payment environment settings:', error);
+      setIsSandbox(false);
+    });
+  }, [isOpen]);
 
   // Reset or initialize state
   React.useEffect(() => {
@@ -141,58 +153,58 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150">
-      <div className="bg-white dark:bg-[#12161D] w-full max-w-xl rounded-3xl shadow-2xl border border-sky-100 dark:border-zinc-800 overflow-hidden flex flex-col my-4">
+      <div className="bg-white dark:bg-[#12161D] w-full max-w-xl rounded-3xl shadow-2xl border border-brand-100 dark:border-surface-800 overflow-hidden flex flex-col my-4">
         {/* SSLCommerz Security Banner */}
-        <div className="bg-gradient-to-r from-slate-900 via-[#0F1D2B] to-slate-900 px-6 py-3 border-b border-sky-500/20 flex items-center justify-between text-white">
+        <div className="bg-gradient-to-r from-surface-900 via-[#0F1D2B] to-surface-900 px-6 py-3 border-b border-brand-500/20 flex items-center justify-between text-white">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-sky-500/20 border border-sky-400/40 flex items-center justify-center text-sky-400">
+            <div className="w-7 h-7 rounded-lg bg-brand-500/20 border border-brand-400/40 flex items-center justify-center text-brand-400">
               <Lock className="w-3.5 h-3.5" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="text-xs font-black tracking-wider text-white">SSLCOMMERZ</span>
-                <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                <span className="px-1.5 py-0.5 rounded text-micro font-bold bg-success-500/20 text-success-400 border border-success-500/30">
                   SANDBOX 256-BIT SECURE
                 </span>
               </div>
-              <p className="text-[10px] text-slate-400">Official Payment Gateway Partner of ShopNiro</p>
+              <p className="text-micro text-surface-400">Official Payment Gateway Partner of ShopNiro</p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-1 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+            className="p-1 rounded-full text-surface-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Order Price & Merchant Summary */}
-        <div className="bg-slate-50 dark:bg-[#181F2A] px-6 py-4 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between">
+        <div className="bg-surface-50 dark:bg-[#181F2A] px-6 py-4 border-b border-surface-200 dark:border-surface-800 flex items-center justify-between">
           <div>
-            <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400 dark:text-zinc-500 block">
+            <span className="text-micro uppercase tracking-wider font-bold text-surface-400 dark:text-surface-500 block">
               Payable Amount
             </span>
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-black text-slate-900 dark:text-white">
+              <span className="text-2xl font-black text-surface-900 dark:text-white">
                 {formatBDT(paymentAmountBDT)}
               </span>
             </div>
           </div>
 
           <div className="text-right">
-            <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400 dark:text-zinc-500 block">
+            <span className="text-micro uppercase tracking-wider font-bold text-surface-400 dark:text-surface-500 block">
               Merchant
             </span>
-            <span className="text-xs font-bold text-slate-800 dark:text-zinc-200">
+            <span className="text-xs font-bold text-surface-800 dark:text-surface-200">
               ShopNiro Marketplace BD
             </span>
-            <span className="text-[10px] text-slate-400 block font-mono">Invoice: ORD-{Date.now().toString().slice(-6)}</span>
+            <span className="text-micro text-surface-400 block font-mono">Invoice: ORD-{Date.now().toString().slice(-6)}</span>
           </div>
         </div>
 
         {/* Payment Channels Navigation */}
-        <div className="px-6 pt-4 pb-1 flex gap-2 border-b border-slate-100 dark:border-zinc-800/80 bg-white dark:bg-[#12161D] overflow-x-auto">
+        <div className="px-6 pt-4 pb-1 flex gap-2 border-b border-surface-100 dark:border-surface-800/80 bg-white dark:bg-[#12161D] overflow-x-auto">
           <button
             type="button"
             onClick={() => {
@@ -203,12 +215,12 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
             className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
               selectedChannel === 'bkash'
                 ? 'bg-[#E2136E] text-white shadow-md shadow-[#E2136E]/30'
-                : 'bg-slate-100 dark:bg-[#181F2A] text-slate-600 dark:text-zinc-400 hover:bg-slate-200'
+                : 'bg-surface-100 dark:bg-[#181F2A] text-surface-600 dark:text-surface-400 hover:bg-surface-200'
             }`}
           >
             <div className="w-2.5 h-2.5 rounded-full bg-white animate-pulse"></div>
             <span>bKash</span>
-            <span className="text-[10px] opacity-80 font-normal">MFS</span>
+            <span className="text-micro opacity-80 font-normal">MFS</span>
           </button>
 
           <button
@@ -221,7 +233,7 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
             className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
               selectedChannel === 'nagad'
                 ? 'bg-[#F7941D] text-white shadow-md shadow-[#F7941D]/30'
-                : 'bg-slate-100 dark:bg-[#181F2A] text-slate-600 dark:text-zinc-400 hover:bg-slate-200'
+                : 'bg-surface-100 dark:bg-[#181F2A] text-surface-600 dark:text-surface-400 hover:bg-surface-200'
             }`}
           >
             <span>Nagad</span>
@@ -237,7 +249,7 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
             className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
               selectedChannel === 'rocket'
                 ? 'bg-[#8C3494] text-white shadow-md shadow-[#8C3494]/30'
-                : 'bg-slate-100 dark:bg-[#181F2A] text-slate-600 dark:text-zinc-400 hover:bg-slate-200'
+                : 'bg-surface-100 dark:bg-[#181F2A] text-surface-600 dark:text-surface-400 hover:bg-surface-200'
             }`}
           >
             <span>Rocket</span>
@@ -252,8 +264,8 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
             }}
             className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
               selectedChannel === 'cards'
-                ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
-                : 'bg-slate-100 dark:bg-[#181F2A] text-slate-600 dark:text-zinc-400 hover:bg-slate-200'
+                ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30'
+                : 'bg-surface-100 dark:bg-[#181F2A] text-surface-600 dark:text-surface-400 hover:bg-surface-200'
             }`}
           >
             <CreditCard className="w-3.5 h-3.5" />
@@ -268,10 +280,10 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
               role="status"
               className={`mb-4 flex items-center gap-2 rounded-2xl border p-3 text-xs ${
                 failureStatus === 'restored'
-                  ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                  ? 'border-success-500/30 bg-success-500/10 text-success-700 dark:text-success-400'
                   : failureStatus === 'restore-failed'
-                  ? 'border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400'
-                  : 'border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-400'
+                  ? 'border-danger-500/30 bg-danger-500/10 text-danger-600 dark:text-danger-400'
+                  : 'border-brand-500/30 bg-brand-500/10 text-brand-700 dark:text-brand-400'
               }`}
             >
               {failureStatus === 'restored' ? (
@@ -289,12 +301,12 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
             </div>
           )}
           {failureStatus === 'restored' && (
-            <button type="button" onClick={onClose} className="mb-4 w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-bold text-white hover:bg-slate-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-white">
+            <button type="button" onClick={onClose} className="mb-4 w-full rounded-xl bg-surface-900 px-4 py-3 text-sm font-bold text-white hover:bg-surface-700 dark:bg-surface-100 dark:text-surface-900 dark:hover:bg-white">
               Return to checkout
             </button>
           )}
           {errorMsg && (
-            <div className="mb-4 p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-500 text-xs flex items-center gap-2">
+            <div className="mb-4 p-3 rounded-2xl bg-danger-500/10 border border-danger-500/30 text-danger-500 text-xs flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{errorMsg}</span>
             </div>
@@ -311,12 +323,12 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
                   </div>
                   <div>
                     <h3 className="font-black text-sm tracking-wide">bKash Payment Gateway</h3>
-                    <p className="text-[11px] text-pink-100">Powered by SSLCOMMERZ</p>
+                    <p className="text-micro text-pink-100">Powered by SSLCOMMERZ</p>
                   </div>
                 </div>
 
                 <div className="text-right">
-                  <span className="text-[10px] font-bold text-pink-200 uppercase block">Amount</span>
+                  <span className="text-micro font-bold text-pink-200 uppercase block">Amount</span>
                   <span className="text-base font-black">{formatBDT(paymentAmountBDT)}</span>
                 </div>
               </div>
@@ -325,42 +337,47 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
               {step === 'number' && (
                 <form onSubmit={handlePhoneSubmit} className="space-y-4">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1.5">
+                    <label htmlFor="payment-phone" className="block text-xs font-bold text-surface-700 dark:text-surface-300 mb-1.5">
                       Your bKash Account Number
                     </label>
                     <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400 text-xs font-bold">
+                      <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-surface-400 text-xs font-bold">
                         🇧🇩 +88
                       </div>
                       <input
+                        id="payment-phone"
                         type="tel"
                         required
+                        inputMode="tel"
+                        autoComplete="tel"
                         value={phone}
                         onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, ''))}
                         placeholder="017XXXXXXXX"
                         maxLength={11}
-                        className="w-full pl-16 pr-4 py-3 bg-white dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-2xl text-slate-900 dark:text-white font-mono font-bold text-sm tracking-wider focus:outline-none focus:ring-2 focus:ring-[#E2136E]"
+                        className="w-full pl-16 pr-4 py-3 bg-white dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-2xl text-surface-900 dark:text-white font-mono font-bold text-sm tracking-wider focus:outline-none focus:ring-2 focus:ring-[#E2136E]"
                       />
                     </div>
                   </div>
 
                   {/* Sandbox helper */}
-                  <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-800 text-xs">
-                    <div className="flex items-center gap-2 text-slate-600 dark:text-zinc-400">
-                      <HelpCircle className="w-3.5 h-3.5 text-[#E2136E]" />
-                      <span>Sandbox Demo Wallet:</span>
+                  {isSandbox && (
+                    <div className="flex items-center justify-between p-3 rounded-2xl bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-800 text-xs">
+                      <div className="flex items-center gap-2 text-surface-600 dark:text-surface-400">
+                        <HelpCircle className="w-3.5 h-3.5 text-[#E2136E]" />
+                        <span>Sandbox Demo Wallet:</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setPhone('01700000000')}
+                        className="text-xs font-bold text-[#E2136E] hover:underline cursor-pointer"
+                      >
+                        Fill 01700000000
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setPhone('01700000000')}
-                      className="text-xs font-bold text-[#E2136E] hover:underline cursor-pointer"
-                    >
-                      Fill 01700000000
-                    </button>
-                  </div>
+                  )}
 
                   <div className="pt-1">
-                    <label className="flex items-start gap-2 cursor-pointer text-[11px] text-slate-600 dark:text-zinc-400">
+                    <label className="flex items-start gap-2 cursor-pointer text-micro text-surface-600 dark:text-surface-400">
                       <input
                         type="checkbox"
                         checked={agreedTerms}
@@ -368,7 +385,7 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
                         className="mt-0.5 rounded text-[#E2136E] focus:ring-[#E2136E]"
                       />
                       <span>
-                        I agree to the <strong className="text-slate-800 dark:text-zinc-200">bKash Merchant terms &amp; conditions</strong> and authorize SSLCommerz to charge {formatBDT(paymentAmountBDT)}.
+                        I agree to the <strong className="text-surface-800 dark:text-surface-200">bKash Merchant terms &amp; conditions</strong> and authorize SSLCommerz to charge {formatBDT(paymentAmountBDT)}.
                       </span>
                     </label>
                   </div>
@@ -377,7 +394,7 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
                     <button
                       type="button"
                       onClick={onClose}
-                      className="w-1/3 py-3 rounded-full text-xs font-bold text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                      className="w-1/3 py-3 rounded-full text-xs font-bold text-surface-600 dark:text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors cursor-pointer"
                     >
                       Close
                     </button>
@@ -400,12 +417,12 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
                     <p className="font-semibold">
                       A 6-digit verification code was simulated for <span className="font-mono font-bold">{phone}</span>.
                     </p>
-                    <p className="text-[11px] opacity-80 mt-0.5">SSLCommerz Sandbox Test OTP: <strong className="font-mono">123456</strong></p>
+                    <p className="text-micro opacity-80 mt-0.5">SSLCommerz Sandbox Test OTP: <strong className="font-mono">123456</strong></p>
                   </div>
 
                   <div>
                     <div className="flex justify-between items-center mb-1.5">
-                      <label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
+                      <label className="text-xs font-bold text-surface-700 dark:text-surface-300">
                         Enter bKash Verification Code (OTP)
                       </label>
                       <button
@@ -425,14 +442,14 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
                       placeholder="e.g. 123456"
                       maxLength={6}
                       autoFocus
-                      className="w-full text-center tracking-widest text-xl font-mono font-black py-3 bg-white dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-2xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#E2136E]"
+                      className="w-full text-center tracking-widest text-xl font-mono font-black py-3 bg-white dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-2xl text-surface-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#E2136E]"
                     />
                   </div>
 
-                  <div className="flex items-center justify-between text-xs text-slate-500 dark:text-zinc-400">
+                  <div className="flex items-center justify-between text-xs text-surface-500 dark:text-surface-400">
                     <span>Didn't receive code?</span>
                     {timer > 0 ? (
-                      <span className="font-mono text-slate-400">Resend in {timer}s</span>
+                      <span className="font-mono text-surface-400">Resend in {timer}s</span>
                     ) : (
                       <button
                         type="button"
@@ -448,7 +465,7 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
                     <button
                       type="button"
                       onClick={() => setStep('number')}
-                      className="w-1/3 py-3 rounded-full text-xs font-bold text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                      className="w-1/3 py-3 rounded-full text-xs font-bold text-surface-600 dark:text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors cursor-pointer"
                     >
                       Back
                     </button>
@@ -469,7 +486,7 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
                 <form onSubmit={handlePinSubmit} className="space-y-4">
                   <div>
                     <div className="flex justify-between items-center mb-1.5">
-                      <label className="text-xs font-bold text-slate-700 dark:text-zinc-300">
+                      <label className="text-xs font-bold text-surface-700 dark:text-surface-300">
                         Enter bKash Account PIN
                       </label>
                       <button
@@ -489,12 +506,12 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
                       placeholder="•••••"
                       maxLength={5}
                       autoFocus
-                      className="w-full text-center tracking-widest text-2xl font-mono font-black py-3 bg-white dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-2xl text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#E2136E]"
+                      className="w-full text-center tracking-widest text-2xl font-mono font-black py-3 bg-white dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-2xl text-surface-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#E2136E]"
                     />
                   </div>
 
-                  <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-800 text-[11px] text-slate-500 dark:text-zinc-400 flex items-center gap-2">
-                    <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <div className="p-3.5 rounded-2xl bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-800 text-micro text-surface-500 dark:text-surface-400 flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-success-500 shrink-0" />
                     <span>Your PIN is encrypted with 256-bit SSLCommerz vault security. Never disclosed to merchants.</span>
                   </div>
 
@@ -502,7 +519,7 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
                     <button
                       type="button"
                       onClick={() => setStep('otp')}
-                      className="w-1/3 py-3 rounded-full text-xs font-bold text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                      className="w-1/3 py-3 rounded-full text-xs font-bold text-surface-600 dark:text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors cursor-pointer"
                     >
                       Back
                     </button>
@@ -530,13 +547,13 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
               >
                 <div>
                   <h3 className="font-black text-sm">{selectedChannel.toUpperCase()} Mobile Banking</h3>
-                  <p className="text-[11px] opacity-80">SSLCommerz Digital MFS Integration</p>
+                  <p className="text-micro opacity-80">SSLCommerz Digital MFS Integration</p>
                 </div>
                 <div className="text-right font-black text-base">{formatBDT(paymentAmountBDT)}</div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1.5">
+                <label className="block text-xs font-bold text-surface-700 dark:text-surface-300 mb-1.5">
                   {selectedChannel.toUpperCase()} Account Number
                 </label>
                 <input
@@ -544,7 +561,7 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="01XXXXXXXXX"
-                  className="w-full px-4 py-3 bg-white dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-2xl text-slate-900 dark:text-white font-mono text-sm"
+                  className="w-full px-4 py-3 bg-white dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-2xl text-surface-900 dark:text-white font-mono text-sm"
                 />
               </div>
 
@@ -565,18 +582,18 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
           {/* ================= CARDS GATEWAY ================= */}
           {selectedChannel === 'cards' && (
             <div className="space-y-4">
-              <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-700 to-indigo-800 text-white flex items-center justify-between shadow-lg">
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-brand-700 to-indigo-800 text-white flex items-center justify-between shadow-lg">
                 <div className="flex items-center gap-3">
                   <CreditCard className="w-8 h-8 opacity-80" />
                   <div>
                     <h3 className="font-bold text-sm">Credit / Debit Card (SSLCommerz)</h3>
-                    <p className="text-[11px] opacity-80">Visa, Mastercard, Amex, UnionPay</p>
+                    <p className="text-micro opacity-80">Visa, Mastercard, Amex, UnionPay</p>
                   </div>
                 </div>
                 <span className="font-black text-base">{formatBDT(paymentAmountBDT)}</span>
                 </div>
 
-              <p className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 dark:border-zinc-800 dark:bg-[#181F2A] dark:text-zinc-300">
+              <p className="rounded-xl border border-surface-200 bg-surface-50 p-3 text-xs text-surface-600 dark:border-surface-800 dark:bg-[#181F2A] dark:text-surface-300">
                 Card details are entered securely on the SSLCommerz checkout page and are never collected here.
               </p>
 
@@ -584,7 +601,7 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
                 type="button"
                 onClick={() => void startPayment()}
                 disabled={isSubmitting || failureStatus === 'restored'}
-                className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-full text-xs shadow-lg shadow-blue-600/30 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full py-3.5 bg-brand-600 hover:bg-brand-500 text-white font-bold rounded-full text-xs shadow-lg shadow-brand-600/30 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 <Lock className="w-4 h-4" />
                 <span>Pay {formatBDT(paymentAmountBDT)} via SSLCommerz Card Gateway</span>
@@ -595,12 +612,12 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
           {/* ================= PROCESSING OVERLAY ================= */}
           {step === 'processing' && (
             <div className="absolute inset-0 bg-white/95 dark:bg-[#12161D]/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center space-y-4 animate-in fade-in">
-              <div className="w-16 h-16 rounded-full border-4 border-slate-200 border-t-[#E2136E] animate-spin flex items-center justify-center">
+              <div className="w-16 h-16 rounded-full border-4 border-surface-200 border-t-[#E2136E] animate-spin flex items-center justify-center">
                 <Lock className="w-6 h-6 text-[#E2136E]" />
               </div>
               <div>
-                <h4 className="font-black text-lg text-slate-900 dark:text-white">Opening secure checkout</h4>
-                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
+                <h4 className="font-black text-lg text-surface-900 dark:text-white">Opening secure checkout</h4>
+                <p className="text-xs text-surface-500 dark:text-surface-400 mt-1">
                   You’ll complete payment on SSLCommerz and return here for your receipt.
                 </p>
               </div>
@@ -610,12 +627,12 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
           {/* ================= SUCCESS OVERLAY ================= */}
           {step === 'success' && (
             <div className="absolute inset-0 bg-white dark:bg-[#12161D] flex flex-col items-center justify-center p-6 text-center space-y-4 animate-in zoom-in-95">
-              <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-300 flex items-center justify-center shadow-lg">
+              <div className="w-16 h-16 rounded-full bg-success-100 dark:bg-success-950/60 text-success-600 dark:text-success-400 border border-success-300 flex items-center justify-center shadow-lg">
                 <CheckCircle2 className="w-9 h-9" />
               </div>
               <div>
-                <h4 className="font-black text-xl text-slate-900 dark:text-white">Payment Authorized!</h4>
-                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
+                <h4 className="font-black text-xl text-surface-900 dark:text-white">Payment Authorized!</h4>
+                <p className="text-xs text-surface-500 dark:text-surface-400 mt-1">
                   Transaction verified by SSLCommerz. Generating your order waybill...
                 </p>
               </div>
@@ -624,12 +641,12 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
         </div>
 
         {/* Footer Security Badges */}
-        <div className="px-6 py-3 bg-slate-50 dark:bg-[#161C24] border-t border-slate-200 dark:border-zinc-800 flex items-center justify-between text-[11px] text-slate-400">
-          <div className="flex items-center gap-1.5 text-slate-500 dark:text-zinc-400">
-            <ShieldCheck className="w-4 h-4 text-emerald-500" />
+        <div className="px-6 py-3 bg-surface-50 dark:bg-[#161C24] border-t border-surface-200 dark:border-surface-800 flex items-center justify-between text-micro text-surface-400">
+          <div className="flex items-center gap-1.5 text-surface-500 dark:text-surface-400">
+            <ShieldCheck className="w-4 h-4 text-success-500" />
             <span>SSLCommerz PCI-DSS Compliant</span>
           </div>
-          <div className="font-mono text-[10px]">Bangladesh Central Bank Regulated</div>
+          <div className="font-mono text-micro">Bangladesh Central Bank Regulated</div>
         </div>
       </div>
     </div>

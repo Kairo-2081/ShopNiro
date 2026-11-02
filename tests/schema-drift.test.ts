@@ -57,6 +57,7 @@ test('adoption records the real starting schema without claiming the baseline wa
       '0005_align_column_defaults',
       '0006_stop_writing_items_json',
       '0007_drop_items_json',
+      '0008_checkout_idempotency',
     ]);
 
     const baselineHistory = await client.query<{ count: number }>(
@@ -72,6 +73,7 @@ test('adoption records the real starting schema without claiming the baseline wa
       '0005_align_column_defaults',
       '0006_stop_writing_items_json',
       '0007_drop_items_json',
+      '0008_checkout_idempotency',
     ]);
     assert.equal(applied.adopted, '0001_baseline');
     assert.deepEqual(applied.pending, []);

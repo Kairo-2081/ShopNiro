@@ -34,7 +34,7 @@ const adminTabButtonClass = (isActive: boolean) =>
   `inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-5 py-2.5 text-xs font-bold transition-all duration-200 hover:-translate-y-px active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a99b72] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#12161D] ${
     isActive
       ? 'premium-button text-white ring-1 ring-inset ring-white/20'
-      : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900 hover:shadow-sm hover:-translate-y-0.5 dark:text-zinc-400 dark:hover:bg-[#181F2A] dark:hover:text-white'
+      : 'text-surface-500 hover:bg-surface-100 hover:text-surface-900 hover:shadow-sm hover:-translate-y-0.5 dark:text-surface-400 dark:hover:bg-[#181F2A] dark:hover:text-white'
   }`;
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
@@ -232,9 +232,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const selectedSeller = sellers.find((seller) => seller.Seller_ID === selectedSellerId) || null;
   const dashboardKpis = [
     { title: 'Total Market Value', value: formatCurrency(totalMarketValue), sub: 'Current catalog stock value', accent: 'from-[#a99b72] to-[#d0c8a5]' },
-    { title: 'Active Merchants', value: approvedSellers.length.toLocaleString(), sub: `Pending: ${pendingSellers.length} | Suspended: ${suspendedSellers.length}`, accent: 'from-emerald-500 to-teal-400' },
+    { title: 'Active Merchants', value: approvedSellers.length.toLocaleString(), sub: `Pending: ${pendingSellers.length} | Suspended: ${suspendedSellers.length}`, accent: 'from-success-500 to-teal-400' },
     { title: 'Order Throughput', value: `${orders.length.toLocaleString()} Orders`, sub: 'Live Fulfillment Synced', accent: 'from-[#77775a] to-[#a99b72]' },
-    { title: 'Review Sentiment', value: `${avgSentiment.toFixed(2)} / 5.0`, sub: `Based on ${reviews.length} reviews`, accent: 'from-amber-400 to-orange-500' },
+    { title: 'Review Sentiment', value: `${avgSentiment.toFixed(2)} / 5.0`, sub: `Based on ${reviews.length} reviews`, accent: 'from-warning-400 to-warning-500' },
   ];
 
   // Approving a seller needs the verification checklist, so every Approve button opens the review panel with the
@@ -303,26 +303,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   };
 
   return (
-    <div className="space-y-6 pb-16 text-slate-900 dark:text-zinc-100">
+    <div className="space-y-6 pb-16 text-surface-900 dark:text-surface-100">
       {/* Toast Feedback */}
       {feedbackMsg && (
-        <div role={feedbackTone === 'error' ? 'alert' : 'status'} className={`fixed right-4 top-20 z-50 flex items-center gap-2 rounded-xl border px-4 py-3 text-xs font-semibold shadow-xl backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-200 sm:right-6 ${feedbackTone === 'error' ? 'border-rose-500/20 bg-rose-500/10 text-rose-700 dark:text-rose-300' : 'border-emerald-500/20 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300'}`}>
+        <div role={feedbackTone === 'error' ? 'alert' : 'status'} className={`fixed right-4 top-20 z-50 flex items-center gap-2 rounded-xl border px-4 py-3 text-xs font-semibold shadow-xl backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-200 sm:right-6 ${feedbackTone === 'error' ? 'border-danger-500/20 bg-danger-500/10 text-danger-700 dark:text-danger-300' : 'border-success-500/20 bg-success-500/10 text-success-800 dark:text-success-300'}`}>
           {feedbackTone === 'error' ? <AlertCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
           <span>{feedbackMsg}</span>
         </div>
       )}
 
       {/* Top Overview Banner */}
-      <div className="bg-white dark:bg-[#12161D] border border-sky-100 dark:border-sky-500/20 rounded-3xl p-6 flex flex-wrap items-center justify-between gap-4 shadow-xs">
+      <div className="bg-white dark:bg-[#12161D] border border-brand-100 dark:border-brand-500/20 rounded-3xl p-6 flex flex-wrap items-center justify-between gap-4 shadow-xs">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-500">
+          <div className="w-12 h-12 rounded-2xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-brand-500">
             <ShieldCheck className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
+            <h1 className="text-xl font-bold tracking-tight text-surface-900 dark:text-white flex items-center gap-2">
               Platform Admin Governance Console
             </h1>
-            <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+            <p className="text-xs text-surface-500 dark:text-surface-400 mt-0.5">
               Review seller applications, manage global product categories, and moderate marketplace entities.
             </p>
           </div>
@@ -330,13 +330,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
         {/* Pending approvals highlight badge */}
         {pendingSellers.length > 0 ? (
-          <div className="px-4 py-2 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-xs font-semibold flex items-center gap-2">
-            <Clock className="w-4 h-4 text-amber-500" />
+          <div className="px-4 py-2 rounded-full bg-warning-500/10 border border-warning-500/20 text-warning-700 dark:text-warning-400 text-xs font-semibold flex items-center gap-2">
+            <Clock className="w-4 h-4 text-warning-500" />
             <span>{pendingSellers.length} Pending Seller Application{pendingSellers.length > 1 ? 's' : ''} Requires Approval</span>
           </div>
         ) : (
-          <div className="px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-xs font-semibold flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+          <div className="px-4 py-2 rounded-full bg-success-500/10 border border-success-500/20 text-success-700 dark:text-success-400 text-xs font-semibold flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-success-500" />
             <span>All Seller Applications Processed</span>
           </div>
         )}
@@ -347,15 +347,15 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         {dashboardKpis.map((kpi) => (
           <div key={kpi.title} className="group premium-card relative overflow-hidden rounded-3xl p-5">
             <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${kpi.accent} opacity-80 group-hover:opacity-100 transition-opacity`} />
-            <p className="text-[11px] font-bold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">{kpi.title}</p>
-            <p className="text-2xl font-black text-slate-900 dark:text-white mt-2 tracking-tight">{isLoading ? <span className="premium-skeleton block h-7 w-3/4 rounded-full" /> : kpi.value}</p>
-            <p className="text-[11px] text-slate-500 dark:text-zinc-400 font-medium mt-2">{isLoading ? <span className="premium-skeleton block h-3 w-5/6 rounded-full" /> : kpi.sub}</p>
+            <p className="text-micro font-bold text-surface-600 dark:text-surface-400 uppercase tracking-wider">{kpi.title}</p>
+            <p className="text-2xl font-black text-surface-900 dark:text-white mt-2 tracking-tight">{isLoading ? <span className="premium-skeleton block h-7 w-3/4 rounded-full" /> : kpi.value}</p>
+            <p className="text-micro text-surface-500 dark:text-surface-400 font-medium mt-2">{isLoading ? <span className="premium-skeleton block h-3 w-5/6 rounded-full" /> : kpi.sub}</p>
           </div>
         ))}
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex max-w-full flex-wrap gap-2 border-b border-[#a99b72]/25 pb-2 shadow-sm dark:border-[#a99b72]/20 dark:shadow-blue-950/10">
+      <div className="flex max-w-full flex-wrap gap-2 border-b border-[#a99b72]/25 pb-2 shadow-sm dark:border-[#a99b72]/20 dark:shadow-brand-950/10">
         <button
           onClick={() => setAdminTab('overview')}
           aria-current={adminTab === 'overview' ? 'page' : undefined}
@@ -447,39 +447,39 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       )}
 
       {adminTab === 'cancellations' && (
-        <Section title="Order cancellation requests" description="Approved online refunds are processed through SSLCommerz and remain pending until the gateway confirms completion." className="space-y-4" action={<button type="button" onClick={() => void fetchCancellationRequests()} disabled={loadingCancellations} className="inline-flex items-center gap-2 rounded-full border border-slate-300 px-3 py-2 text-xs font-semibold dark:border-zinc-700"><RefreshCw className={`h-3.5 w-3.5 ${loadingCancellations ? 'animate-spin' : ''}`} />Refresh</button>}>
+        <Section title="Order cancellation requests" description="Approved online refunds are processed through SSLCommerz and remain pending until the gateway confirms completion." className="space-y-4" action={<button type="button" onClick={() => void fetchCancellationRequests()} disabled={loadingCancellations} className="inline-flex items-center gap-2 rounded-full border border-surface-300 px-3 py-2 text-xs font-semibold dark:border-surface-700"><RefreshCw className={`h-3.5 w-3.5 ${loadingCancellations ? 'animate-spin' : ''}`} />Refresh</button>}>
           {loadingCancellations ? (
             <div role="status" aria-label="Loading cancellation requests" className="premium-skeleton h-40 rounded-2xl" />
           ) : cancellationRequests.length === 0 ? (
-            <p className="premium-surface rounded-xl p-8 text-center text-sm text-slate-500 dark:text-zinc-400">No cancellation requests.</p>
+            <p className="premium-surface rounded-xl p-8 text-center text-sm text-surface-500 dark:text-surface-400">No cancellation requests.</p>
           ) : (
             <div className="space-y-3">
               {cancellationRequests.map((request) => (
                 <article key={request.Request_ID} className="premium-surface space-y-3 rounded-xl p-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <p className="text-sm font-bold text-slate-900 dark:text-white">Order {request.Order_ID}</p>
-                      <p className="mt-1 text-xs text-slate-500 dark:text-zinc-400">Customer {request.Customer_ID} · {request.Payment_Status} · {formatDate(request.Requested_At)}</p>
-                      {request.Reason && <p className="mt-2 text-xs text-slate-700 dark:text-zinc-300">Reason: {request.Reason}</p>}
-                      {request.Refund_Status && <p className="mt-2 text-xs font-semibold text-sky-700 dark:text-sky-300">Refund: {request.Refund_Status}</p>}
+                      <p className="text-sm font-bold text-surface-900 dark:text-white">Order {request.Order_ID}</p>
+                      <p className="mt-1 text-xs text-surface-500 dark:text-surface-400">Customer {request.Customer_ID} · {request.Payment_Status} · {formatDate(request.Requested_At)}</p>
+                      {request.Reason && <p className="mt-2 text-xs text-surface-700 dark:text-surface-300">Reason: {request.Reason}</p>}
+                      {request.Refund_Status && <p className="mt-2 text-xs font-semibold text-brand-700 dark:text-brand-300">Refund: {request.Refund_Status}</p>}
                     </div>
-                    <span className={`rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase ${request.Status === 'pending' ? 'border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-300' : request.Status === 'approved' ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300' : 'border-rose-500/20 bg-rose-500/10 text-rose-700 dark:text-rose-300'}`}>{request.Status}</span>
+                    <span className={`rounded-full border px-2.5 py-1 text-micro font-bold uppercase ${request.Status === 'pending' ? 'border-warning-500/20 bg-warning-500/10 text-warning-700 dark:text-warning-300' : request.Status === 'approved' ? 'border-success-500/20 bg-success-500/10 text-success-700 dark:text-success-300' : 'border-danger-500/20 bg-danger-500/10 text-danger-700 dark:text-danger-300'}`}>{request.Status}</span>
                   </div>
                   {request.Status === 'pending' && (
-                    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-3 dark:border-zinc-800">
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-surface-200 pt-3 dark:border-surface-800">
                       {request.Payment_Status === 'paid' && request.Payment_Method === 'cash_on_delivery' ? (
-                        <label className="flex items-start gap-2 text-xs text-slate-700 dark:text-zinc-300">
+                        <label className="flex items-start gap-2 text-xs text-surface-700 dark:text-surface-300">
                           <input type="checkbox" checked={confirmedCashReturnIds.includes(request.Request_ID)} onChange={(event) => setConfirmedCashReturnIds((ids) => event.target.checked ? [...ids, request.Request_ID] : ids.filter((id) => id !== request.Request_ID))} />
                           Cash was returned to the customer
                         </label>
                       ) : request.Payment_Status === 'paid' ? (
-                        <span className="text-xs text-slate-500 dark:text-zinc-400">An SSLCommerz refund will be requested after approval.</span>
+                        <span className="text-xs text-surface-500 dark:text-surface-400">An SSLCommerz refund will be requested after approval.</span>
                       ) : (
-                        <span className="text-xs text-slate-500 dark:text-zinc-400">No payment refund is required.</span>
+                        <span className="text-xs text-surface-500 dark:text-surface-400">No payment refund is required.</span>
                       )}
                       <div className="flex gap-2">
-                        <button type="button" disabled={reviewingCancellationId === request.Request_ID} onClick={() => void reviewCancellationRequest(request, 'rejected')} className="rounded-full border border-slate-300 px-3 py-2 text-xs font-bold dark:border-zinc-700">Reject</button>
-                        <button type="button" disabled={reviewingCancellationId === request.Request_ID || (request.Payment_Status === 'paid' && request.Payment_Method === 'cash_on_delivery' && !confirmedCashReturnIds.includes(request.Request_ID))} onClick={() => void reviewCancellationRequest(request, 'approved')} className="rounded-full bg-emerald-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">Approve cancellation</button>
+                        <button type="button" disabled={reviewingCancellationId === request.Request_ID} onClick={() => void reviewCancellationRequest(request, 'rejected')} className="rounded-full border border-surface-300 px-3 py-2 text-xs font-bold dark:border-surface-700">Reject</button>
+                        <button type="button" disabled={reviewingCancellationId === request.Request_ID || (request.Payment_Status === 'paid' && request.Payment_Method === 'cash_on_delivery' && !confirmedCashReturnIds.includes(request.Request_ID))} onClick={() => void reviewCancellationRequest(request, 'approved')} className="rounded-full bg-success-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">Approve cancellation</button>
                       </div>
                     </div>
                   )}
@@ -491,30 +491,30 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       )}
 
       {adminTab === 'support' && (
-        <Section title="Support inbox" description="Review customer requests and record resolution notes." className="space-y-4" action={<button type="button" onClick={() => void fetchSupportRequests()} disabled={loadingSupportRequests} className="inline-flex items-center gap-2 rounded-full border border-slate-300 px-3 py-2 text-xs font-semibold dark:border-zinc-700"><RefreshCw className={`h-3.5 w-3.5 ${loadingSupportRequests ? 'animate-spin' : ''}`} />Refresh</button>}>
+        <Section title="Support inbox" description="Review customer requests and record resolution notes." className="space-y-4" action={<button type="button" onClick={() => void fetchSupportRequests()} disabled={loadingSupportRequests} className="inline-flex items-center gap-2 rounded-full border border-surface-300 px-3 py-2 text-xs font-semibold dark:border-surface-700"><RefreshCw className={`h-3.5 w-3.5 ${loadingSupportRequests ? 'animate-spin' : ''}`} />Refresh</button>}>
           {loadingSupportRequests ? (
             <div role="status" aria-label="Loading support requests" className="premium-skeleton h-40 rounded-2xl" />
           ) : supportRequests.length === 0 ? (
-            <p className="premium-surface rounded-xl p-8 text-center text-sm text-slate-500 dark:text-zinc-400">No support requests.</p>
+            <p className="premium-surface rounded-xl p-8 text-center text-sm text-surface-500 dark:text-surface-400">No support requests.</p>
           ) : (
             <div className="space-y-3">
               {supportRequests.map((request) => (
                 <article key={request.Request_ID} className="premium-surface space-y-3 rounded-xl p-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <h3 className="text-sm font-bold text-slate-900 dark:text-white">{request.Subject}</h3>
-                      <a href={`mailto:${encodeURIComponent(request.Email)}`} className="mt-1 inline-block text-xs font-semibold text-emerald-800 underline underline-offset-2 dark:text-emerald-300">{request.Name} · {request.Email}</a>
-                      <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700 dark:text-zinc-300">{request.Message}</p>
-                      <p className="mt-2 text-xs text-slate-500 dark:text-zinc-400">{request.Request_ID} · {formatDate(request.Created_At)}</p>
+                      <h3 className="text-sm font-bold text-surface-900 dark:text-white">{request.Subject}</h3>
+                      <a href={`mailto:${encodeURIComponent(request.Email)}`} className="mt-1 inline-block text-xs font-semibold text-success-800 underline underline-offset-2 dark:text-success-300">{request.Name} · {request.Email}</a>
+                      <p className="mt-2 whitespace-pre-wrap text-sm text-surface-700 dark:text-surface-300">{request.Message}</p>
+                      <p className="mt-2 text-xs text-surface-500 dark:text-surface-400">{request.Request_ID} · {formatDate(request.Created_At)}</p>
                     </div>
-                    <span className="rounded-full border border-slate-300 px-2.5 py-1 text-[10px] font-bold uppercase dark:border-zinc-700">{request.Status.replace('_', ' ')}</span>
+                    <span className="rounded-full border border-surface-300 px-2.5 py-1 text-micro font-bold uppercase dark:border-surface-700">{request.Status.replace('_', ' ')}</span>
                   </div>
-                  <div className="grid gap-3 border-t border-slate-200 pt-3 dark:border-zinc-800 sm:grid-cols-[170px_1fr_auto]">
-                    <select value={supportStatuses[request.Request_ID] || request.Status} onChange={(event) => setSupportStatuses((current) => ({ ...current, [request.Request_ID]: event.target.value as SupportRequest['Status'] }))} className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs dark:border-zinc-700 dark:bg-[#181F2A]">
+                  <div className="grid gap-3 border-t border-surface-200 pt-3 dark:border-surface-800 sm:grid-cols-[170px_1fr_auto]">
+                    <select value={supportStatuses[request.Request_ID] || request.Status} onChange={(event) => setSupportStatuses((current) => ({ ...current, [request.Request_ID]: event.target.value as SupportRequest['Status'] }))} className="rounded-lg border border-surface-300 bg-white px-3 py-2 text-xs dark:border-surface-700 dark:bg-[#181F2A]">
                       <option value="open">Open</option><option value="in_progress">In progress</option><option value="resolved">Resolved</option>
                     </select>
-                    <input value={supportNotes[request.Request_ID] || ''} onChange={(event) => setSupportNotes((current) => ({ ...current, [request.Request_ID]: event.target.value }))} maxLength={2000} placeholder="Internal resolution note" className="min-w-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs dark:border-zinc-700 dark:bg-[#181F2A]" />
-                    <button type="button" disabled={savingSupportId === request.Request_ID} onClick={() => void updateSupportRequest(request)} className="rounded-lg bg-emerald-700 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">{savingSupportId === request.Request_ID ? 'Saving…' : 'Save'}</button>
+                    <input value={supportNotes[request.Request_ID] || ''} onChange={(event) => setSupportNotes((current) => ({ ...current, [request.Request_ID]: event.target.value }))} maxLength={2000} placeholder="Internal resolution note" className="min-w-0 rounded-lg border border-surface-300 bg-white px-3 py-2 text-xs dark:border-surface-700 dark:bg-[#181F2A]" />
+                    <button type="button" disabled={savingSupportId === request.Request_ID} onClick={() => void updateSupportRequest(request)} className="rounded-lg bg-success-700 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">{savingSupportId === request.Request_ID ? 'Saving…' : 'Save'}</button>
                   </div>
                 </article>
               ))}
@@ -528,17 +528,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <>
         <div className="grid grid-cols-12 gap-6">
           {/* Main Approval Table (Span 8) */}
-          <div className="col-span-12 lg:col-span-8 bg-white dark:bg-[#12161D] border border-sky-100 dark:border-sky-500/20 rounded-3xl flex flex-col overflow-hidden shadow-xs">
-            <div className="p-6 border-b border-sky-100 dark:border-zinc-800 flex items-center justify-between">
+          <div className="col-span-12 lg:col-span-8 bg-white dark:bg-[#12161D] border border-brand-100 dark:border-brand-500/20 rounded-3xl flex flex-col overflow-hidden shadow-xs">
+            <div className="p-6 border-b border-brand-100 dark:border-surface-800 flex items-center justify-between">
               <div>
-                <h2 className="text-sm font-semibold text-slate-900 dark:text-white">Seller Approval Workflow</h2>
-                <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">
+                <h2 className="text-sm font-semibold text-surface-900 dark:text-white">Seller Approval Workflow</h2>
+                <p className="text-micro text-surface-500 dark:text-surface-400 mt-0.5">
                   Approve or restrict merchant stores requesting live product listing privileges.
                 </p>
               </div>
               <button
                 onClick={() => setAdminTab('sellers')}
-                className="text-[11px] font-bold bg-slate-100 hover:bg-slate-200 dark:bg-[#181F2A] dark:hover:bg-[#1f2937] text-blue-600 dark:text-sky-400 px-3.5 py-1.5 rounded-full border border-sky-100 dark:border-zinc-700 transition-colors cursor-pointer"
+                className="text-micro font-bold bg-surface-100 hover:bg-surface-200 dark:bg-[#181F2A] dark:hover:bg-[#1f2937] text-brand-600 dark:text-brand-400 px-3.5 py-1.5 rounded-full border border-brand-100 dark:border-surface-700 transition-colors cursor-pointer"
               >
                 View All Merchants ({sellers.length})
               </button>
@@ -546,7 +546,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 dark:bg-[#181F2A] text-[10px] text-slate-500 dark:text-zinc-400 uppercase tracking-wider border-b border-sky-100 dark:border-zinc-800">
+                <thead className="bg-surface-50 dark:bg-[#181F2A] text-micro text-surface-500 dark:text-surface-400 uppercase tracking-wider border-b border-brand-100 dark:border-surface-800">
                   <tr>
                     <th className="px-6 py-4 font-semibold">Seller Info</th>
                     <th className="px-6 py-4 font-semibold">Contact Email</th>
@@ -555,43 +555,43 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <th className="px-6 py-4 font-semibold text-right">Approval Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-sky-100/60 dark:divide-zinc-800/80 text-slate-700 dark:text-zinc-300">
+                <tbody className="divide-y divide-brand-100/60 dark:divide-surface-800/80 text-surface-700 dark:text-surface-300">
                   {sellers.map((seller) => (
-                    <tr key={seller.Seller_ID} className="hover:bg-slate-50 dark:hover:bg-[#181F2A]/60 transition-colors">
+                    <tr key={seller.Seller_ID} className="hover:bg-surface-50 dark:hover:bg-[#181F2A]/60 transition-colors">
                       <td className="px-6 py-4">
                         <button
                           type="button"
                           onClick={() => setSelectedSellerId(seller.Seller_ID)}
                           aria-label={`View ${seller.Name} application details`}
-                          className="flex items-center gap-3 text-left rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                          className="flex items-center gap-3 text-left rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                         >
                           <img
                             src={seller.Logo}
                             alt={seller.Name}
-                            className="w-9 h-9 rounded-xl object-cover border border-sky-100 dark:border-zinc-700 bg-slate-100 dark:bg-[#181F2A]"
+                            className="w-9 h-9 rounded-xl object-cover border border-brand-100 dark:border-surface-700 bg-surface-100 dark:bg-[#181F2A]"
                           />
                           <div>
-                            <p className="font-semibold text-slate-900 dark:text-white">{seller.Name}</p>
-                            <p className="text-[10px] text-slate-400 dark:text-zinc-500 font-mono">ID: {seller.Seller_ID}</p>
-                            <p className="text-[10px] text-blue-600 dark:text-sky-400">View application</p>
+                            <p className="font-semibold text-surface-900 dark:text-white">{seller.Name}</p>
+                            <p className="text-micro text-surface-400 dark:text-surface-500 font-mono">ID: {seller.Seller_ID}</p>
+                            <p className="text-micro text-brand-600 dark:text-brand-400">View application</p>
                           </div>
                         </button>
                       </td>
-                      <td className="px-6 py-4 text-slate-600 dark:text-zinc-400">{seller.Email}</td>
-                      <td className="px-6 py-4 text-slate-600 dark:text-zinc-400">{formatDate(seller.Created_At)}</td>
+                      <td className="px-6 py-4 text-surface-600 dark:text-surface-400">{seller.Email}</td>
+                      <td className="px-6 py-4 text-surface-600 dark:text-surface-400">{formatDate(seller.Created_At)}</td>
                       <td className="px-6 py-4">
                         {seller.Status === 'approved' && (
-                          <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold border border-emerald-500/20 uppercase">
+                          <span className="px-2.5 py-1 rounded-full bg-success-500/10 text-success-600 dark:text-success-400 text-micro font-bold border border-success-500/20 uppercase">
                             Approved
                           </span>
                         )}
                         {seller.Status === 'pending' && (
-                          <span className="inline-flex whitespace-nowrap px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-bold border border-amber-500/20 uppercase">
+                          <span className="inline-flex whitespace-nowrap px-2.5 py-1 rounded-full bg-warning-500/10 text-warning-600 dark:text-warning-400 text-micro font-bold border border-warning-500/20 uppercase">
                             Pending Review
                           </span>
                         )}
                         {(seller.Status === 'suspended' || seller.Status === 'rejected') && (
-                          <span className="px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[10px] font-bold border border-rose-500/20 uppercase">
+                          <span className="px-2.5 py-1 rounded-full bg-danger-500/10 text-danger-600 dark:text-danger-400 text-micro font-bold border border-danger-500/20 uppercase">
                             {seller.Status}
                           </span>
                         )}
@@ -603,7 +603,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               type="button"
                               onClick={() => openSellerReview(seller)}
                               disabled={updatingSellerId === seller.Seller_ID}
-                              className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-full text-[10px] font-bold transition-all cursor-pointer shadow-sm shadow-emerald-500/20"
+                              className="px-3 py-1 bg-success-600 hover:bg-success-500 disabled:opacity-50 text-white rounded-full text-micro font-bold transition-all cursor-pointer shadow-sm shadow-success-500/20"
                             >
                               Review &amp; approve
                             </button>
@@ -613,7 +613,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               type="button"
                               onClick={() => void handleSellerStatusChange(seller, 'suspended')}
                               disabled={updatingSellerId === seller.Seller_ID}
-                              className="px-3 py-1 bg-rose-600/80 hover:bg-rose-500 disabled:opacity-50 text-white rounded-full text-[10px] font-bold transition-all cursor-pointer"
+                              className="px-3 py-1 bg-danger-600/80 hover:bg-danger-500 disabled:opacity-50 text-white rounded-full text-micro font-bold transition-all cursor-pointer"
                             >
                               Suspend
                             </button>
@@ -630,46 +630,46 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           {/* Side Info Panels (Span 4) */}
           <div className="col-span-12 lg:col-span-4 space-y-6">
             {/* System Activity Log */}
-            <div className="bg-white dark:bg-[#12161D] border border-sky-100 dark:border-sky-500/20 rounded-3xl p-6 flex flex-col justify-between shadow-xs">
-              <h2 className="text-sm font-semibold text-slate-900 dark:text-white border-b border-sky-100 dark:border-zinc-800 pb-3">
+            <div className="bg-white dark:bg-[#12161D] border border-brand-100 dark:border-brand-500/20 rounded-3xl p-6 flex flex-col justify-between shadow-xs">
+              <h2 className="text-sm font-semibold text-surface-900 dark:text-white border-b border-brand-100 dark:border-surface-800 pb-3">
                 System Activity Log
               </h2>
               <div className="space-y-4 pt-4 text-xs">
                 <div className="flex gap-3 items-start">
-                  <div className="w-2.5 h-2.5 rounded-full bg-blue-500 mt-1 shrink-0"></div>
+                  <div className="w-2.5 h-2.5 rounded-full bg-brand-500 mt-1 shrink-0"></div>
                   <div>
-                    <p className="font-medium text-slate-800 dark:text-zinc-200">Merchant Directory Synced</p>
-                    <p className="text-[10px] text-slate-500 dark:text-zinc-400">All registered vendors verified with PostgreSQL</p>
+                    <p className="font-medium text-surface-800 dark:text-surface-200">Merchant Directory Synced</p>
+                    <p className="text-micro text-surface-500 dark:text-surface-400">All registered vendors verified with PostgreSQL</p>
                   </div>
                 </div>
 
                 <div className="flex gap-3 items-start">
-                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 mt-1 shrink-0"></div>
+                  <div className="w-2.5 h-2.5 rounded-full bg-success-500 mt-1 shrink-0"></div>
                   <div>
-                    <p className="font-medium text-slate-800 dark:text-zinc-200">Platform Health Guard Active</p>
-                    <p className="text-[10px] text-slate-500 dark:text-zinc-400">0 critical incidents reported across active nodes</p>
+                    <p className="font-medium text-surface-800 dark:text-surface-200">Platform Health Guard Active</p>
+                    <p className="text-micro text-surface-500 dark:text-surface-400">0 critical incidents reported across active nodes</p>
                   </div>
                 </div>
 
                 <div className="flex gap-3 items-start">
-                  <div className="w-2.5 h-2.5 rounded-full bg-sky-500 mt-1 shrink-0"></div>
+                  <div className="w-2.5 h-2.5 rounded-full bg-brand-500 mt-1 shrink-0"></div>
                   <div>
-                    <p className="font-medium text-slate-800 dark:text-zinc-200">Category Registry Updated</p>
-                    <p className="text-[10px] text-slate-500 dark:text-zinc-400">{categories.length} Categories active in storefront</p>
+                    <p className="font-medium text-surface-800 dark:text-surface-200">Category Registry Updated</p>
+                    <p className="text-micro text-surface-500 dark:text-surface-400">{categories.length} Categories active in storefront</p>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Storefront Synchronized Banner */}
-            <div className="bg-gradient-to-br from-[#0B1528] to-[#12161D] border border-sky-500/25 rounded-3xl p-6 relative overflow-hidden text-white space-y-3 shadow-lg shadow-blue-500/10">
-              <div className="absolute -right-12 -top-12 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
-              <h3 className="text-base font-bold text-sky-400">Storefront Synchronization</h3>
-              <p className="text-xs text-zinc-300 leading-relaxed">
+            <div className="bg-gradient-to-br from-[#0B1528] to-[#12161D] border border-brand-500/25 rounded-3xl p-6 relative overflow-hidden text-white space-y-3 shadow-lg shadow-brand-500/10">
+              <div className="absolute -right-12 -top-12 w-48 h-48 bg-brand-500/10 rounded-full blur-3xl pointer-events-none"></div>
+              <h3 className="text-base font-bold text-brand-400">Storefront Synchronization</h3>
+              <p className="text-xs text-surface-300 leading-relaxed">
                 Changes made here immediately update live product visibility and seller status across all client interfaces.
               </p>
               <div className="pt-2">
-                <span className="inline-block bg-blue-600 text-white px-3.5 py-1.5 rounded-full text-xs font-bold shadow-md shadow-blue-500/30">
+                <span className="inline-block bg-brand-600 text-white px-3.5 py-1.5 rounded-full text-xs font-bold shadow-md shadow-brand-500/30">
                   Status: 100% Synced
                 </span>
               </div>
@@ -685,25 +685,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       {/* Tab 2: Full Merchant Accounts Management */}
       {adminTab === 'sellers' && (
         <div className="space-y-4">
-          <div className="bg-white dark:bg-[#12161D] p-4 rounded-3xl border border-sky-100 dark:border-sky-500/20 flex flex-wrap items-center justify-between gap-4 shadow-xs">
+          <div className="bg-white dark:bg-[#12161D] p-4 rounded-3xl border border-brand-100 dark:border-brand-500/20 flex flex-wrap items-center justify-between gap-4 shadow-xs">
             <div className="relative w-full sm:w-80">
-              <Search className="w-4 h-4 text-slate-400 dark:text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Search className="w-4 h-4 text-surface-400 dark:text-surface-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={sellerSearch}
                 onChange={(e) => setSellerSearch(e.target.value)}
                 placeholder="Search sellers by name or email..."
-                className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-full text-xs text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full pl-9 pr-3 py-2 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-full text-xs text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500 focus:outline-none focus:ring-2 focus:ring-brand-500"
               />
             </div>
 
             <div className="flex items-center gap-3 text-xs">
               <div className="flex items-center gap-2">
-                <span className="text-slate-600 dark:text-zinc-400 font-medium">Status Filter:</span>
+                <span className="text-surface-600 dark:text-surface-400 font-medium">Status Filter:</span>
                 <select
                   value={sellerStatusFilter}
                   onChange={(e) => setSellerStatusFilter(e.target.value)}
-                  className="bg-slate-50 dark:bg-[#181F2A] text-slate-900 dark:text-white border border-slate-200 dark:border-zinc-700 rounded-full px-3.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="bg-surface-50 dark:bg-[#181F2A] text-surface-900 dark:text-white border border-surface-200 dark:border-surface-700 rounded-full px-3.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-500"
                 >
                   <option value="all">All Statuses ({sellers.length})</option>
                   <option value="pending">Pending ({pendingSellers.length})</option>
@@ -715,7 +715,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               {onOpenSellerSignup && (
                 <button
                   onClick={onOpenSellerSignup}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-full text-xs transition-all shadow-md shadow-blue-500/25 cursor-pointer"
+                  className="flex items-center gap-1.5 px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white font-semibold rounded-full text-xs transition-all shadow-md shadow-brand-500/25 cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   <span>Register New Merchant</span>
@@ -724,10 +724,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             </div>
           </div>
 
-          <div className="bg-white dark:bg-[#12161D] border border-sky-100 dark:border-sky-500/20 rounded-3xl overflow-hidden shadow-xs">
+          <div className="bg-white dark:bg-[#12161D] border border-brand-100 dark:border-brand-500/20 rounded-3xl overflow-hidden shadow-xs">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-slate-50 dark:bg-[#181F2A] text-[10px] text-slate-500 dark:text-zinc-400 uppercase tracking-wider border-b border-sky-100 dark:border-zinc-800">
+                <thead className="bg-surface-50 dark:bg-[#181F2A] text-micro text-surface-500 dark:text-surface-400 uppercase tracking-wider border-b border-brand-100 dark:border-surface-800">
                   <tr>
                     <th className="p-4">Merchant Name</th>
                     <th className="p-4">Email &amp; Phone</th>
@@ -736,48 +736,48 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <th className="p-4 text-right">Approval Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-sky-100/60 dark:divide-zinc-800/80">
+                <tbody className="divide-y divide-brand-100/60 dark:divide-surface-800/80">
                   {filteredSellers.map((seller) => (
-                    <tr key={seller.Seller_ID} className="hover:bg-slate-50 dark:hover:bg-[#181F2A]/60 transition-colors">
+                    <tr key={seller.Seller_ID} className="hover:bg-surface-50 dark:hover:bg-[#181F2A]/60 transition-colors">
                       <td className="p-4">
                         <div className="flex items-center gap-3">
                           <img
                             src={seller.Logo}
                             alt={seller.Name}
-                            className="w-10 h-10 rounded-xl object-cover bg-slate-100 dark:bg-[#181F2A] border border-sky-100 dark:border-zinc-700"
+                            className="w-10 h-10 rounded-xl object-cover bg-surface-100 dark:bg-[#181F2A] border border-brand-100 dark:border-surface-700"
                           />
                           <button
                             type="button"
                             onClick={() => openSellerReview(seller)}
                             aria-label={`View ${seller.Name} application details`}
-                            className="text-left rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                            className="text-left rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                           >
-                            <span className="font-bold text-slate-900 dark:text-white block">{seller.Name}</span>
-                            <span className="text-[10px] text-slate-400 dark:text-zinc-500 font-mono block">ID: {seller.Seller_ID}</span>
-                            <span className="text-[10px] text-blue-600 dark:text-sky-400 block">View application</span>
+                            <span className="font-bold text-surface-900 dark:text-white block">{seller.Name}</span>
+                            <span className="text-micro text-surface-400 dark:text-surface-500 font-mono block">ID: {seller.Seller_ID}</span>
+                            <span className="text-micro text-brand-600 dark:text-brand-400 block">View application</span>
                           </button>
                         </div>
                       </td>
-                      <td className="p-4 text-slate-700 dark:text-zinc-300">
+                      <td className="p-4 text-surface-700 dark:text-surface-300">
                         <p>{seller.Email}</p>
-                        <p className="text-slate-400 dark:text-zinc-500">{seller.Number}</p>
+                        <p className="text-surface-400 dark:text-surface-500">{seller.Number}</p>
                       </td>
-                      <td className="p-4 text-slate-600 dark:text-zinc-400 max-w-xs">
+                      <td className="p-4 text-surface-600 dark:text-surface-400 max-w-xs">
                         {seller.Address.House_Name}, {seller.Address.Street}, {seller.Address.City} ({seller.Address.Postal_Code})
                       </td>
                       <td className="p-4">
                         {seller.Status === 'approved' && (
-                          <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold border border-emerald-500/20 uppercase">
+                          <span className="px-2.5 py-1 rounded-full bg-success-500/10 text-success-600 dark:text-success-400 text-micro font-bold border border-success-500/20 uppercase">
                             Approved
                           </span>
                         )}
                         {seller.Status === 'pending' && (
-                          <span className="inline-flex whitespace-nowrap px-2.5 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-bold border border-amber-500/20 uppercase">
+                          <span className="inline-flex whitespace-nowrap px-2.5 py-1 rounded-full bg-warning-500/10 text-warning-600 dark:text-warning-400 text-micro font-bold border border-warning-500/20 uppercase">
                             Pending Review
                           </span>
                         )}
                         {(seller.Status === 'suspended' || seller.Status === 'rejected') && (
-                          <span className="px-2.5 py-1 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[10px] font-bold border border-rose-500/20 uppercase">
+                          <span className="px-2.5 py-1 rounded-full bg-danger-500/10 text-danger-600 dark:text-danger-400 text-micro font-bold border border-danger-500/20 uppercase">
                             {seller.Status}
                           </span>
                         )}
@@ -789,7 +789,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               type="button"
                               onClick={() => openSellerReview(seller)}
                               disabled={updatingSellerId === seller.Seller_ID}
-                              className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-full text-xs font-bold transition-all cursor-pointer shadow-sm shadow-emerald-500/20"
+                              className="px-3 py-1 bg-success-600 hover:bg-success-500 disabled:opacity-50 text-white rounded-full text-xs font-bold transition-all cursor-pointer shadow-sm shadow-success-500/20"
                             >
                               Review &amp; approve
                             </button>
@@ -799,7 +799,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               type="button"
                               onClick={() => void handleSellerStatusChange(seller, 'rejected')}
                               disabled={updatingSellerId === seller.Seller_ID}
-                              className="px-3 py-1 bg-slate-200 hover:bg-slate-300 dark:bg-zinc-700 dark:hover:bg-zinc-600 disabled:opacity-50 text-slate-800 dark:text-zinc-200 rounded-full text-xs font-bold transition-colors cursor-pointer"
+                              className="px-3 py-1 bg-surface-200 hover:bg-surface-300 dark:bg-surface-700 dark:hover:bg-surface-600 disabled:opacity-50 text-surface-800 dark:text-surface-200 rounded-full text-xs font-bold transition-colors cursor-pointer"
                             >
                               Reject
                             </button>
@@ -809,7 +809,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               type="button"
                               onClick={() => void handleSellerStatusChange(seller, 'suspended')}
                               disabled={updatingSellerId === seller.Seller_ID}
-                              className="px-3 py-1 bg-rose-600/80 hover:bg-rose-500 disabled:opacity-50 text-white rounded-full text-xs font-bold transition-all cursor-pointer"
+                              className="px-3 py-1 bg-danger-600/80 hover:bg-danger-500 disabled:opacity-50 text-white rounded-full text-xs font-bold transition-all cursor-pointer"
                             >
                               Suspend
                             </button>
@@ -829,27 +829,27 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       {adminTab === 'categories' && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Create Category Form */}
-          <div className="bg-white dark:bg-[#12161D] border border-sky-100 dark:border-sky-500/20 rounded-3xl p-6 h-fit space-y-4 shadow-xs">
-            <h3 className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2">
-              <FolderTree className="w-4 h-4 text-blue-500" />
+          <div className="bg-white dark:bg-[#12161D] border border-brand-100 dark:border-brand-500/20 rounded-3xl p-6 h-fit space-y-4 shadow-xs">
+            <h3 className="font-bold text-surface-900 dark:text-white text-sm flex items-center gap-2">
+              <FolderTree className="w-4 h-4 text-brand-500" />
               Add New Category
             </h3>
             <form onSubmit={handleCreateCategory} className="space-y-3 text-xs">
               <div>
-                <label className="block text-slate-600 dark:text-zinc-400 mb-1 font-medium">Category Name *</label>
+                <label className="block text-surface-600 dark:text-surface-400 mb-1 font-medium">Category Name *</label>
                 <input
                   type="text"
                   required
                   value={newCategoryName}
                   onChange={(e) => setNewCategoryName(e.target.value)}
                   placeholder="e.g. Eco-Hardware or Audio & Studio"
-                  className="luxury-input w-full p-2.5 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500"
+                  className="luxury-input w-full p-2.5 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500"
                 />
               </div>
               <button
                 type="submit"
                 disabled={isSubmittingCat || !newCategoryName.trim()}
-                className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-bold rounded-full shadow-lg shadow-blue-500/25 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                className="w-full py-2.5 bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white font-bold rounded-full shadow-lg shadow-brand-500/25 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
                 <span>Create Category</span>
@@ -858,19 +858,19 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
 
           {/* Existing Categories Table */}
-          <div className="md:col-span-2 bg-white dark:bg-[#12161D] border border-sky-100 dark:border-sky-500/20 rounded-3xl overflow-hidden shadow-xs">
-            <div className="p-4 border-b border-sky-100 dark:border-zinc-800 font-bold text-xs text-slate-900 dark:text-white">
+          <div className="md:col-span-2 bg-white dark:bg-[#12161D] border border-brand-100 dark:border-brand-500/20 rounded-3xl overflow-hidden shadow-xs">
+            <div className="p-4 border-b border-brand-100 dark:border-surface-800 font-bold text-xs text-surface-900 dark:text-white">
               Global Category Registry ({categories.length})
             </div>
-            <div className="divide-y divide-sky-100/60 dark:divide-zinc-800/80 text-xs">
+            <div className="divide-y divide-brand-100/60 dark:divide-surface-800/80 text-xs">
               {categories.map((cat) => {
                 const count = products.filter((p) => p.Category_ID === cat.Category_ID).length;
                 const isEditing = editingCategoryId === cat.Category_ID;
 
                 return (
-                  <div key={cat.Category_ID} className="p-4 flex items-center justify-between gap-4 hover:bg-slate-50 dark:hover:bg-[#181F2A]/60 transition-colors">
+                  <div key={cat.Category_ID} className="p-4 flex items-center justify-between gap-4 hover:bg-surface-50 dark:hover:bg-[#181F2A]/60 transition-colors">
                     <div className="flex items-center gap-3 flex-1">
-                      <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-500 font-bold text-xs">
+                      <div className="w-8 h-8 rounded-xl bg-brand-500/10 border border-brand-500/20 flex items-center justify-center text-brand-500 font-bold text-xs">
                         {cat.Name.charAt(0)}
                       </div>
                       {isEditing ? (
@@ -878,12 +878,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           type="text"
                           value={editingCategoryName}
                           onChange={(e) => setEditingCategoryName(e.target.value)}
-                          className="bg-slate-50 dark:bg-[#181F2A] border border-blue-500 rounded-xl p-1.5 text-xs text-slate-900 dark:text-white"
+                          className="bg-surface-50 dark:bg-[#181F2A] border border-brand-500 rounded-xl p-1.5 text-xs text-surface-900 dark:text-white"
                         />
                       ) : (
                         <div>
-                          <span className="font-bold text-slate-900 dark:text-white block">{cat.Name}</span>
-                          <span className="text-[10px] text-slate-400 dark:text-zinc-500 font-mono">ID: {cat.Category_ID} • {count} Products listed</span>
+                          <span className="font-bold text-surface-900 dark:text-white block">{cat.Name}</span>
+                          <span className="text-micro text-surface-400 dark:text-surface-500 font-mono">ID: {cat.Category_ID} • {count} Products listed</span>
                         </div>
                       )}
                     </div>
@@ -893,13 +893,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <>
                           <button
                             onClick={() => handleSaveCategoryEdit(cat.Category_ID)}
-                            className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-full text-[10px] cursor-pointer"
+                            className="px-3 py-1 bg-success-600 hover:bg-success-500 text-white font-bold rounded-full text-micro cursor-pointer"
                           >
                             Save
                           </button>
                           <button
                             onClick={() => setEditingCategoryId(null)}
-                            className="px-3 py-1 bg-slate-200 dark:bg-zinc-800 text-slate-700 dark:text-zinc-400 font-bold rounded-full text-[10px] cursor-pointer"
+                            className="px-3 py-1 bg-surface-200 dark:bg-surface-800 text-surface-700 dark:text-surface-400 font-bold rounded-full text-micro cursor-pointer"
                           >
                             Cancel
                           </button>
@@ -911,7 +911,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               setEditingCategoryId(cat.Category_ID);
                               setEditingCategoryName(cat.Name);
                             }}
-                            className="p-1.5 text-slate-400 dark:text-zinc-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors cursor-pointer"
+                            className="p-1.5 text-surface-400 dark:text-surface-400 hover:text-brand-500 dark:hover:text-brand-400 transition-colors cursor-pointer"
                             title="Edit Category Name"
                           >
                             <Edit className="w-4 h-4" />
@@ -921,7 +921,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               onDeleteCategory(cat.Category_ID);
                               showNotification(`Deleted category "${cat.Name}"`);
                             }}
-                            className="p-1.5 text-slate-400 dark:text-zinc-400 hover:text-rose-500 dark:hover:text-rose-400 transition-colors cursor-pointer"
+                            className="p-1.5 text-surface-400 dark:text-surface-400 hover:text-danger-500 dark:hover:text-danger-400 transition-colors cursor-pointer"
                             title="Delete Category"
                           >
                             <Trash2 className="w-4 h-4" />
@@ -939,13 +939,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       {/* Tab 4: Product Deactivation / Moderation */}
       {adminTab === 'products' && (
-        <div className="bg-white dark:bg-[#12161D] border border-sky-100 dark:border-sky-500/20 rounded-3xl overflow-hidden shadow-xs">
-          <div className="p-4 border-b border-sky-100 dark:border-zinc-800 font-bold text-xs text-slate-900 dark:text-white">
+        <div className="bg-white dark:bg-[#12161D] border border-brand-100 dark:border-brand-500/20 rounded-3xl overflow-hidden shadow-xs">
+          <div className="p-4 border-b border-brand-100 dark:border-surface-800 font-bold text-xs text-surface-900 dark:text-white">
             Product Listing Moderation ({products.length})
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-50 dark:bg-[#181F2A] text-[10px] text-slate-500 dark:text-zinc-400 uppercase tracking-wider border-b border-sky-100 dark:border-zinc-800">
+              <thead className="bg-surface-50 dark:bg-[#181F2A] text-micro text-surface-500 dark:text-surface-400 uppercase tracking-wider border-b border-brand-100 dark:border-surface-800">
                 <tr>
                   <th className="p-4">Product</th>
                   <th className="p-4">Merchant</th>
@@ -954,33 +954,33 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <th className="p-4 text-right">Moderation Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-sky-100/60 dark:divide-zinc-800/80 text-slate-700 dark:text-zinc-300">
+              <tbody className="divide-y divide-brand-100/60 dark:divide-surface-800/80 text-surface-700 dark:text-surface-300">
                 {products.map((p) => {
                   const sellerName = sellers.find((s) => s.Seller_ID === p.Seller_ID)?.Name || 'Unknown';
                   return (
-                    <tr key={p.Product_ID} className="hover:bg-slate-50 dark:hover:bg-[#181F2A]/60 transition-colors">
+                    <tr key={p.Product_ID} className="hover:bg-surface-50 dark:hover:bg-[#181F2A]/60 transition-colors">
                       <td className="p-4">
                         <div className="flex items-center gap-3">
                           <img
                             src={p.Image}
                             alt={p.Name}
-                            className="w-10 h-10 rounded-xl object-cover bg-slate-100 dark:bg-[#181F2A] border border-sky-100 dark:border-zinc-700"
+                            className="w-10 h-10 rounded-xl object-cover bg-surface-100 dark:bg-[#181F2A] border border-brand-100 dark:border-surface-700"
                           />
                           <div>
-                            <span className="font-bold text-slate-900 dark:text-white block">{p.Name}</span>
-                            <span className="text-[10px] text-slate-400 dark:text-zinc-500 font-mono">ID: {p.Product_ID}</span>
+                            <span className="font-bold text-surface-900 dark:text-white block">{p.Name}</span>
+                            <span className="text-micro text-surface-400 dark:text-surface-500 font-mono">ID: {p.Product_ID}</span>
                           </div>
                         </div>
                       </td>
-                      <td className="p-4 text-slate-700 dark:text-zinc-300">{sellerName}</td>
-                      <td className="p-4 font-bold text-slate-900 dark:text-white">{formatCurrency(p.Price)}</td>
+                      <td className="p-4 text-surface-700 dark:text-surface-300">{sellerName}</td>
+                      <td className="p-4 font-bold text-surface-900 dark:text-white">{formatCurrency(p.Price)}</td>
                       <td className="p-4">
-                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase border transition-transform duration-200 hover:-translate-y-px hover:shadow-sm ${
+                        <span className={`px-2.5 py-0.5 rounded-full text-micro font-bold uppercase border transition-transform duration-200 hover:-translate-y-px hover:shadow-sm ${
                           p.Product_Status === 'active'
-                            ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                            ? 'bg-success-500/10 text-success-600 dark:text-success-400 border-success-500/20'
                             : p.Product_Status === 'deactivated'
-                            ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
-                            : 'bg-zinc-800 text-zinc-400 border-zinc-700'
+                            ? 'bg-danger-500/10 text-danger-600 dark:text-danger-400 border-danger-500/20'
+                            : 'bg-surface-800 text-surface-400 border-surface-700'
                         }`}>
                           {p.Product_Status}
                         </span>
@@ -994,8 +994,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           }}
                           className={`px-3.5 py-1 rounded-full text-xs font-bold transition-all cursor-pointer shadow-sm ${
                             p.Product_Status === 'deactivated'
-                              ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-500/20'
-                              : 'bg-rose-600/80 hover:bg-rose-500 text-white'
+                              ? 'bg-success-600 hover:bg-success-500 text-white shadow-success-500/20'
+                              : 'bg-danger-600/80 hover:bg-danger-500 text-white'
                           }`}
                         >
                           {p.Product_Status === 'deactivated' ? 'Reinstate Listing' : 'Deactivate Listing'}
@@ -1015,71 +1015,71 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <div className="space-y-6 animate-in fade-in duration-200">
           {/* Summary KPIs */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white dark:bg-[#12161D] border border-sky-100 dark:border-sky-500/20 rounded-3xl p-5 shadow-xs flex flex-col justify-between">
+            <div className="bg-white dark:bg-[#12161D] border border-brand-100 dark:border-brand-500/20 rounded-3xl p-5 shadow-xs flex flex-col justify-between">
               <div>
-                <span className="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider block">
+                <span className="text-micro font-bold text-surface-400 dark:text-surface-500 uppercase tracking-wider block">
                   Total Order Volume
                 </span>
-                <div className="text-2xl font-black text-slate-900 dark:text-white mt-1">
+                <div className="text-2xl font-black text-surface-900 dark:text-white mt-1">
                   {formatBDT(totalOrderVolume)}
                 </div>
               </div>
-              <span className="text-[11px] text-emerald-500 font-semibold mt-2">
+              <span className="text-micro text-success-500 font-semibold mt-2">
                 Order subtotal plus shipping across the marketplace
               </span>
             </div>
 
-            <div className="bg-white dark:bg-[#12161D] border border-sky-100 dark:border-sky-500/20 rounded-3xl p-5 shadow-xs flex flex-col justify-between">
+            <div className="bg-white dark:bg-[#12161D] border border-brand-100 dark:border-brand-500/20 rounded-3xl p-5 shadow-xs flex flex-col justify-between">
               <div>
-                <span className="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider block">
+                <span className="text-micro font-bold text-surface-400 dark:text-surface-500 uppercase tracking-wider block">
                   bKash Transactions
                 </span>
                 <div className="text-2xl font-black text-[#E2136E] mt-1">
                   {transactions.filter((t) => t.payment_method === 'bkash').length || orders.filter((o) => o.Payment_Method === 'bkash').length}
                 </div>
               </div>
-              <span className="text-[11px] text-pink-600 dark:text-pink-400 font-semibold mt-2">
+              <span className="text-micro text-pink-600 dark:text-pink-400 font-semibold mt-2">
                 Official MFS Partner
               </span>
             </div>
 
-            <div className="bg-white dark:bg-[#12161D] border border-sky-100 dark:border-sky-500/20 rounded-3xl p-5 shadow-xs flex flex-col justify-between">
+            <div className="bg-white dark:bg-[#12161D] border border-brand-100 dark:border-brand-500/20 rounded-3xl p-5 shadow-xs flex flex-col justify-between">
               <div>
-                <span className="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider block">
+                <span className="text-micro font-bold text-surface-400 dark:text-surface-500 uppercase tracking-wider block">
                   Cards &amp; Other MFS
                 </span>
-                <div className="text-2xl font-black text-blue-500 mt-1">
+                <div className="text-2xl font-black text-brand-500 mt-1">
                   {transactions.filter((t) => t.payment_method !== 'bkash' && t.payment_method !== 'cash_on_delivery').length}
                 </div>
               </div>
-              <span className="text-[11px] text-slate-500 dark:text-zinc-400 mt-2">
+              <span className="text-micro text-surface-500 dark:text-surface-400 mt-2">
                 Nagad, Rocket &amp; Visa/Mastercard
               </span>
             </div>
 
-            <div className="bg-white dark:bg-[#12161D] border border-sky-100 dark:border-sky-500/20 rounded-3xl p-5 shadow-xs flex flex-col justify-between">
+            <div className="bg-white dark:bg-[#12161D] border border-brand-100 dark:border-brand-500/20 rounded-3xl p-5 shadow-xs flex flex-col justify-between">
               <div>
-                <span className="text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider block">
+                <span className="text-micro font-bold text-surface-400 dark:text-surface-500 uppercase tracking-wider block">
                   Gateway Status
                 </span>
-                <div className="text-sm font-black text-emerald-500 mt-1 flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <div className="text-sm font-black text-success-500 mt-1 flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-success-500 animate-pulse"></span>
                   <span>ONLINE (SANDBOX ACTIVE)</span>
                 </div>
               </div>
-              <span className="text-[10px] text-slate-400 font-mono mt-2">Store ID: testbox</span>
+              <span className="text-micro text-surface-400 font-mono mt-2">Store ID: testbox</span>
             </div>
           </div>
 
           {/* Transactions Table Container */}
-          <div className="bg-white dark:bg-[#12161D] border border-sky-100 dark:border-sky-500/20 rounded-3xl overflow-hidden shadow-xs">
-            <div className="p-6 border-b border-sky-100 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-4">
+          <div className="bg-white dark:bg-[#12161D] border border-brand-100 dark:border-brand-500/20 rounded-3xl overflow-hidden shadow-xs">
+            <div className="p-6 border-b border-brand-100 dark:border-surface-800 flex flex-wrap items-center justify-between gap-4">
               <div>
-                <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Lock className="w-4 h-4 text-emerald-500" />
+                <h2 className="text-sm font-bold text-surface-900 dark:text-white flex items-center gap-2">
+                  <Lock className="w-4 h-4 text-success-500" />
                   Online Payment Transaction Ledger
                 </h2>
-                <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">
+                <p className="text-micro text-surface-500 dark:text-surface-400 mt-0.5">
                   Online gateway sessions recorded separately by payment channel and transaction status.
                 </p>
               </div>
@@ -1090,7 +1090,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   id="payment-channel-filter"
                   value={paymentFilter}
                   onChange={(event) => setPaymentFilter(event.target.value)}
-                  className="min-h-9 rounded-full border border-slate-200 bg-slate-50 px-3 text-xs font-semibold text-slate-700 dark:border-zinc-700 dark:bg-[#181F2A] dark:text-zinc-200"
+                  className="min-h-9 rounded-full border border-surface-200 bg-surface-50 px-3 text-xs font-semibold text-surface-700 dark:border-surface-700 dark:bg-[#181F2A] dark:text-surface-200"
                 >
                   <option value="all">All online channels</option>
                   <option value="bkash">bKash</option>
@@ -1102,7 +1102,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   type="button"
                   onClick={fetchTransactions}
                   disabled={loadingTransactions}
-                  className="px-3.5 py-1.5 rounded-full border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-[#181F2A] hover:bg-slate-100 text-xs font-bold text-slate-700 dark:text-zinc-300 flex items-center gap-1.5 transition-all cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-full border border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-[#181F2A] hover:bg-surface-100 text-xs font-bold text-surface-700 dark:text-surface-300 flex items-center gap-1.5 transition-all cursor-pointer"
                 >
                   <RefreshCw className={`w-3.5 h-3.5 ${loadingTransactions ? 'animate-spin' : ''}`} />
                   <span>Refresh Ledger</span>
@@ -1114,7 +1114,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
-                  <tr className="bg-slate-50/50 dark:bg-[#161C24]/80 border-b border-sky-100 dark:border-zinc-800 text-[10px] uppercase font-bold tracking-wider text-slate-400 dark:text-zinc-500">
+                  <tr className="bg-surface-50/50 dark:bg-[#161C24]/80 border-b border-brand-100 dark:border-surface-800 text-micro uppercase font-bold tracking-wider text-surface-400 dark:text-surface-500">
                     <th className="p-4">Transaction ID (tran_id)</th>
                     <th className="p-4">Channel</th>
                     <th className="p-4">Order ID</th>
@@ -1124,60 +1124,60 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <th className="p-4">Time</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-sky-100/50 dark:divide-zinc-800/80">
+                <tbody className="divide-y divide-brand-100/50 dark:divide-surface-800/80">
                   {filteredTransactions.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="p-8 text-center text-slate-400 dark:text-zinc-500">
+                      <td colSpan={7} className="p-8 text-center text-surface-400 dark:text-surface-500">
                         {loadingTransactions ? 'Loading online payment transactions...' : paymentFilter === 'all' ? 'No online payment transactions recorded yet.' : `No ${paymentChannelLabel(paymentFilter)} transactions recorded yet.`}
                       </td>
                     </tr>
                   ) : (
                     filteredTransactions.map((t) => (
-                      <tr key={t.id} className="hover:bg-slate-50/80 dark:hover:bg-[#181F2A]/60 transition-colors">
-                        <td className="p-4 font-mono font-bold text-blue-600 dark:text-sky-400">
+                      <tr key={t.id} className="hover:bg-surface-50/80 dark:hover:bg-[#181F2A]/60 transition-colors">
+                        <td className="p-4 font-mono font-bold text-brand-600 dark:text-brand-400">
                           {t.transaction_id}
                           {t.val_id && (
-                            <span className="block text-[9px] text-slate-400 font-mono">Val: {t.val_id}</span>
+                            <span className="block text-micro text-surface-400 font-mono">Val: {t.val_id}</span>
                           )}
                         </td>
                         <td className="p-4">
                           <span
-                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                            className={`px-2.5 py-0.5 rounded-full text-micro font-black uppercase tracking-wider ${
                               t.payment_method === 'bkash'
                                 ? 'bg-pink-100 dark:bg-pink-950/60 text-[#E2136E] border border-pink-300'
                                 : t.payment_method === 'nagad'
-                                ? 'bg-orange-100 dark:bg-orange-950/60 text-orange-600 border border-orange-300'
+                                ? 'bg-warning-100 dark:bg-warning-950/60 text-warning-600 border border-warning-300'
                                 : t.payment_method === 'rocket'
-                                ? 'bg-purple-100 dark:bg-purple-950/60 text-purple-600 border border-purple-300'
-                                : 'bg-blue-100 dark:bg-blue-950/60 text-blue-600 border border-blue-300'
+                                ? 'bg-brand-100 dark:bg-brand-950/60 text-brand-600 border border-brand-300'
+                                : 'bg-brand-100 dark:bg-brand-950/60 text-brand-600 border border-brand-300'
                             }`}
                           >
                             {paymentChannelLabel(String(t.payment_method || 'unknown').toLowerCase())}
                           </span>
                         </td>
-                        <td className="p-4 font-mono text-slate-700 dark:text-zinc-300">
+                        <td className="p-4 font-mono text-surface-700 dark:text-surface-300">
                           {t.order_id || 'Checkout Pending'}
                         </td>
-                        <td className="p-4 font-mono text-slate-600 dark:text-zinc-400">
+                        <td className="p-4 font-mono text-surface-600 dark:text-surface-400">
                           {t.customer_phone || 'N/A'}
                         </td>
-                        <td className="p-4 font-black text-slate-900 dark:text-white">
+                        <td className="p-4 font-black text-surface-900 dark:text-white">
                           {formatBDT(Number(t.amount))}
                         </td>
                         <td className="p-4">
                           <span
-                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                            className={`px-2.5 py-0.5 rounded-full text-micro font-black uppercase tracking-wider ${
                               t.status === 'VALIDATED' || t.status === 'VALID'
-                                ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-300'
+                                ? 'bg-success-100 dark:bg-success-950/60 text-success-600 dark:text-success-400 border border-success-300'
                                 : t.status === 'PENDING'
-                                ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border border-amber-300'
-                                : 'bg-rose-100 text-rose-600 border border-rose-300'
+                                ? 'bg-warning-100 dark:bg-warning-950/60 text-warning-600 dark:text-warning-400 border border-warning-300'
+                                : 'bg-danger-100 text-danger-600 border border-danger-300'
                             }`}
                           >
                             {t.status}
                           </span>
                         </td>
-                        <td className="p-4 text-[11px] text-slate-400">
+                        <td className="p-4 text-micro text-surface-400">
                           {formatDate(t.created_at)}
                         </td>
                       </tr>
@@ -1187,20 +1187,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
               </table>
             </div>
           </div>
-          <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-zinc-800 dark:bg-[#12161D]">
-            <header className="flex items-center justify-between gap-3 border-b border-slate-200 p-4 dark:border-zinc-800">
-              <div><h2 className="text-sm font-bold text-slate-900 dark:text-white">Seller payout requests</h2><p className="text-xs text-slate-500 dark:text-zinc-400">Verify account details and record an external reference when paying.</p></div>
-              <button type="button" onClick={() => void fetchSellerPayouts()} disabled={loadingPayouts} aria-label="Refresh seller payouts" className="rounded-lg border border-slate-300 p-2 text-slate-600 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-300"><RefreshCw className={`h-4 w-4 ${loadingPayouts ? 'animate-spin' : ''}`} /></button>
+          <section className="overflow-hidden rounded-2xl border border-surface-200 bg-white dark:border-surface-800 dark:bg-[#12161D]">
+            <header className="flex items-center justify-between gap-3 border-b border-surface-200 p-4 dark:border-surface-800">
+              <div><h2 className="text-sm font-bold text-surface-900 dark:text-white">Seller payout requests</h2><p className="text-xs text-surface-500 dark:text-surface-400">Verify account details and record an external reference when paying.</p></div>
+              <button type="button" onClick={() => void fetchSellerPayouts()} disabled={loadingPayouts} aria-label="Refresh seller payouts" className="rounded-lg border border-surface-300 p-2 text-surface-600 disabled:opacity-50 dark:border-surface-700 dark:text-surface-300"><RefreshCw className={`h-4 w-4 ${loadingPayouts ? 'animate-spin' : ''}`} /></button>
             </header>
-            <div className="divide-y divide-slate-200 dark:divide-zinc-800">
+            <div className="divide-y divide-surface-200 dark:divide-surface-800">
               {sellerPayouts.map((payout) => (
                 <article key={payout.id} className="grid gap-3 p-4 lg:grid-cols-[1fr_auto_auto] lg:items-center">
-                  <div className="min-w-0"><p className="text-sm font-semibold text-slate-900 dark:text-white">{payout.seller_name} · {formatCurrency(Number(payout.amount))}</p><p className="mt-1 break-all text-xs text-slate-500 dark:text-zinc-400">{payout.method}: {payout.account} · {payout.id}</p></div>
-                  <label className="text-xs font-semibold text-slate-600 dark:text-zinc-300">External reference<input value={payoutReferences[payout.id] || ''} onChange={(event) => setPayoutReferences((current) => ({ ...current, [payout.id]: event.target.value }))} className="mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-[#181F2A]" /></label>
-                  <div className="flex gap-2"><button type="button" onClick={() => void processSellerPayout(payout, 'pay')} className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold text-white">Mark paid</button><button type="button" onClick={() => void processSellerPayout(payout, 'reject')} className="rounded-lg border border-rose-300 px-3 py-2 text-xs font-bold text-rose-700 dark:border-rose-900 dark:text-rose-300">Reject</button></div>
+                  <div className="min-w-0"><p className="text-sm font-semibold text-surface-900 dark:text-white">{payout.seller_name} · {formatCurrency(Number(payout.amount))}</p><p className="mt-1 break-all text-xs text-surface-500 dark:text-surface-400">{payout.method}: {payout.account} · {payout.id}</p></div>
+                  <label className="text-xs font-semibold text-surface-600 dark:text-surface-300">External reference<input value={payoutReferences[payout.id] || ''} onChange={(event) => setPayoutReferences((current) => ({ ...current, [payout.id]: event.target.value }))} className="mt-1 block w-full rounded-lg border border-surface-300 bg-white px-3 py-2 text-sm dark:border-surface-700 dark:bg-[#181F2A]" /></label>
+                  <div className="flex gap-2"><button type="button" onClick={() => void processSellerPayout(payout, 'pay')} className="rounded-lg bg-success-700 px-3 py-2 text-xs font-bold text-white">Mark paid</button><button type="button" onClick={() => void processSellerPayout(payout, 'reject')} className="rounded-lg border border-danger-300 px-3 py-2 text-xs font-bold text-danger-700 dark:border-danger-900 dark:text-danger-300">Reject</button></div>
                 </article>
               ))}
-              {!sellerPayouts.length && <p className="p-6 text-center text-sm text-slate-500">{loadingPayouts ? 'Loading payout requests…' : 'No pending seller payouts.'}</p>}
+              {!sellerPayouts.length && <p className="p-6 text-center text-sm text-surface-500">{loadingPayouts ? 'Loading payout requests…' : 'No pending seller payouts.'}</p>}
             </div>
           </section>
         </div>
@@ -1219,25 +1219,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             role="dialog"
             aria-modal="true"
             aria-labelledby="seller-application-title"
-            className="my-auto w-full max-w-xl overflow-hidden rounded-2xl border border-sky-100 bg-white shadow-2xl ring-2 ring-white/10 animate-in fade-in slide-in-from-bottom-2 duration-200 dark:border-sky-500/20 dark:bg-[#12161D]"
+            className="my-auto w-full max-w-xl overflow-hidden rounded-2xl border border-brand-100 bg-white shadow-2xl ring-2 ring-white/10 animate-in fade-in slide-in-from-bottom-2 duration-200 dark:border-brand-500/20 dark:bg-[#12161D]"
           >
-            <header className="flex items-start justify-between gap-4 border-b border-slate-200 p-5 dark:border-zinc-800">
+            <header className="flex items-start justify-between gap-4 border-b border-surface-200 p-5 dark:border-surface-800">
               <div className="flex min-w-0 items-center gap-3">
                 {selectedSeller.Logo ? (
-                  <img src={selectedSeller.Logo} alt="" className="h-12 w-12 shrink-0 rounded-xl border border-slate-200 object-cover dark:border-zinc-700" />
+                  <img src={selectedSeller.Logo} alt="" className="h-12 w-12 shrink-0 rounded-xl border border-surface-200 object-cover dark:border-surface-700" />
                 ) : (
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 dark:bg-zinc-800"><Store className="h-5 w-5" /></div>
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-surface-100 text-surface-500 dark:bg-surface-800"><Store className="h-5 w-5" /></div>
                 )}
                 <div className="min-w-0">
-                  <h2 id="seller-application-title" className="truncate text-lg font-bold text-slate-900 dark:text-white">{selectedSeller.Name}</h2>
-                  <p className="text-xs text-slate-500 dark:text-zinc-400">Seller application · {selectedSeller.Seller_ID}</p>
+                  <h2 id="seller-application-title" className="truncate text-lg font-bold text-surface-900 dark:text-white">{selectedSeller.Name}</h2>
+                  <p className="text-xs text-surface-500 dark:text-surface-400">Seller application · {selectedSeller.Seller_ID}</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setSelectedSellerId(null)}
                 aria-label="Close seller details"
-                className="rounded-full p-2 text-slate-500 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                className="rounded-full p-2 text-surface-500 hover:bg-surface-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 dark:text-surface-400 dark:hover:bg-surface-800"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -1245,23 +1245,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
             <div className="max-h-[65vh] space-y-5 overflow-y-auto p-5 text-sm">
               <div className="flex items-center justify-between gap-3">
-                <h3 className="font-semibold text-slate-900 dark:text-white">Application details</h3>
-                <span className={`whitespace-nowrap rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase ${selectedSeller.Status === 'approved' ? 'border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : selectedSeller.Status === 'pending' ? 'border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'border-rose-500/20 bg-rose-500/10 text-rose-600 dark:text-rose-400'}`}>
+                <h3 className="font-semibold text-surface-900 dark:text-white">Application details</h3>
+                <span className={`whitespace-nowrap rounded-full border px-2.5 py-1 text-micro font-bold uppercase ${selectedSeller.Status === 'approved' ? 'border-success-500/20 bg-success-500/10 text-success-600 dark:text-success-400' : selectedSeller.Status === 'pending' ? 'border-warning-500/20 bg-warning-500/10 text-warning-600 dark:text-warning-400' : 'border-danger-500/20 bg-danger-500/10 text-danger-600 dark:text-danger-400'}`}>
                   {selectedSeller.Status === 'pending' ? 'Pending review' : selectedSeller.Status}
                 </span>
               </div>
 
               <div>
-                <p className="mb-1 text-xs font-semibold text-slate-500 dark:text-zinc-400">Business description</p>
-                <p className="whitespace-pre-wrap break-words text-slate-800 dark:text-zinc-200">{selectedSeller.Description || 'No description was provided.'}</p>
+                <p className="mb-1 text-xs font-semibold text-surface-500 dark:text-surface-400">Business description</p>
+                <p className="whitespace-pre-wrap break-words text-surface-800 dark:text-surface-200">{selectedSeller.Description || 'No description was provided.'}</p>
               </div>
 
-              <section className="space-y-2 border-y border-slate-200 py-4 dark:border-zinc-800">
-                <h3 className="font-semibold text-slate-900 dark:text-white">Verification checklist</h3>
+              <section className="space-y-2 border-y border-surface-200 py-4 dark:border-surface-800">
+                <h3 className="font-semibold text-surface-900 dark:text-white">Verification checklist</h3>
                 <button
                   type="button"
                   onClick={() => void handleViewSellerIdentityDocument(selectedSeller)}
-                  className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                  className="inline-flex items-center gap-2 rounded-lg border border-surface-300 px-3 py-2 text-xs font-semibold text-surface-700 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-200 dark:hover:bg-surface-800"
                 >
                   <ExternalLink className="h-4 w-4" /> View identity document
                 </button>
@@ -1270,7 +1270,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   ['documentsReviewed', 'Documents reviewed'],
                   ['payoutVerified', 'Payout account verified'],
                 ] as const).map(([key, label]) => (
-                  <label key={key} className="flex items-center gap-2 text-sm text-slate-700 dark:text-zinc-300">
+                  <label key={key} className="flex items-center gap-2 text-sm text-surface-700 dark:text-surface-300">
                     <input
                       type="checkbox"
                       checked={sellerChecklist[key]}
@@ -1281,47 +1281,47 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 ))}
               </section>
 
-              <dl className="grid gap-4 border-y border-slate-200 py-4 sm:grid-cols-2 dark:border-zinc-800">
+              <dl className="grid gap-4 border-y border-surface-200 py-4 sm:grid-cols-2 dark:border-surface-800">
                 <div className="min-w-0">
-                  <dt className="text-xs font-semibold text-slate-500 dark:text-zinc-400">Email</dt>
-                  <dd className="break-all text-slate-800 dark:text-zinc-200">{selectedSeller.Email || 'Not provided'}</dd>
+                  <dt className="text-xs font-semibold text-surface-500 dark:text-surface-400">Email</dt>
+                  <dd className="break-all text-surface-800 dark:text-surface-200">{selectedSeller.Email || 'Not provided'}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs font-semibold text-slate-500 dark:text-zinc-400">Phone</dt>
-                  <dd className="text-slate-800 dark:text-zinc-200">{selectedSeller.Number || 'Not provided'}</dd>
+                  <dt className="text-xs font-semibold text-surface-500 dark:text-surface-400">Phone</dt>
+                  <dd className="text-surface-800 dark:text-surface-200">{selectedSeller.Number || 'Not provided'}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs font-semibold text-slate-500 dark:text-zinc-400">Username</dt>
-                  <dd className="text-slate-800 dark:text-zinc-200">{selectedSeller.Username || 'Not provided'}</dd>
+                  <dt className="text-xs font-semibold text-surface-500 dark:text-surface-400">Username</dt>
+                  <dd className="text-surface-800 dark:text-surface-200">{selectedSeller.Username || 'Not provided'}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs font-semibold text-slate-500 dark:text-zinc-400">Registered</dt>
-                  <dd className="text-slate-800 dark:text-zinc-200">{formatDate(selectedSeller.Created_At)}</dd>
+                  <dt className="text-xs font-semibold text-surface-500 dark:text-surface-400">Registered</dt>
+                  <dd className="text-surface-800 dark:text-surface-200">{formatDate(selectedSeller.Created_At)}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs font-semibold text-slate-500 dark:text-zinc-400">Payout method</dt>
-                  <dd className="text-slate-800 dark:text-zinc-200">{selectedSeller.Payout_Method || 'Not provided'}</dd>
+                  <dt className="text-xs font-semibold text-surface-500 dark:text-surface-400">Payout method</dt>
+                  <dd className="text-surface-800 dark:text-surface-200">{selectedSeller.Payout_Method || 'Not provided'}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs font-semibold text-slate-500 dark:text-zinc-400">Payout account</dt>
-                  <dd className="break-all text-slate-800 dark:text-zinc-200">{selectedSeller.Payout_Account || 'Not provided'}</dd>
+                  <dt className="text-xs font-semibold text-surface-500 dark:text-surface-400">Payout account</dt>
+                  <dd className="break-all text-surface-800 dark:text-surface-200">{selectedSeller.Payout_Account || 'Not provided'}</dd>
                 </div>
                 <div className="sm:col-span-2">
-                  <dt className="text-xs font-semibold text-slate-500 dark:text-zinc-400">Business address</dt>
-                  <dd className="break-words text-slate-800 dark:text-zinc-200">
+                  <dt className="text-xs font-semibold text-surface-500 dark:text-surface-400">Business address</dt>
+                  <dd className="break-words text-surface-800 dark:text-surface-200">
                     {[selectedSeller.Address.House_Name, selectedSeller.Address.Street, selectedSeller.Address.City, selectedSeller.Address.Postal_Code, selectedSeller.Address.Additional_Info].filter(Boolean).join(', ') || 'Not provided'}
                   </dd>
                 </div>
               </dl>
             </div>
 
-            <footer className="flex flex-wrap justify-end gap-2 border-t border-slate-200 bg-slate-50 p-4 dark:border-zinc-800 dark:bg-[#181F2A]">
+            <footer className="flex flex-wrap justify-end gap-2 border-t border-surface-200 bg-surface-50 p-4 dark:border-surface-800 dark:bg-[#181F2A]">
               {selectedSeller.Status !== 'approved' && (
                 <button
                   type="button"
                   onClick={() => void handleSellerStatusChange(selectedSeller, 'approved')}
                   disabled={updatingSellerId === selectedSeller.Seller_ID || !Object.values(sellerChecklist).every(Boolean)}
-                  className="rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500 disabled:opacity-50"
+                  className="rounded-lg bg-success-600 px-4 py-2 text-xs font-bold text-white hover:bg-success-500 disabled:opacity-50"
                 >
                   {updatingSellerId === selectedSeller.Seller_ID ? 'Updating...' : 'Approve seller'}
                 </button>
@@ -1331,7 +1331,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   type="button"
                   onClick={() => void handleSellerStatusChange(selectedSeller, 'rejected')}
                   disabled={updatingSellerId === selectedSeller.Seller_ID}
-                  className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+                  className="rounded-lg border border-surface-300 px-4 py-2 text-xs font-bold text-surface-700 hover:bg-surface-100 disabled:opacity-50 dark:border-surface-700 dark:text-surface-200 dark:hover:bg-surface-800"
                 >
                   Reject
                 </button>
@@ -1341,7 +1341,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   type="button"
                   onClick={() => void handleSellerStatusChange(selectedSeller, 'suspended')}
                   disabled={updatingSellerId === selectedSeller.Seller_ID}
-                  className="rounded-lg bg-rose-600 px-4 py-2 text-xs font-bold text-white hover:bg-rose-500 disabled:opacity-50"
+                  className="rounded-lg bg-danger-600 px-4 py-2 text-xs font-bold text-white hover:bg-danger-500 disabled:opacity-50"
                 >
                   Suspend
                 </button>

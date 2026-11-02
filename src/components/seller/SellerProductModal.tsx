@@ -5,6 +5,7 @@ import { describeVoucher } from '../../lib/vouchers';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { X, Package, Save, Sparkles, Plus, Trash2, Upload } from 'lucide-react';
 import { prepareProductImage } from '../../lib/productImage';
+import { money } from '../../lib/format';
 const toLocalDateTimeInput = (value?: string) => {
   if (!value) return '';
   const date = new Date(value);
@@ -212,7 +213,7 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
 
   const renderUploadButton = (slot: number) => (
     <label
-      className={`inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border border-emerald-300 px-3 text-xs font-bold text-emerald-800 hover:bg-emerald-50 dark:border-emerald-800 dark:text-emerald-300 ${uploadingSlot !== null ? 'pointer-events-none opacity-50' : ''}`}
+      className={`inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-lg border border-success-300 px-3 text-xs font-bold text-success-800 hover:bg-success-50 dark:border-success-800 dark:text-success-300 ${uploadingSlot !== null ? 'pointer-events-none opacity-50' : ''}`}
     >
       <Upload className="h-3.5 w-3.5" />
       {uploadingSlot === slot ? 'Uploading...' : 'Upload'}
@@ -377,22 +378,22 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
       <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="seller-product-modal-title" tabIndex={-1} className="premium-surface w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col my-6">
         {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-sky-100 dark:border-zinc-800/80 bg-emerald-50/50 dark:bg-emerald-950/20 flex items-center justify-between">
+        <div className="px-6 py-4 border-b border-brand-100 dark:border-surface-800/80 bg-success-50/50 dark:bg-success-950/20 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white flex items-center justify-center shadow-lg shadow-emerald-500/30">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-success-500 to-teal-600 text-white flex items-center justify-center shadow-lg shadow-success-500/30">
               <Package className="w-5 h-5" />
             </div>
             <div>
-              <h2 id="seller-product-modal-title" className="font-bold text-slate-900 dark:text-white text-base">
+              <h2 id="seller-product-modal-title" className="font-bold text-surface-900 dark:text-white text-base">
                 {productToEdit ? 'Edit Product Listing' : 'Create New Product Listing'}
               </h2>
-              <p className="text-xs text-slate-500 dark:text-zinc-400">Publish catalog items on ShopNiro marketplace</p>
+              <p className="text-xs text-surface-500 dark:text-surface-400">Publish catalog items on ShopNiro marketplace</p>
             </div>
           </div>
           <button
             onClick={onClose}
             aria-label="Close product editor"
-            className="p-2 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5]"
+            className="p-2 rounded-full text-surface-400 hover:text-surface-700 dark:hover:text-surface-200 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5]"
           >
             <X className="w-5 h-5" />
           </button>
@@ -401,13 +402,13 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
         {/* Modal Body */}
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-4 flex-1 text-xs">
           {error && (
-            <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-300 rounded-2xl">
+            <div className="p-3 bg-danger-50 dark:bg-danger-950/40 border border-danger-200 dark:border-danger-900/60 text-danger-700 dark:text-danger-300 rounded-2xl">
               {error}
             </div>
           )}
 
           <div>
-            <label className="block text-slate-700 dark:text-zinc-300 font-semibold mb-1">
+            <label className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">
               Product Title *
             </label>
             <input
@@ -417,9 +418,9 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Wireless Noise-Canceling Headphones"
-              className="w-full p-2.5 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500"
+              className="w-full p-2.5 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-success-500 text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500"
             />
-            <div className="mt-1 flex justify-between gap-3 text-[10px] text-slate-500 dark:text-zinc-400">
+            <div className="mt-1 flex justify-between gap-3 text-micro text-surface-500 dark:text-surface-400">
               <span>Lead with the brand, model, and main feature.</span>
               <span className="shrink-0 tabular-nums">{name.length}/80</span>
             </div>
@@ -427,14 +428,14 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-slate-700 dark:text-zinc-300 font-semibold mb-1">
+              <label className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">
                 Category *
               </label>
               <select
                 required
                 value={categoryId}
                 onChange={(e) => setCategoryId(e.target.value)}
-                className="w-full p-2.5 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white"
+                className="w-full p-2.5 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-success-500 text-surface-900 dark:text-white"
               >
                 {categories.map((c) => (
                   <option key={c.Category_ID} value={c.Category_ID}>
@@ -445,13 +446,13 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-slate-700 dark:text-zinc-300 font-semibold mb-1">
+              <label className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">
                 Product Status
               </label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as ProductStatus)}
-                className="w-full p-2.5 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white"
+                className="w-full p-2.5 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-success-500 text-surface-900 dark:text-white"
               >
                 <option value="active">Active (Visible)</option>
                 <option value="inactive">Inactive (Hidden)</option>
@@ -461,8 +462,8 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-slate-700 dark:text-zinc-300 font-semibold mb-1">
-                Unit Price (৳) *
+              <label className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">
+                Unit Price (BDT) *
               </label>
               <input
                 type="number"
@@ -472,13 +473,13 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
                 max="99999999.99"
                 value={price}
                 onChange={(e) => setPrice(e.target.value === '' ? '' : Number(e.target.value))}
-                className="w-full p-2.5 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white"
+                className="w-full p-2.5 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-success-500 text-surface-900 dark:text-white"
               />
-              <p className="mt-1 text-[10px] text-slate-500 dark:text-zinc-400">Whole-number and decimal prices are accepted.</p>
+              <p className="mt-1 text-micro text-surface-500 dark:text-surface-400">Whole-number and decimal prices are accepted.</p>
             </div>
 
             <div>
-              <label className="block text-slate-700 dark:text-zinc-300 font-semibold mb-1">
+              <label className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">
                 Stock Quantity *
               </label>
               <input
@@ -487,12 +488,12 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
                 min="0"
                 value={stock}
                 onChange={(e) => setStock(e.target.value === '' ? '' : Number(e.target.value))}
-                className="w-full p-2.5 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white"
+                className="w-full p-2.5 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-success-500 text-surface-900 dark:text-white"
               />
             </div>
 
             <div>
-              <label className="block text-slate-700 dark:text-zinc-300 font-semibold mb-1">
+              <label className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">
                 Voucher Code (Optional)
               </label>
               <input
@@ -500,23 +501,23 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
                 value={voucher}
                 onChange={(e) => setVoucher(e.target.value)}
                 placeholder="e.g. SAVE10"
-                className="w-full p-2.5 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white uppercase"
+                className="w-full p-2.5 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-success-500 text-surface-900 dark:text-white uppercase"
               />
-              <p className="mt-1 text-[10px] text-slate-500 dark:text-zinc-400">Campaigns discount matching products at checkout; TECH10 is a flat ৳10 per item.</p>
+              <p className="mt-1 text-micro text-surface-700 dark:text-surface-300">Campaigns discount matching products at checkout; TECH10 is a flat {money(10)} per item.</p>
               {voucherSuggestions.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-1.5">
                   {voucherSuggestions.map(({ code }) => (
-                    <button key={code} type="button" onClick={() => setVoucher(code)} aria-pressed={voucher === code} className={`rounded-lg border px-2.5 py-1.5 text-[10px] font-semibold transition-colors ${voucher === code ? 'border-emerald-600 bg-emerald-50 text-emerald-800 dark:border-emerald-500 dark:bg-emerald-950/30 dark:text-emerald-200' : 'border-slate-300 text-slate-600 hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800'}`}>
+                    <button key={code} type="button" onClick={() => setVoucher(code)} aria-pressed={voucher === code} className={`rounded-lg border px-2.5 py-1.5 text-micro font-semibold transition-colors ${voucher === code ? 'border-success-600 bg-success-50 text-success-800 dark:border-success-500 dark:bg-success-950/30 dark:text-success-200' : 'border-surface-300 text-surface-600 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800'}`}>
                       {code} · {describeVoucher(code)}
                     </button>
                   ))}
                 </div>
               )}
-              <label className="mt-2 block text-[10px] font-semibold text-slate-600 dark:text-zinc-300">
+              <label className="mt-2 block text-micro font-semibold text-surface-600 dark:text-surface-300">
                 Offer end date
-                <input type="datetime-local" value={voucherExpiresAt} onChange={(event) => setVoucherExpiresAt(event.target.value)} disabled={!voucher.trim()} className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 text-xs text-slate-900 disabled:opacity-50 dark:border-zinc-700 dark:bg-[#181F2A] dark:text-white" />
+                <input type="datetime-local" value={voucherExpiresAt} onChange={(event) => setVoucherExpiresAt(event.target.value)} disabled={!voucher.trim()} className="mt-1 w-full rounded-lg border border-surface-200 bg-surface-50 px-2.5 py-2 text-xs text-surface-900 disabled:opacity-50 dark:border-surface-700 dark:bg-[#181F2A] dark:text-white" />
               </label>
-              <label className="mt-2 flex items-center gap-2 text-[10px] font-semibold text-slate-600 dark:text-zinc-300">
+              <label className="mt-2 flex items-center gap-2 text-micro font-semibold text-surface-600 dark:text-surface-300">
                 <input type="checkbox" checked={featuredDeal} onChange={(event) => setFeaturedDeal(event.target.checked)} disabled={!voucher.trim()} />
                 Show in Featured Deals
               </label>
@@ -525,8 +526,8 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
 
           <section className="space-y-2">
             <div className="flex items-baseline justify-between gap-3">
-              <label className="block text-slate-700 dark:text-zinc-300 font-semibold">Product Images</label>
-              <span className="shrink-0 text-[10px] tabular-nums text-slate-500 dark:text-zinc-400">
+              <label className="block text-surface-700 dark:text-surface-300 font-semibold">Product Images</label>
+              <span className="shrink-0 text-micro tabular-nums text-surface-500 dark:text-surface-400">
                 {[image, ...additionalImages].filter((url) => url.trim()).length}/7
               </span>
             </div>
@@ -536,7 +537,7 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
                 value={image}
                 onChange={(e) => setImage(e.target.value)}
                 placeholder="Primary image link, or upload a file"
-                className="min-w-0 flex-1 p-2.5 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500"
+                className="min-w-0 flex-1 p-2.5 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-success-500 text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500"
               />
               {renderUploadButton(0)}
             </div>
@@ -547,30 +548,30 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
                   value={url}
                   onChange={(event) => setAdditionalImages((current) => current.map((item, itemIndex) => itemIndex === index ? event.target.value : item))}
                   placeholder={`Additional image ${index + 2} link, or upload a file`}
-                  className="min-w-0 flex-1 p-2.5 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500"
+                  className="min-w-0 flex-1 p-2.5 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-success-500 text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500"
                 />
                 {renderUploadButton(index + 1)}
-                <button type="button" onClick={() => setAdditionalImages((current) => current.filter((_, itemIndex) => itemIndex !== index))} aria-label={`Remove image ${index + 2}`} className="rounded-lg border border-slate-300 px-3 text-slate-500 hover:text-rose-600 dark:border-zinc-700"><Trash2 className="h-4 w-4" /></button>
+                <button type="button" onClick={() => setAdditionalImages((current) => current.filter((_, itemIndex) => itemIndex !== index))} aria-label={`Remove image ${index + 2}`} className="rounded-lg border border-surface-300 px-3 text-surface-500 hover:text-danger-600 dark:border-surface-700"><Trash2 className="h-4 w-4" /></button>
               </div>
             ))}
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-[10px] text-slate-500 dark:text-zinc-400">Add 1–7 clear product views. Upload a file, or paste a link. Uploaded pictures are always shown; links from other websites may be blocked.</p>
-              <button type="button" disabled={[image, ...additionalImages].filter((url) => url.trim()).length >= 7} onClick={() => setAdditionalImages((current) => [...current, ''])} className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 px-3 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-emerald-800 dark:text-emerald-300"><Plus className="h-3.5 w-3.5" />Add image</button>
+              <p className="text-micro text-surface-500 dark:text-surface-400">Add 1–7 clear product views. Upload a file, or paste a link. Uploaded pictures are always shown; links from other websites may be blocked.</p>
+              <button type="button" disabled={[image, ...additionalImages].filter((url) => url.trim()).length >= 7} onClick={() => setAdditionalImages((current) => [...current, ''])} className="inline-flex items-center gap-1.5 rounded-lg border border-success-300 px-3 py-2 text-xs font-bold text-success-800 hover:bg-success-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-success-800 dark:text-success-300"><Plus className="h-3.5 w-3.5" />Add image</button>
             </div>
           </section>
 
           <div>
-            <label htmlFor="seller-product-video" className="mb-1 block text-xs font-semibold text-slate-700 dark:text-zinc-300">Product video URL · 15 seconds max</label>
-            <input id="seller-product-video" type="url" value={videoUrl} onChange={(event) => setVideoUrl(event.target.value)} placeholder="https://example.com/product-demo.mp4" className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-[#181F2A] dark:text-white" />
+            <label htmlFor="seller-product-video" className="mb-1 block text-xs font-semibold text-surface-700 dark:text-surface-300">Product video URL · 15 seconds max</label>
+            <input id="seller-product-video" type="url" value={videoUrl} onChange={(event) => setVideoUrl(event.target.value)} placeholder="https://example.com/product-demo.mp4" className="w-full rounded-xl border border-surface-200 bg-surface-50 p-2.5 text-xs text-surface-900 focus:outline-none focus:ring-2 focus:ring-success-500 dark:border-surface-700 dark:bg-[#181F2A] dark:text-white" />
           </div>
 
-          <section className="space-y-2 rounded-xl border border-slate-200 p-4 dark:border-zinc-800">
+          <section className="space-y-2 rounded-xl border border-surface-200 p-4 dark:border-surface-800">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <h3 className="text-xs font-bold text-slate-800 dark:text-zinc-200">Key product specs</h3>
-                <p className="mt-0.5 text-[10px] text-slate-500 dark:text-zinc-400">Add up to 5 concise benefits or specifications.</p>
+                <h3 className="text-xs font-bold text-surface-800 dark:text-surface-200">Key product specs</h3>
+                <p className="mt-0.5 text-micro text-surface-500 dark:text-surface-400">Add up to 5 concise benefits or specifications.</p>
               </div>
-              <span className="text-[10px] tabular-nums text-slate-500 dark:text-zinc-400">{highlights.filter(Boolean).length}/5</span>
+              <span className="text-micro tabular-nums text-surface-500 dark:text-surface-400">{highlights.filter(Boolean).length}/5</span>
             </div>
             {highlights.map((highlight, index) => (
               <div key={index} className="flex gap-2">
@@ -581,67 +582,67 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
                   onChange={(event) => setHighlights((current) => current.map((item, itemIndex) => itemIndex === index ? event.target.value : item))}
                   placeholder={`Key spec ${index + 1}`}
                   aria-label={`Key product spec ${index + 1}`}
-                  className="min-w-0 flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-[#181F2A] dark:text-white"
+                  className="min-w-0 flex-1 rounded-lg border border-surface-200 bg-surface-50 px-3 py-2 text-xs text-surface-900 focus:outline-none focus:ring-2 focus:ring-success-500 dark:border-surface-700 dark:bg-[#181F2A] dark:text-white"
                 />
-                <button type="button" onClick={() => setHighlights((current) => current.filter((_, itemIndex) => itemIndex !== index))} aria-label={`Remove key spec ${index + 1}`} className="rounded-lg border border-slate-300 px-3 text-slate-500 hover:text-rose-600 dark:border-zinc-700"><Trash2 className="h-4 w-4" /></button>
+                <button type="button" onClick={() => setHighlights((current) => current.filter((_, itemIndex) => itemIndex !== index))} aria-label={`Remove key spec ${index + 1}`} className="rounded-lg border border-surface-300 px-3 text-surface-500 hover:text-danger-600 dark:border-surface-700"><Trash2 className="h-4 w-4" /></button>
               </div>
             ))}
             {highlights.length < 5 && (
-              <button type="button" onClick={() => setHighlights((current) => [...current, ''])} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800">
+              <button type="button" onClick={() => setHighlights((current) => [...current, ''])} className="inline-flex items-center gap-1.5 rounded-lg border border-surface-300 px-3 py-2 text-xs font-semibold text-surface-700 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-200 dark:hover:bg-surface-800">
                 <Plus className="h-3.5 w-3.5" />Add spec
               </button>
             )}
           </section>
 
-          <section className="space-y-3 rounded-xl border border-slate-200 p-4 dark:border-zinc-800">
-            <label className="flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-zinc-200">
+          <section className="space-y-3 rounded-xl border border-surface-200 p-4 dark:border-surface-800">
+            <label className="flex items-center gap-2 text-sm font-semibold text-surface-800 dark:text-surface-200">
               <input type="checkbox" checked={hasSizes} onChange={(event) => { setHasSizes(event.target.checked); setSizeError(null); }} />
               This apparel product has size options
             </label>
             {hasSizes && (
               <div className="space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <label className="text-xs font-semibold text-slate-600 dark:text-zinc-300">Size group
-                    <select value={sizeGender} onChange={(event) => setSizeGender(event.target.value as 'men' | 'women' | 'unisex')} className="ml-2 rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs dark:border-zinc-700 dark:bg-[#181F2A]">
+                  <label className="text-xs font-semibold text-surface-600 dark:text-surface-300">Size group
+                    <select value={sizeGender} onChange={(event) => setSizeGender(event.target.value as 'men' | 'women' | 'unisex')} className="ml-2 rounded-lg border border-surface-300 bg-white px-3 py-2 text-xs dark:border-surface-700 dark:bg-[#181F2A]">
                       <option value="men">Men</option><option value="women">Women</option><option value="unisex">Unisex</option>
                     </select>
                   </label>
-                  <button type="button" onClick={handleGenerateSizeChart} disabled={isGeneratingSizeChart} className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-300 px-3 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-50 disabled:opacity-50 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-950/30">
+                  <button type="button" onClick={handleGenerateSizeChart} disabled={isGeneratingSizeChart} className="inline-flex items-center gap-1.5 rounded-lg border border-success-300 px-3 py-2 text-xs font-bold text-success-800 hover:bg-success-50 disabled:opacity-50 dark:border-success-800 dark:text-success-300 dark:hover:bg-success-950/30">
                     <Sparkles className="h-3.5 w-3.5" />{isGeneratingSizeChart ? 'Reading image...' : 'Suggest size chart from image'}
                   </button>
                 </div>
-                <p className="text-[11px] text-amber-700 dark:text-amber-300">AI measurements are visual estimates. Verify them against the actual garment before publishing.</p>
+                <p className="text-micro text-warning-700 dark:text-warning-300">AI measurements are visual estimates. Verify them against the actual garment before publishing.</p>
                 <div className="flex flex-wrap gap-2">
                   {['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'].map((size) => (
-                    <button key={size} type="button" aria-pressed={sizes.includes(size)} onClick={() => toggleSize(size)} className={`rounded-lg border px-3 py-1.5 text-xs font-bold ${sizes.includes(size) ? 'border-emerald-700 bg-emerald-700 text-white' : 'border-slate-300 text-slate-700 dark:border-zinc-700 dark:text-zinc-300'}`}>{size}</button>
+                    <button key={size} type="button" aria-pressed={sizes.includes(size)} onClick={() => toggleSize(size)} className={`rounded-lg border px-3 py-1.5 text-xs font-bold ${sizes.includes(size) ? 'border-success-700 bg-success-700 text-white' : 'border-surface-300 text-surface-700 dark:border-surface-700 dark:text-surface-300'}`}>{size}</button>
                   ))}
                 </div>
                 {sizes.length > 0 && (
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[540px] text-left text-xs">
-                      <thead className="text-slate-500 dark:text-zinc-400"><tr><th className="py-2">Size</th><th>Chest cm</th><th>Waist cm</th><th>Hip cm</th><th>Length cm</th></tr></thead>
-                      <tbody className="divide-y divide-slate-200 dark:divide-zinc-800">
+                      <thead className="text-surface-500 dark:text-surface-400"><tr><th className="py-2">Size</th><th>Chest cm</th><th>Waist cm</th><th>Hip cm</th><th>Length cm</th></tr></thead>
+                      <tbody className="divide-y divide-surface-200 dark:divide-surface-800">
                         {sizes.map((size) => {
                           const row = sizeChart.find((measurement) => measurement.Size === size);
-                          return <tr key={size}><td className="py-2 font-bold text-slate-800 dark:text-zinc-200">{size}</td>{(['Chest_CM', 'Waist_CM', 'Hip_CM', 'Length_CM'] as const).map((field) => <td key={field} className="py-1"><input aria-label={`${size} ${field.replace('_CM', '').toLowerCase()} centimeters`} type="number" min="0" step="0.1" value={row?.[field] ?? ''} onChange={(event) => updateMeasurement(size, field, event.target.value)} className="w-24 rounded-md border border-slate-300 bg-white px-2 py-1.5 dark:border-zinc-700 dark:bg-[#181F2A]" /></td>)}</tr>;
+                          return <tr key={size}><td className="py-2 font-bold text-surface-800 dark:text-surface-200">{size}</td>{(['Chest_CM', 'Waist_CM', 'Hip_CM', 'Length_CM'] as const).map((field) => <td key={field} className="py-1"><input aria-label={`${size} ${field.replace('_CM', '').toLowerCase()} centimeters`} type="number" min="0" step="0.1" value={row?.[field] ?? ''} onChange={(event) => updateMeasurement(size, field, event.target.value)} className="w-24 rounded-md border border-surface-300 bg-white px-2 py-1.5 dark:border-surface-700 dark:bg-[#181F2A]" /></td>)}</tr>;
                         })}
                       </tbody>
                     </table>
                   </div>
                 )}
-                {sizeError && <p role="alert" className="text-xs text-rose-600 dark:text-rose-300">{sizeError}</p>}
+                {sizeError && <p role="alert" className="text-xs text-danger-600 dark:text-danger-300">{sizeError}</p>}
               </div>
             )}
           </section>
 
           <div>
             <div className="flex items-center justify-between gap-3 mb-1">
-              <label className="block text-slate-700 dark:text-zinc-300 font-semibold">Product description · up to 300 words</label>
+              <label className="block text-surface-700 dark:text-surface-300 font-semibold">Product description · up to 300 words</label>
               <button
                 type="button"
                 onClick={() => void handleAICopy('description')}
                 disabled={aiCopyLoading.description}
-                className="inline-flex items-center gap-1.5 text-emerald-700 dark:text-emerald-300 font-semibold hover:text-emerald-800 dark:hover:text-emerald-200 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 rounded-md"
+                className="inline-flex items-center gap-1.5 text-success-700 dark:text-success-300 font-semibold hover:text-success-800 dark:hover:text-success-200 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success-500 rounded-md"
               >
                 <Sparkles className="w-3.5 h-3.5" />
                 {aiCopyLoading.description ? 'Working...' : description.trim() ? 'Enhance with AI' : 'Draft with AI'}
@@ -656,26 +657,26 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
                 setAiCopyErrors((current) => ({ ...current, description: null }));
               }}
               placeholder={'## Highlights\n**Benefit one:** ...\n**Benefit two:** ...\n\n## Specifications\n- ...'}
-              className="w-full p-2.5 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500"
+              className="w-full p-2.5 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-success-500 text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500"
             />
-            <p className="mt-1 text-[10px] text-slate-500 dark:text-zinc-400">AI uses your entered product specs to write polished, detailed copy. Verify every claim before publishing.</p>
-            <p className="mt-1 text-right text-[10px] tabular-nums text-slate-500 dark:text-zinc-400">
+            <p className="mt-1 text-micro text-surface-500 dark:text-surface-400">AI uses your entered product specs to write polished, detailed copy. Verify every claim before publishing.</p>
+            <p className="mt-1 text-right text-micro tabular-nums text-surface-500 dark:text-surface-400">
               {description.trim() ? description.trim().split(/\s+/).filter(Boolean).length : 0}/300 words
             </p>
-            {aiCopyErrors.description && <p role="alert" className="mt-1 text-rose-600 dark:text-rose-300">{aiCopyErrors.description}</p>}
+            {aiCopyErrors.description && <p role="alert" className="mt-1 text-danger-600 dark:text-danger-300">{aiCopyErrors.description}</p>}
           </div>
 
-          <section className="space-y-3 rounded-xl border border-slate-200 p-4 dark:border-zinc-800">
+          <section className="space-y-3 rounded-xl border border-surface-200 p-4 dark:border-surface-800">
             <div>
-              <h3 className="text-xs font-bold text-slate-800 dark:text-zinc-200">Warranty and guarantee</h3>
-              <p className="mt-1 text-[10px] text-slate-500 dark:text-zinc-400">Choose the coverage offered. AI drafts use editable placeholders when no terms are provided.</p>
+              <h3 className="text-xs font-bold text-surface-800 dark:text-surface-200">Warranty and guarantee</h3>
+              <p className="mt-1 text-micro text-surface-500 dark:text-surface-400">Choose the coverage offered. AI drafts use editable placeholders when no terms are provided.</p>
             </div>
             <div className="flex flex-wrap gap-4">
-              <label className="inline-flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-zinc-300">
+              <label className="inline-flex items-center gap-2 text-xs font-semibold text-surface-700 dark:text-surface-300">
                 <input type="checkbox" checked={warrantyEnabled} onChange={(event) => setWarrantyEnabled(event.target.checked)} />
                 Warranty
               </label>
-              <label className="inline-flex items-center gap-2 text-xs font-semibold text-slate-700 dark:text-zinc-300">
+              <label className="inline-flex items-center gap-2 text-xs font-semibold text-surface-700 dark:text-surface-300">
                 <input type="checkbox" checked={guaranteeEnabled} onChange={(event) => setGuaranteeEnabled(event.target.checked)} />
                 Guarantee
               </label>
@@ -683,46 +684,46 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
             {warrantyEnabled && (
               <div>
                 <div className="mb-1 flex items-center justify-between gap-2">
-                  <label htmlFor="seller-warranty-info" className="block text-xs font-semibold text-slate-700 dark:text-zinc-300">Warranty terms · seller verified</label>
-                  <button type="button" onClick={() => void handleAICopy('warranty')} disabled={aiCopyLoading.warranty} className="inline-flex shrink-0 items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 disabled:opacity-50 dark:text-emerald-300"><Sparkles className="h-3.5 w-3.5" />{aiCopyLoading.warranty ? 'Working...' : warrantyInformation.trim() ? 'Enhance with AI' : 'Draft with AI'}</button>
+                  <label htmlFor="seller-warranty-info" className="block text-xs font-semibold text-surface-700 dark:text-surface-300">Warranty terms · seller verified</label>
+                  <button type="button" onClick={() => void handleAICopy('warranty')} disabled={aiCopyLoading.warranty} className="inline-flex shrink-0 items-center gap-1 text-micro font-semibold text-success-700 hover:text-success-800 disabled:opacity-50 dark:text-success-300"><Sparkles className="h-3.5 w-3.5" />{aiCopyLoading.warranty ? 'Working...' : warrantyInformation.trim() ? 'Enhance with AI' : 'Draft with AI'}</button>
                 </div>
-                <textarea id="seller-warranty-info" rows={4} maxLength={2200} value={warrantyInformation} onChange={(event) => { setWarrantyInformation(event.target.value); setAiCopyErrors((current) => ({ ...current, warranty: null })); }} placeholder="Enter verified warranty coverage and duration." className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-[#181F2A] dark:text-white" />
-                {aiCopyErrors.warranty && <p role="alert" className="mt-1 text-rose-600 dark:text-rose-300">{aiCopyErrors.warranty}</p>}
+                <textarea id="seller-warranty-info" rows={4} maxLength={2200} value={warrantyInformation} onChange={(event) => { setWarrantyInformation(event.target.value); setAiCopyErrors((current) => ({ ...current, warranty: null })); }} placeholder="Enter verified warranty coverage and duration." className="w-full rounded-xl border border-surface-200 bg-surface-50 p-2.5 text-xs text-surface-900 focus:outline-none focus:ring-2 focus:ring-success-500 dark:border-surface-700 dark:bg-[#181F2A] dark:text-white" />
+                {aiCopyErrors.warranty && <p role="alert" className="mt-1 text-danger-600 dark:text-danger-300">{aiCopyErrors.warranty}</p>}
               </div>
             )}
             {guaranteeEnabled && (
               <div>
                 <div className="mb-1 flex items-center justify-between gap-2">
-                  <label htmlFor="seller-guarantee-info" className="block text-xs font-semibold text-slate-700 dark:text-zinc-300">Guarantee terms · seller verified</label>
-                  <button type="button" onClick={() => void handleAICopy('guarantee')} disabled={aiCopyLoading.guarantee} className="inline-flex shrink-0 items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 disabled:opacity-50 dark:text-emerald-300"><Sparkles className="h-3.5 w-3.5" />{aiCopyLoading.guarantee ? 'Working...' : guaranteeInformation.trim() ? 'Enhance with AI' : 'Draft with AI'}</button>
+                  <label htmlFor="seller-guarantee-info" className="block text-xs font-semibold text-surface-700 dark:text-surface-300">Guarantee terms · seller verified</label>
+                  <button type="button" onClick={() => void handleAICopy('guarantee')} disabled={aiCopyLoading.guarantee} className="inline-flex shrink-0 items-center gap-1 text-micro font-semibold text-success-700 hover:text-success-800 disabled:opacity-50 dark:text-success-300"><Sparkles className="h-3.5 w-3.5" />{aiCopyLoading.guarantee ? 'Working...' : guaranteeInformation.trim() ? 'Enhance with AI' : 'Draft with AI'}</button>
                 </div>
-                <textarea id="seller-guarantee-info" rows={4} maxLength={2200} value={guaranteeInformation} onChange={(event) => { setGuaranteeInformation(event.target.value); setAiCopyErrors((current) => ({ ...current, guarantee: null })); }} placeholder="Enter verified guarantee conditions and duration." className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-[#181F2A] dark:text-white" />
-                {aiCopyErrors.guarantee && <p role="alert" className="mt-1 text-rose-600 dark:text-rose-300">{aiCopyErrors.guarantee}</p>}
+                <textarea id="seller-guarantee-info" rows={4} maxLength={2200} value={guaranteeInformation} onChange={(event) => { setGuaranteeInformation(event.target.value); setAiCopyErrors((current) => ({ ...current, guarantee: null })); }} placeholder="Enter verified guarantee conditions and duration." className="w-full rounded-xl border border-surface-200 bg-surface-50 p-2.5 text-xs text-surface-900 focus:outline-none focus:ring-2 focus:ring-success-500 dark:border-surface-700 dark:bg-[#181F2A] dark:text-white" />
+                {aiCopyErrors.guarantee && <p role="alert" className="mt-1 text-danger-600 dark:text-danger-300">{aiCopyErrors.guarantee}</p>}
               </div>
             )}
           </section>
 
           <section>
             <div className="mb-1 flex items-center justify-between gap-2">
-              <label htmlFor="seller-return-policy" className="block text-xs font-semibold text-slate-700 dark:text-zinc-300">Return terms · seller provided</label>
-              <button type="button" onClick={() => void handleAICopy('return-policy')} disabled={aiCopyLoading['return-policy']} className="inline-flex shrink-0 items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:text-emerald-800 disabled:opacity-50 dark:text-emerald-300"><Sparkles className="h-3.5 w-3.5" />{aiCopyLoading['return-policy'] ? 'Working...' : returnPolicy.trim() ? 'Enhance with AI' : 'Draft with AI'}</button>
+              <label htmlFor="seller-return-policy" className="block text-xs font-semibold text-surface-700 dark:text-surface-300">Return terms · seller provided</label>
+              <button type="button" onClick={() => void handleAICopy('return-policy')} disabled={aiCopyLoading['return-policy']} className="inline-flex shrink-0 items-center gap-1 text-micro font-semibold text-success-700 hover:text-success-800 disabled:opacity-50 dark:text-success-300"><Sparkles className="h-3.5 w-3.5" />{aiCopyLoading['return-policy'] ? 'Working...' : returnPolicy.trim() ? 'Enhance with AI' : 'Draft with AI'}</button>
             </div>
-            <textarea id="seller-return-policy" rows={4} maxLength={2200} value={returnPolicy} onChange={(event) => { setReturnPolicy(event.target.value); setAiCopyErrors((current) => ({ ...current, 'return-policy': null })); }} placeholder="State return conditions, or leave blank." className="w-full rounded-xl border border-slate-200 bg-slate-50 p-2.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 dark:border-zinc-700 dark:bg-[#181F2A] dark:text-white" />
-            {aiCopyErrors['return-policy'] && <p role="alert" className="mt-1 text-rose-600 dark:text-rose-300">{aiCopyErrors['return-policy']}</p>}
+            <textarea id="seller-return-policy" rows={4} maxLength={2200} value={returnPolicy} onChange={(event) => { setReturnPolicy(event.target.value); setAiCopyErrors((current) => ({ ...current, 'return-policy': null })); }} placeholder="State return conditions, or leave blank." className="w-full rounded-xl border border-surface-200 bg-surface-50 p-2.5 text-xs text-surface-900 focus:outline-none focus:ring-2 focus:ring-success-500 dark:border-surface-700 dark:bg-[#181F2A] dark:text-white" />
+            {aiCopyErrors['return-policy'] && <p role="alert" className="mt-1 text-danger-600 dark:text-danger-300">{aiCopyErrors['return-policy']}</p>}
           </section>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-zinc-800">
+          <div className="flex justify-end gap-3 pt-4 border-t border-surface-100 dark:border-surface-800">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-full text-slate-600 hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+              className="px-4 py-2 rounded-full text-surface-600 hover:bg-surface-100 dark:text-surface-400 dark:hover:bg-surface-800 transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSaving || uploadingSlot !== null}
-              className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-bold rounded-full shadow-lg shadow-emerald-500/30 transition-all cursor-pointer"
+              className="flex items-center gap-2 px-6 py-2.5 bg-success-600 hover:bg-success-500 disabled:opacity-50 text-white font-bold rounded-full shadow-lg shadow-success-500/30 transition-all cursor-pointer"
             >
               <Save className="w-4 h-4" />
               <span>{isSaving ? 'Saving...' : 'Save Product'}</span>

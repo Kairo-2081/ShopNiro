@@ -81,18 +81,18 @@ const RiderCvPreview: React.FC<{ url: string; onClose: () => void }> = ({ url, o
 
   return (
     <div className="fixed inset-0 z-[85] flex items-center justify-center bg-black/80 p-2 sm:p-5">
-      <section role="dialog" aria-modal="true" aria-labelledby="rider-cv-title" className="flex max-h-[96dvh] w-full max-w-4xl flex-col overflow-hidden rounded-xl border border-slate-300 bg-white shadow-2xl dark:border-zinc-700 dark:bg-[#12161D]">
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-3 dark:border-zinc-800">
-          <h2 id="rider-cv-title" className="font-bold text-slate-900 dark:text-white">My CV</h2>
+      <section role="dialog" aria-modal="true" aria-labelledby="rider-cv-title" className="flex max-h-[96dvh] w-full max-w-4xl flex-col overflow-hidden rounded-xl border border-surface-300 bg-white shadow-2xl dark:border-surface-700 dark:bg-[#12161D]">
+        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-surface-200 px-4 py-3 dark:border-surface-800">
+          <h2 id="rider-cv-title" className="font-bold text-surface-900 dark:text-white">My CV</h2>
           <div className="flex items-center gap-2">
-            <button type="button" aria-label="Previous CV page" disabled={!pdfDocument || pageNumber <= 1} onClick={() => setPageNumber((page) => Math.max(1, page - 1))} className="rounded-md p-2 text-slate-700 hover:bg-slate-100 disabled:opacity-40 dark:text-zinc-200 dark:hover:bg-zinc-800"><ChevronLeft className="h-5 w-5" /></button>
-            <span className="min-w-16 text-center text-xs text-slate-600 dark:text-zinc-300">{pdfDocument ? `${pageNumber} / ${pdfDocument.numPages}` : 'Loading'}</span>
-            <button type="button" aria-label="Next CV page" disabled={!pdfDocument || pageNumber >= pdfDocument.numPages} onClick={() => setPageNumber((page) => Math.min(pdfDocument?.numPages || page, page + 1))} className="rounded-md p-2 text-slate-700 hover:bg-slate-100 disabled:opacity-40 dark:text-zinc-200 dark:hover:bg-zinc-800"><ChevronRight className="h-5 w-5" /></button>
-            <button type="button" onClick={onClose} aria-label="Close CV preview" className="rounded-md p-2 text-slate-500 hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-zinc-800"><X className="h-5 w-5" /></button>
+            <button type="button" aria-label="Previous CV page" disabled={!pdfDocument || pageNumber <= 1} onClick={() => setPageNumber((page) => Math.max(1, page - 1))} className="rounded-md p-2 text-surface-700 hover:bg-surface-100 disabled:opacity-40 dark:text-surface-200 dark:hover:bg-surface-800"><ChevronLeft className="h-5 w-5" /></button>
+            <span className="min-w-16 text-center text-xs text-surface-600 dark:text-surface-300">{pdfDocument ? `${pageNumber} / ${pdfDocument.numPages}` : 'Loading'}</span>
+            <button type="button" aria-label="Next CV page" disabled={!pdfDocument || pageNumber >= pdfDocument.numPages} onClick={() => setPageNumber((page) => Math.min(pdfDocument?.numPages || page, page + 1))} className="rounded-md p-2 text-surface-700 hover:bg-surface-100 disabled:opacity-40 dark:text-surface-200 dark:hover:bg-surface-800"><ChevronRight className="h-5 w-5" /></button>
+            <button type="button" onClick={onClose} aria-label="Close CV preview" className="rounded-md p-2 text-surface-500 hover:bg-surface-100 dark:text-surface-400 dark:hover:bg-surface-800"><X className="h-5 w-5" /></button>
           </div>
         </header>
-        <div ref={containerRef} className="min-h-0 flex-1 overflow-auto bg-slate-200 p-4 dark:bg-[#080a0c]">
-          {error ? <p role="alert" className="p-6 text-center text-sm text-rose-700 dark:text-rose-300">{error}</p> : !pdfDocument ? <p role="status" className="p-6 text-center text-sm text-slate-600 dark:text-zinc-300">Preparing CV preview...</p> : <canvas ref={canvasRef} aria-label={`CV page ${pageNumber}`} className="mx-auto block max-w-full shadow-lg" />}
+        <div ref={containerRef} className="min-h-0 flex-1 overflow-auto bg-surface-200 p-4 dark:bg-[#080a0c]">
+          {error ? <p role="alert" className="p-6 text-center text-sm text-danger-700 dark:text-danger-300">{error}</p> : !pdfDocument ? <p role="status" className="p-6 text-center text-sm text-surface-600 dark:text-surface-300">Preparing CV preview...</p> : <canvas ref={canvasRef} aria-label={`CV page ${pageNumber}`} className="mx-auto block max-w-full shadow-lg" />}
         </div>
       </section>
     </div>
@@ -253,7 +253,7 @@ export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, ri
     }
   };
 
-  const fieldClass = 'w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-600 dark:border-zinc-700 dark:bg-[#181F2A] dark:text-white';
+  const fieldClass = 'w-full rounded-lg border border-surface-300 bg-white px-3 py-2.5 text-sm text-surface-900 placeholder:text-surface-400 focus:outline-none focus:ring-2 focus:ring-success-600 dark:border-surface-700 dark:bg-[#181F2A] dark:text-white';
   const handleProfileImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] || null;
     setProfileImageFile(file);
@@ -279,50 +279,50 @@ export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, ri
   return (
     <>
     <div className="fixed inset-0 z-[75] flex items-center justify-center bg-black/75 p-3 backdrop-blur-sm sm:p-5">
-      <section role="dialog" aria-modal="true" aria-labelledby="rider-details-title" className="flex max-h-[94vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-emerald-200 bg-white shadow-2xl dark:border-emerald-900 dark:bg-[#12161D]">
-        <header className="flex items-center justify-between gap-4 border-b border-slate-200 bg-emerald-50/70 px-5 py-4 dark:border-zinc-800 dark:bg-emerald-950/20 sm:px-7">
+      <section role="dialog" aria-modal="true" aria-labelledby="rider-details-title" className="flex max-h-[94vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-success-200 bg-white shadow-2xl dark:border-success-900 dark:bg-[#12161D]">
+        <header className="flex items-center justify-between gap-4 border-b border-surface-200 bg-success-50/70 px-5 py-4 dark:border-surface-800 dark:bg-success-950/20 sm:px-7">
           <div>
-            <h2 id="rider-details-title" className="font-bold text-slate-900 dark:text-white">My details</h2>
-            <p className="mt-1 text-xs text-slate-600 dark:text-zinc-400">Profile changes refresh your CV and require approval. Password changes do not.</p>
-            {required && <p role="status" className="mt-2 text-xs font-semibold text-amber-800 dark:text-amber-200">Complete and save your profile before making other changes.</p>}
+            <h2 id="rider-details-title" className="font-bold text-surface-900 dark:text-white">My details</h2>
+            <p className="mt-1 text-xs text-surface-600 dark:text-surface-400">Profile changes refresh your CV and require approval. Password changes do not.</p>
+            {required && <p role="status" className="mt-2 text-xs font-semibold text-warning-800 dark:text-warning-200">Complete and save your profile before making other changes.</p>}
           </div>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={() => void viewCv()} disabled={openingCv} className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200"><FileText className="h-4 w-4" />{openingCv ? 'Opening...' : 'View my CV'}</button>
-            <button type="button" onClick={onClose} aria-label="Close rider details" className="rounded-md p-2 text-slate-500 hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-zinc-800"><X className="h-5 w-5" /></button>
+            <button type="button" onClick={() => void viewCv()} disabled={openingCv} className="inline-flex items-center gap-2 rounded-lg border border-surface-300 px-3 py-2 text-xs font-semibold text-surface-700 disabled:opacity-50 dark:border-surface-700 dark:text-surface-200"><FileText className="h-4 w-4" />{openingCv ? 'Opening...' : 'View my CV'}</button>
+            <button type="button" onClick={onClose} aria-label="Close rider details" className="rounded-md p-2 text-surface-500 hover:bg-surface-100 dark:text-surface-400 dark:hover:bg-surface-800"><X className="h-5 w-5" /></button>
           </div>
         </header>
 
         <form onSubmit={save} className="space-y-6 overflow-y-auto p-5 sm:p-7">
-          {error && <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300">{error}</p>}
-          {notice && <p role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200">{notice}</p>}
+          {error && <p role="alert" className="rounded-lg border border-danger-200 bg-danger-50 p-3 text-sm text-danger-700 dark:border-danger-900 dark:bg-danger-950/40 dark:text-danger-300">{error}</p>}
+          {notice && <p role="status" className="rounded-lg border border-success-200 bg-success-50 p-3 text-sm text-success-800 dark:border-success-900 dark:bg-success-950/30 dark:text-success-200">{notice}</p>}
 
           <section className="space-y-3">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Account and contact</h3>
+            <h3 className="text-sm font-bold text-surface-900 dark:text-white">Account and contact</h3>
             <div className="grid gap-3 sm:grid-cols-2">
               <input className={fieldClass} required autoComplete="name" placeholder="Full name" value={name} onChange={(event) => setName(event.target.value)} />
               <input className={fieldClass} required autoComplete="username" placeholder="Username" value={username} onChange={(event) => setUsername(event.target.value)} />
               <input className={fieldClass} required type="email" autoComplete="email" placeholder="Email address" value={email} onChange={(event) => setEmail(event.target.value)} />
               <input className={fieldClass} required type="tel" autoComplete="tel" placeholder="Phone number" value={phone} onChange={(event) => setPhone(event.target.value)} />
               <div className="relative sm:col-span-2">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                <Lock className="absolute left-3 top-3 h-4 w-4 text-surface-400" />
                 <input className={`${fieldClass} pl-9`} type="password" minLength={8} autoComplete="new-password" placeholder="New password (leave blank to keep current)" value={password} onChange={(event) => setPassword(event.target.value)} />
               </div>
             </div>
           </section>
 
           <section className="space-y-3">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Profile photo</h3>
-            <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-emerald-400 bg-emerald-50/60 p-4 text-sm text-slate-700 dark:border-emerald-800 dark:bg-emerald-950/20 dark:text-zinc-200">
-              {profileImage ? <img src={profileImage} alt="Rider profile preview" className="h-14 w-14 rounded-xl border border-emerald-200 object-cover dark:border-emerald-800" /> : <ImageIcon className="h-5 w-5 shrink-0 text-emerald-700 dark:text-emerald-400" />}
+            <h3 className="text-sm font-bold text-surface-900 dark:text-white">Profile photo</h3>
+            <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-success-400 bg-success-50/60 p-4 text-sm text-surface-700 dark:border-success-800 dark:bg-success-950/20 dark:text-surface-200">
+              {profileImage ? <img src={profileImage} alt="Rider profile preview" className="h-14 w-14 rounded-xl border border-success-200 object-cover dark:border-success-800" /> : <ImageIcon className="h-5 w-5 shrink-0 text-success-700 dark:text-success-400" />}
               <span className="min-w-0 flex-1">{profileImageFile ? `${profileImageFile.name} · Ready` : 'Upload / change profile image (JPG or PNG, max 2 MB)'}</span>
               <input type="file" accept="image/jpeg,image/png" className="sr-only" onChange={handleProfileImageChange} />
             </label>
-            <p className="text-xs text-slate-500 dark:text-zinc-400">Saving a new photo automatically updates the image in your generated CV.</p>
+            <p className="text-xs text-surface-500 dark:text-surface-400">Saving a new photo automatically updates the image in your generated CV.</p>
           </section>
 
           {addressForms.map((addressForm) => (
             <section key={addressForm.title} className="space-y-3">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">{addressForm.title}</h3>
+              <h3 className="text-sm font-bold text-surface-900 dark:text-white">{addressForm.title}</h3>
               <AccountLocationPicker
                 initialLocation={Number.isFinite(addressForm.value.Latitude) && Number.isFinite(addressForm.value.Longitude)
                   ? { lat: addressForm.value.Latitude!, lng: addressForm.value.Longitude! }
@@ -341,22 +341,22 @@ export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, ri
           ))}
 
           <section className="space-y-3">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Work and education history</h3>
+            <h3 className="text-sm font-bold text-surface-900 dark:text-white">Work and education history</h3>
             {[
               { label: 'Experience', value: experience, set: setExperience },
               { label: 'Previous jobs', value: previousJobs, set: setPreviousJobs },
               { label: 'Education and qualifications', value: education, set: setEducation },
             ].map((field) => (
-              <label key={field.label} className="block text-xs font-semibold text-slate-700 dark:text-zinc-300">
+              <label key={field.label} className="block text-xs font-semibold text-surface-700 dark:text-surface-300">
                 {field.label}
                 <textarea rows={3} value={field.value} onChange={(event) => field.set(event.target.value)} placeholder={`One item per line. Write “None” if not applicable.`} className={`${fieldClass} mt-1`} />
               </label>
             ))}
           </section>
 
-          <footer className="flex flex-col-reverse justify-end gap-2 border-t border-slate-200 pt-4 dark:border-zinc-800 sm:flex-row">
-            <button type="button" onClick={onClose} className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 dark:border-zinc-700 dark:text-zinc-200">Cancel</button>
-            <button type="submit" disabled={saving || preparingProfileImage} className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"><Save className="h-4 w-4" />{preparingProfileImage ? 'Preparing photo...' : saving ? 'Saving details...' : 'Save details'}</button>
+          <footer className="flex flex-col-reverse justify-end gap-2 border-t border-surface-200 pt-4 dark:border-surface-800 sm:flex-row">
+            <button type="button" onClick={onClose} className="rounded-lg border border-surface-300 px-4 py-2.5 text-sm font-semibold text-surface-700 dark:border-surface-700 dark:text-surface-200">Cancel</button>
+            <button type="submit" disabled={saving || preparingProfileImage} className="inline-flex items-center justify-center gap-2 rounded-lg bg-success-700 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"><Save className="h-4 w-4" />{preparingProfileImage ? 'Preparing photo...' : saving ? 'Saving details...' : 'Save details'}</button>
           </footer>
         </form>
       </section>

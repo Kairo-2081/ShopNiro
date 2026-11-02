@@ -62,6 +62,7 @@ test('migration runner applies, verifies, and baselines schemas safely', {
       '0005_align_column_defaults',
       '0006_stop_writing_items_json',
       '0007_drop_items_json',
+      '0008_checkout_idempotency',
     ]);
 
     await cp(path.join(migrationDirectory, '0001_baseline.sql'), path.join(baselineMigrations, '0001_baseline.sql'));
@@ -273,7 +274,7 @@ test('migration runner applies, verifies, and baselines schemas safely', {
         (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
          WHERE n.nspname = 'public' AND left(p.proname, 9) = 'shopniro_') AS shopniro_function_count
     `);
-    assert.equal(Number(schemaCounts.rows[0]?.table_count), 34);
+    assert.equal(Number(schemaCounts.rows[0]?.table_count), 35);
     assert.equal(Number(schemaCounts.rows[0]?.shopniro_function_count), 54);
 
     const recordedBeforeRerun = await freshClient.query<{ applied_at: string }>(

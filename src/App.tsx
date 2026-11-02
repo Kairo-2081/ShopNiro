@@ -24,7 +24,7 @@ import { RoleSwitcher } from './components/RoleSwitcher';
 import { AuthenticationGuard } from './components/AuthenticationGuard';
 import { ChatFloatingTrigger } from './components/chat/ChatFloatingTrigger';
 import { rememberFocusTarget } from './hooks/useFocusTrap';
-import { AlertCircle, CheckCircle2, Info, LayoutGrid, Radio, X } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Info, Radio, X } from 'lucide-react';
 
 type ToastTone = 'success' | 'error' | 'info';
 
@@ -116,9 +116,11 @@ export default function App() {
   const [customers, setCustomers] = React.useState<Customer[]>([]);
   const [cart, setCart] = React.useState<CartItem[]>([]);
   const [orders, setOrders] = React.useState<Order[]>([]);
+  const [ordersLoadError, setOrdersLoadError] = React.useState<string | null>(null);
   const [reviews, setReviews] = React.useState<Review[]>([]);
   const [admins, setAdmins] = React.useState<Admin[]>([]);
   const [isInitialDataLoading, setIsInitialDataLoading] = React.useState(true);
+  const [storefrontLoadError, setStorefrontLoadError] = React.useState<string | null>(null);
   const [hasMoreStoreProducts, setHasMoreStoreProducts] = React.useState(false);
   const [isLoadingMoreStoreProducts, setIsLoadingMoreStoreProducts] = React.useState(false);
   const [isCartLoading, setIsCartLoading] = React.useState(false);
@@ -326,26 +328,36 @@ export default function App() {
   // Load public storefront data and conditionally load role-authenticated resources
   const loadInitialData = React.useCallback(async () => {
     setIsInitialDataLoading(true);
+    setStorefrontLoadError(null);
+    setOrdersLoadError(null);
     try {
+      const storefrontFailures: string[] = [];
       // Public storefront data (categories, products, reviews, approved sellers)
       const [cats, sels, productPage, revs] = await Promise.all([
         api.getCategories().catch((err) => {
           console.error('Error fetching categories:', err);
+          storefrontFailures.push('categories');
           return [];
         }),
         api.getSellers().catch((err) => {
           console.error('Error fetching sellers:', err);
+          storefrontFailures.push('sellers');
           return [];
         }),
         api.getProductsPage({ limit: STORE_PRODUCT_PAGE_SIZE, offset: 0 }).catch((err) => {
           console.error('Error fetching products:', err);
+          storefrontFailures.push('products');
           return { items: [], hasMore: false };
         }),
         api.getReviews().catch((err) => {
           console.error('Error fetching reviews:', err);
+          storefrontFailures.push('reviews');
           return [];
         }),
       ]);
+      if (storefrontFailures.length) {
+        setStorefrontLoadError(`Could not load ${storefrontFailures.join(', ')}. Check your connection and retry.`);
+      }
 
       if (cats && cats.length > 0) setCategories(cats);
       if (sels && sels.length > 0) setSellers(sels);
@@ -376,7 +388,10 @@ export default function App() {
           try {
             const [custs, ords, fetchedAdmins] = await Promise.all([
               api.getCustomers().catch(() => []),
-              api.getOrders().catch(() => []),
+              api.getOrders().catch((error) => {
+                setOrdersLoadError(error.message || 'Could not load orders.');
+                return [];
+              }),
               api.getAdmins().catch(() => []),
             ]);
             setCustomers(custs);
@@ -389,7 +404,10 @@ export default function App() {
           setSelectedCustomer(auth.entity as Customer);
           try {
             const [custOrders, cartItems] = await Promise.all([
-              api.getOrders({ customerId: (auth.entity as Customer).Customer_ID }).catch(() => []),
+              api.getOrders({ customerId: (auth.entity as Customer).Customer_ID }).catch((error) => {
+                setOrdersLoadError(error.message || 'Could not load your orders.');
+                return [];
+              }),
               api.getCart((auth.entity as Customer).Customer_ID).catch(() => []),
             ]);
             setOrders(custOrders);
@@ -400,7 +418,10 @@ export default function App() {
         } else if (auth.role === 'seller') {
           setSelectedSeller(auth.entity as Seller);
           try {
-            const sellerOrders = await api.getOrders({ sellerId: (auth.entity as Seller).Seller_ID }).catch(() => []);
+            const sellerOrders = await api.getOrders({ sellerId: (auth.entity as Seller).Seller_ID }).catch((error) => {
+              setOrdersLoadError(error.message || 'Could not load seller orders.');
+              return [];
+            });
             setOrders(sellerOrders);
           } catch (err) {
             console.error('Error fetching seller orders:', err);
@@ -418,6 +439,7 @@ export default function App() {
         setAdmins([]);
       }
     } catch (err) {
+      setStorefrontLoadError(err instanceof Error ? err.message : 'Could not load marketplace data. Check your connection and retry.');
       console.error('Failed to load initial data:', err);
     } finally {
       setIsInitialDataLoading(false);
@@ -455,7 +477,9 @@ export default function App() {
         setProducts(page.items);
         setHasMoreStoreProducts(page.hasMore);
       }
+      setStorefrontLoadError(null);
     } catch (error: any) {
+      setStorefrontLoadError(error.message || 'Could not search products. Check your connection and retry.');
       showToast(error.message || 'Could not search products.', 'error');
     }
   }, []);
@@ -722,12 +746,12 @@ export default function App() {
   };
 
   // Order Placement
-  const handlePlaceOrder = async (orderData: any) => {
+  const handlePlaceOrder = async (orderData: any, idempotencyKey: string) => {
     if (!selectedCustomer) {
       setIsLoginModalOpen(true);
       throw new Error('Please sign in to place order');
     }
-    const newOrder = await api.createOrder(orderData);
+    const newOrder = await api.createOrder(orderData, idempotencyKey);
     setOrders((prev) => [newOrder, ...prev]);
     const [updatedCart, updatedProds] = await Promise.all([
       api.getCart(selectedCustomer.Customer_ID),
@@ -902,15 +926,6 @@ export default function App() {
   };
 
   // Get active user entity
-  const currentUserEntity =
-    currentRole === 'customer'
-      ? selectedCustomer
-      : currentRole === 'seller'
-      ? selectedSeller
-      : currentRole === 'admin'
-      ? selectedAdmin
-      : selectedRider;
-
   const marketplaceStats: MarketplaceStat[] = [
     {
       label: 'Live listings',
@@ -939,7 +954,7 @@ export default function App() {
   // Render Landing Page
   if (viewMode === 'landing') {
     return (
-      <React.Suspense fallback={<div className="flex min-h-screen items-center justify-center text-sm text-slate-500 dark:text-zinc-400">Loading ShopNiro...</div>}>
+      <React.Suspense fallback={<div className="flex min-h-screen items-center justify-center text-sm text-surface-500 dark:text-surface-400">Loading ShopNiro...</div>}>
       <>
         <LandingPage
           customers={customers}
@@ -1016,14 +1031,14 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-transparent text-slate-900 dark:text-zinc-100 font-sans flex flex-col antialiased transition-colors duration-200 app-shell">
+    <div className="min-h-screen overflow-x-hidden bg-transparent text-surface-900 dark:text-surface-100 font-sans flex flex-col antialiased transition-colors duration-200 app-shell">
       <div className="fixed right-4 top-20 z-[70] flex w-[min(24rem,calc(100vw-2rem))] flex-col gap-2 sm:right-6" aria-live="polite">
         {toastMessages.map((toast) => {
           const toneClass = toast.tone === 'error'
-            ? 'border-rose-500/25 bg-rose-500/10 text-rose-700 dark:text-rose-300'
+            ? 'border-danger-500/25 bg-danger-500/10 text-danger-700 dark:text-danger-300'
             : toast.tone === 'success'
-              ? 'border-emerald-500/25 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300'
-              : 'border-amber-500/25 bg-amber-500/10 text-amber-800 dark:text-amber-200';
+              ? 'border-success-500/25 bg-success-500/10 text-success-800 dark:text-success-300'
+              : 'border-warning-500/25 bg-warning-500/10 text-warning-800 dark:text-warning-200';
           const Icon = toast.tone === 'error' ? AlertCircle : toast.tone === 'success' ? CheckCircle2 : Info;
           return (
             <div key={toast.id} role={toast.tone === 'error' ? 'alert' : 'status'} className={`premium-card flex items-start gap-3 rounded-xl border p-3.5 text-xs font-semibold shadow-xl backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-200 ${toneClass}`}>
@@ -1036,29 +1051,12 @@ export default function App() {
           );
         })}
       </div>
-      {/* Top Bar with Landing option */}
-      <div className="bg-[#171713]/80 dark:bg-[#10100f]/75 border-b border-[#d0c8a5]/15 dark:border-white/10 px-3 py-1.5 flex items-center justify-between text-xs text-slate-700 dark:text-zinc-300 backdrop-blur-xl shadow-[0_10px_30px_rgba(7,7,5,0.25)] animate-fade-up sm:px-4">
-        <button
-          onClick={() => setViewMode('landing')}
-          className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-[#161C24] dark:hover:bg-[#1E2633] text-blue-600 dark:text-sky-400 font-semibold border border-sky-100 dark:border-zinc-800 transition-colors cursor-pointer shadow-2xs"
-        >
-          <LayoutGrid className="w-3.5 h-3.5" />
-          <span>Home / Marketplace Landing</span>
-        </button>
-
-      </div>
-
-      {/* Role Switcher Bar - Notice: In-profile switching is REMOVED when logged in! */}
       <RoleSwitcher
         isLoggedIn={isLoggedIn}
-        currentRole={currentRole}
-        currentUserEntity={currentUserEntity}
         onOpenCustomerSignup={() => openSignup('customer')}
         onOpenSellerSignup={() => openSignup('seller')}
-        onOpenAdminSignup={() => setIsAdminRegistrationOpen(true)}
         onOpenRiderSignup={() => openSignup('rider')}
         onOpenLogin={openLogin}
-        onLogout={handleLogout}
       />
 
       {/* Main Header & Navbar */}
@@ -1087,14 +1085,14 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 pt-4 pb-16 app-panel animate-fade-up sm:px-6 lg:px-8 lg:pt-6">
-        <React.Suspense fallback={<div className="flex min-h-[40vh] items-center justify-center text-sm text-slate-500 dark:text-zinc-400">Loading marketplace...</div>}>
+        <React.Suspense fallback={<div className="flex min-h-[40vh] items-center justify-center text-sm text-surface-500 dark:text-surface-400">Loading marketplace...</div>}>
         {/* Authentication Notice Banner if set */}
         {isLoggedIn && !profileComplete && (
-          <div role="status" className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs text-amber-800 shadow-xs dark:text-amber-200">
+          <div role="status" className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warning-500/30 bg-warning-500/10 p-4 text-xs text-warning-800 shadow-xs dark:text-warning-200">
             <div className="min-w-0">
               <strong className="block">Update your profile first</strong>
               <span>Complete your profile before making account changes or placing orders.</span>
-              {profileMissingFields.length > 0 && <span className="mt-1 block text-[11px] opacity-80">Missing: {profileMissingFields.join(', ')}</span>}
+              {profileMissingFields.length > 0 && <span className="mt-1 block text-micro opacity-80">Missing: {profileMissingFields.join(', ')}</span>}
             </div>
             <button
               type="button"
@@ -1103,7 +1101,7 @@ export default function App() {
                 if (currentRole === 'seller') setActiveTab('seller-dashboard');
                 if (currentRole === 'rider') setActiveTab('rider-dashboard');
               }}
-              className="shrink-0 rounded-lg bg-amber-700 px-3 py-2 font-bold text-white hover:bg-amber-600"
+              className="shrink-0 rounded-lg bg-warning-700 px-3 py-2 font-bold text-white hover:bg-warning-600"
             >
               Complete profile
             </button>
@@ -1111,14 +1109,14 @@ export default function App() {
         )}
 
         {authNotice && !isLoginModalOpen && profileComplete && (
-          <div className="mb-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs flex items-center justify-between gap-3 shadow-xs">
+          <div className="mb-6 p-4 rounded-2xl bg-warning-500/10 border border-warning-500/30 text-warning-700 dark:text-warning-300 text-xs flex items-center justify-between gap-3 shadow-xs">
             <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-amber-500 animate-ping"></span>
+              <span className="w-2 h-2 rounded-full bg-warning-500 animate-ping"></span>
               <strong>Security Protocol:</strong> {authNotice}
             </div>
             <button
               onClick={openLogin}
-              className="px-3 py-1 bg-amber-600 hover:bg-amber-500 text-white font-bold rounded-lg shadow-xs cursor-pointer shrink-0"
+              className="px-3 py-1 bg-warning-600 hover:bg-warning-500 text-white font-bold rounded-lg shadow-xs cursor-pointer shrink-0"
             >
               Sign In Now
             </button>
@@ -1136,6 +1134,8 @@ export default function App() {
             sellers={sellers}
             reviews={reviews}
             isLoading={isInitialDataLoading}
+            loadError={storefrontLoadError}
+            onRetryProducts={() => void loadInitialData()}
             hasMoreProducts={hasMoreStoreProducts}
             isLoadingMoreProducts={isLoadingMoreStoreProducts}
             onLoadMoreProducts={() => void loadMoreStoreProducts()}
@@ -1164,11 +1164,25 @@ export default function App() {
             <CustomerOrders
               currentCustomer={selectedCustomer}
               orders={orders}
+              ordersError={ordersLoadError}
               sellers={sellers}
               allProducts={products}
               onSelectProduct={(p) => setSelectedProductForDetail(p)}
               onAddToCart={handleAddToCart}
-              onRefreshOrders={async () => setOrders(await api.getOrders({ customerId: selectedCustomer.Customer_ID }))}
+              onBrowseProducts={() => setActiveTab('storefront')}
+              onRetryOrders={async () => {
+                try {
+                  setOrders(await api.getOrders({ customerId: selectedCustomer.Customer_ID }));
+                  setOrdersLoadError(null);
+                } catch (error: any) {
+                  setOrdersLoadError(error.message || 'Could not load your orders.');
+                }
+              }}
+              onRefreshOrders={async () => {
+                const nextOrders = await api.getOrders({ customerId: selectedCustomer.Customer_ID });
+                setOrders(nextOrders);
+                setOrdersLoadError(null);
+              }}
             />
           ) : (
             <AuthenticationGuard
@@ -1186,16 +1200,16 @@ export default function App() {
         {/* OpenStreetMap delivery tracking tab */}
         {activeTab === 'live-tracking' && (
           <div className="space-y-6 animate-in fade-in-50 duration-200">
-            <div className="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-[#12161D] p-6 rounded-3xl border border-sky-100 dark:border-zinc-800 shadow-xl">
+            <div className="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-[#12161D] p-6 rounded-3xl border border-brand-100 dark:border-surface-800 shadow-xl">
               <div>
-                <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-sky-950/80 text-sky-400 text-[10px] font-bold tracking-wider uppercase border border-sky-800/40 mb-2">
+                <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-brand-950/80 text-brand-400 text-micro font-bold tracking-wider uppercase border border-brand-800/40 mb-2">
                   <Radio className="w-3 h-3 animate-pulse" />
                   <span>REAL-TIME SATELLITE &amp; ROADWAY GPS TELEMETRY</span>
                 </div>
-                <h1 className="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-2">
+                <h1 className="text-2xl font-black text-surface-900 dark:text-white flex items-center gap-2">
                   Live Delivery Tracking
                 </h1>
-                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
+                <p className="text-xs text-surface-500 dark:text-surface-400 mt-1">
                   Interactive telemetry tracking showing dispatch warehouses, in-flight parcel couriers, and product shipment coordinates.
                 </p>
               </div>
@@ -1204,14 +1218,14 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setActiveTab('storefront')}
-                  className="px-4 py-2 rounded-full border border-slate-300 dark:border-zinc-700 text-xs font-semibold text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                  className="px-4 py-2 rounded-full border border-surface-300 dark:border-surface-700 text-xs font-semibold text-surface-700 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors cursor-pointer"
                 >
                   Browse Storefront
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveTab('orders')}
-                  className="px-4 py-2 rounded-full bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md shadow-blue-600/30 transition-all cursor-pointer"
+                  className="px-4 py-2 rounded-full bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold shadow-md shadow-brand-600/30 transition-all cursor-pointer"
                 >
                   My Orders History
                 </button>
@@ -1230,9 +1244,9 @@ export default function App() {
                 onDeliveryComplete={(orderId) => handleUpdateOrderStatus(orderId, 'delivered')}
               />
             ) : (
-              <div className="rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#12161D] p-6 text-center">
-                <p className="font-bold text-slate-900 dark:text-white">No shipments are in transit</p>
-                <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">Live tracking appears after a vendor marks an order as shipped.</p>
+              <div className="rounded-2xl border border-surface-200 dark:border-surface-800 bg-white dark:bg-[#12161D] p-6 text-center">
+                <p className="font-bold text-surface-900 dark:text-white">No shipments are in transit</p>
+                <p className="text-xs text-surface-500 dark:text-surface-400 mt-1">Live tracking appears after a vendor marks an order as shipped.</p>
               </div>
             )}
           </div>
@@ -1342,28 +1356,28 @@ export default function App() {
         <div className="max-w-7xl mx-auto">
           <MarketplaceClosing stats={marketplaceStats} />
         </div>
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-slate-500 dark:text-zinc-400">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-surface-500 dark:text-surface-400">
           <div className="flex items-center gap-3">
             <img
               src={shopNiroLogo}
               alt="ShopNiro"
-              className="w-8 h-8 rounded-full object-cover border border-sky-100 dark:border-zinc-700 shadow-md shadow-blue-500/20"
+              className="w-8 h-8 rounded-full object-cover border border-brand-100 dark:border-surface-700 shadow-md shadow-brand-500/20"
             />
             <div>
-              <div className="font-extrabold text-slate-900 dark:text-white tracking-tight text-sm">
+              <div className="font-extrabold text-surface-900 dark:text-white tracking-tight text-sm">
                 ShopNiro
               </div>
-              <p className="text-[11px] text-slate-400 dark:text-zinc-500">shop smart, ship fast</p>
+              <p className="text-micro text-surface-400 dark:text-surface-500">shop smart, ship fast</p>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-4 text-[11px] font-medium">
+          <div className="flex flex-wrap items-center justify-center gap-4 text-micro font-medium">
             <button
               onClick={() => {
                 setActiveTab('storefront');
                 scrollViewportToTop();
               }}
-              className="hover:text-blue-500 dark:hover:text-sky-400 transition-colors cursor-pointer"
+              className="hover:text-brand-500 dark:hover:text-brand-400 transition-colors cursor-pointer"
             >
               Catalog Storefront
             </button>
@@ -1373,7 +1387,7 @@ export default function App() {
                 setActiveTab('orders');
                 scrollViewportToTop();
               }}
-              className="hover:text-blue-500 dark:hover:text-sky-400 transition-colors cursor-pointer"
+              className="hover:text-brand-500 dark:hover:text-brand-400 transition-colors cursor-pointer"
             >
               Order Tracking Radar
             </button>
@@ -1383,32 +1397,32 @@ export default function App() {
                 setActiveTab('live-tracking');
                 scrollViewportToTop();
               }}
-              className="hover:text-blue-500 dark:hover:text-sky-400 transition-colors cursor-pointer flex items-center gap-1 font-semibold text-blue-600 dark:text-sky-400"
+              className="hover:text-brand-500 dark:hover:text-brand-400 transition-colors cursor-pointer flex items-center gap-1 font-semibold text-brand-600 dark:text-brand-400"
             >
-              <Radio className="w-3 h-3 text-sky-400 animate-pulse" />
+              <Radio className="w-3 h-3 text-brand-400 animate-pulse" />
               <span>Live Delivery Tracking</span>
             </button>
             <span>•</span>
             <button
               onClick={() => setViewMode('landing')}
-              className="hover:text-blue-500 dark:hover:text-sky-400 transition-colors cursor-pointer"
+              className="hover:text-brand-500 dark:hover:text-brand-400 transition-colors cursor-pointer"
             >
               Marketplace Landing
             </button>
             <span>•</span>
             <button
               onClick={() => setIsChatOpen(true)}
-              className="hover:text-blue-500 dark:hover:text-sky-400 transition-colors cursor-pointer text-blue-600 dark:text-sky-400 font-bold"
+              className="hover:text-brand-500 dark:hover:text-brand-400 transition-colors cursor-pointer text-brand-600 dark:text-brand-400 font-bold"
             >
               AI Assistant
             </button>
           </div>
 
-          <div className="text-[11px] text-slate-400 dark:text-zinc-500 font-mono text-center md:text-right">
+          <div className="text-micro text-surface-400 dark:text-surface-500 font-mono text-center md:text-right">
             <span>© {new Date().getFullYear()} ShopNiro • Smart commerce network</span>
             <nav aria-label="Policies" className="mt-1 flex flex-wrap justify-center gap-x-3 md:justify-end">
               {POLICIES.map((policy) => (
-                <a key={policy.id} href={policy.path} className="hover:text-blue-500 dark:hover:text-sky-400">
+                <a key={policy.id} href={policy.path} className="hover:text-brand-500 dark:hover:text-brand-400">
                   {policy.title}
                 </a>
               ))}
@@ -1562,10 +1576,9 @@ export default function App() {
       </React.Suspense>
 
       {/* Floating Chat Trigger */}
-      <ChatFloatingTrigger
-        isOpen={isChatOpen}
-        onClick={() => setIsChatOpen(true)}
-      />
+      {activeTab === 'storefront' && (!isLoggedIn || currentRole === 'customer') && (
+        <ChatFloatingTrigger isOpen={isChatOpen} onClick={() => setIsChatOpen(true)} />
+      )}
     </div>
   );
 }

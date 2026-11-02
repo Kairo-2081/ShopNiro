@@ -75,74 +75,74 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ currentCustome
 
   return (
     <div className="max-w-3xl mx-auto space-y-6 pb-16">
-      <div className="bg-white dark:bg-[#12161D] p-6 rounded-3xl border border-sky-100 dark:border-zinc-800 shadow-xl">
+      <div className="bg-white dark:bg-[#12161D] p-6 rounded-3xl border border-brand-100 dark:border-surface-800 shadow-xl">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-full bg-blue-600 text-white font-black text-lg flex items-center justify-center shadow-md shadow-blue-600/40">
+          <div className="w-12 h-12 rounded-full bg-brand-600 text-white font-black text-lg flex items-center justify-center shadow-md shadow-brand-600/40">
             {currentCustomer.Name.charAt(0)}
           </div>
           <div>
-            <h1 className="text-xl font-black text-slate-900 dark:text-white">Customer Account &amp; Address</h1>
-            <p className="text-xs text-slate-500 dark:text-zinc-400 font-mono">ID: {currentCustomer.Customer_ID}</p>
+            <h1 className="text-xl font-black text-surface-900 dark:text-white">Customer Account &amp; Address</h1>
+            <p className="text-xs text-surface-500 dark:text-surface-400 font-mono">ID: {currentCustomer.Customer_ID}</p>
           </div>
         </div>
       </div>
 
       {savedSuccess && (
-        <div className="p-4 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 rounded-3xl text-xs font-semibold flex items-center gap-2 border border-emerald-500/20 shadow-md">
-          <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+        <div className="p-4 bg-success-50 text-success-700 dark:bg-success-950/60 dark:text-success-300 rounded-3xl text-xs font-semibold flex items-center gap-2 border border-success-500/20 shadow-md">
+          <CheckCircle2 className="w-5 h-5 text-success-500" />
           Profile and Address details saved successfully!
         </div>
       )}
 
-      {profileError && <p role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300">{profileError}</p>}
+      {profileError && <p role="alert" className="rounded-xl border border-danger-200 bg-danger-50 p-3 text-sm text-danger-700 dark:border-danger-900 dark:bg-danger-950/40 dark:text-danger-300">{profileError}</p>}
 
-      <form onSubmit={handleSubmit} className="bg-white dark:bg-[#12161D] p-6 md:p-8 rounded-3xl border border-sky-100 dark:border-zinc-800 shadow-xl space-y-6">
+      <form onSubmit={handleSubmit} className="bg-white dark:bg-[#12161D] p-6 md:p-8 rounded-3xl border border-brand-100 dark:border-surface-800 shadow-xl space-y-6">
         {/* Personal Info */}
         <div className="space-y-4">
-          <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2 border-b border-slate-100 dark:border-zinc-800 pb-3">
-            <User className="w-4 h-4 text-blue-600 dark:text-sky-400" />
+          <h3 className="text-sm font-bold text-surface-900 dark:text-white flex items-center gap-2 border-b border-surface-100 dark:border-surface-800 pb-3">
+            <User className="w-4 h-4 text-brand-600 dark:text-brand-400" />
             Personal Contact Information
           </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
             <div>
-              <label className="block text-slate-600 dark:text-zinc-400 mb-1 font-medium">Full Name</label>
+              <label className="block text-surface-600 dark:text-surface-400 mb-1 font-medium">Full Name</label>
               <div className="relative">
-                <User className="w-4 h-4 text-slate-400 dark:text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                <User className="w-4 h-4 text-surface-400 dark:text-surface-500 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+                  className="w-full pl-9 pr-3 py-2.5 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 text-surface-900 dark:text-white"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-slate-600 dark:text-zinc-400 mb-1 font-medium">Email Address</label>
+              <label className="block text-surface-600 dark:text-surface-400 mb-1 font-medium">Email Address</label>
               <div className="relative">
-                <Mail className="w-4 h-4 text-slate-400 dark:text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Mail className="w-4 h-4 text-surface-400 dark:text-surface-500 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+                  className="w-full pl-9 pr-3 py-2.5 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 text-surface-900 dark:text-white"
                 />
               </div>
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-slate-600 dark:text-zinc-400 mb-1 font-medium">Phone Number</label>
+              <label className="block text-surface-600 dark:text-surface-400 mb-1 font-medium">Phone Number</label>
               <div className="relative">
-                <Phone className="w-4 h-4 text-slate-400 dark:text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Phone className="w-4 h-4 text-surface-400 dark:text-surface-500 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   required
                   value={number}
                   onChange={(e) => setNumber(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+                  className="w-full pl-9 pr-3 py-2.5 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 text-surface-900 dark:text-white"
                 />
               </div>
             </div>
@@ -150,9 +150,9 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ currentCustome
         </div>
 
         {/* Address */}
-        <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-zinc-800">
-          <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2 border-b border-slate-100 dark:border-zinc-800 pb-3">
-              <MapPin className="w-4 h-4 text-blue-600 dark:text-sky-400" />
+        <div className="space-y-4 pt-4 border-t border-surface-100 dark:border-surface-800">
+          <h3 className="text-sm font-bold text-surface-900 dark:text-white flex items-center gap-2 border-b border-surface-100 dark:border-surface-800 pb-3">
+              <MapPin className="w-4 h-4 text-brand-600 dark:text-brand-400" />
               Default Shipping Destination
           </h3>
 
@@ -180,56 +180,56 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ currentCustome
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
             <div>
-              <label className="block text-slate-600 dark:text-zinc-400 mb-1 font-medium">House / Apartment / Unit</label>
+              <label className="block text-surface-600 dark:text-surface-400 mb-1 font-medium">House / Apartment / Unit</label>
               <input
                 type="text"
                 required
                 value={address.House_Name}
                 onChange={(e) => setAddress({ ...address, House_Name: e.target.value })}
-                className="w-full p-2.5 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+                className="w-full p-2.5 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 text-surface-900 dark:text-white"
               />
             </div>
 
             <div>
-              <label className="block text-slate-600 dark:text-zinc-400 mb-1 font-medium">Street Name</label>
+              <label className="block text-surface-600 dark:text-surface-400 mb-1 font-medium">Street Name</label>
               <input
                 type="text"
                 required
                 value={address.Street}
                 onChange={(e) => updateLocationText('Street', e.target.value)}
-                className="w-full p-2.5 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+                className="w-full p-2.5 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 text-surface-900 dark:text-white"
               />
             </div>
 
             <div>
-              <label className="block text-slate-600 dark:text-zinc-400 mb-1 font-medium">City</label>
+              <label className="block text-surface-600 dark:text-surface-400 mb-1 font-medium">City</label>
               <input
                 type="text"
                 required
                 value={address.City}
                 onChange={(e) => updateLocationText('City', e.target.value)}
-                className="w-full p-2.5 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+                className="w-full p-2.5 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 text-surface-900 dark:text-white"
               />
             </div>
 
             <div>
-              <label className="block text-slate-600 dark:text-zinc-400 mb-1 font-medium">Postal / ZIP Code</label>
+              <label className="block text-surface-600 dark:text-surface-400 mb-1 font-medium">Postal / ZIP Code</label>
               <input
                 type="text"
                 required
                 value={address.Postal_Code}
                 onChange={(e) => setAddress({ ...address, Postal_Code: e.target.value })}
-                className="w-full p-2.5 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+                className="w-full p-2.5 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 text-surface-900 dark:text-white"
               />
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-slate-600 dark:text-zinc-400 mb-1 font-medium">Delivery Notes / Landmarks</label>
+              <label className="block text-surface-600 dark:text-surface-400 mb-1 font-medium">Delivery Notes / Landmarks</label>
               <input
                 type="text"
                 value={address.Additional_Info}
                 onChange={(e) => setAddress({ ...address, Additional_Info: e.target.value })}
-                className="w-full p-2.5 bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+                className="w-full p-2.5 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 text-surface-900 dark:text-white"
               />
             </div>
           </div>
@@ -239,7 +239,7 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ currentCustome
           <button
             type="submit"
             disabled={isResolvingLocation}
-            className="flex items-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-full text-xs shadow-lg shadow-blue-600/30 transition-all cursor-pointer transform hover:-translate-y-0.5"
+            className="flex items-center gap-2 px-6 py-3 bg-brand-600 hover:bg-brand-500 text-white font-bold rounded-full text-xs shadow-lg shadow-brand-600/30 transition-all cursor-pointer transform hover:-translate-y-0.5"
           >
             <Save className="w-4 h-4" />
             <span>Save Profile &amp; Address</span>

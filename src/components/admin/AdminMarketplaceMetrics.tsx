@@ -288,31 +288,31 @@ export const AdminMarketplaceMetrics: React.FC<AdminMarketplaceMetricsProps> = (
     <section className="space-y-4">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-bold text-slate-900 dark:text-white">Marketplace Metrics</h2>
-          <p className="text-xs text-slate-500 dark:text-zinc-400">Ranked product, vendor, and rider performance.</p>
+          <h2 className="text-lg font-bold text-surface-900 dark:text-white">Marketplace Metrics</h2>
+          <p className="text-xs text-surface-500 dark:text-surface-400">Ranked product, vendor, and rider performance.</p>
         </div>
         <button
           type="button"
           onClick={() => setReloadKey((key) => key + 1)}
           disabled={loading}
-          className="inline-flex items-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800"
+          className="inline-flex items-center gap-2 rounded-lg border border-surface-300 px-3 py-2 text-xs font-semibold text-surface-700 hover:bg-surface-50 disabled:opacity-50 dark:border-surface-700 dark:text-surface-200 dark:hover:bg-surface-800"
         >
           <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
           Refresh metrics
         </button>
       </header>
 
-      <div className="flex w-fit max-w-full gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-slate-100 p-1 dark:border-zinc-800 dark:bg-[#181F2A]">
+      <div className="flex w-fit max-w-full gap-1 overflow-x-auto rounded-xl border border-surface-200 bg-surface-100 p-1 dark:border-surface-800 dark:bg-[#181F2A]">
         {groupOptions.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             type="button"
             aria-pressed={activeGroup === id}
             onClick={() => setActiveGroup(id)}
-            className={`inline-flex min-h-9 items-center gap-2 whitespace-nowrap rounded-lg px-4 text-xs font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${
+            className={`inline-flex min-h-9 items-center gap-2 whitespace-nowrap rounded-lg px-4 text-xs font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600 ${
               activeGroup === id
-                ? 'bg-white text-slate-900 shadow-sm dark:bg-[#252E3A] dark:text-white'
-                : 'text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-white'
+                ? 'bg-white text-surface-900 shadow-sm dark:bg-[#252E3A] dark:text-white'
+                : 'text-surface-600 hover:text-surface-900 dark:text-surface-400 dark:hover:text-white'
             }`}
           >
             <Icon className="h-3.5 w-3.5" />
@@ -322,27 +322,27 @@ export const AdminMarketplaceMetrics: React.FC<AdminMarketplaceMetricsProps> = (
       </div>
 
       {loadErrors.length > 0 && (
-        <div role="status" className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+        <div role="status" className="rounded-lg border border-warning-200 bg-warning-50 px-4 py-3 text-xs text-warning-900 dark:border-warning-900/60 dark:bg-warning-950/30 dark:text-warning-200">
           Some rankings could not be loaded: {loadErrors.join(', ')}. Refresh to try again.
         </div>
       )}
 
-      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-zinc-800 dark:bg-[#12161D]">
+      <div className="overflow-hidden rounded-2xl border border-surface-200 bg-white dark:border-surface-800 dark:bg-[#12161D]">
         {loading ? (
-          <div role="status" aria-label="Loading marketplace rankings" className="grid grid-cols-1 divide-y divide-slate-200 dark:divide-zinc-800 lg:grid-cols-3 lg:divide-x lg:divide-y-0">
+          <div role="status" aria-label="Loading marketplace rankings" className="grid grid-cols-1 divide-y divide-surface-200 dark:divide-surface-800 lg:grid-cols-3 lg:divide-x lg:divide-y-0">
             {activeLeaderboards.map((leaderboard) => (
               <section key={leaderboard.title} className="min-w-0 p-4 sm:p-5">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">{leaderboard.title}</h3>
+                <h3 className="text-sm font-bold text-surface-900 dark:text-white">{leaderboard.title}</h3>
                 <div aria-hidden="true" className="mt-4 animate-pulse space-y-3">
                   {Array.from({ length: 4 }, (_, index) => (
                     <div key={index} className="flex items-center gap-2.5 py-2">
-                      <span className="h-6 w-6 shrink-0 rounded-md bg-slate-200 dark:bg-zinc-800" />
-                      <span className="h-9 w-9 shrink-0 rounded-md bg-slate-200 dark:bg-zinc-800" />
+                      <span className="h-6 w-6 shrink-0 rounded-md bg-surface-200 dark:bg-surface-800" />
+                      <span className="h-9 w-9 shrink-0 rounded-md bg-surface-200 dark:bg-surface-800" />
                       <span className="min-w-0 flex-1 space-y-2">
-                        <span className="block h-2.5 w-3/4 rounded bg-slate-200 dark:bg-zinc-800" />
-                        <span className="block h-2 w-1/2 rounded bg-slate-100 dark:bg-zinc-900" />
+                        <span className="block h-2.5 w-3/4 rounded bg-surface-200 dark:bg-surface-800" />
+                        <span className="block h-2 w-1/2 rounded bg-surface-100 dark:bg-surface-900" />
                       </span>
-                      <span className="h-2.5 w-10 shrink-0 rounded bg-slate-200 dark:bg-zinc-800" />
+                      <span className="h-2.5 w-10 shrink-0 rounded bg-surface-200 dark:bg-surface-800" />
                     </div>
                   ))}
                 </div>
@@ -350,59 +350,59 @@ export const AdminMarketplaceMetrics: React.FC<AdminMarketplaceMetricsProps> = (
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 divide-y divide-slate-200 dark:divide-zinc-800 lg:grid-cols-3 lg:divide-x lg:divide-y-0">
+          <div className="grid grid-cols-1 divide-y divide-surface-200 dark:divide-surface-800 lg:grid-cols-3 lg:divide-x lg:divide-y-0">
             {activeLeaderboards.map((leaderboard) => (
               <section key={leaderboard.title} className="min-w-0 p-4 sm:p-5">
                 <header className="mb-3 flex items-start justify-between gap-3">
                   <div>
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">{leaderboard.title}</h3>
-                    <p className="mt-1 text-[11px] text-slate-500 dark:text-zinc-400">{leaderboard.description}</p>
+                    <h3 className="text-sm font-bold text-surface-900 dark:text-white">{leaderboard.title}</h3>
+                    <p className="mt-1 text-micro text-surface-500 dark:text-surface-400">{leaderboard.description}</p>
                   </div>
-                  <BarChart3 className="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-sky-400" />
+                  <BarChart3 className="mt-0.5 h-4 w-4 shrink-0 text-brand-600 dark:text-brand-400" />
                 </header>
                 {leaderboard.entries.length > 0 ? (
-                  <ol className="divide-y divide-slate-100 dark:divide-zinc-800/80">
+                  <ol className="divide-y divide-surface-100 dark:divide-surface-800/80">
                     {leaderboard.entries.map((entry, index) => (
-                      <li key={entry.id} className="group relative isolate flex min-w-0 items-center gap-3 rounded-xl p-2.5 transition-all hover:bg-slate-50 dark:hover:bg-[#181F2A]/80 first:pt-2 last:pb-2">
+                      <li key={entry.id} className="group relative isolate flex min-w-0 items-center gap-3 rounded-xl p-2.5 transition-all hover:bg-surface-50 dark:hover:bg-[#181F2A]/80 first:pt-2 last:pb-2">
                         {entry.progress !== undefined && (
                           <span
                             aria-hidden="true"
-                            className="pointer-events-none absolute inset-y-0 left-0 -z-10 rounded-lg bg-gradient-to-r from-sky-500/10 to-blue-500/10 transition-[width] duration-500 dark:from-sky-400/8 dark:to-blue-400/8"
+                            className="pointer-events-none absolute inset-y-0 left-0 -z-10 rounded-lg bg-gradient-to-r from-brand-500/10 to-brand-500/10 transition-[width] duration-500 dark:from-brand-400/8 dark:to-brand-400/8"
                             style={{ width: `${entry.progress}%` }}
                           />
                         )}
                         <span
                           className={`relative z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-black shadow-xs ${
                             index === 0
-                              ? 'bg-gradient-to-br from-amber-300 to-amber-500 text-slate-950 shadow-amber-500/20'
+                              ? 'bg-gradient-to-br from-warning-300 to-warning-500 text-surface-950 shadow-warning-500/20'
                               : index === 1
-                              ? 'bg-gradient-to-br from-slate-200 to-slate-400 text-slate-900 shadow-slate-400/20'
+                              ? 'bg-gradient-to-br from-surface-200 to-surface-400 text-surface-900 shadow-surface-400/20'
                               : index === 2
-                              ? 'bg-gradient-to-br from-amber-700 to-orange-800 text-amber-100'
-                              : 'bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400'
+                              ? 'bg-gradient-to-br from-warning-700 to-warning-800 text-warning-100'
+                              : 'bg-surface-100 dark:bg-surface-800 text-surface-500 dark:text-surface-400'
                           }`}
                         >
                           {index + 1}
                         </span>
                         {entry.image ? (
-                          <img src={entry.image} alt="" className="relative z-10 h-10 w-10 shrink-0 rounded-xl border border-slate-200 dark:border-zinc-700 object-cover" />
+                          <img src={entry.image} alt="" className="relative z-10 h-10 w-10 shrink-0 rounded-xl border border-surface-200 dark:border-surface-700 object-cover" />
                         ) : (
-                          <span className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 dark:bg-zinc-800 text-slate-400">
+                          <span className="relative z-10 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface-100 dark:bg-surface-800 text-surface-400">
                             <FallbackIcon className="h-5 w-5" />
                           </span>
                         )}
                         <div className="relative z-10 min-w-0 flex-1">
-                          <p className="truncate text-xs font-bold text-slate-900 transition-colors group-hover:text-blue-600 dark:text-white dark:group-hover:text-sky-400">{entry.name}</p>
-                          <p className="truncate text-[10px] text-slate-500 dark:text-zinc-400">{entry.detail}</p>
+                          <p className="truncate text-xs font-bold text-surface-900 transition-colors group-hover:text-brand-600 dark:text-white dark:group-hover:text-brand-400">{entry.name}</p>
+                          <p className="truncate text-micro text-surface-500 dark:text-surface-400">{entry.detail}</p>
                         </div>
                         <div className="relative z-10 shrink-0 text-right">
-                          <p className="text-xs font-bold tabular-nums text-slate-800 dark:text-zinc-200">{entry.value}</p>
+                          <p className="text-xs font-bold tabular-nums text-surface-800 dark:text-surface-200">{entry.value}</p>
                         </div>
                       </li>
                     ))}
                   </ol>
                 ) : (
-                  <p className="py-6 text-center text-xs text-slate-500 dark:text-zinc-400">No ranking data available yet.</p>
+                  <p className="py-6 text-center text-xs text-surface-500 dark:text-surface-400">No ranking data available yet.</p>
                 )}
               </section>
             ))}
