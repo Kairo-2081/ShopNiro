@@ -106,7 +106,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
         {/* Item list */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           {isLoading ? (
-            <div role="status" aria-label="Loading cart items" aria-busy="true" className="space-y-4">
+            <div role="status" aria-label={t('loadingCartItems')} aria-busy="true" className="space-y-4">
               {Array.from({ length: 3 }, (_, index) => (
                 <div key={index} className="flex items-center gap-3 rounded-xl border border-[#a99b72]/15 p-3.5">
                   <div className="premium-skeleton h-16 w-16 shrink-0 rounded-xl" />
@@ -153,7 +153,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     <h4 className="font-bold text-xs text-surface-900 dark:text-white truncate">
                       {product.Name}
                     </h4>
-                    {item.Size && <span className="mt-0.5 block text-micro font-semibold text-surface-500 dark:text-surface-400">Size: {item.Size}</span>}
+                    {item.Size && <span className="mt-0.5 block text-micro font-semibold text-surface-500 dark:text-surface-400">{t('sizeLabel')}: {item.Size}</span>}
                     <span className="text-xs font-black text-brand-600 dark:text-brand-400 block mt-0.5">
                       {formatCurrency(Number(product.Price) || 0)}
                     </span>

@@ -117,23 +117,23 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     setOnlinePaymentsEnabled(false);
     setIsLoadingPaymentConfig(true);
     setPaymentMethod('cash_on_delivery');
-    setPaymentAvailabilityMessage('Checking online payment availability.');
+    setPaymentAvailabilityMessage(t('checkingPaymentAvailability'));
     api.getPaymentMethods().then((settings: { onlinePaymentsEnabled?: boolean }) => {
       if (!isMounted) return;
       const enabled = settings.onlinePaymentsEnabled === true;
       setOnlinePaymentsEnabled(enabled);
       setPaymentMethod(enabled ? initialPaymentMethod : 'cash_on_delivery');
-      setPaymentAvailabilityMessage(enabled ? '' : 'Online payments are temporarily unavailable. Choose cash on delivery.');
+      setPaymentAvailabilityMessage(enabled ? '' : t('paymentUnavailableCod'));
     }).catch(() => {
       if (!isMounted) return;
       setOnlinePaymentsEnabled(false);
       setPaymentMethod('cash_on_delivery');
-      setPaymentAvailabilityMessage('Online payment availability could not be verified. Choose cash on delivery.');
+      setPaymentAvailabilityMessage(t('paymentAvailabilityUnknown'));
     }).finally(() => {
       if (isMounted) setIsLoadingPaymentConfig(false);
     });
     return () => { isMounted = false; };
-  }, [initialPaymentMethod, isOpen]);
+  }, [initialPaymentMethod, isOpen, t]);
 
   React.useEffect(() => {
     if (!isOpen) {
@@ -213,23 +213,23 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     );
     const activeMatchingProducts = matchingProducts.filter((item) => !isVoucherExpired(item.Product?.Voucher_Expires_At));
     if (!matchingProducts.length) {
-      setVoucherError('That code does not match a voucher on any product in your cart.');
+      setVoucherError(t('voucherNotFoundInCart'));
       setAppliedVoucher('');
       return;
     }
     if (!activeMatchingProducts.length) {
-      setVoucherError('This offer has expired.');
+      setVoucherError(t('offerExpired'));
       setAppliedVoucher('');
       return;
     }
     const voucherRule = getVoucherRule(activeMatchingProducts[0].Product!.Voucher);
     if (!voucherRule) {
-      setVoucherError('This voucher code is not valid.');
+      setVoucherError(t('voucherInvalid'));
       setAppliedVoucher('');
       return;
     }
     if (voucherRule.firstOrderOnly && previousOrderCount > 0) {
-      setVoucherError('NEW20 is available on your first ShopNiro order only.');
+      setVoucherError(t('new20FirstOrder'));
       setAppliedVoucher('');
       return;
     }
@@ -350,7 +350,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
       });
       if (result.instruction) setAdditionalNotes(result.instruction);
     } catch (error: any) {
-      setInstructionError(error.message || 'Could not suggest delivery instructions.');
+      setInstructionError(error.message || t('couldNotSuggestDelivery'));
     } finally {
       setIsSuggestingInstructions(false);
     }
@@ -367,13 +367,13 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 <Truck className="w-4 h-4" />
               </div>
               <div>
-                <h2 id="checkout-modal-title" className="font-bold text-surface-900 dark:text-white text-base">Direct Checkout &amp; Payment</h2>
-                <p className="text-micro text-surface-400">SSLCOMMERZ Secured Gateway • bKash • COD</p>
+                <h2 id="checkout-modal-title" className="font-bold text-surface-900 dark:text-white text-base">{t('directCheckoutPayment')}</h2>
+                <p className="text-micro text-surface-400">{t('securedGateway')}</p>
               </div>
             </div>
             <button
               onClick={onClose}
-              aria-label="Close checkout"
+              aria-label={t('closeCheckout')}
               className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-surface-600 hover:text-surface-900 dark:text-surface-300 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5]"
             >
               <X className="w-5 h-5" />
@@ -387,17 +387,17 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 <div className="mx-auto grid h-14 w-14 place-items-center rounded-full border border-success-200 bg-success-100 text-success-700 dark:border-success-800 dark:bg-success-950/60 dark:text-success-300">
                   <CheckCircle2 aria-hidden="true" className="h-7 w-7" />
                 </div>
-                <h3 className="mt-4 text-2xl font-bold text-surface-900 dark:text-white">Order placed</h3>
+                <h3 className="mt-4 text-2xl font-bold text-surface-900 dark:text-white">{t('orderPlaced')}</h3>
                 <p className="mt-2 text-sm text-surface-600 dark:text-surface-300">
-                  {createdOrder.Payment_Status === 'paid' ? 'Payment confirmed.' : 'Pay the courier when your order arrives.'}
+                  {createdOrder.Payment_Status === 'paid' ? t('paymentConfirmed') : t('payCourierOnArrival')}
                 </p>
                 <dl className="mt-6 space-y-3 rounded-xl border border-surface-200 bg-surface-50 p-4 text-left text-sm dark:border-surface-800 dark:bg-[#181F2A]">
                   <div className="flex justify-between gap-4">
-                    <dt className="text-surface-500 dark:text-surface-400">Order number</dt>
+                    <dt className="text-surface-500 dark:text-surface-400">{t('orderNumber')}</dt>
                     <dd className="break-all text-right font-mono font-semibold text-surface-900 dark:text-white">{createdOrder.Order_ID}</dd>
                   </div>
                   <div className="flex justify-between gap-4">
-                    <dt className="text-surface-500 dark:text-surface-400">Total</dt>
+                    <dt className="text-surface-500 dark:text-surface-400">{t('total')}</dt>
                     <dd className="font-bold tabular-nums text-surface-900 dark:text-white">{formatBDT(createdOrder.Subtotal + createdOrder.Shipping_Fee)}</dd>
                   </div>
                 </dl>
@@ -410,13 +410,13 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   className="premium-button mt-6 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-bold text-white"
                 >
                   <Package aria-hidden="true" className="h-4 w-4" />
-                  View order
+                  {t('viewOrder')}
                 </button>
               </div>
             ) : (
               /* Checkout Form */
               <form onSubmit={handleOpenPaymentOrSubmit} className="space-y-6">
-                <nav aria-label="Checkout steps">
+                <nav aria-label={t('checkoutSteps')}>
                   <ol className="grid grid-cols-3 gap-2 text-center text-xs font-bold">
                     {[['1', t('address')], ['2', t('payment')], ['3', t('review')]].map(([number, label]) => (
                       <li key={number} className="rounded-full border border-brand-200 bg-brand-50 px-2 py-2 text-brand-800 dark:border-brand-800 dark:bg-brand-950/50 dark:text-brand-200">
@@ -429,7 +429,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                                   <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-surface-200 bg-surface-50 p-4 text-xs dark:border-surface-800 dark:bg-[#161C24]">
                   <div>
                     <span className="text-surface-500 dark:text-surface-500 block font-bold text-micro uppercase tracking-wider">
-                      Purchasing Customer
+                      {t('purchasingCustomer')}
                     </span>
                     <span className="font-bold text-surface-900 dark:text-white text-sm">{currentCustomer.Name}</span>
                     <span className="text-surface-500 dark:text-surface-400 block">
@@ -450,7 +450,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                     <div>
-                      <label htmlFor="checkout-house" className="block text-surface-700 dark:text-surface-300 mb-1 font-medium">House / Apartment / Unit</label>
+                      <label htmlFor="checkout-house" className="block text-surface-700 dark:text-surface-300 mb-1 font-medium">{t('houseApartmentUnit')}</label>
                       <input
                         id="checkout-house"
                         type="text"
@@ -458,13 +458,13 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                         autoComplete="address-line2"
                         value={shippingAddress.House_Name}
                         onChange={(e) => setShippingAddress({ ...shippingAddress, House_Name: e.target.value })}
-                        placeholder="e.g. Apt 4B or Road 11, Block D"
+                        placeholder={t('housePlaceholder')}
                         className="luxury-input min-h-11 w-full px-3 py-2.5 bg-white dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-warning-500/40 text-surface-900 dark:text-white"
                       />
                     </div>
 
                     <div>
-                      <label htmlFor="checkout-street" className="block text-surface-700 dark:text-surface-300 mb-1 font-medium">Street Address</label>
+                      <label htmlFor="checkout-street" className="block text-surface-700 dark:text-surface-300 mb-1 font-medium">{t('streetAddress')}</label>
                       <input
                         id="checkout-street"
                         type="text"
@@ -472,13 +472,13 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                         autoComplete="street-address"
                         value={shippingAddress.Street}
                         onChange={(e) => setShippingAddress({ ...shippingAddress, Street: e.target.value, Latitude: undefined, Longitude: undefined })}
-                        placeholder="e.g. Banani, Gulshan, or Dhanmondi"
+                        placeholder={t('streetPlaceholder')}
                         className="luxury-input min-h-11 w-full px-3 py-2.5 bg-white dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-warning-500/40 text-surface-900 dark:text-white"
                       />
                     </div>
 
                     <div>
-                      <label htmlFor="checkout-city" className="block text-surface-700 dark:text-surface-300 mb-1 font-medium">City</label>
+                      <label htmlFor="checkout-city" className="block text-surface-700 dark:text-surface-300 mb-1 font-medium">{t('city')}</label>
                       <input
                         id="checkout-city"
                         type="text"
@@ -486,13 +486,13 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                         autoComplete="address-level2"
                         value={shippingAddress.City}
                         onChange={(e) => setShippingAddress({ ...shippingAddress, City: e.target.value, Latitude: undefined, Longitude: undefined })}
-                        placeholder="e.g. Dhaka or Chittagong"
+                        placeholder={t('cityPlaceholder')}
                         className="luxury-input min-h-11 w-full px-3 py-2.5 bg-white dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-warning-500/40 text-surface-900 dark:text-white"
                       />
                     </div>
 
                     <div>
-                      <label htmlFor="checkout-postal" className="block text-surface-700 dark:text-surface-300 mb-1 font-medium">Postal / ZIP Code</label>
+                      <label htmlFor="checkout-postal" className="block text-surface-700 dark:text-surface-300 mb-1 font-medium">{t('postalZipCode')}</label>
                       <input
                         id="checkout-postal"
                         type="text"
@@ -508,15 +508,15 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
                   <div>
                                           <div className="flex flex-wrap items-center justify-between gap-2">
-                      <label htmlFor="delivery-instructions" className="block text-surface-600 dark:text-surface-400 font-medium text-xs">Delivery Instructions</label>
-                      <button type="button" onClick={() => void suggestDeliveryInstructions()} disabled={isSuggestingInstructions} className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-brand-300 px-3 py-2 text-xs font-bold text-brand-700 disabled:opacity-50 dark:border-brand-900 dark:text-brand-300"><Sparkles className="h-3.5 w-3.5" />{isSuggestingInstructions ? 'Suggesting...' : 'Suggest with AI'}</button>
+                      <label htmlFor="delivery-instructions" className="block text-surface-600 dark:text-surface-400 font-medium text-xs">{t('deliveryInstructions')}</label>
+                      <button type="button" onClick={() => void suggestDeliveryInstructions()} disabled={isSuggestingInstructions} className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-brand-300 px-3 py-2 text-xs font-bold text-brand-700 disabled:opacity-50 dark:border-brand-900 dark:text-brand-300"><Sparkles className="h-3.5 w-3.5" />{isSuggestingInstructions ? t('suggesting') : t('suggestWithAi')}</button>
                     </div>
                     <textarea
                       id="delivery-instructions"
                       rows={2}
                       value={additionalNotes}
                       onChange={(e) => setAdditionalNotes(e.target.value)}
-                      placeholder="Add access details or preferences for your rider"
+                      placeholder={t('riderAccessDetails')}
                       className="luxury-input min-h-11 w-full px-3 py-2.5 bg-white dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-warning-500/40 text-xs text-surface-900 dark:text-white"
                     />
                     {instructionError && <p role="alert" className="text-xs text-danger-600 dark:text-danger-300">{instructionError}</p>}
@@ -531,7 +531,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       2. {t('paymentMethod')}
                     </h3>
                     <span className="max-w-full whitespace-normal rounded-full border border-brand-800 bg-brand-950/80 px-2 py-1 text-micro font-bold uppercase leading-tight text-brand-400">
-                      All prices shown in Bangladeshi Taka
+                      {t('pricesInBdt')}
                     </span>
                   </div>
                   {paymentAvailabilityMessage && (
@@ -547,7 +547,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     <button
                       type="button"
                       aria-pressed={paymentMethod === 'bkash'}
-                      aria-label="Select bKash as payment method"
+                      aria-label={t('selectPaymentMethod', { method: 'bKash' })}
                       onClick={() => setPaymentMethod('bkash')}
                       className={`w-full text-left p-4 rounded-2xl border-2 transition-all cursor-pointer relative overflow-hidden flex flex-col justify-between ${
                         paymentMethod === 'bkash'
@@ -562,21 +562,21 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                           </div>
                           <div className="min-w-0">
                             <span className="font-black text-xs text-surface-900 dark:text-white block">
-                              bKash Mobile Banking
+                              {t('bkashMobileBanking')}
                             </span>
                             <span className="text-micro text-pink-600 dark:text-pink-400 font-bold block">
-                              via SSLCOMMERZ
+                              {t('viaSslcommerz')}
                             </span>
                           </div>
                         </div>
 
                         <span className="px-2 py-0.5 rounded-full bg-[#E2136E] text-white text-micro font-black uppercase tracking-wider">
-                          Recommended
+                          {t('recommended')}
                         </span>
                       </div>
 
                       <div className="mt-3 pt-2 border-t border-surface-100 dark:border-surface-800/80 flex items-center justify-between text-micro">
-                        <span className="text-surface-500 dark:text-surface-400">Pay Instant via PIN &amp; OTP</span>
+                        <span className="text-surface-500 dark:text-surface-400">{t('payInstantWithPinOtp')}</span>
                         <span className="font-black text-[#E2136E]">{formatBDT(grandTotalBDT)}</span>
                       </div>
                     </button>
@@ -585,7 +585,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     <button
                       type="button"
                       aria-pressed={paymentMethod === 'nagad'}
-                      aria-label="Select Nagad as payment method"
+                      aria-label={t('selectPaymentMethod', { method: 'Nagad' })}
                       onClick={() => setPaymentMethod('nagad')}
                       className={`w-full text-left p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
                         paymentMethod === 'nagad'
@@ -600,17 +600,17 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                           </div>
                           <div className="min-w-0">
                             <span className="font-bold text-xs text-surface-900 dark:text-white block">
-                              Nagad Digital Payment
+                              {t('nagadDigitalPayment')}
                             </span>
                             <span className="text-micro text-warning-600 dark:text-warning-400 font-bold block">
-                              Post Office Digital Banking
+                              {t('postOfficeDigitalBanking')}
                             </span>
                           </div>
                         </div>
                       </div>
 
                       <div className="mt-3 pt-2 border-t border-surface-100 dark:border-surface-800/80 flex items-center justify-between text-micro">
-                        <span className="text-surface-500 dark:text-surface-400">Nagad MFS via SSLCommerz</span>
+                        <span className="text-surface-500 dark:text-surface-400">{t('nagadMfsSslcommerz')}</span>
                         <span className="font-black text-[#F7941D]">{formatBDT(grandTotalBDT)}</span>
                       </div>
                     </button>
@@ -619,7 +619,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     <button
                       type="button"
                       aria-pressed={paymentMethod === 'rocket'}
-                      aria-label="Select Rocket as payment method"
+                      aria-label={t('selectPaymentMethod', { method: 'Rocket' })}
                       onClick={() => setPaymentMethod('rocket')}
                       className={`w-full text-left p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
                         paymentMethod === 'rocket'
@@ -633,16 +633,16 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                         </div>
                         <div className="min-w-0">
                           <span className="font-bold text-xs text-surface-900 dark:text-white block">
-                            Rocket (DBBL MFS)
+                            {t('rocketDbblMfs')}
                           </span>
                           <span className="text-micro text-brand-600 dark:text-brand-400 font-medium block">
-                            Dutch-Bangla Bank Gateway
+                            {t('dutchBanglaGateway')}
                           </span>
                         </div>
                       </div>
 
                       <div className="mt-3 pt-2 border-t border-surface-100 dark:border-surface-800/80 flex items-center justify-between text-micro">
-                        <span className="text-surface-500 dark:text-surface-400">Rocket Account PIN</span>
+                        <span className="text-surface-500 dark:text-surface-400">{t('rocketAccountPin')}</span>
                         <span className="font-black text-[#8C3494]">{formatBDT(grandTotalBDT)}</span>
                       </div>
                     </button>
@@ -651,7 +651,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     <button
                       type="button"
                       aria-pressed={paymentMethod === 'visa_mastercard'}
-                      aria-label="Select card or net banking as payment method"
+                      aria-label={t('selectPaymentMethod', { method: t('cardsNetBanking') })}
                       onClick={() => setPaymentMethod('visa_mastercard')}
                       className={`w-full text-left p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
                         paymentMethod === 'visa_mastercard'
@@ -665,16 +665,16 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                         </div>
                         <div>
                           <span className="font-bold text-xs text-surface-900 dark:text-white block">
-                            Cards / Net Banking
+                            {t('cardsNetBanking')}
                           </span>
                           <span className="text-micro text-brand-600 dark:text-brand-400 font-medium block">
-                            Visa • Mastercard • Amex
+                            {t('cardBrands')}
                           </span>
                         </div>
                       </div>
 
                       <div className="mt-3 pt-2 border-t border-surface-100 dark:border-surface-800/80 flex items-center justify-between text-micro">
-                        <span className="text-surface-500 dark:text-surface-400">SSLCommerz 3D Secure</span>
+                        <span className="text-surface-500 dark:text-surface-400">{t('sslcommerz3dSecure')}</span>
                         <span className="font-black text-brand-600 dark:text-brand-400">{formatCurrency(grandTotal)}</span>
                       </div>
                     </button>
@@ -685,7 +685,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     <button
                       type="button"
                       aria-pressed={paymentMethod === 'cash_on_delivery'}
-                      aria-label="Select cash on delivery as payment method"
+                      aria-label={t('selectPaymentMethod', { method: t('cashOnDeliveryCod') })}
                       onClick={() => setPaymentMethod('cash_on_delivery')}
                       className={`sm:col-span-2 w-full text-left p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-wrap items-center justify-between gap-3 ${
                         paymentMethod === 'cash_on_delivery'
@@ -699,10 +699,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                         </div>
                         <div className="min-w-0">
                           <span className="font-bold text-xs text-surface-900 dark:text-white block">
-                            Cash on Delivery (COD)
+                            {t('cashOnDeliveryCod')}
                           </span>
                           <span className="text-micro text-success-600 dark:text-success-400 font-medium block">
-                            Pay in cash when dispatch courier delivers the package
+                            {t('payCashWhenDelivered')}
                           </span>
                         </div>
                       </div>
@@ -717,41 +717,41 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 {/* Order Items & Fee Summary */}
                 <div className="p-4 rounded-3xl bg-[#a99b72]/[0.07] dark:bg-[#161C24] border border-[#a99b72]/25 dark:border-[#a99b72]/20 space-y-3">
                   <h4 className="font-bold text-xs uppercase tracking-wider text-[#80734f] dark:text-[#d0c8a5]">
-                    3. {t('reviewOrder')} ({isLoadingCart ? 'Loading cart' : `${cartItems.length} products`})
+                    3. {t('reviewOrder')} ({isLoadingCart ? t('loadingCart') : t('productsCount', { count: cartItems.length })})
                   </h4>
 
                   <div className="space-y-2 rounded-xl border border-[#a99b72]/20 bg-white/70 p-3 dark:border-surface-700 dark:bg-[#12161D]">
-                    <label htmlFor="checkout-voucher" className="block text-xs font-semibold text-surface-700 dark:text-surface-300">Product voucher code</label>
-                    {isLoadingBundles && <div role="status" className="flex items-center gap-2 text-micro text-surface-500 dark:text-surface-400"><span className="premium-skeleton h-3 w-28 rounded-full" /><span className="sr-only">Checking bundle offers</span></div>}
+                    <label htmlFor="checkout-voucher" className="block text-xs font-semibold text-surface-700 dark:text-surface-300">{t('productVoucherCode')}</label>
+                    {isLoadingBundles && <div role="status" className="flex items-center gap-2 text-micro text-surface-500 dark:text-surface-400"><span className="premium-skeleton h-3 w-28 rounded-full" /><span className="sr-only">{t('checkingBundleOffers')}</span></div>}
                     <div className="flex flex-wrap gap-2">
                       <input
                         id="checkout-voucher"
                         value={voucherInput}
                         onChange={(event) => { setVoucherInput(event.target.value); setVoucherError(''); }}
                         onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); applyVoucher(); } }}
-                        placeholder="e.g. SAVE20"
+                        placeholder={t('voucherPlaceholder')}
                         aria-invalid={Boolean(voucherError)}
                         className="luxury-input min-h-11 min-w-0 flex-[1_1_8rem] rounded-lg border border-surface-300 bg-white px-3 py-2 text-xs uppercase text-surface-900 placeholder:normal-case placeholder:text-surface-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-warning-500/40 dark:border-surface-700 dark:bg-[#181F2A] dark:text-white"
                       />
-                      <button type="button" onClick={applyVoucher} className="premium-button min-h-11 rounded-lg px-4 py-2 text-xs font-bold text-white">Apply</button>
-                      {appliedVoucher && <button type="button" onClick={() => { setAppliedVoucher(''); setVoucherInput(''); setVoucherError(''); }} className="min-h-11 shrink-0 rounded-lg border border-surface-300 px-3 py-2 text-xs font-semibold text-surface-700 dark:border-surface-700 dark:text-surface-200">Remove</button>}
+                      <button type="button" onClick={applyVoucher} className="premium-button min-h-11 rounded-lg px-4 py-2 text-xs font-bold text-white">{t('apply')}</button>
+                      {appliedVoucher && <button type="button" onClick={() => { setAppliedVoucher(''); setVoucherInput(''); setVoucherError(''); }} className="min-h-11 shrink-0 rounded-lg border border-surface-300 px-3 py-2 text-xs font-semibold text-surface-700 dark:border-surface-700 dark:text-surface-200">{t('remove')}</button>}
                     </div>
                     {voucherError && <p role="alert" className="text-xs text-danger-700 dark:text-danger-300">{voucherError}</p>}
-                    {appliedVoucher && <p role="status" className="text-xs font-semibold text-success-700 dark:text-success-300">{appliedVoucher} applied: {describeVoucher(appliedVoucher)}</p>}
+                    {appliedVoucher && <p role="status" className="text-xs font-semibold text-success-700 dark:text-success-300">{t('voucherApplied', { code: appliedVoucher, description: describeVoucher(appliedVoucher) })}</p>}
                     {bundlePricing.appliedBundleIds.map((bundleId) => {
                       const bundle = bundles.find((item) => item.Bundle_ID === bundleId);
-                      return <p key={bundleId} role="status" className="text-xs font-semibold text-success-700 dark:text-success-300">{bundle?.Name || 'Bundle offer'} applied: {bundle?.Discount_Percent}% off together.</p>;
+                      return <p key={bundleId} role="status" className="text-xs font-semibold text-success-700 dark:text-success-300">{bundle?.Name || t('bundleOffer')} · {t('bundleDiscountTogether', { percent: bundle?.Discount_Percent ?? 0 })}</p>;
                     })}
                     {cartDiscountEligible ? (
-                      <p role="status" className="text-xs font-semibold text-success-700 dark:text-success-300">CART5 applied: 5% off your {money(500)}+ cart.</p>
+                      <p role="status" className="text-xs font-semibold text-success-700 dark:text-success-300">{t('cartDiscountApplied', { amount: money(500) })}</p>
                     ) : (
-                      <p className="text-micro text-surface-500 dark:text-surface-400">Add {formatCurrency(Math.max(0, 500 - subtotal))} more for 5% off your cart.</p>
+                      <p className="text-micro text-surface-500 dark:text-surface-400">{t('addForCartDiscount', { amount: formatCurrency(Math.max(0, 500 - subtotal)) })}</p>
                     )}
                   </div>
 
                   <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
                     {isLoadingCart ? (
-                      <div role="status" aria-label="Loading checkout items" aria-busy="true" className="space-y-2 py-1">
+                      <div role="status" aria-label={t('loadingCheckoutItems')} aria-busy="true" className="space-y-2 py-1">
                         {Array.from({ length: 2 }, (_, index) => <div key={index} className="premium-skeleton h-4 w-full rounded-full" />)}
                       </div>
                     ) : cartItems.map((item) => {
@@ -761,7 +761,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       <div key={item.Cart_ID} className="flex justify-between items-center text-xs">
                         <span className="min-w-0 truncate max-w-[240px] text-surface-700 dark:text-surface-300">
                           {item.Quantity}x {item.Product?.Name}
-                          {item.Product?.Voucher && !isVoucherExpired(item.Product.Voucher_Expires_At) && <span className="ml-1 text-micro text-brand-600 dark:text-brand-400">Code {item.Product.Voucher}</span>}
+                          {item.Product?.Voucher && !isVoucherExpired(item.Product.Voucher_Expires_At) && <span className="ml-1 text-micro text-brand-600 dark:text-brand-400">{t('code')} {item.Product.Voucher}</span>}
                         </span>
                         <span className="flex shrink-0 items-center gap-1.5 font-bold text-surface-900 dark:text-white">
                           {finalLinePrice < originalLinePrice && <span className="text-micro font-medium text-surface-500 line-through dark:text-surface-500">{formatCurrency(originalLinePrice)}</span>}
@@ -773,40 +773,40 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
                   <div className="pt-2 border-t border-brand-200/60 dark:border-surface-800 text-xs space-y-1">
                     <div className="flex justify-between text-surface-600 dark:text-surface-400">
-                      <span>Product subtotal</span>
+                      <span>{t('productSubtotal')}</span>
                       <span>{formatCurrency(subtotal)}</span>
                     </div>
                     {voucherSavings > 0 && <>
                       <div className="flex justify-between font-semibold text-success-700 dark:text-success-300">
-                        <span>Coupon savings</span>
+                        <span>{t('couponSavings')}</span>
                         <span>-{formatCurrency(voucherSavings)}</span>
                       </div>
                     </>}
                     {bundleSavings > 0 && (
                       <div className="flex justify-between font-semibold text-success-700 dark:text-success-300">
-                        <span>Bundle savings</span>
+                        <span>{t('bundleSavings')}</span>
                         <span>-{formatCurrency(bundleSavings)}</span>
                       </div>
                     )}
                     {cartSavings > 0 && (
                       <div className="flex justify-between font-semibold text-success-700 dark:text-success-300">
-                        <span>Cart savings (CART5)</span>
+                        <span>{t('cartSavings')}</span>
                         <span>-{formatCurrency(cartSavings)}</span>
                       </div>
                     )}
                     {(voucherSavings > 0 || bundleSavings > 0 || cartSavings > 0) && (
                       <div className="flex justify-between text-surface-600 dark:text-surface-400">
-                        <span>Subtotal after promotions</span>
+                        <span>{t('subtotalAfterPromotions')}</span>
                         <span>{formatCurrency(discountedSubtotal)}</span>
                       </div>
                     )}
                     <div className="flex justify-between text-surface-600 dark:text-surface-400">
-                      <span>Shipping Fee</span>
-                      <span>{shippingFee === 0 ? 'FREE' : formatCurrency(shippingFee)}</span>
+                      <span>{t('shippingFee')}</span>
+                      <span>{shippingFee === 0 ? t('free') : formatCurrency(shippingFee)}</span>
                     </div>
-                    <p className="text-micro text-surface-700 dark:text-surface-300">Free shipping on product subtotals of {money(400)} or more.</p>
+                    <p className="text-micro text-surface-700 dark:text-surface-300">{t('freeShippingAt', { amount: money(400) })}</p>
                     <div className="flex justify-between font-black text-sm text-surface-900 dark:text-white pt-1">
-                      <span>Total Amount Payable</span>
+                      <span>{t('totalPayable')}</span>
                       <div className="text-right">
                         <span data-testid="checkout-total" className="text-brand-600 dark:text-brand-400 text-base block font-black">
                           {formatBDT(grandTotalBDT)}
@@ -824,13 +824,13 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     className="h-4 w-4 shrink-0 cursor-pointer"
                   />
                   <span>
-                    I have read and agree to the <PolicyLinks ids={['terms', 'refunds', 'delivery']} />.
+                    {t('agreeToPolicies')} <PolicyLinks ids={['terms', 'refunds', 'delivery']} />.
                   </span>
                 </label>
 
                 <div data-testid="checkout-action-footer" className="sticky bottom-0 -mx-4 -mb-4 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-t border-surface-200 bg-white/95 p-3 shadow-[0_-8px_24px_rgba(20,20,16,0.08)] backdrop-blur-md dark:border-surface-800 dark:bg-[#12161D]/95 sm:-mx-6 sm:-mb-6 sm:p-5">
                   <p className="min-w-0 text-xs font-semibold text-surface-600 dark:text-surface-300">
-                    <span className="block text-micro text-surface-500 dark:text-surface-400">Total</span>
+                    <span className="block text-micro text-surface-500 dark:text-surface-400">{t('total')}</span>
                     <span data-testid="checkout-footer-total" className="block truncate text-base font-black tabular-nums text-surface-900 dark:text-white">{money(grandTotalBDT)}</span>
                   </p>
                   <button
@@ -852,22 +852,22 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     {isSubmitting ? (
                       <>
                         <LoaderCircle aria-hidden="true" className="h-4 w-4 animate-spin" />
-                        <span>Processing…</span>
+                        <span>{t('processing')}</span>
                       </>
                     ) : isLoadingCart || isLoadingBundles || isLoadingPaymentConfig ? (
-                      'Calculating order total...'
+                      t('calculatingOrderTotal')
                     ) : cartItems.length === 0 ? (
-                      'Your cart is empty'
+                      t('cartIsEmpty')
                     ) : paymentMethod === 'cash_on_delivery' ? (
                       <>
-                        <span className="min-w-0 break-words">Place order</span>
+                        <span className="min-w-0 break-words">{t('placeOrder')}</span>
                         <ArrowRight aria-hidden="true" className="h-4 w-4 shrink-0" />
                       </>
                     ) : (
                       <>
                         <Lock aria-hidden="true" className="h-4 w-4 shrink-0" />
                         <span className="min-w-0 break-words">
-                          Pay with {paymentMethod === 'visa_mastercard' ? 'card' : paymentMethod === 'bkash' ? 'bKash' : paymentMethod}
+                          {t('payWith', { method: paymentMethod === 'visa_mastercard' ? t('paymentCard') : paymentMethod })}
                         </span>
                         <ArrowRight aria-hidden="true" className="h-4 w-4 shrink-0" />
                       </>
