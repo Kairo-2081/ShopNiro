@@ -1,3 +1,4 @@
+-- Manual rollback: DROP TABLE public.checkout_idempotency.
 CREATE TABLE public.checkout_idempotency (
   customer_id varchar(64) NOT NULL REFERENCES public.customers(id) ON DELETE CASCADE,
   idempotency_key varchar(128) NOT NULL,
