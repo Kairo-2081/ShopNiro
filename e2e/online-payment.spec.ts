@@ -25,6 +25,7 @@ async function startBkashPayment(page: Page) {
   await page.getByRole('checkbox').check();
   const shownTotal = parseMoney(await page.getByTestId('checkout-total').innerText());
   await page.getByRole('button', { name: /Select bKash as payment method/ }).click();
+  await page.getByRole('button', { name: /Pay with bKash \(SSLCommerz\)/ }).click();
   await page.getByRole('button', { name: /Continue to SSLCommerz/ }).click();
   await expect(page.getByRole('heading', { name: /payment demo/ })).toBeVisible();
   return shownTotal;
