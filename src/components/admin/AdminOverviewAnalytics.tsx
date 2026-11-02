@@ -56,8 +56,8 @@ const AdminChartTooltip: React.FC<Partial<TooltipContentProps<number, string>>> 
   if (!active || !payload?.length) return null;
 
   return (
-    <div className="rounded-2xl border border-white/20 bg-slate-900/85 p-3.5 shadow-2xl backdrop-blur-md text-xs text-white space-y-1.5 animate-in fade-in duration-150">
-      <p className="font-bold text-slate-300 border-b border-white/10 pb-1">{label}</p>
+    <div className="rounded-2xl border border-white/20 bg-surface-900/85 p-3.5 shadow-2xl backdrop-blur-md text-xs text-white space-y-1.5 animate-in fade-in duration-150">
+      <p className="font-bold text-surface-300 border-b border-white/10 pb-1">{label}</p>
       {payload.map((entry, index) => {
         const name = String(entry.name || entry.dataKey || 'Metric');
         const value = Number(entry.value) || 0;
@@ -65,7 +65,7 @@ const AdminChartTooltip: React.FC<Partial<TooltipContentProps<number, string>>> 
         return (
           <div key={`${name}-${index}`} className="flex items-center gap-2">
             <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
-            <span className="text-slate-400 capitalize">{name}:</span>
+            <span className="text-surface-400 capitalize">{name}:</span>
             <span className="ml-auto font-semibold tabular-nums text-white">
               {name.toLowerCase().includes('value') ? formatBDT(value) : value.toLocaleString()}
             </span>
@@ -175,24 +175,24 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
   return (
     <section aria-labelledby="admin-overview-analytics-title" className="space-y-4">
       <header>
-        <h2 id="admin-overview-analytics-title" className="text-lg font-bold text-slate-900 dark:text-white">
+        <h2 id="admin-overview-analytics-title" className="text-lg font-bold text-surface-900 dark:text-white">
           Overall Platform Metrics
         </h2>
-        <p className="mt-1 text-xs text-slate-500 dark:text-zinc-400">
+        <p className="mt-1 text-xs text-surface-500 dark:text-surface-400">
           Order activity for the past 12 months and the current order status mix.
         </p>
       </header>
 
       <div className="flex flex-col gap-5">
-        <section className="w-full rounded-3xl border border-sky-100 dark:border-sky-500/20 bg-gradient-to-br from-slate-900/95 via-slate-900/90 to-sky-950/70 p-5 shadow-[0_20px_60px_rgba(15,23,42,0.38)] transition-all duration-300 hover:shadow-[0_26px_70px_rgba(59,130,246,0.14)]">
+        <section className="w-full rounded-3xl border border-brand-100 dark:border-brand-500/20 bg-gradient-to-br from-surface-900/95 via-surface-900/90 to-brand-950/70 p-5 shadow-[0_20px_60px_rgba(15,23,42,0.38)] transition-all duration-300 hover:shadow-[0_26px_70px_rgba(59,130,246,0.14)]">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
             <div>
               <h3 className="text-sm font-bold text-white">Monthly Orders &amp; Volume</h3>
-              <p className="text-[11px] text-slate-300">Order revenue trends against completed order count</p>
+              <p className="text-micro text-surface-300">Order revenue trends against completed order count</p>
             </div>
-            <div className="text-right rounded-2xl border border-sky-500/20 bg-sky-500/10 px-3 py-2 shadow-inner shadow-sky-500/10">
-              <span className="text-lg font-black text-sky-300 block">{formatBDT(trailingOrderValue)}</span>
-              <span className="text-[10px] text-slate-300 font-medium">
+            <div className="text-right rounded-2xl border border-brand-500/20 bg-brand-500/10 px-3 py-2 shadow-inner shadow-brand-500/10">
+              <span className="text-lg font-black text-brand-300 block">{formatBDT(trailingOrderValue)}</span>
+              <span className="text-micro text-surface-300 font-medium">
                 {trailingOrderCount.toLocaleString()} total orders (12 mo)
               </span>
             </div>
@@ -266,7 +266,7 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
               </ResponsiveContainer>
             </div>
           ) : (
-            <div className="flex h-[280px] items-center justify-center text-center text-xs text-slate-500 dark:text-zinc-400 sm:h-[320px]">
+            <div className="flex h-[280px] items-center justify-center text-center text-xs text-surface-500 dark:text-surface-400 sm:h-[320px]">
               No orders were placed in the past 12 months.
             </div>
           )}
@@ -274,8 +274,8 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
 
         <section className="premium-surface w-full min-w-0 rounded-xl p-5 shadow-xs transition-all hover:shadow-md">
           <div className="mb-1">
-            <h3 className="text-sm font-bold text-slate-900 dark:text-white">Order Status Mix</h3>
-            <p className="mt-1 text-[11px] text-slate-600 dark:text-zinc-300">Lifecycle distribution across all orders</p>
+            <h3 className="text-sm font-bold text-surface-900 dark:text-white">Order Status Mix</h3>
+            <p className="mt-1 text-micro text-surface-600 dark:text-surface-300">Lifecycle distribution across all orders</p>
           </div>
 
           {statusMetrics.length > 0 ? (
@@ -304,14 +304,14 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
                 </ResponsiveContainer>
                 <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                   <span className="text-2xl font-black text-white">{orders.length.toLocaleString()}</span>
-                  <span className="text-[10px] text-slate-300 font-semibold uppercase tracking-wider">Orders</span>
+                  <span className="text-micro text-surface-300 font-semibold uppercase tracking-wider">Orders</span>
                 </div>
               </div>
 
-              <ul className="grid grid-cols-2 gap-2 border-t border-slate-100 dark:border-zinc-800/80 pt-3">
+              <ul className="grid grid-cols-2 gap-2 border-t border-surface-100 dark:border-surface-800/80 pt-3">
                 {statusMetrics.map((status) => (
-                  <li key={status.status} className="flex items-center justify-between text-[11px]">
-                    <span className="flex items-center gap-1.5 text-slate-200 truncate">
+                  <li key={status.status} className="flex items-center justify-between text-micro">
+                    <span className="flex items-center gap-1.5 text-surface-200 truncate">
                       <span className="w-2.5 h-2.5 rounded-full shrink-0 shadow-[0_0_12px_rgba(255,255,255,0.25)]" style={{ backgroundColor: status.color }} />
                       <span className="truncate">{status.name}</span>
                     </span>
@@ -321,7 +321,7 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
               </ul>
             </>
           ) : (
-            <div className="my-2 flex h-[220px] items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 text-center text-[11px] text-slate-500 dark:border-zinc-700 dark:bg-slate-900/40 dark:text-zinc-400">
+            <div className="my-2 flex h-[220px] items-center justify-center rounded-2xl border border-dashed border-surface-200 bg-surface-50 text-center text-micro text-surface-500 dark:border-surface-700 dark:bg-surface-900/40 dark:text-surface-400">
               No order status data available yet.
             </div>
           )}
@@ -330,10 +330,10 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
           <section className="premium-surface w-full rounded-xl p-5 shadow-xs transition-all hover:shadow-md">
             <div className="mb-3">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">Revenue by Month</h3>
-              <p className="mt-1 text-[11px] text-slate-600 dark:text-zinc-300">Order value trend over the last 12 months</p>
+              <h3 className="text-sm font-bold text-surface-900 dark:text-white">Revenue by Month</h3>
+              <p className="mt-1 text-micro text-surface-600 dark:text-surface-300">Order value trend over the last 12 months</p>
             </div>
-            <div className="h-[220px] w-full rounded-2xl bg-slate-950/20 p-2">
+            <div className="h-[220px] w-full rounded-2xl bg-surface-950/20 p-2">
               <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={monthlyMetrics} margin={{ top: 8, right: 8, left: -12, bottom: 4 }}>
                     <defs>
@@ -362,8 +362,8 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
 
           <section className="premium-surface w-full min-w-0 rounded-xl p-5 shadow-xs transition-all hover:shadow-md">
             <div className="mb-3">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">Payment Method Mix</h3>
-              <p className="mt-1 text-[11px] text-slate-600 dark:text-zinc-300">How customer orders are being paid for</p>
+              <h3 className="text-sm font-bold text-surface-900 dark:text-white">Payment Method Mix</h3>
+              <p className="mt-1 text-micro text-surface-600 dark:text-surface-300">How customer orders are being paid for</p>
             </div>
 
             {paymentMetrics.length > 0 ? (
@@ -392,10 +392,10 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
                   </ResponsiveContainer>
                 </div>
 
-                <ul className="mt-2 grid grid-cols-2 gap-2 border-t border-slate-100 dark:border-zinc-800/80 pt-3">
+                <ul className="mt-2 grid grid-cols-2 gap-2 border-t border-surface-100 dark:border-surface-800/80 pt-3">
                   {paymentMetrics.map((method) => (
-                    <li key={method.method} className="flex items-center justify-between text-[11px]">
-                      <span className="flex items-center gap-1.5 text-slate-200 truncate">
+                    <li key={method.method} className="flex items-center justify-between text-micro">
+                      <span className="flex items-center gap-1.5 text-surface-200 truncate">
                         <span className="h-2.5 w-2.5 rounded-full shrink-0 shadow-[0_0_12px_rgba(255,255,255,0.25)]" style={{ backgroundColor: method.color }} />
                         <span className="truncate">{method.name}</span>
                       </span>
@@ -405,7 +405,7 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
                 </ul>
               </>
             ) : (
-              <div className="flex h-[220px] items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 text-center text-[11px] text-slate-500 dark:border-zinc-700 dark:bg-slate-900/40 dark:text-zinc-400">
+              <div className="flex h-[220px] items-center justify-center rounded-2xl border border-dashed border-surface-200 bg-surface-50 text-center text-micro text-surface-500 dark:border-surface-700 dark:bg-surface-900/40 dark:text-surface-400">
                 No payment data yet.
               </div>
             )}

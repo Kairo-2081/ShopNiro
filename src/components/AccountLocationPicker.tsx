@@ -119,18 +119,18 @@ function LocationMap({ onAddressSelected, initialLocation }: AccountLocationPick
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-[11px] text-slate-500 dark:text-zinc-400">Tap the map or use GPS. Your browser will ask before sharing location.</p>
+        <p className="text-micro text-surface-500 dark:text-surface-400">Tap the map or use GPS. Your browser will ask before sharing location.</p>
         <button
           type="button"
           onClick={useCurrentLocation}
           disabled={isLocating || isResolving}
-          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-emerald-300 bg-white px-3 py-2 text-xs font-semibold text-emerald-800 hover:bg-emerald-50 disabled:opacity-50 dark:border-emerald-800 dark:bg-[#12161D] dark:text-emerald-300 dark:hover:bg-emerald-950/30"
+          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-success-300 bg-white px-3 py-2 text-xs font-semibold text-success-800 hover:bg-success-50 disabled:opacity-50 dark:border-success-800 dark:bg-[#12161D] dark:text-success-300 dark:hover:bg-success-950/30"
         >
           <LocateFixed className="h-4 w-4" />
           {isLocating ? 'Finding you...' : 'Use current location'}
         </button>
       </div>
-      <div className="relative h-56 w-full touch-pan-x touch-pan-y overflow-hidden rounded-xl border border-slate-200 bg-slate-100 dark:border-zinc-700 dark:bg-[#181F2A] sm:h-72">
+      <div className="relative h-56 w-full touch-pan-x touch-pan-y overflow-hidden rounded-xl border border-surface-200 bg-surface-100 dark:border-surface-700 dark:bg-[#181F2A] sm:h-72">
         <MapContainer
           center={initialLocation ? [initialLocation.lat, initialLocation.lng] : defaultCenter}
           zoom={initialLocation ? 15 : 11}
@@ -157,7 +157,7 @@ function LocationMap({ onAddressSelected, initialLocation }: AccountLocationPick
         )}
       </div>
       <p
-        className={`flex items-center gap-1.5 text-[11px] ${status.startsWith('Location selected') || status.startsWith('Map pin saved') ? 'text-emerald-700 dark:text-emerald-300' : 'text-slate-500 dark:text-zinc-400'}`}
+        className={`flex items-center gap-1.5 text-micro ${status.startsWith('Location selected') || status.startsWith('Map pin saved') ? 'text-success-700 dark:text-success-300' : 'text-surface-500 dark:text-surface-400'}`}
         role="status"
         aria-live="polite"
       >

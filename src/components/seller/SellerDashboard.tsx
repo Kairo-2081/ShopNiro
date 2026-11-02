@@ -25,13 +25,6 @@ import {
 } from 'lucide-react';
 
 const compactSellerValue = (value: number) => value >= 1000 ? `${(value / 1000).toFixed(1)}k` : String(Math.round(value));
-const sellerPriceFormatter = new Intl.NumberFormat('en-BD', {
-  style: 'currency',
-  currency: 'BDT',
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-
 interface SellerDashboardProps {
   currentSeller: Seller;
   products: Product[];
@@ -263,46 +256,31 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
   const getApprovalStatusBanner = () => {
     switch (currentSeller.Status) {
       case 'approved':
-        return (
-          <div className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-xs text-emerald-800 dark:text-emerald-300 sm:items-center">
-            <div className="flex min-w-0 flex-1 items-start gap-2.5 sm:items-center">
-              <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
-              <div className="min-w-0 break-words leading-relaxed">
-                <strong className="font-bold">Merchant Approved &amp; Live:</strong> Your store is active on ShopNiro marketplace.
-              </div>
-            </div>
-            <span className="shrink-0 self-start rounded-full bg-emerald-500 px-2.5 py-1 font-mono text-[11px] font-bold uppercase text-white sm:self-center">
-              Live Verified
-            </span>
-          </div>
-        );
+        return null;
       case 'pending':
         return (
-          <div className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 text-xs text-amber-800 dark:text-amber-200 sm:items-center">
+          <div className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-warning-500/20 bg-warning-500/10 p-4 text-xs text-warning-800 dark:text-warning-200 sm:items-center">
             <div className="flex min-w-0 flex-1 items-start gap-2.5 sm:items-center">
-              <Clock className="w-5 h-5 text-amber-500 shrink-0" />
+              <Clock className="w-5 h-5 text-warning-500 shrink-0" />
               <div className="min-w-0 break-words leading-relaxed">
-                <strong className="font-bold">Awaiting Admin Verification:</strong> Your merchant profile is pending review. Product drafts can be created now.
+                <strong className="font-bold">Awaiting verification:</strong> Complete your store profile and identity details while your application is reviewed.
               </div>
             </div>
-            <span className="shrink-0 self-start rounded-full bg-amber-500 px-2.5 py-1 font-mono text-[11px] font-bold uppercase text-white sm:self-center">
-              Pending Review
-            </span>
+            <button type="button" onClick={() => setIsProfileModalOpen(true)} className="min-h-10 shrink-0 rounded-full border border-warning-700/40 px-3 text-xs font-bold text-warning-900 hover:bg-warning-100 dark:text-warning-200 dark:hover:bg-warning-950/50">
+              Review profile
+            </button>
           </div>
         );
       case 'suspended':
       case 'rejected':
         return (
-          <div className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-rose-500/20 bg-rose-500/10 p-4 text-xs text-rose-800 dark:text-rose-200 sm:items-center">
+          <div className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-danger-500/20 bg-danger-500/10 p-4 text-xs text-danger-800 dark:text-danger-200 sm:items-center">
             <div className="flex min-w-0 flex-1 items-start gap-2.5 sm:items-center">
-              <XCircle className="w-5 h-5 text-rose-500 shrink-0" />
+              <XCircle className="w-5 h-5 text-danger-500 shrink-0" />
               <div className="min-w-0 break-words leading-relaxed">
-                <strong className="font-bold">Account Restricted ({currentSeller.Status}):</strong> Your merchant account has been paused by platform administration.
+                <strong className="font-bold">Account {currentSeller.Status}:</strong> Contact platform support to ask about the restriction and next steps.
               </div>
             </div>
-            <span className="shrink-0 self-start rounded-full bg-rose-600 px-2.5 py-1 font-mono text-[11px] font-bold uppercase text-white sm:self-center">
-              Restricted
-            </span>
           </div>
         );
     }
@@ -311,27 +289,26 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
   return (
     <div className="space-y-8 pb-16">
       {/* Seller Store Header */}
-      <div className="bg-white dark:bg-[#12161D] p-6 rounded-3xl border border-sky-100 dark:border-sky-500/20 shadow-xs space-y-4">
+      <div className="bg-white dark:bg-[#12161D] p-6 rounded-3xl border border-brand-100 dark:border-brand-500/20 shadow-xs space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center sm:gap-4">
             <img
               src={currentSeller.Logo}
               alt={currentSeller.Name}
-              className="h-16 w-16 shrink-0 rounded-2xl border border-sky-100 bg-slate-50 object-cover shadow-sm dark:border-zinc-700 dark:bg-[#181F2A]"
+              className="h-16 w-16 shrink-0 rounded-2xl border border-brand-100 bg-surface-50 object-cover shadow-sm dark:border-surface-700 dark:bg-[#181F2A]"
             />
             <div className="min-w-0 flex-1">
-              <h1 className="break-words text-xl font-bold leading-tight text-slate-900 dark:text-white [overflow-wrap:anywhere] sm:text-2xl">
+              <h1 className="break-words text-xl font-bold leading-tight text-surface-900 dark:text-white [overflow-wrap:anywhere] sm:text-2xl">
                 {currentSeller.Name}
               </h1>
-              <p className="mt-1 max-w-lg break-words text-xs leading-relaxed text-slate-500 dark:text-zinc-400 [overflow-wrap:anywhere]">
+              {currentSeller.Status === 'approved' && <span className="mt-1 inline-flex items-center gap-1 rounded-full bg-success-100 px-2.5 py-1 text-xs font-bold text-success-800 dark:bg-success-950/50 dark:text-success-200"><CheckCircle2 className="h-3.5 w-3.5" />Approved</span>}
+              <p className="mt-1 max-w-lg break-words text-xs leading-relaxed text-surface-500 dark:text-surface-400 [overflow-wrap:anywhere]">
                 {currentSeller.Description}
               </p>
-              <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-slate-500 dark:text-zinc-400">
+              <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-micro text-surface-500 dark:text-surface-400">
                 <span className="break-all font-mono">ID: {currentSeller.Seller_ID}</span>
                 <span aria-hidden="true">•</span>
-                <span className="break-all">{currentSeller.Email}</span>
-                <span aria-hidden="true">•</span>
-                <span>Member since {formatDate(currentSeller.Created_At)}</span>
+                <span>Member since {currentSeller.Created_At ? new Date(currentSeller.Created_At).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : 'N/A'}</span>
               </div>
             </div>
           </div>
@@ -340,7 +317,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
             <button
               type="button"
               onClick={() => setIsProfileModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-slate-300 text-slate-700 dark:border-zinc-700 dark:text-zinc-200 text-xs font-bold hover:bg-slate-50 dark:hover:bg-zinc-800"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-surface-300 text-surface-700 dark:border-surface-700 dark:text-surface-200 text-xs font-bold hover:bg-surface-50 dark:hover:bg-surface-800"
             >
               <Edit className="w-4 h-4" />
               <span>Edit store details</span>
@@ -353,7 +330,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
               }}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-xs shadow-lg transition-all cursor-pointer ${
                 currentSeller.Status !== 'approved'
-                  ? 'bg-slate-200 dark:bg-zinc-800 text-slate-400 dark:text-zinc-600 cursor-not-allowed'
+                  ? 'bg-surface-200 dark:bg-surface-800 text-surface-400 dark:text-surface-600 cursor-not-allowed'
                   : 'premium-button text-white shadow-md hover:-translate-y-0.5'
               }`}
             >
@@ -370,10 +347,10 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="premium-card flex items-center justify-between rounded-3xl p-5">
           <div>
-            <span className="text-[11px] uppercase tracking-wider font-semibold text-slate-500 dark:text-zinc-400">
+            <span className="text-micro uppercase tracking-wider font-semibold text-surface-500 dark:text-surface-400">
               Listed Products
             </span>
-            <div className="text-2xl font-extrabold text-slate-900 dark:text-white mt-1">
+            <div className="text-2xl font-extrabold text-surface-900 dark:text-white mt-1">
               {isLoading ? <span className="premium-skeleton block h-7 w-16 rounded-full" /> : sellerProducts.length}
             </div>
           </div>
@@ -384,21 +361,21 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
 
         <div className="premium-card flex items-center justify-between rounded-3xl p-5">
           <div>
-            <span className="text-[11px] uppercase tracking-wider font-semibold text-slate-500 dark:text-zinc-400">
+            <span className="text-micro uppercase tracking-wider font-semibold text-surface-500 dark:text-surface-400">
               Total Revenue
             </span>
-            <div className="text-2xl font-extrabold text-emerald-500 mt-1">
+            <div className="mt-1 text-2xl font-extrabold text-surface-900 dark:text-white">
               {isLoading ? <span className="premium-skeleton block h-7 w-28 rounded-full" /> : formatCurrency(totalSalesRevenue)}
             </div>
           </div>
-          <div className="w-11 h-11 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+          <div className="w-11 h-11 rounded-2xl bg-success-500/10 text-success-500 flex items-center justify-center">
             <ShoppingBag className="w-5 h-5" />
           </div>
         </div>
 
         <div className="premium-card flex items-center justify-between rounded-3xl p-5">
           <div>
-            <span className="text-[11px] uppercase tracking-wider font-semibold text-slate-500 dark:text-zinc-400">
+            <span className="text-micro uppercase tracking-wider font-semibold text-surface-500 dark:text-surface-400">
               Orders Received
             </span>
             <div className="mt-1 text-2xl font-extrabold text-[#77775a] dark:text-[#c0c09d]">
@@ -412,15 +389,15 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
 
         <div className="premium-card flex items-center justify-between rounded-3xl p-5">
           <div>
-            <span className="text-[11px] uppercase tracking-wider font-semibold text-slate-500 dark:text-zinc-400">
+            <span className="text-micro uppercase tracking-wider font-semibold text-surface-500 dark:text-surface-400">
               Store Rating
             </span>
-            <div className="text-2xl font-extrabold text-amber-500 mt-1 flex items-center gap-1">
+            <div className="text-2xl font-extrabold text-warning-500 mt-1 flex items-center gap-1">
               {isLoading ? <span className="premium-skeleton block h-7 w-14 rounded-full" /> : avgSellerRating.toFixed(1)}
-              <Star className="w-4 h-4 fill-amber-400" />
+              <Star className="w-4 h-4 fill-warning-400" />
             </div>
           </div>
-          <div className="w-11 h-11 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
+          <div className="w-11 h-11 rounded-2xl bg-warning-500/10 text-warning-500 flex items-center justify-center">
             <Star className="w-5 h-5" />
           </div>
         </div>
@@ -433,7 +410,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
           className={`shrink-0 whitespace-nowrap px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
             activeTab === 'products'
               ? 'premium-button text-white shadow-md'
-              : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#181F2A]'
+              : 'text-surface-500 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-[#181F2A]'
           }`}
         >
           <Package className="w-4 h-4" />
@@ -445,7 +422,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
           className={`shrink-0 whitespace-nowrap px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
             activeTab === 'orders'
               ? 'premium-button text-white shadow-md'
-              : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#181F2A]'
+              : 'text-surface-500 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-[#181F2A]'
           }`}
         >
           <Truck className="w-4 h-4" />
@@ -457,7 +434,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
           className={`shrink-0 whitespace-nowrap px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
             activeTab === 'reviews'
               ? 'premium-button text-white shadow-md'
-              : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#181F2A]'
+              : 'text-surface-500 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-[#181F2A]'
           }`}
         >
           <Star className="w-4 h-4" />
@@ -469,7 +446,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
           className={`shrink-0 whitespace-nowrap px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
             activeTab === 'analytics'
               ? 'premium-button text-white shadow-md'
-              : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#181F2A]'
+              : 'text-surface-500 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-[#181F2A]'
           }`}
         >
           <BarChart3 className="h-4 w-4" />
@@ -481,7 +458,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
           className={`shrink-0 whitespace-nowrap px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
             activeTab === 'promotions'
               ? 'premium-button text-white shadow-md'
-              : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#181F2A]'
+              : 'text-surface-500 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-[#181F2A]'
           }`}
         >
           <Tag className="h-4 w-4" />
@@ -493,7 +470,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
           className={`shrink-0 whitespace-nowrap px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
             activeTab === 'wallet'
               ? 'premium-button text-white shadow-md'
-              : 'text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-[#181F2A]'
+              : 'text-surface-500 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-[#181F2A]'
           }`}
         >
           <Wallet className="w-4 h-4" />
@@ -507,10 +484,10 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
       {activeTab === 'products' && (
         <div className="space-y-4">
           {sellerProducts.length === 0 ? (
-            <div className="text-center py-16 bg-white dark:bg-[#12161D] rounded-3xl border border-sky-100 dark:border-sky-500/20 p-8 space-y-3">
-              <Package className="w-12 h-12 text-slate-300 dark:text-zinc-600 mx-auto" />
-              <h3 className="font-bold text-slate-800 dark:text-zinc-200">No products created yet</h3>
-              <p className="text-xs text-slate-500 dark:text-zinc-400">
+            <div className="text-center py-16 bg-white dark:bg-[#12161D] rounded-3xl border border-brand-100 dark:border-brand-500/20 p-8 space-y-3">
+              <Package className="w-12 h-12 text-surface-300 dark:text-surface-600 mx-auto" />
+              <h3 className="font-bold text-surface-800 dark:text-surface-200">No products created yet</h3>
+              <p className="text-xs text-surface-500 dark:text-surface-400">
                 Click "+ Add New Product Listing" above to publish products under your seller brand.
               </p>
             </div>
@@ -539,34 +516,34 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                                 src={p.Image}
                                 alt={p.Name}
                                 referrerPolicy="no-referrer"
-                                className="h-12 w-12 shrink-0 rounded-xl object-cover bg-slate-100 border border-[#a99b72]/20 dark:border-[#d0c8a5]/15"
+                                className="h-12 w-12 shrink-0 rounded-xl object-cover bg-surface-100 border border-[#a99b72]/20 dark:border-[#d0c8a5]/15"
                               />
                               <div className="min-w-0">
-                                <span className="block break-words font-bold text-slate-900 dark:text-white [overflow-wrap:anywhere]">{p.Name}</span>
-                                <span className="block break-words text-[12px] text-slate-500 dark:text-zinc-400 [overflow-wrap:anywhere]">{catName}</span>
-                                <span className="block break-all text-[11px] font-mono text-slate-500 dark:text-zinc-400">ID: {p.Product_ID}</span>
+                                <span className="block break-words font-bold text-surface-900 dark:text-white [overflow-wrap:anywhere]">{p.Name}</span>
+                                <span className="block break-words text-[12px] text-surface-500 dark:text-surface-400 [overflow-wrap:anywhere]">{catName}</span>
+                                <span className="block break-all text-micro font-mono text-surface-500 dark:text-surface-400">ID: {p.Product_ID}</span>
                               </div>
                             </div>
                           </td>
-                          <td className="p-4 text-right text-sm font-semibold tabular-nums text-slate-900 dark:text-white">{sellerPriceFormatter.format(Number(p.Price) || 0)}</td>
+                          <td className="p-4 text-right text-sm font-semibold tabular-nums text-surface-900 dark:text-white">{formatCurrency(Number(p.Price) || 0)}</td>
                           <td className="p-4 font-semibold">
                             <div className="flex min-w-32 flex-col items-start gap-1.5">
                               {Number(p.Stock) === 0 ? (
-                                <span className="font-bold text-rose-700 dark:text-rose-300">Out of stock</span>
+                                <span className="font-bold text-danger-700 dark:text-danger-300">Out of stock</span>
                               ) : Number(p.Stock) <= 5 ? (
-                                <span className="font-bold text-amber-700 dark:text-amber-300">Low: {p.Stock} left</span>
+                                <span className="font-bold text-warning-700 dark:text-warning-300">Low: {p.Stock} left</span>
                               ) : (
-                                <span className="font-medium text-slate-600 dark:text-zinc-300">{p.Stock} in stock</span>
+                                <span className="font-medium text-surface-600 dark:text-surface-300">{p.Stock} in stock</span>
                               )}
                               {restockingProductId === p.Product_ID ? (
                                 <form onSubmit={(event) => { event.preventDefault(); void restockProduct(p); }} className="flex flex-wrap items-center gap-1.5">
                                   <input type="number" min="1" step="1" required value={restockQuantity} onChange={(event) => setRestockQuantity(event.target.value)} aria-label={`Quantity to add for ${p.Name}`} placeholder="Qty" className="luxury-input h-9 min-h-9 w-20 rounded-lg px-2 text-xs tabular-nums" />
-                                  <button type="submit" disabled={isRestocking} className="rounded-lg bg-[#77775a] px-2.5 py-2 text-[11px] font-bold text-white hover:bg-[#66664c] disabled:opacity-50">{isRestocking ? 'Saving…' : 'Save'}</button>
-                                  <button type="button" onClick={() => { setRestockingProductId(null); setRestockError(''); }} aria-label={`Cancel restock for ${p.Name}`} className="grid h-9 w-9 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] dark:text-zinc-300 dark:hover:bg-zinc-800"><X className="h-4 w-4" /></button>
-                                  {restockError && <span role="alert" className="w-full text-[10px] text-rose-600 dark:text-rose-300">{restockError}</span>}
+                                  <button type="submit" disabled={isRestocking} className="rounded-lg bg-[#77775a] px-2.5 py-2 text-micro font-bold text-white hover:bg-[#66664c] disabled:opacity-50">{isRestocking ? 'Saving…' : 'Save'}</button>
+                                  <button type="button" onClick={() => { setRestockingProductId(null); setRestockError(''); }} aria-label={`Cancel restock for ${p.Name}`} className="grid h-9 w-9 place-items-center rounded-lg text-surface-500 hover:bg-surface-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] dark:text-surface-300 dark:hover:bg-surface-800"><X className="h-4 w-4" /></button>
+                                  {restockError && <span role="alert" className="w-full text-micro text-danger-600 dark:text-danger-300">{restockError}</span>}
                                 </form>
                               ) : (
-                                <button type="button" onClick={() => { setRestockError(''); setRestockQuantity(''); setRestockingProductId(p.Product_ID); }} className="rounded-md px-1.5 py-1 text-[11px] font-semibold text-[#70674a] underline decoration-[#a99b72]/40 underline-offset-2 hover:text-[#514b3d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] dark:text-[#d0c8a5]">Restock</button>
+                                <button type="button" onClick={() => { setRestockError(''); setRestockQuantity(''); setRestockingProductId(p.Product_ID); }} className="rounded-md px-1.5 py-1 text-micro font-semibold text-[#70674a] underline decoration-[#a99b72]/40 underline-offset-2 hover:text-[#514b3d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] dark:text-[#d0c8a5]">Restock</button>
                               )}
                             </div>
                           </td>
@@ -577,7 +554,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                                 {p.Voucher}
                               </span>
                             ) : (
-                              <span className="text-slate-400 dark:text-zinc-500">No voucher</span>
+                              <span className="text-surface-400 dark:text-surface-500">No voucher</span>
                             )}
                           </td>
                           <td className="p-4">
@@ -592,10 +569,10 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                                   p.Product_Status === 'active' ? 'inactive' : 'active'
                                 )
                               }
-                              className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase transition-all duration-200 cursor-pointer hover:-translate-y-px hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] ${
+                              className={`px-2.5 py-1 rounded-full text-micro font-bold uppercase transition-all duration-200 cursor-pointer hover:-translate-y-px hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] ${
                                 p.Product_Status === 'active'
-                                  ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/30'
-                                  : 'bg-zinc-800 text-zinc-400 border border-zinc-700'
+                                  ? 'bg-success-500/15 text-success-500 border border-success-500/30'
+                                  : 'bg-surface-800 text-surface-400 border border-surface-700'
                               }`}
                             >
                               {p.Product_Status}
@@ -610,7 +587,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                                   setProductToEdit(p);
                                   setIsProductModalOpen(true);
                                 }}
-                                className="grid h-10 w-10 place-items-center rounded-lg text-slate-600 transition-colors hover:bg-[#a99b72]/10 hover:text-[#80734f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] dark:text-zinc-400 dark:hover:bg-[#d0c8a5]/10 dark:hover:text-[#d0c8a5]"
+                                className="grid h-10 w-10 place-items-center rounded-lg text-surface-600 transition-colors hover:bg-[#a99b72]/10 hover:text-[#80734f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] dark:text-surface-400 dark:hover:bg-[#d0c8a5]/10 dark:hover:text-[#d0c8a5]"
                                 title="Edit Product"
                               >
                                 <Edit className="w-4 h-4" />
@@ -619,7 +596,8 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                                 type="button"
                                 aria-label={`Delete ${p.Name}`}
                                 onClick={() => { setDeleteProductError(''); setProductToDelete(p); }}
-                                className="grid h-10 w-10 place-items-center rounded-lg text-slate-500 transition-colors hover:bg-rose-100 hover:text-rose-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 dark:text-zinc-400 dark:hover:bg-rose-950/50 dark:hover:text-rose-300"
+                                className="grid h-10 w-10 place-items-center rounded-lg text-surface-500 transition-colors hover:bg-danger-100 hover:text-danger-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger-500 dark:text-surface-400 dark:hover:bg-danger-950/50 dark:hover:text-danger-300"
+                                title={`Delete ${p.Name}`}
                               >
                                 <Trash2 className="w-4 h-4" />
                               </button>
@@ -642,10 +620,10 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
       {activeTab === 'orders' && (
         <div className="space-y-4">
           {sellerOrders.length === 0 ? (
-            <div className="text-center py-16 bg-white dark:bg-[#12161D] rounded-3xl border border-sky-100 dark:border-sky-500/20 p-8 space-y-3">
-              <Truck className="w-12 h-12 text-slate-300 dark:text-zinc-600 mx-auto" />
-              <h3 className="font-bold text-slate-800 dark:text-zinc-200">No incoming orders yet</h3>
-              <p className="text-xs text-slate-500 dark:text-zinc-400">
+            <div className="text-center py-16 bg-white dark:bg-[#12161D] rounded-3xl border border-brand-100 dark:border-brand-500/20 p-8 space-y-3">
+              <Truck className="w-12 h-12 text-surface-300 dark:text-surface-600 mx-auto" />
+              <h3 className="font-bold text-surface-800 dark:text-surface-200">No incoming orders yet</h3>
+              <p className="text-xs text-surface-500 dark:text-surface-400">
                 Orders containing your seller products will appear here for fulfillment status updates.
               </p>
             </div>
@@ -659,22 +637,22 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                 return (
                   <div
                     key={order.Order_ID}
-                    className="bg-white dark:bg-[#12161D] rounded-3xl border border-sky-100 dark:border-sky-500/20 p-5 shadow-xs space-y-4 text-xs"
+                    className="bg-white dark:bg-[#12161D] rounded-3xl border border-brand-100 dark:border-brand-500/20 p-5 shadow-xs space-y-4 text-xs"
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-sky-100 dark:border-zinc-800 pb-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-brand-100 dark:border-surface-800 pb-3">
                       <div>
-                        <span className="font-mono font-bold text-slate-900 dark:text-white text-sm">
+                        <span className="font-mono font-bold text-surface-900 dark:text-white text-sm">
                           Order #{order.Order_ID}
                         </span>
-                        <span className="text-blue-500 dark:text-sky-400 ml-2 font-mono font-bold">
+                        <span className="text-brand-500 dark:text-brand-400 ml-2 font-mono font-bold">
                           Tracking: {order.Tracking_ID}
                         </span>
                         <div className="flex items-center gap-2 mt-1">
                           <span
-                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                            className={`px-2.5 py-0.5 rounded-full text-micro font-bold uppercase tracking-wider ${
                               order.Payment_Status === 'paid'
-                                ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
-                                : 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800'
+                                ? 'bg-success-100 dark:bg-success-950/60 text-success-700 dark:text-success-300 border border-success-300 dark:border-success-800'
+                                : 'bg-warning-100 dark:bg-warning-950/60 text-warning-700 dark:text-warning-300 border border-warning-300 dark:border-warning-800'
                             }`}
                           >
                             {order.Payment_Status === 'paid'
@@ -682,24 +660,24 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                               : 'Cash on Delivery (Pending)'}
                           </span>
                           {order.Transaction_ID && (
-                            <span className="font-mono text-[10px] text-slate-400">
+                            <span className="font-mono text-micro text-surface-400">
                               Trx: {order.Transaction_ID}
                             </span>
                           )}
                         </div>
-                        <span className="block text-[11px] text-slate-400 mt-0.5">
+                        <span className="block text-micro text-surface-400 mt-0.5">
                           Placed on {formatDate(order.Order_Placed_At)}
                         </span>
                       </div>
 
                       {/* Fulfillment Status Selector */}
                       <div className="flex items-center gap-2">
-                        <span className="text-slate-500 dark:text-zinc-400 font-medium">Fulfillment:</span>
+                        <span className="text-surface-500 dark:text-surface-400 font-medium">Fulfillment:</span>
                         <select
                           value={fulfillmentStatus}
                           onChange={(e) => onUpdateOrderStatus(order.Order_ID, e.target.value)}
                           aria-label={`Fulfillment status for order ${order.Order_ID}`}
-                          className="luxury-control bg-slate-50 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-full px-3 py-1.5 font-bold text-slate-900 dark:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5]"
+                          className="luxury-control bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-full px-3 py-1.5 font-bold text-surface-900 dark:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5]"
                         >
                           <option value={fulfillmentStatus}>
                             {fulfillmentStatus === 'placed' ? 'Placed (Pending)' :
@@ -718,21 +696,21 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                     {/* Items from this seller */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <span className="font-semibold text-slate-500 dark:text-zinc-400 uppercase text-[10px]">Your Products in this order</span>
+                        <span className="font-semibold text-surface-500 dark:text-surface-400 uppercase text-micro">Your Products in this order</span>
                         {myItems.map((item, idx) => (
-                          <div key={idx} className="flex justify-between p-2.5 rounded-2xl bg-slate-50 dark:bg-[#181F2A]">
-                            <span className="text-slate-800 dark:text-zinc-200">{item.Quantity}x {item.Name}</span>
-                            <span className="font-bold text-slate-900 dark:text-white">{formatCurrency(item.Price * item.Quantity)}</span>
+                          <div key={idx} className="flex justify-between p-2.5 rounded-2xl bg-surface-50 dark:bg-[#181F2A]">
+                            <span className="text-surface-800 dark:text-surface-200">{item.Quantity}x {item.Name}</span>
+                            <span className="font-bold text-surface-900 dark:text-white">{formatCurrency(item.Price * item.Quantity)}</span>
                           </div>
                         ))}
                       </div>
 
-                      <div className="space-y-1 p-3 rounded-2xl bg-slate-50 dark:bg-[#181F2A]">
-                        <span className="font-semibold text-slate-500 dark:text-zinc-400 uppercase text-[10px]">Destination Address</span>
-                        <p className="font-bold text-slate-900 dark:text-white">
+                      <div className="space-y-1 p-3 rounded-2xl bg-surface-50 dark:bg-[#181F2A]">
+                        <span className="font-semibold text-surface-500 dark:text-surface-400 uppercase text-micro">Destination Address</span>
+                        <p className="font-bold text-surface-900 dark:text-white">
                           {order.Shipping_Address.House_Name}, {order.Shipping_Address.Street}
                         </p>
-                        <p className="text-slate-600 dark:text-zinc-300">
+                        <p className="text-surface-600 dark:text-surface-300">
                           {order.Shipping_Address.City}, {order.Shipping_Address.Postal_Code}
                         </p>
                       </div>
@@ -761,89 +739,89 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
               { label: 'Average order value', value: formatCurrency(averageSellerOrderValue), note: 'Across eligible seller orders' },
               { label: 'Product rating', value: avgSellerRating ? `${avgSellerRating.toFixed(1)} / 5` : 'No ratings', note: `${sellerReviews.length} customer reviews` },
             ].map((metric) => (
-              <article key={metric.label} className="rounded-2xl border border-sky-100 bg-white p-4 dark:border-sky-500/20 dark:bg-[#12161D]">
-                <p className="text-[10px] font-semibold uppercase text-slate-500 dark:text-zinc-400">{metric.label}</p>
-                <p className="mt-2 text-xl font-bold tabular-nums text-slate-900 dark:text-white">{metric.value}</p>
-                <p className="mt-1 text-[10px] text-slate-500 dark:text-zinc-400">{metric.note}</p>
+              <article key={metric.label} className="rounded-2xl border border-brand-100 bg-white p-4 dark:border-brand-500/20 dark:bg-[#12161D]">
+                <p className="text-micro font-semibold uppercase text-surface-500 dark:text-surface-400">{metric.label}</p>
+                <p className="mt-2 text-xl font-bold tabular-nums text-surface-900 dark:text-white">{metric.value}</p>
+                <p className="mt-1 text-micro text-surface-500 dark:text-surface-400">{metric.note}</p>
               </article>
             ))}
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-zinc-800 dark:bg-[#12161D]">
-              <h2 className="text-sm font-bold text-slate-900 dark:text-white">Monthly sales</h2>
-              <p className="mt-1 text-[11px] text-slate-500 dark:text-zinc-400">Product revenue across the last six months.</p>
+            <section className="rounded-2xl border border-surface-200 bg-white p-5 dark:border-surface-800 dark:bg-[#12161D]">
+              <h2 className="text-sm font-bold text-surface-900 dark:text-white">Monthly sales</h2>
+              <p className="mt-1 text-micro text-surface-500 dark:text-surface-400">Product revenue across the last six months.</p>
               <div role="img" aria-label="Monthly product sales for the last six months" className="mt-5 grid h-44 grid-cols-6 items-end gap-2">
                 {recentMonthlySales.map((month) => (
                   <div key={month.key} className="flex h-full min-w-0 flex-col items-center justify-end gap-2">
-                    <span className="text-center text-[9px] tabular-nums text-slate-500 dark:text-zinc-400">{month.revenue ? compactSellerValue(month.revenue) : ''}</span>
-                    <div className="flex h-28 w-full items-end rounded-md bg-slate-100 dark:bg-[#1B2430]">
+                    <span className="text-center text-micro tabular-nums text-surface-500 dark:text-surface-400">{month.revenue ? compactSellerValue(month.revenue) : ''}</span>
+                    <div className="flex h-28 w-full items-end rounded-md bg-surface-100 dark:bg-[#1B2430]">
                       <div
-                        className="w-full rounded-md bg-emerald-600 transition-[height] duration-500 dark:bg-emerald-500"
+                        className="w-full rounded-md bg-success-600 transition-[height] duration-500 dark:bg-success-500"
                         style={{ height: `${month.revenue ? Math.max(5, (month.revenue / maximumMonthlyRevenue) * 100) : 0}%` }}
                         title={`${month.label}: ${formatCurrency(month.revenue)} · ${month.orders} orders`}
                       />
                     </div>
-                    <span className="text-[10px] text-slate-600 dark:text-zinc-300">{month.label}</span>
+                    <span className="text-micro text-surface-600 dark:text-surface-300">{month.label}</span>
                   </div>
                 ))}
               </div>
             </section>
 
-            <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-zinc-800 dark:bg-[#12161D]">
-              <h2 className="text-sm font-bold text-slate-900 dark:text-white">Top products</h2>
-              <p className="mt-1 text-[11px] text-slate-500 dark:text-zinc-400">Ranked by net product sales.</p>
+            <section className="rounded-2xl border border-surface-200 bg-white p-5 dark:border-surface-800 dark:bg-[#12161D]">
+              <h2 className="text-sm font-bold text-surface-900 dark:text-white">Top products</h2>
+              <p className="mt-1 text-micro text-surface-500 dark:text-surface-400">Ranked by net product sales.</p>
               {sellerProductPerformance.length ? (
-                <ol className="mt-3 divide-y divide-slate-100 dark:divide-zinc-800">
+                <ol className="mt-3 divide-y divide-surface-100 dark:divide-surface-800">
                   {sellerProductPerformance.map(({ product, units, revenue }, index) => (
                     <li key={product.Product_ID} className="flex items-center gap-3 py-3">
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-slate-100 text-xs font-bold text-slate-700 dark:bg-zinc-800 dark:text-zinc-200">{index + 1}</span>
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-surface-100 text-xs font-bold text-surface-700 dark:bg-surface-800 dark:text-surface-200">{index + 1}</span>
                       <img src={product.Image} alt="" className="h-9 w-9 shrink-0 rounded-md object-cover" />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-semibold text-slate-900 dark:text-white">{product.Name}</p>
-                        <p className="text-[10px] text-slate-500 dark:text-zinc-400">{units.toLocaleString()} units sold</p>
+                        <p className="truncate text-xs font-semibold text-surface-900 dark:text-white">{product.Name}</p>
+                        <p className="text-micro text-surface-500 dark:text-surface-400">{units.toLocaleString()} units sold</p>
                       </div>
-                      <span className="shrink-0 text-xs font-bold tabular-nums text-slate-800 dark:text-zinc-200">{formatCurrency(revenue)}</span>
+                      <span className="shrink-0 text-xs font-bold tabular-nums text-surface-800 dark:text-surface-200">{formatCurrency(revenue)}</span>
                     </li>
                   ))}
                 </ol>
               ) : (
-                <p className="py-10 text-center text-xs text-slate-500 dark:text-zinc-400">Sales analytics appear after your first eligible order.</p>
+                <p className="py-10 text-center text-xs text-surface-500 dark:text-surface-400">Sales analytics appear after your first eligible order.</p>
               )}
             </section>
           </div>
-          <section className="overflow-x-auto rounded-2xl border border-slate-200 bg-white dark:border-zinc-800 dark:bg-[#12161D]">
+          <section className="overflow-x-auto rounded-2xl border border-surface-200 bg-white dark:border-surface-800 dark:bg-[#12161D]">
             <div className="p-5">
-              <h2 className="text-sm font-bold text-slate-900 dark:text-white">Price positioning</h2>
-              <p className="mt-1 text-[11px] text-slate-500 dark:text-zinc-400">Compares effective price with the median of other active, in-stock ShopNiro listings in the same category. This is not external competitor data or a margin estimate.</p>
+              <h2 className="text-sm font-bold text-surface-900 dark:text-white">Price positioning</h2>
+              <p className="mt-1 text-micro text-surface-500 dark:text-surface-400">Compares effective price with the median of other active, in-stock ShopNiro listings in the same category. This is not external competitor data or a margin estimate.</p>
             </div>
             <table className="w-full min-w-[560px] text-left text-xs">
-              <thead className="border-y border-slate-200 bg-slate-50 text-[10px] uppercase text-slate-500 dark:border-zinc-800 dark:bg-[#181F2A] dark:text-zinc-400"><tr><th className="p-3">Product</th><th className="p-3">List price</th><th className="p-3">Effective price</th><th className="p-3">Category median</th><th className="p-3">Position</th></tr></thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
+              <thead className="border-y border-surface-200 bg-surface-50 text-micro uppercase text-surface-500 dark:border-surface-800 dark:bg-[#181F2A] dark:text-surface-400"><tr><th className="p-3">Product</th><th className="p-3">List price</th><th className="p-3">Effective price</th><th className="p-3">Category median</th><th className="p-3">Position</th></tr></thead>
+              <tbody className="divide-y divide-surface-100 dark:divide-surface-800">
                 {sellerPricingGuidance.map(({ product, categoryMedian, effectivePrice, variance }) => (
                   <tr key={product.Product_ID}>
-                    <td className="p-3 font-semibold text-slate-900 dark:text-white">{product.Name}</td>
+                    <td className="p-3 font-semibold text-surface-900 dark:text-white">{product.Name}</td>
                     <td className="p-3 tabular-nums">{formatCurrency(product.Price)}</td>
                     <td className="p-3 tabular-nums">{formatCurrency(effectivePrice)}</td>
                     <td className="p-3 tabular-nums">{categoryMedian === null ? 'Not enough listings' : formatCurrency(categoryMedian)}</td>
-                    <td className="p-3 text-slate-600 dark:text-zinc-300">{variance === null ? 'No comparison' : `${variance > 0 ? '+' : ''}${variance.toFixed(1)}% vs median`}</td>
+                    <td className="p-3 text-surface-600 dark:text-surface-300">{variance === null ? 'No comparison' : `${variance > 0 ? '+' : ''}${variance.toFixed(1)}% vs median`}</td>
                   </tr>
                 ))}
-                {!sellerPricingGuidance.length && <tr><td colSpan={5} className="p-6 text-center text-xs text-slate-500">Add products to compare category pricing.</td></tr>}
+                {!sellerPricingGuidance.length && <tr><td colSpan={5} className="p-6 text-center text-xs text-surface-500">Add products to compare category pricing.</td></tr>}
               </tbody>
             </table>
           </section>
-          <section className="overflow-x-auto rounded-2xl border border-slate-200 bg-white dark:border-zinc-800 dark:bg-[#12161D]">
+          <section className="overflow-x-auto rounded-2xl border border-surface-200 bg-white dark:border-surface-800 dark:bg-[#12161D]">
             <div className="p-5">
-              <h2 className="text-sm font-bold text-slate-900 dark:text-white">Listing performance</h2>
-              <p className="mt-1 text-[11px] text-slate-500 dark:text-zinc-400">Click-through uses unique daily storefront impressions and clicks for the last 7 days; return rate uses refunded order units from the last 30 days.</p>
+              <h2 className="text-sm font-bold text-surface-900 dark:text-white">Listing performance</h2>
+              <p className="mt-1 text-micro text-surface-500 dark:text-surface-400">Click-through uses unique daily storefront impressions and clicks for the last 7 days; return rate uses refunded order units from the last 30 days.</p>
             </div>
-            {analyticsError && <p role="alert" className="mx-5 mb-3 text-xs text-rose-700 dark:text-rose-300">{analyticsError}</p>}
+            {analyticsError && <p role="alert" className="mx-5 mb-3 text-xs text-danger-700 dark:text-danger-300">{analyticsError}</p>}
             <table className="w-full min-w-[680px] text-left text-xs">
-              <thead className="border-y border-slate-200 bg-slate-50 text-[10px] uppercase text-slate-500 dark:border-zinc-800 dark:bg-[#181F2A] dark:text-zinc-400">
+              <thead className="border-y border-surface-200 bg-surface-50 text-micro uppercase text-surface-500 dark:border-surface-800 dark:bg-[#181F2A] dark:text-surface-400">
                 <tr><th className="p-3">Product</th><th className="p-3">Views · 7d</th><th className="p-3">Clicks · 7d</th><th className="p-3">CTR</th><th className="p-3">Returned · 30d</th><th className="p-3">Return rate</th><th className="p-3">Next action</th></tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-zinc-800">
+              <tbody className="divide-y divide-surface-100 dark:divide-surface-800">
                 {productAnalytics.map((metric) => {
                   const product = sellerProducts.find((item) => item.Product_ID === metric.Product_ID);
                   if (!product) return null;
@@ -851,16 +829,16 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                   const ctrDrop = metric.CTR_Previous_7d !== null && metric.CTR_Previous_7d > 0 && metric.CTR_7d !== null && metric.CTR_7d <= metric.CTR_Previous_7d * 0.9;
                   const highReturns = metric.Returned_Units_30d >= 2 && metric.Return_Rate_30d !== null && metric.Return_Rate_30d >= 10;
                   return <tr key={metric.Product_ID}>
-                    <td className="p-3 font-semibold text-slate-900 dark:text-white">{product.Name}</td>
+                    <td className="p-3 font-semibold text-surface-900 dark:text-white">{product.Name}</td>
                     <td className="p-3 tabular-nums">{metric.Impressions_7d.toLocaleString()}</td>
                     <td className="p-3 tabular-nums">{metric.Clicks_7d.toLocaleString()}</td>
                     <td className="p-3 tabular-nums">{metric.CTR_7d === null ? '—' : `${metric.CTR_7d.toFixed(1)}%`}</td>
                     <td className="p-3 tabular-nums">{metric.Returned_Units_30d.toLocaleString()}</td>
                     <td className="p-3 tabular-nums">{metric.Return_Rate_30d === null ? '—' : `${metric.Return_Rate_30d.toFixed(1)}%`}</td>
-                    <td className="p-3 text-[10px] text-slate-600 dark:text-zinc-300">{ctrDrop ? 'CTR down 10%+; review listing' : lowCtr ? 'Refresh image or title' : highReturns ? 'Review product details and fit' : metric.Impressions_7d < 25 ? 'Gather more views' : 'On track'}</td>
+                    <td className="p-3 text-micro text-surface-600 dark:text-surface-300">{ctrDrop ? 'CTR down 10%+; review listing' : lowCtr ? 'Refresh image or title' : highReturns ? 'Review product details and fit' : metric.Impressions_7d < 25 ? 'Gather more views' : 'On track'}</td>
                   </tr>;
                 })}
-                {!productAnalytics.length && !analyticsError && <tr><td colSpan={7} className="p-6 text-center text-xs text-slate-500">Listing metrics will appear as shoppers view and buy your products.</td></tr>}
+                {!productAnalytics.length && !analyticsError && <tr><td colSpan={7} className="p-6 text-center text-xs text-surface-500">Listing metrics will appear as shoppers view and buy your products.</td></tr>}
               </tbody>
             </table>
           </section>
@@ -872,13 +850,13 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm" onClick={(event) => { if (event.target === event.currentTarget && !isDeletingProduct) setProductToDelete(null); }}>
           <section role="dialog" aria-modal="true" aria-labelledby="delete-product-title" className="premium-surface w-full max-w-md space-y-4 rounded-xl p-5 shadow-2xl">
             <div>
-              <h2 id="delete-product-title" className="text-base font-bold text-slate-900 dark:text-white">Delete {productToDelete.Name}?</h2>
-              <p className="mt-2 text-sm text-slate-600 dark:text-zinc-300">Orders already placed keep their copy.</p>
+              <h2 id="delete-product-title" className="text-base font-bold text-surface-900 dark:text-white">Delete {productToDelete.Name}?</h2>
+              <p className="mt-2 text-sm text-surface-600 dark:text-surface-300">Orders already placed keep their copy.</p>
             </div>
-            {deleteProductError && <p role="alert" className="text-xs text-rose-700 dark:text-rose-300">{deleteProductError}</p>}
+            {deleteProductError && <p role="alert" className="text-xs text-danger-700 dark:text-danger-300">{deleteProductError}</p>}
             <div className="flex justify-end gap-2">
-              <button type="button" disabled={isDeletingProduct} onClick={() => setProductToDelete(null)} className="rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800">Keep product</button>
-              <button type="button" disabled={isDeletingProduct} onClick={() => void confirmDeleteProduct()} className="rounded-full bg-rose-700 px-4 py-2 text-xs font-bold text-white hover:bg-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 disabled:opacity-50">{isDeletingProduct ? 'Deleting…' : 'Delete product'}</button>
+              <button type="button" disabled={isDeletingProduct} onClick={() => setProductToDelete(null)} className="rounded-full border border-surface-300 px-4 py-2 text-xs font-semibold text-surface-700 hover:bg-surface-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] dark:border-surface-700 dark:text-surface-200 dark:hover:bg-surface-800">Keep product</button>
+              <button type="button" disabled={isDeletingProduct} onClick={() => void confirmDeleteProduct()} className="rounded-full bg-danger-700 px-4 py-2 text-xs font-bold text-white hover:bg-danger-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger-400 disabled:opacity-50">{isDeletingProduct ? 'Deleting…' : 'Delete product'}</button>
             </div>
           </section>
         </div>
@@ -888,10 +866,10 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
       {activeTab === 'reviews' && (
         <div className="space-y-4">
           {sellerReviews.length === 0 ? (
-            <div className="text-center py-16 bg-white dark:bg-[#12161D] rounded-3xl border border-sky-100 dark:border-sky-500/20 p-8 space-y-3">
-              <Star className="w-12 h-12 text-slate-300 dark:text-zinc-600 mx-auto" />
-              <h3 className="font-bold text-slate-800 dark:text-zinc-200">No product reviews yet</h3>
-              <p className="text-xs text-slate-500 dark:text-zinc-400">
+            <div className="text-center py-16 bg-white dark:bg-[#12161D] rounded-3xl border border-brand-100 dark:border-brand-500/20 p-8 space-y-3">
+              <Star className="w-12 h-12 text-surface-300 dark:text-surface-600 mx-auto" />
+              <h3 className="font-bold text-surface-800 dark:text-surface-200">No product reviews yet</h3>
+              <p className="text-xs text-surface-500 dark:text-surface-400">
                 Customer reviews and star ratings left on your products will appear here.
               </p>
             </div>
@@ -906,19 +884,19 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                   >
                     <div className="flex justify-between items-start">
                       <div>
-                        <span className="font-bold text-slate-900 dark:text-white block">{rev.Customer_Name}</span>
-                        <span className="text-[10px] text-slate-400 dark:text-zinc-500">{formatDate(rev.Created_At)}</span>
+                        <span className="font-bold text-surface-900 dark:text-white block">{rev.Customer_Name}</span>
+                        <span className="text-micro text-surface-400 dark:text-surface-500">{formatDate(rev.Created_At)}</span>
                       </div>
                       <StarRating rating={rev.Rating} size="sm" />
                     </div>
 
                     {prod && (
-                      <div className="p-2 bg-sky-500/10 border border-sky-500/20 rounded-xl text-[11px] font-semibold text-blue-500 dark:text-sky-400">
+                      <div className="p-2 bg-brand-500/10 border border-brand-500/20 rounded-xl text-micro font-semibold text-brand-500 dark:text-brand-400">
                         Product: {prod.Name}
                       </div>
                     )}
 
-                    <p className="text-slate-600 dark:text-zinc-300 leading-relaxed italic">
+                    <p className="text-surface-600 dark:text-surface-300 leading-relaxed italic">
                       "{rev.Review_text}"
                     </p>
                   </div>
@@ -932,22 +910,22 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
       {activeTab === 'wallet' && (
         <section className="space-y-4">
           <header className="flex flex-wrap items-end justify-between gap-3">
-            <div><h2 className="text-lg font-bold text-slate-900 dark:text-white">Seller ledger</h2><p className="text-xs text-slate-500 dark:text-zinc-400">Sales, COD, commission, refunds, and payout activity.</p></div>
-            <div className="text-right"><p className="text-lg font-bold text-emerald-800 dark:text-emerald-300">Available: {formatCurrency(sellerWallet?.available || 0)}</p><p className="text-xs text-slate-500 dark:text-zinc-400">Pending 7-day hold: {formatCurrency(sellerWallet?.pending || 0)}</p></div>
+            <div><h2 className="text-lg font-bold text-surface-900 dark:text-white">Seller ledger</h2><p className="text-xs text-surface-500 dark:text-surface-400">Sales, COD, commission, refunds, and payout activity.</p></div>
+            <div className="text-right"><p className="text-lg font-bold text-success-800 dark:text-success-300">Available: {formatCurrency(sellerWallet?.available || 0)}</p><p className="text-xs text-surface-500 dark:text-surface-400">Pending 7-day hold: {formatCurrency(sellerWallet?.pending || 0)}</p></div>
           </header>
-          {walletError && <p role="alert" className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950/30 dark:text-rose-300">{walletError}</p>}
-          {payoutMessage && <p role="status" className="rounded-lg bg-emerald-50 p-3 text-sm text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300">{payoutMessage}</p>}
-          <form onSubmit={requestPayout} className="flex flex-wrap items-end gap-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-zinc-800 dark:bg-[#12161D]">
-            <label className="min-w-[180px] flex-1 space-y-1 text-xs font-semibold text-slate-700 dark:text-zinc-300">Payout amount
-              <input type="number" min="0.01" step="0.01" required value={payoutAmount} onChange={(event) => setPayoutAmount(event.target.value)} className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-[#181F2A]" />
+          {walletError && <p role="alert" className="rounded-lg bg-danger-50 p-3 text-sm text-danger-700 dark:bg-danger-950/30 dark:text-danger-300">{walletError}</p>}
+          {payoutMessage && <p role="status" className="rounded-lg bg-success-50 p-3 text-sm text-success-800 dark:bg-success-950/30 dark:text-success-300">{payoutMessage}</p>}
+          <form onSubmit={requestPayout} className="flex flex-wrap items-end gap-3 rounded-xl border border-surface-200 bg-white p-4 dark:border-surface-800 dark:bg-[#12161D]">
+            <label className="min-w-[180px] flex-1 space-y-1 text-xs font-semibold text-surface-700 dark:text-surface-300">Payout amount
+              <input type="number" min="0.01" step="0.01" required value={payoutAmount} onChange={(event) => setPayoutAmount(event.target.value)} className="w-full rounded-lg border border-surface-300 bg-white px-3 py-2 text-sm dark:border-surface-700 dark:bg-[#181F2A]" />
             </label>
-            {!sellerWallet?.payoutVerified && <p className="text-xs text-amber-700 dark:text-amber-300">Payout account verification is required before requesting a payout.</p>}
-            <button type="submit" disabled={isRequestingPayout || !sellerWallet?.payoutVerified} className="rounded-lg bg-emerald-700 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">{isRequestingPayout ? 'Submitting…' : 'Request payout'}</button>
+            {!sellerWallet?.payoutVerified && <p className="text-xs text-warning-700 dark:text-warning-300">Payout account verification is required before requesting a payout.</p>}
+            <button type="submit" disabled={isRequestingPayout || !sellerWallet?.payoutVerified} className="rounded-lg bg-success-700 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">{isRequestingPayout ? 'Submitting…' : 'Request payout'}</button>
           </form>
-          <div className="divide-y divide-slate-200 rounded-xl border border-slate-200 bg-white dark:divide-zinc-800 dark:border-zinc-800 dark:bg-[#12161D]">
-            {sellerWallet?.entries.map((entry) => <div key={entry.id} className="flex flex-wrap items-center justify-between gap-3 p-4"><div><p className="text-sm font-semibold text-slate-900 dark:text-white">{entry.description}</p><p className="mt-1 font-mono text-[10px] text-slate-500">Ref: {entry.reference_id} · {formatDate(entry.created_at)} · {new Date(entry.available_at).getTime() > Date.now() ? 'On hold' : 'Available'}</p></div><span className={`font-bold ${Number(entry.amount) < 0 ? 'text-rose-700 dark:text-rose-300' : 'text-emerald-700 dark:text-emerald-300'}`}>{formatCurrency(Number(entry.amount))}</span></div>)}
-            {!sellerWallet?.entries.length && !walletError && <p className="p-8 text-center text-sm text-slate-500">No ledger entries yet.</p>}
-            {!sellerWallet && !walletError && <p className="p-8 text-center text-sm text-slate-500">Loading seller ledger...</p>}
+          <div className="divide-y divide-surface-200 rounded-xl border border-surface-200 bg-white dark:divide-surface-800 dark:border-surface-800 dark:bg-[#12161D]">
+            {sellerWallet?.entries.map((entry) => <div key={entry.id} className="flex flex-wrap items-center justify-between gap-3 p-4"><div><p className="text-sm font-semibold text-surface-900 dark:text-white">{entry.description}</p><p className="mt-1 font-mono text-micro text-surface-500">Ref: {entry.reference_id} · {formatDate(entry.created_at)} · {new Date(entry.available_at).getTime() > Date.now() ? 'On hold' : 'Available'}</p></div><span className={`font-bold ${Number(entry.amount) < 0 ? 'text-danger-700 dark:text-danger-300' : 'text-success-700 dark:text-success-300'}`}>{formatCurrency(Number(entry.amount))}</span></div>)}
+            {!sellerWallet?.entries.length && !walletError && <p className="p-8 text-center text-sm text-surface-500">No ledger entries yet.</p>}
+            {!sellerWallet && !walletError && <p className="p-8 text-center text-sm text-surface-500">Loading seller ledger...</p>}
           </div>
         </section>
       )}
@@ -956,13 +934,13 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm" onClick={(event) => { if (event.target === event.currentTarget && !isDeletingProduct) setProductToDelete(null); }}>
           <section role="dialog" aria-modal="true" aria-labelledby="delete-product-title" className="premium-surface w-full max-w-md space-y-4 rounded-xl p-5 shadow-2xl">
             <div>
-              <h2 id="delete-product-title" className="text-base font-bold text-slate-900 dark:text-white">Delete {productToDelete.Name}?</h2>
-              <p className="mt-2 text-sm text-slate-600 dark:text-zinc-300">Orders already placed keep their copy.</p>
+              <h2 id="delete-product-title" className="text-base font-bold text-surface-900 dark:text-white">Delete {productToDelete.Name}?</h2>
+              <p className="mt-2 text-sm text-surface-600 dark:text-surface-300">Orders already placed keep their copy.</p>
             </div>
-            {deleteProductError && <p role="alert" className="text-xs text-rose-700 dark:text-rose-300">{deleteProductError}</p>}
+            {deleteProductError && <p role="alert" className="text-xs text-danger-700 dark:text-danger-300">{deleteProductError}</p>}
             <div className="flex justify-end gap-2">
-              <button type="button" disabled={isDeletingProduct} onClick={() => setProductToDelete(null)} className="rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-800">Keep product</button>
-              <button type="button" disabled={isDeletingProduct} onClick={() => void confirmDeleteProduct()} className="rounded-full bg-rose-700 px-4 py-2 text-xs font-bold text-white hover:bg-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 disabled:opacity-50">{isDeletingProduct ? 'Deleting…' : 'Delete product'}</button>
+              <button type="button" disabled={isDeletingProduct} onClick={() => setProductToDelete(null)} className="rounded-full border border-surface-300 px-4 py-2 text-xs font-semibold text-surface-700 hover:bg-surface-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] dark:border-surface-700 dark:text-surface-200 dark:hover:bg-surface-800">Keep product</button>
+              <button type="button" disabled={isDeletingProduct} onClick={() => void confirmDeleteProduct()} className="rounded-full bg-danger-700 px-4 py-2 text-xs font-bold text-white hover:bg-danger-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger-400 disabled:opacity-50">{isDeletingProduct ? 'Deleting…' : 'Delete product'}</button>
             </div>
           </section>
         </div>

@@ -1,4 +1,5 @@
 import { BUSINESS as B } from './business';
+import { money } from '../../lib/format';
 
 export type PolicyId = 'terms' | 'privacy' | 'refunds' | 'delivery';
 
@@ -229,7 +230,7 @@ export const POLICIES: Policy[] = [
       },
       {
         heading: '2. Delivery fees',
-        paragraphs: [`The delivery fee is shown at checkout before you confirm. Delivery is free when the product subtotal is ৳${B.freeShippingThresholdBDT} or more.`],
+        paragraphs: [`The delivery fee is shown at checkout before you confirm. Delivery is free when the product subtotal is ${money(B.freeShippingThresholdBDT)} or more.`],
       },
       {
         heading: '3. Timing and tracking',

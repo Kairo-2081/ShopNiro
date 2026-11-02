@@ -211,18 +211,18 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
         onClick={(event) => event.stopPropagation()}
       >
         {/* Header bar */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-zinc-800 bg-slate-50/50 dark:bg-[#161C24]/80">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-surface-100 dark:border-surface-800 bg-surface-50/50 dark:bg-[#161C24]/80">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-sky-400">
+            <span className="text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
               {category?.Name || 'Product Detail'}
             </span>
-            <span className="text-slate-300 dark:text-zinc-700">•</span>
-            <span className="text-xs text-slate-500 dark:text-zinc-400 font-mono">ID: {product.Product_ID}</span>
+            <span className="text-surface-300 dark:text-surface-700">•</span>
+            <span className="text-xs text-surface-500 dark:text-surface-400 font-mono">ID: {product.Product_ID}</span>
           </div>
           <button
             onClick={onClose}
             aria-label="Close product details"
-            className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200 dark:hover:bg-zinc-800 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5]"
+            className="p-1.5 rounded-full text-surface-400 hover:text-surface-700 dark:hover:text-surface-200 hover:bg-surface-200 dark:hover:bg-surface-800 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5]"
           >
             <X className="w-5 h-5" />
           </button>
@@ -233,7 +233,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* Left Column - Product Image */}
             <div className="space-y-4">
-              <div className="aspect-square w-full rounded-2xl bg-slate-100 dark:bg-[#0C1014] overflow-hidden border border-slate-200 dark:border-zinc-800 relative">
+              <div className="aspect-square w-full rounded-2xl bg-surface-100 dark:bg-[#0C1014] overflow-hidden border border-surface-200 dark:border-surface-800 relative">
                 <img
                   src={imgError || !selectedImage ? defaultPlaceholder : selectedImage}
                   alt={product.Name}
@@ -242,7 +242,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   className="w-full h-full object-cover"
                 />
                 {product.Voucher && (
-                  <div className="absolute top-4 left-4 bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5">
+                  <div className="absolute top-4 left-4 bg-brand-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5">
                     <Tag className="w-4 h-4" />
                     Voucher: {product.Voucher}
                   </div>
@@ -251,45 +251,45 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               {productImages.length > 1 && (
                 <div className="flex gap-2 overflow-x-auto">
                   {productImages.map((imageUrl, index) => (
-                    <button key={`${imageUrl}-${index}`} type="button" onClick={() => { setGalleryIndex(index); setImgError(false); }} aria-label={`Show product image ${index + 1}`} aria-pressed={galleryIndex === index} className={`h-14 w-14 shrink-0 overflow-hidden rounded-lg border-2 ${galleryIndex === index ? 'border-blue-600' : 'border-slate-200 dark:border-zinc-700'}`}>
+                    <button key={`${imageUrl}-${index}`} type="button" onClick={() => { setGalleryIndex(index); setImgError(false); }} aria-label={`Show product image ${index + 1}`} aria-pressed={galleryIndex === index} className={`h-14 w-14 shrink-0 overflow-hidden rounded-lg border-2 ${galleryIndex === index ? 'border-brand-600' : 'border-surface-200 dark:border-surface-700'}`}>
                       <img src={imageUrl} alt="" className="h-full w-full object-cover" />
                     </button>
                   ))}
                 </div>
               )}
               {product.Video_URL && (
-                <video controls preload="metadata" src={product.Video_URL} className="w-full rounded-xl border border-slate-200 bg-black dark:border-zinc-800">
+                <video controls preload="metadata" src={product.Video_URL} className="w-full rounded-xl border border-surface-200 bg-black dark:border-surface-800">
                   Your browser does not support product video playback.
                 </video>
               )}
 
               {/* Seller Info Box */}
               {seller && (
-                <div className="p-4 rounded-2xl bg-slate-50 dark:bg-[#161C24] border border-slate-200 dark:border-zinc-800 flex items-start gap-3">
+                <div className="p-4 rounded-2xl bg-surface-50 dark:bg-[#161C24] border border-surface-200 dark:border-surface-800 flex items-start gap-3">
                   <img
                     src={seller.Logo || defaultPlaceholder}
                     alt={seller.Name}
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = defaultPlaceholder;
                     }}
-                    className="w-12 h-12 rounded-xl object-cover border border-slate-200 dark:border-zinc-700 shrink-0"
+                    className="w-12 h-12 rounded-xl object-cover border border-surface-200 dark:border-surface-700 shrink-0"
                   />
                   <div className="flex-1 text-xs space-y-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <span className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-1.5 truncate">
-                        <Store className="w-4 h-4 text-emerald-500 shrink-0" />
+                      <span className="font-bold text-surface-900 dark:text-white text-sm flex items-center gap-1.5 truncate">
+                        <Store className="w-4 h-4 text-success-500 shrink-0" />
                         <span className="truncate">{seller.Name}</span>
                       </span>
-                      <span className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 px-2.5 py-0.5 rounded-full font-semibold text-[10px] uppercase shrink-0 border border-emerald-500/20">
+                      <span className="bg-success-500/10 text-success-700 dark:text-success-400 px-2.5 py-0.5 rounded-full font-semibold text-micro uppercase shrink-0 border border-success-500/20">
                         Approved Seller
                       </span>
                     </div>
                     {seller.Description && (
-                      <p className="text-slate-600 dark:text-zinc-300 line-clamp-2">{seller.Description}</p>
+                      <p className="text-surface-600 dark:text-surface-300 line-clamp-2">{seller.Description}</p>
                     )}
                     {seller.Address && (
-                      <p className="text-slate-500 dark:text-zinc-400 flex items-center gap-1 font-mono text-[11px] pt-1 truncate">
-                        <MapPin className="w-3 h-3 text-slate-400 shrink-0" />
+                      <p className="text-surface-500 dark:text-surface-400 flex items-center gap-1 font-mono text-micro pt-1 truncate">
+                        <MapPin className="w-3 h-3 text-surface-400 shrink-0" />
                         <span className="truncate">
                           {seller.Address.Street}, {seller.Address.City} ({seller.Address.Postal_Code})
                         </span>
@@ -303,51 +303,51 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             {/* Right Column - Product Meta & Actions */}
             <div className="flex flex-col justify-between space-y-6">
               <div className="space-y-4">
-                <h1 className="text-2xl font-black text-slate-900 dark:text-white leading-tight">
+                <h1 className="text-2xl font-black text-surface-900 dark:text-white leading-tight">
                   {product.Name}
                 </h1>
 
                 {/* Rating Summary */}
                 <div className="flex items-center gap-3">
                   <StarRating rating={avgRating} size="md" showText totalReviews={productReviews.length} />
-                  <span className="text-slate-300 dark:text-zinc-700">•</span>
-                    <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
+                  <span className="text-surface-300 dark:text-surface-700">•</span>
+                    <span className="text-xs text-success-600 dark:text-success-400 font-medium flex items-center gap-1">
                     <CheckCircle2 className="w-3.5 h-3.5" /> Available from this seller
                   </span>
                 </div>
 
                 {/* Price Display */}
-                <div className="p-4 rounded-2xl bg-blue-50/50 dark:bg-[#161C24] border border-blue-100 dark:border-blue-900/40 flex items-baseline justify-between">
+                <div className="p-4 rounded-2xl bg-brand-50/50 dark:bg-[#161C24] border border-brand-100 dark:border-brand-900/40 flex items-baseline justify-between">
                   <div>
-                    <span className="text-xs text-slate-500 dark:text-zinc-400 uppercase tracking-wider font-semibold block">
+                    <span className="text-xs text-surface-500 dark:text-surface-400 uppercase tracking-wider font-semibold block">
                       {hasVoucherDiscount ? 'Price with code' : 'Price'}
                     </span>
-                    <span className="text-3xl font-black text-blue-600 dark:text-sky-400">
+                    <span className="text-3xl font-black text-brand-600 dark:text-brand-400">
                       {formatCurrency(voucherPrice)}
                     </span>
-                    {hasVoucherDiscount && <span className="ml-2 text-xs text-slate-500 line-through dark:text-zinc-500">{formatCurrency(Number(product.Price))}</span>}
+                    {hasVoucherDiscount && <span className="ml-2 text-xs text-surface-500 line-through dark:text-surface-500">{formatCurrency(Number(product.Price))}</span>}
                   </div>
                   {hasActiveVoucher && (
-                    <span title={describeVoucher(product.Voucher)} className="max-w-[180px] text-right text-[10px] font-semibold text-blue-700 dark:text-sky-300">
+                    <span title={describeVoucher(product.Voucher)} className="max-w-[180px] text-right text-micro font-semibold text-brand-700 dark:text-brand-300">
                       <span className="block">Use code <code className="font-bold">{product.Voucher}</code></span>
-                      <span className="mt-0.5 block font-normal text-slate-500 dark:text-zinc-400">{describeVoucher(product.Voucher)}</span>
-                      {voucherCountdown && <span className="mt-0.5 block font-semibold text-amber-700 dark:text-amber-300">{voucherCountdown}</span>}
+                      <span className="mt-0.5 block font-normal text-surface-500 dark:text-surface-400">{describeVoucher(product.Voucher)}</span>
+                      {voucherCountdown && <span className="mt-0.5 block font-semibold text-warning-700 dark:text-warning-300">{voucherCountdown}</span>}
                     </span>
                   )}
                 </div>
 
                 {/* Description */}
                 <div>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-zinc-400 mb-1">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-surface-500 dark:text-surface-400 mb-1">
                     Product Details
                   </h3>
-                  <div className="space-y-2 text-sm leading-relaxed text-slate-600 dark:text-zinc-300">
+                  <div className="space-y-2 text-sm leading-relaxed text-surface-600 dark:text-surface-300">
                     <ReactMarkdown components={{
-                      h1: ({ children }) => <h2 className="pt-2 text-sm font-bold text-slate-900 dark:text-white">{children}</h2>,
-                      h2: ({ children }) => <h2 className="pt-2 text-sm font-bold text-slate-900 dark:text-white">{children}</h2>,
-                      h3: ({ children }) => <h3 className="pt-1 text-xs font-bold text-slate-900 dark:text-white">{children}</h3>,
+                      h1: ({ children }) => <h2 className="pt-2 text-sm font-bold text-surface-900 dark:text-white">{children}</h2>,
+                      h2: ({ children }) => <h2 className="pt-2 text-sm font-bold text-surface-900 dark:text-white">{children}</h2>,
+                      h3: ({ children }) => <h3 className="pt-1 text-xs font-bold text-surface-900 dark:text-white">{children}</h3>,
                       p: ({ children }) => <p>{children}</p>,
-                      strong: ({ children }) => <strong className="font-bold text-slate-900 dark:text-white">{children}</strong>,
+                      strong: ({ children }) => <strong className="font-bold text-surface-900 dark:text-white">{children}</strong>,
                       ul: ({ children }) => <ul className="list-disc space-y-1 pl-5">{children}</ul>,
                       ol: ({ children }) => <ol className="list-decimal space-y-1 pl-5">{children}</ol>,
                       li: ({ children }) => <li>{children}</li>,
@@ -358,12 +358,12 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 </div>
 
                 {product.Highlights?.some((highlight) => highlight.trim()) && (
-                  <section className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-zinc-800 dark:bg-[#161C24]">
-                    <h3 className="mb-2 text-xs font-bold text-slate-800 dark:text-zinc-200">Key product specs</h3>
-                    <ul className="space-y-1.5 text-xs text-slate-600 dark:text-zinc-300">
+                  <section className="rounded-xl border border-surface-200 bg-surface-50 p-4 dark:border-surface-800 dark:bg-[#161C24]">
+                    <h3 className="mb-2 text-xs font-bold text-surface-800 dark:text-surface-200">Key product specs</h3>
+                    <ul className="space-y-1.5 text-xs text-surface-600 dark:text-surface-300">
                       {product.Highlights.filter((highlight) => highlight.trim()).map((highlight) => (
                         <li key={highlight} className="flex items-start gap-2">
-                          <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                          <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0 text-success-600 dark:text-success-400" />
                           <span>{highlight}</span>
                         </li>
                       ))}
@@ -372,64 +372,64 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 )}
 
                 {(product.Warranty_Information || product.Return_Policy) && (
-                  <section className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-zinc-800 dark:bg-[#161C24]">
-                    <h3 className="mb-2 text-xs font-bold text-slate-800 dark:text-zinc-200">Seller-provided policies</h3>
-                    {product.Warranty_Information && <p className="whitespace-pre-line text-xs text-slate-600 dark:text-zinc-300"><strong>Coverage:</strong> {product.Warranty_Information}</p>}
-                    {product.Return_Policy && <p className="mt-1 text-xs text-slate-600 dark:text-zinc-300"><strong>Returns:</strong> {product.Return_Policy}</p>}
+                  <section className="rounded-xl border border-surface-200 bg-surface-50 p-4 dark:border-surface-800 dark:bg-[#161C24]">
+                    <h3 className="mb-2 text-xs font-bold text-surface-800 dark:text-surface-200">Seller-provided policies</h3>
+                    {product.Warranty_Information && <p className="whitespace-pre-line text-xs text-surface-600 dark:text-surface-300"><strong>Coverage:</strong> {product.Warranty_Information}</p>}
+                    {product.Return_Policy && <p className="mt-1 text-xs text-surface-600 dark:text-surface-300"><strong>Returns:</strong> {product.Return_Policy}</p>}
                   </section>
                 )}
 
                 {/* Specs pills */}
                 <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div className="p-3 rounded-2xl bg-slate-50 dark:bg-[#161C24] border border-slate-200 dark:border-zinc-800">
-                    <span className="text-slate-400 dark:text-zinc-500 block text-[10px] uppercase font-bold">Category</span>
-                    <span className="font-semibold text-slate-800 dark:text-zinc-200">{category?.Name || 'General'}</span>
+                  <div className="p-3 rounded-2xl bg-surface-50 dark:bg-[#161C24] border border-surface-200 dark:border-surface-800">
+                    <span className="text-surface-400 dark:text-surface-500 block text-micro uppercase font-bold">Category</span>
+                    <span className="font-semibold text-surface-800 dark:text-surface-200">{category?.Name || 'General'}</span>
                   </div>
-                  <div className="p-3 rounded-2xl bg-slate-50 dark:bg-[#161C24] border border-slate-200 dark:border-zinc-800">
-                    <span className="text-slate-400 dark:text-zinc-500 block text-[10px] uppercase font-bold">Available Inventory</span>
-                    <span className="font-semibold text-slate-800 dark:text-zinc-200">{product.Stock} units</span>
+                  <div className="p-3 rounded-2xl bg-surface-50 dark:bg-[#161C24] border border-surface-200 dark:border-surface-800">
+                    <span className="text-surface-400 dark:text-surface-500 block text-micro uppercase font-bold">Available Inventory</span>
+                    <span className="font-semibold text-surface-800 dark:text-surface-200">{product.Stock} units</span>
                   </div>
                 </div>
               </div>
 
               {/* Quantity & Add to Cart */}
-              <div className="pt-4 border-t border-slate-100 dark:border-zinc-800 space-y-4">
+              <div className="pt-4 border-t border-surface-100 dark:border-surface-800 space-y-4">
                 {product.Sizes?.length ? (
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-xs font-semibold text-slate-600 dark:text-zinc-400">Choose size{product.Size_Gender ? ` · ${product.Size_Gender}` : ''}</span>
-                      {product.Size_Chart?.length ? <span className="text-[10px] text-slate-500">Measurements in cm</span> : null}
+                      <span className="text-xs font-semibold text-surface-600 dark:text-surface-400">Choose size{product.Size_Gender ? ` · ${product.Size_Gender}` : ''}</span>
+                      {product.Size_Chart?.length ? <span className="text-micro text-surface-500">Measurements in cm</span> : null}
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      {product.Sizes.map((size) => <button key={size} type="button" aria-pressed={selectedSize === size} onClick={() => setSelectedSize(size)} className={`min-w-10 rounded-lg border px-3 py-2 text-xs font-bold ${selectedSize === size ? 'border-blue-700 bg-blue-700 text-white' : 'border-slate-300 text-slate-700 dark:border-zinc-700 dark:text-zinc-300'}`}>{size}</button>)}
+                      {product.Sizes.map((size) => <button key={size} type="button" aria-pressed={selectedSize === size} onClick={() => setSelectedSize(size)} className={`min-w-10 rounded-lg border px-3 py-2 text-xs font-bold ${selectedSize === size ? 'border-brand-700 bg-brand-700 text-white' : 'border-surface-300 text-surface-700 dark:border-surface-700 dark:text-surface-300'}`}>{size}</button>)}
                     </div>
                     {product.Size_Chart?.length ? (
-                      <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-zinc-800">
-                        <table className="w-full min-w-[420px] text-left text-[10px]">
-                          <thead className="bg-slate-50 text-slate-500 dark:bg-[#181F2A] dark:text-zinc-400"><tr><th className="p-2">Size</th><th>Chest</th><th>Waist</th><th>Hip</th><th>Length</th></tr></thead>
-                          <tbody>{product.Size_Chart.filter((row) => product.Sizes?.includes(row.Size)).map((row) => <tr key={row.Size} className="border-t border-slate-100 dark:border-zinc-800"><td className="p-2 font-bold">{row.Size}</td><td>{row.Chest_CM ?? '-'}</td><td>{row.Waist_CM ?? '-'}</td><td>{row.Hip_CM ?? '-'}</td><td>{row.Length_CM ?? '-'}</td></tr>)}</tbody>
+                      <div className="overflow-x-auto rounded-lg border border-surface-200 dark:border-surface-800">
+                        <table className="w-full min-w-[420px] text-left text-micro">
+                          <thead className="bg-surface-50 text-surface-500 dark:bg-[#181F2A] dark:text-surface-400"><tr><th className="p-2">Size</th><th>Chest</th><th>Waist</th><th>Hip</th><th>Length</th></tr></thead>
+                          <tbody>{product.Size_Chart.filter((row) => product.Sizes?.includes(row.Size)).map((row) => <tr key={row.Size} className="border-t border-surface-100 dark:border-surface-800"><td className="p-2 font-bold">{row.Size}</td><td>{row.Chest_CM ?? '-'}</td><td>{row.Waist_CM ?? '-'}</td><td>{row.Hip_CM ?? '-'}</td><td>{row.Length_CM ?? '-'}</td></tr>)}</tbody>
                         </table>
                       </div>
                     ) : null}
                   </div>
                 ) : null}
                 <div className="flex items-center gap-4">
-                  <span className="text-xs font-semibold text-slate-600 dark:text-zinc-400">Quantity:</span>
-                  <div className="flex items-center border border-slate-200 dark:border-zinc-700 rounded-full overflow-hidden bg-slate-50 dark:bg-[#181F2A]">
+                  <span className="text-xs font-semibold text-surface-600 dark:text-surface-400">Quantity:</span>
+                  <div className="flex items-center border border-surface-200 dark:border-surface-700 rounded-full overflow-hidden bg-surface-50 dark:bg-[#181F2A]">
                     <button
                       type="button"
                       onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                      className="px-3.5 py-1.5 text-slate-600 dark:text-zinc-300 hover:bg-slate-200 dark:hover:bg-zinc-700 font-bold text-sm cursor-pointer"
+                      className="px-3.5 py-1.5 text-surface-600 dark:text-surface-300 hover:bg-surface-200 dark:hover:bg-surface-700 font-bold text-sm cursor-pointer"
                     >
                       -
                     </button>
-                    <span className="px-4 py-1 text-sm font-bold text-slate-900 dark:text-white">
+                    <span className="px-4 py-1 text-sm font-bold text-surface-900 dark:text-white">
                       {quantity}
                     </span>
                     <button
                       type="button"
                       onClick={() => setQuantity((q) => Math.min(Math.max(1, Number(product.Stock) || 99), q + 1))}
-                      className="px-3.5 py-1.5 text-slate-600 dark:text-zinc-300 hover:bg-slate-200 dark:hover:bg-zinc-700 font-bold text-sm cursor-pointer"
+                      className="px-3.5 py-1.5 text-surface-600 dark:text-surface-300 hover:bg-surface-200 dark:hover:bg-surface-700 font-bold text-sm cursor-pointer"
                     >
                       +
                     </button>
@@ -443,10 +443,10 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                     onClick={handleAddToCartClick}
                     className={`w-full py-3.5 px-4 rounded-full font-bold text-sm shadow-lg flex items-center justify-center gap-2 transition-all cursor-pointer ${
                       isOutOfStock || isDeactivated || Boolean(product.Sizes?.length && !selectedSize)
-                        ? 'bg-slate-200 dark:bg-zinc-800 text-slate-400 dark:text-zinc-600 cursor-not-allowed'
+                        ? 'bg-surface-200 dark:bg-surface-800 text-surface-400 dark:text-surface-600 cursor-not-allowed'
                         : justAdded
-                        ? 'bg-emerald-600 text-white shadow-emerald-500/25'
-                        : 'bg-slate-100 text-slate-900 hover:bg-slate-200 dark:bg-[#202938] dark:text-white dark:hover:bg-[#2b3749]'
+                        ? 'bg-success-600 text-white shadow-success-500/25'
+                        : 'bg-surface-100 text-surface-900 hover:bg-surface-200 dark:bg-[#202938] dark:text-white dark:hover:bg-[#2b3749]'
                     }`}
                   >
                     {justAdded ? <Check className="w-5 h-5" /> : <ShoppingCart className="w-5 h-5" />}
@@ -456,7 +456,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                     type="button"
                     disabled={isOutOfStock || isDeactivated || Boolean(product.Sizes?.length && !selectedSize)}
                     onClick={() => onBuyNow(product, quantity, selectedSize || undefined)}
-                    className="w-full rounded-full bg-blue-600 px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-blue-600/30 transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-600 disabled:shadow-none dark:disabled:bg-zinc-800 dark:disabled:text-zinc-300"
+                    className="w-full rounded-full bg-brand-600 px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-brand-600/30 transition-colors hover:bg-brand-500 disabled:cursor-not-allowed disabled:bg-surface-200 disabled:text-surface-600 disabled:shadow-none dark:disabled:bg-surface-800 dark:disabled:text-surface-300"
                   >
                     Buy Now · {formatCurrency(Number(product.Price) * quantity)}
                   </button>
@@ -471,9 +471,9 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                       );
                       onClose();
                     }}
-                    className="w-full py-2.5 px-4 rounded-full font-semibold text-xs border border-blue-500/30 text-blue-600 dark:text-sky-400 bg-blue-50/50 dark:bg-[#181F2A] hover:bg-blue-100 dark:hover:bg-[#202938] flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs"
+                    className="w-full py-2.5 px-4 rounded-full font-semibold text-xs border border-brand-500/30 text-brand-600 dark:text-brand-400 bg-brand-50/50 dark:bg-[#181F2A] hover:bg-brand-100 dark:hover:bg-[#202938] flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs"
                   >
-                    <Sparkles className="w-4 h-4 text-amber-400" />
+                    <Sparkles className="w-4 h-4 text-warning-400" />
                     <span>Ask ShopNiro AI Assistant about this product</span>
                   </button>
                 )}
@@ -482,26 +482,26 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
           </div>
 
           {relatedProducts.products.length > 0 && (
-            <section className="space-y-3 border-t border-slate-200 pt-6 dark:border-zinc-800">
+            <section className="space-y-3 border-t border-surface-200 pt-6 dark:border-surface-800">
               <header>
-                <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                <h2 className="text-base font-bold text-surface-900 dark:text-white">
                   {relatedProducts.basedOnOrders ? 'Frequently bought together' : 'You may also like'}
                 </h2>
-                <p className="mt-1 text-xs text-slate-500 dark:text-zinc-400">
+                <p className="mt-1 text-xs text-surface-500 dark:text-surface-400">
                   {relatedProducts.basedOnOrders ? 'Suggestions based on products in the same orders.' : 'More available products from the marketplace.'}
                 </p>
               </header>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
                 {relatedProducts.products.map((suggestion) => (
-                  <article key={suggestion.Product_ID} className="flex min-w-0 items-center gap-3 rounded-xl border border-slate-200 p-3 dark:border-zinc-800 dark:bg-[#161C24]">
+                  <article key={suggestion.Product_ID} className="flex min-w-0 items-center gap-3 rounded-xl border border-surface-200 p-3 dark:border-surface-800 dark:bg-[#161C24]">
                     <img src={suggestion.Image} alt="" className="h-12 w-12 shrink-0 rounded-lg object-cover" loading="lazy" />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-xs font-semibold text-slate-900 dark:text-white">{suggestion.Name}</p>
-                      <p className="mt-0.5 text-xs font-bold text-slate-700 dark:text-zinc-200">{formatCurrency(Number(suggestion.Price))}</p>
+                      <p className="truncate text-xs font-semibold text-surface-900 dark:text-white">{suggestion.Name}</p>
+                      <p className="mt-0.5 text-xs font-bold text-surface-700 dark:text-surface-200">{formatCurrency(Number(suggestion.Price))}</p>
                       <button
                         type="button"
                         onClick={() => suggestion.Sizes?.length ? onSelectProduct?.(suggestion) : onAddToCart(suggestion, 1)}
-                        className="mt-1 text-[10px] font-semibold text-blue-700 hover:underline dark:text-sky-300"
+                        className="mt-1 text-micro font-semibold text-brand-700 hover:underline dark:text-brand-300"
                       >
                         {suggestion.Sizes?.length ? 'Choose options' : 'Add to cart'}
                       </button>
@@ -513,20 +513,20 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
           )}
 
           {matchingBundles.length > 0 && (
-            <section className="space-y-3 border-t border-slate-200 pt-6 dark:border-zinc-800">
+            <section className="space-y-3 border-t border-surface-200 pt-6 dark:border-surface-800">
               <header>
-                <h2 className="text-base font-bold text-slate-900 dark:text-white">Bundle and save</h2>
-                <p className="mt-1 text-xs text-slate-500 dark:text-zinc-400">Add every item in a bundle to your cart; savings are applied at checkout and can stack with vouchers.</p>
+                <h2 className="text-base font-bold text-surface-900 dark:text-white">Bundle and save</h2>
+                <p className="mt-1 text-xs text-surface-500 dark:text-surface-400">Add every item in a bundle to your cart; savings are applied at checkout and can stack with vouchers.</p>
               </header>
               {matchingBundles.map((bundle) => (
-                <article key={bundle.Bundle_ID} className="border-l-2 border-amber-400 bg-amber-50/70 p-4 dark:bg-amber-950/20">
-                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">{bundle.Name} · {bundle.Discount_Percent}% off</h3>
-                  {bundle.Ends_At && <p className="mt-1 text-[10px] text-amber-800 dark:text-amber-300">Offer ends {new Date(bundle.Ends_At).toLocaleString()}</p>}
+                <article key={bundle.Bundle_ID} className="border-l-2 border-warning-400 bg-warning-50/70 p-4 dark:bg-warning-950/20">
+                  <h3 className="text-sm font-bold text-surface-900 dark:text-white">{bundle.Name} · {bundle.Discount_Percent}% off</h3>
+                  {bundle.Ends_At && <p className="mt-1 text-micro text-warning-800 dark:text-warning-300">Offer ends {new Date(bundle.Ends_At).toLocaleString()}</p>}
                   <div className="mt-3 flex flex-wrap gap-2">
                     {bundle.Product_IDs.filter((productId) => productId !== product.Product_ID).map((productId) => {
                       const bundleProduct = allProducts.find((candidate) => candidate.Product_ID === productId);
                       if (!bundleProduct) return null;
-                      return <button key={productId} type="button" onClick={() => bundleProduct.Sizes?.length ? onSelectProduct?.(bundleProduct) : onAddToCart(bundleProduct, 1)} className="rounded-md border border-amber-300 px-3 py-2 text-[10px] font-bold text-amber-900 hover:bg-amber-100 dark:border-amber-800 dark:text-amber-200 dark:hover:bg-amber-950/50">Add {bundleProduct.Name}</button>;
+                      return <button key={productId} type="button" onClick={() => bundleProduct.Sizes?.length ? onSelectProduct?.(bundleProduct) : onAddToCart(bundleProduct, 1)} className="rounded-md border border-warning-300 px-3 py-2 text-micro font-bold text-warning-900 hover:bg-warning-100 dark:border-warning-800 dark:text-warning-200 dark:hover:bg-warning-950/50">Add {bundleProduct.Name}</button>;
                     })}
                   </div>
                 </article>
@@ -535,14 +535,14 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
           )}
 
           {/* Customer Reviews Section */}
-          <div className="pt-8 border-t border-slate-200 dark:border-zinc-800 space-y-6">
+          <div className="pt-8 border-t border-surface-200 dark:border-surface-800 space-y-6">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <MessageSquare className="w-5 h-5 text-blue-600 dark:text-sky-400" />
+                <h2 className="text-lg font-bold text-surface-900 dark:text-white flex items-center gap-2">
+                  <MessageSquare className="w-5 h-5 text-brand-600 dark:text-brand-400" />
                   Customer Reviews ({productReviews.length})
                 </h2>
-                <p className="text-xs text-slate-500 dark:text-zinc-400">
+                <p className="text-xs text-surface-500 dark:text-surface-400">
                   Verified customer ratings and feedback
                 </p>
               </div>
@@ -552,30 +552,30 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             </div>
 
             {/* Write a Review Form or Guest Login Prompt */}
-            <div className="p-5 rounded-3xl bg-slate-50 dark:bg-[#161C24] border border-slate-200 dark:border-zinc-800 space-y-3">
+            <div className="p-5 rounded-3xl bg-surface-50 dark:bg-[#161C24] border border-surface-200 dark:border-surface-800 space-y-3">
               {currentCustomer ? (
                 <>
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-zinc-300 flex items-center gap-1.5">
-                    <UserCheck className="w-4 h-4 text-emerald-500" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-surface-700 dark:text-surface-300 flex items-center gap-1.5">
+                    <UserCheck className="w-4 h-4 text-success-500" />
                     Leave a Review as {currentCustomer.Name}
                   </h3>
 
                   {reviewSubmittedMessage && (
-                    <div className="p-3 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 rounded-xl text-xs font-semibold">
+                    <div className="p-3 bg-success-50 text-success-700 dark:bg-success-950/50 dark:text-success-300 rounded-xl text-xs font-semibold">
                       {reviewSubmittedMessage}
                     </div>
                   )}
 
                   <form onSubmit={handleReviewSubmit} className="space-y-3">
                     <div className="flex items-center gap-3">
-                      <span className="text-xs text-slate-500 dark:text-zinc-400 font-medium">Your Rating:</span>
+                      <span className="text-xs text-surface-500 dark:text-surface-400 font-medium">Your Rating:</span>
                       <StarRating
                         rating={newRating}
                         interactive
                         size="md"
                         onRatingChange={(r) => setNewRating(r)}
                       />
-                      <span className="text-xs font-bold text-amber-500">
+                      <span className="text-xs font-bold text-warning-500">
                         {newRating > 0 ? `${newRating} / 5 stars` : 'Choose a rating'}
                       </span>
                     </div>
@@ -585,22 +585,22 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                       value={newReviewText}
                       onChange={(e) => setNewReviewText(e.target.value)}
                       placeholder="Share your experience with this product..."
-                      className="luxury-input w-full p-3 text-xs bg-white dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500/40 text-slate-900 dark:text-zinc-100 placeholder-slate-400"
+                      className="luxury-input w-full p-3 text-xs bg-white dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-warning-500/40 text-surface-900 dark:text-surface-100 placeholder-surface-400"
                     />
 
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="inline-flex rounded-lg border border-slate-200 bg-white p-1 dark:border-zinc-700 dark:bg-[#181F2A]">
-                        {(['good', 'bad'] as const).map((sentiment) => <button key={sentiment} type="button" aria-pressed={reviewSentiment === sentiment} onClick={() => setReviewSentiment(sentiment)} className={`rounded-md px-3 py-1.5 text-[11px] font-bold capitalize ${reviewSentiment === sentiment ? 'bg-blue-700 text-white' : 'text-slate-600 dark:text-zinc-300'}`}>{sentiment}</button>)}
+                      <div className="inline-flex rounded-lg border border-surface-200 bg-white p-1 dark:border-surface-700 dark:bg-[#181F2A]">
+                        {(['good', 'bad'] as const).map((sentiment) => <button key={sentiment} type="button" aria-pressed={reviewSentiment === sentiment} onClick={() => setReviewSentiment(sentiment)} className={`rounded-md px-3 py-1.5 text-micro font-bold capitalize ${reviewSentiment === sentiment ? 'bg-brand-700 text-white' : 'text-surface-600 dark:text-surface-300'}`}>{sentiment}</button>)}
                       </div>
-                      <button type="button" onClick={() => void draftReview()} disabled={isDraftingReview} className="inline-flex items-center gap-1.5 rounded-lg border border-blue-300 px-3 py-2 text-xs font-bold text-blue-700 disabled:opacity-50 dark:border-blue-900 dark:text-sky-300"><Sparkles className="h-3.5 w-3.5" />{isDraftingReview ? 'Drafting...' : 'Draft with AI'}</button>
+                      <button type="button" onClick={() => void draftReview()} disabled={isDraftingReview} className="inline-flex items-center gap-1.5 rounded-lg border border-brand-300 px-3 py-2 text-xs font-bold text-brand-700 disabled:opacity-50 dark:border-brand-900 dark:text-brand-300"><Sparkles className="h-3.5 w-3.5" />{isDraftingReview ? 'Drafting...' : 'Draft with AI'}</button>
                     </div>
-                    {reviewDraftError && <p role="alert" className="text-xs text-rose-600">{reviewDraftError}</p>}
+                    {reviewDraftError && <p role="alert" className="text-xs text-danger-600">{reviewDraftError}</p>}
 
                     <div className="flex justify-end">
                       <button
                         type="submit"
                         disabled={isSubmittingReview || !newReviewText.trim() || newRating < 1}
-                        className="flex items-center gap-1.5 px-5 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-full text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+                        className="flex items-center gap-1.5 px-5 py-2 bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white rounded-full text-xs font-semibold shadow-xs transition-colors cursor-pointer"
                       >
                         <Send className="w-3.5 h-3.5" />
                         <span>Post review</span>
@@ -610,7 +610,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 </>
               ) : (
                 <div className="text-center py-4 space-y-2">
-                  <p className="text-xs text-slate-600 dark:text-zinc-400">
+                  <p className="text-xs text-surface-600 dark:text-surface-400">
                     Sign in to leave a verified review and rating for this product.
                   </p>
                   {onOpenLogin && (
@@ -620,7 +620,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                         onClose();
                         onOpenLogin();
                       }}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-full text-xs font-bold shadow-md shadow-blue-600/30 transition-all cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-full text-xs font-bold shadow-md shadow-brand-600/30 transition-all cursor-pointer"
                     >
                       <LogIn className="w-3.5 h-3.5" />
                       <span>Sign In to Review</span>
@@ -633,32 +633,32 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             {/* Existing Reviews List */}
             <div className="space-y-3">
               {productReviews.length === 0 ? (
-                <p className="text-xs text-slate-500 dark:text-zinc-500 text-center py-4 italic">
+                <p className="text-xs text-surface-500 dark:text-surface-500 text-center py-4 italic">
                   No customer reviews yet. Be the first to review this product!
                 </p>
               ) : (
                 productReviews.map((rev) => (
                   <div
                     key={rev.Review_ID}
-                    className="p-4 rounded-xl bg-white dark:bg-[#161C24] border border-slate-100 dark:border-zinc-800 space-y-2 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
+                    className="p-4 rounded-xl bg-white dark:bg-[#161C24] border border-surface-100 dark:border-surface-800 space-y-2 shadow-xs transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
                   >
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <span className="w-7 h-7 rounded-full bg-blue-600/10 dark:bg-blue-950/80 text-blue-600 dark:text-sky-400 flex items-center justify-center font-bold text-xs">
+                        <span className="w-7 h-7 rounded-full bg-brand-600/10 dark:bg-brand-950/80 text-brand-600 dark:text-brand-400 flex items-center justify-center font-bold text-xs">
                           {rev.Customer_ID.slice(-2)}
                         </span>
                         <div>
-                          <span className="text-xs font-semibold text-slate-900 dark:text-white block leading-tight">
+                          <span className="text-xs font-semibold text-surface-900 dark:text-white block leading-tight">
                             Verified Customer #{rev.Customer_ID}
                           </span>
-                          <span className="text-[10px] text-slate-400 dark:text-zinc-500">
+                          <span className="text-micro text-surface-400 dark:text-surface-500">
                             {formatDate(rev.Created_At)}
                           </span>
                         </div>
                       </div>
                       <StarRating rating={rev.Rating} size="sm" />
                     </div>
-                    <p className="text-xs text-slate-600 dark:text-zinc-300 leading-relaxed pl-9">
+                    <p className="text-xs text-surface-600 dark:text-surface-300 leading-relaxed pl-9">
                       {rev.Review_text}
                     </p>
                   </div>

@@ -340,9 +340,7 @@ router.get('/methods', async (req, res) => {
         brandColor: '#E2136E',
         icon: 'Smartphone',
         description: 'Instant payment via bKash Account (PIN & OTP secured)',
-        testAccount: '01700000000',
-        testOtp: '123456',
-        testPin: '12345',
+        ...(settings.isSandbox ? { testAccount: '01700000000', testOtp: '123456', testPin: '12345' } : {}),
       },
       {
         id: 'nagad',
@@ -353,9 +351,7 @@ router.get('/methods', async (req, res) => {
         brandColor: '#F7941D',
         icon: 'Smartphone',
         description: 'Fast checkout via Nagad Account',
-        testAccount: '01800000000',
-        testOtp: '123456',
-        testPin: '12345',
+        ...(settings.isSandbox ? { testAccount: '01800000000', testOtp: '123456', testPin: '12345' } : {}),
       },
       {
         id: 'rocket',
@@ -366,9 +362,7 @@ router.get('/methods', async (req, res) => {
         brandColor: '#8C3494',
         icon: 'Smartphone',
         description: 'Direct payment via DBBL Rocket Account',
-        testAccount: '01900000000',
-        testOtp: '123456',
-        testPin: '12345',
+        ...(settings.isSandbox ? { testAccount: '01900000000', testOtp: '123456', testPin: '12345' } : {}),
       },
       {
         id: 'visa_mastercard',

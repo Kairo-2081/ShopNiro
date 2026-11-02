@@ -1,3 +1,5 @@
+import { money } from './format';
+
 export const normalizeVoucherCode = (value: string) => value.trim().toUpperCase();
 export const isVoucherExpired = (expiresAt?: string | Date | null, now = Date.now()) => {
   if (!expiresAt) return false;
@@ -60,6 +62,6 @@ export const describeVoucher = (voucher: string) => {
   if (!rule) return 'Discount applies to matching products.';
   if (rule.firstOrderOnly) return `${rule.amount}% off matching products for your first order.`;
   return rule.kind === 'fixed'
-    ? `৳${rule.amount} off each matching item.`
+    ? `${money(rule.amount)} off each matching item.`
     : `${rule.amount}% off matching products.`;
 };

@@ -34,8 +34,8 @@ const ROLE_CONFIGS: Record<
   'shopping-assistant': {
     title: 'Shopping Concierge',
     description: 'Find products, check real-time stock & apply discount vouchers',
-    icon: <ShoppingBag className="w-4 h-4 text-blue-400" />,
-    color: 'from-blue-500/20 to-sky-500/20 border-blue-500/30 text-sky-300',
+    icon: <ShoppingBag className="w-4 h-4 text-brand-400" />,
+    color: 'from-brand-500/20 to-brand-500/20 border-brand-500/30 text-brand-300',
     recommendedModel: 'flash',
     starters: [
       'What are the best wireless headphones available?',
@@ -46,8 +46,8 @@ const ROLE_CONFIGS: Record<
   'seller-advisor': {
     title: 'Merchant Advisor',
     description: 'Catalog optimization, pricing strategies & fulfillment guidance',
-    icon: <Store className="w-4 h-4 text-emerald-400" />,
-    color: 'from-emerald-500/20 to-teal-500/20 border-emerald-500/30 text-emerald-300',
+    icon: <Store className="w-4 h-4 text-success-400" />,
+    color: 'from-success-500/20 to-teal-500/20 border-success-500/30 text-success-300',
     recommendedModel: 'flash',
     starters: [
       'How should I price high-end audio hardware?',
@@ -58,8 +58,8 @@ const ROLE_CONFIGS: Record<
   'order-specialist': {
     title: 'Delivery Specialist',
     description: 'Order tracking, delivery logistics & dispute resolutions',
-    icon: <Zap className="w-4 h-4 text-amber-400" />,
-    color: 'from-amber-500/20 to-orange-500/20 border-amber-500/30 text-amber-300',
+    icon: <Zap className="w-4 h-4 text-warning-400" />,
+    color: 'from-warning-500/20 to-warning-500/20 border-warning-500/30 text-warning-300',
     recommendedModel: 'flash-lite',
     starters: [
       'Where is order #ORD-1001 right now?',
@@ -70,8 +70,8 @@ const ROLE_CONFIGS: Record<
   'complex-analyst': {
     title: 'Marketplace Intelligence',
     description: 'Deep market analysis, multi-item comparisons & business insights',
-    icon: <Brain className="w-4 h-4 text-purple-400" />,
-    color: 'from-purple-500/20 to-pink-500/20 border-purple-500/30 text-purple-300',
+    icon: <Brain className="w-4 h-4 text-brand-400" />,
+    color: 'from-brand-500/20 to-pink-500/20 border-brand-500/30 text-brand-300',
     recommendedModel: 'pro',
     starters: [
       'Compare wireless vs over-ear headphones across battery life and audio fidelity',
@@ -87,21 +87,21 @@ const MODEL_OPTIONS: { id: AIModelChoice; label: string; tag: string; descriptio
     label: 'ShopNiro Flash Lite',
     tag: 'Ultra-Fast',
     description: 'Lowest latency for instant order tracking & quick queries',
-    icon: <Zap className="w-3.5 h-3.5 text-amber-400" />,
+    icon: <Zap className="w-3.5 h-3.5 text-warning-400" />,
   },
   {
     id: 'flash',
     label: 'ShopNiro Flash',
     tag: 'Balanced',
     description: 'Default model for rich customer assistance and catalog searches',
-    icon: <Sparkles className="w-3.5 h-3.5 text-blue-400" />,
+    icon: <Sparkles className="w-3.5 h-3.5 text-brand-400" />,
   },
   {
     id: 'pro',
     label: 'ShopNiro Pro',
     tag: 'Deep Reasoning',
     description: 'Best for complex comparisons, business strategy & heavy reasoning',
-    icon: <Brain className="w-3.5 h-3.5 text-purple-400" />,
+    icon: <Brain className="w-3.5 h-3.5 text-brand-400" />,
   },
 ];
 
@@ -286,7 +286,7 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
             const clean = line.trim().substring(2);
             return (
               <div key={idx} className="flex items-start gap-2 pl-1">
-                <span className="text-blue-500 dark:text-sky-400 mt-1 font-bold">•</span>
+                <span className="text-brand-500 dark:text-brand-400 mt-1 font-bold">•</span>
                 <span>{renderInlineStyles(clean)}</span>
               </div>
             );
@@ -296,7 +296,7 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
           if (numMatch) {
             return (
               <div key={idx} className="flex items-start gap-2 pl-1">
-                <span className="text-blue-500 dark:text-sky-400 font-bold shrink-0">{numMatch[1]}.</span>
+                <span className="text-brand-500 dark:text-brand-400 font-bold shrink-0">{numMatch[1]}.</span>
                 <span>{renderInlineStyles(numMatch[2])}</span>
               </div>
             );
@@ -312,11 +312,11 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
     const parts = text.split(/(\*\*.*?\*\*|`.*?`)/g);
     return parts.map((part, i) => {
       if (part.startsWith('**') && part.endsWith('**')) {
-        return <strong key={i} className="font-semibold text-slate-900 dark:text-white">{part.slice(2, -2)}</strong>;
+        return <strong key={i} className="font-semibold text-surface-900 dark:text-white">{part.slice(2, -2)}</strong>;
       }
       if (part.startsWith('`') && part.endsWith('`')) {
         return (
-          <code key={i} className="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-sky-300 font-mono text-xs">
+          <code key={i} className="px-1.5 py-0.5 rounded bg-brand-500/10 text-brand-600 dark:text-brand-300 font-mono text-xs">
             {part.slice(1, -1)}
           </code>
         );
@@ -332,17 +332,17 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
 
   return (
     <div
-      className={`fixed z-50 transition-all duration-300 ease-in-out flex flex-col shadow-2xl bg-white dark:bg-[#12161D] border border-sky-100 dark:border-sky-500/20 overflow-hidden ${
+      className={`fixed z-50 transition-all duration-300 ease-in-out flex flex-col shadow-2xl bg-white dark:bg-[#12161D] border border-brand-100 dark:border-brand-500/20 overflow-hidden ${
         isExpanded
           ? 'inset-4 md:inset-10 rounded-3xl'
           : 'bottom-4 right-4 md:bottom-6 md:right-6 w-[94vw] sm:w-[480px] h-[640px] max-h-[88vh] rounded-3xl'
       }`}
     >
       {/* Header */}
-      <div className="p-4 border-b border-sky-100 dark:border-zinc-800 flex items-center justify-between bg-gradient-to-r from-slate-900 via-[#0B1528] to-[#12161D] text-white">
+      <div className="p-4 border-b border-brand-100 dark:border-surface-800 flex items-center justify-between bg-gradient-to-r from-surface-900 via-[#0B1528] to-[#12161D] text-white">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-blue-500/20 border border-sky-400/40 flex items-center justify-center text-sky-400 shadow-inner">
-            <Bot className="w-5 h-5 text-sky-400 animate-pulse" />
+          <div className="w-9 h-9 rounded-xl bg-brand-500/20 border border-brand-400/40 flex items-center justify-center text-brand-400 shadow-inner">
+            <Bot className="w-5 h-5 text-brand-400 animate-pulse" />
           </div>
           <div>
             <div className="flex items-center gap-2">
@@ -350,17 +350,17 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
                 ShopNiro AI Assistant
                 <span
                   title={aiStatus === 'setup' ? 'Add GROQ_API_KEY to the server environment and restart the server.' : undefined}
-                  className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-medium border ${
+                  className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-micro font-medium border ${
                     aiStatus === 'ready'
-                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
-                      : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                      ? 'bg-success-500/20 text-success-300 border-success-500/30'
+                      : 'bg-warning-500/15 text-warning-300 border-warning-500/30'
                   }`}
                 >
                   {aiStatus === 'ready' ? 'Ready' : aiStatus === 'setup' ? 'Setup needed' : aiStatus === 'unavailable' ? 'Unavailable' : 'Checking'}
                 </span>
               </h2>
             </div>
-            <p className="text-[11px] text-zinc-400 flex items-center gap-1">
+            <p className="text-micro text-surface-400 flex items-center gap-1">
               <span>ShopNiro Intelligence</span>
             </p>
           </div>
@@ -371,17 +371,17 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
           <div className="relative">
             <button
               onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-zinc-800/80 hover:bg-zinc-700/80 border border-zinc-700 text-zinc-200 text-xs font-medium transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-800/80 hover:bg-surface-700/80 border border-surface-700 text-surface-200 text-xs font-medium transition-colors cursor-pointer"
               title="Change ShopNiro AI mode"
             >
               {activeModelObj.icon}
               <span className="hidden sm:inline">{activeModelObj.tag}</span>
-              <ChevronDown className="w-3 h-3 text-zinc-400" />
+              <ChevronDown className="w-3 h-3 text-surface-400" />
             </button>
 
             {isModelDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-64 bg-[#12161D] border border-sky-500/25 rounded-2xl shadow-2xl p-2 z-50 text-xs space-y-1">
-                <div className="px-2 py-1 text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+              <div className="absolute right-0 mt-2 w-64 bg-[#12161D] border border-brand-500/25 rounded-2xl shadow-2xl p-2 z-50 text-xs space-y-1">
+                <div className="px-2 py-1 text-micro font-bold text-surface-400 uppercase tracking-wider">
                   Select ShopNiro AI Mode
                 </div>
                 {MODEL_OPTIONS.map((m) => (
@@ -393,17 +393,17 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
                     }}
                     className={`w-full text-left p-2 rounded-xl flex items-start gap-2.5 transition-colors cursor-pointer ${
                       selectedModel === m.id
-                        ? 'bg-blue-600/30 border border-sky-500/40 text-white'
-                        : 'hover:bg-[#181F2A] text-zinc-300'
+                        ? 'bg-brand-600/30 border border-brand-500/40 text-white'
+                        : 'hover:bg-[#181F2A] text-surface-300'
                     }`}
                   >
                     <div className="mt-0.5">{m.icon}</div>
                     <div>
                       <div className="font-semibold flex items-center gap-1.5">
                         {m.label}
-                        {selectedModel === m.id && <Check className="w-3 h-3 text-sky-400" />}
+                        {selectedModel === m.id && <Check className="w-3 h-3 text-brand-400" />}
                       </div>
-                      <div className="text-[10px] text-zinc-400 leading-snug">{m.description}</div>
+                      <div className="text-micro text-surface-400 leading-snug">{m.description}</div>
                     </div>
                   </button>
                 ))}
@@ -414,7 +414,7 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
           {/* Clear Chat */}
           <button
             onClick={handleClearChat}
-            className="p-2 rounded-full text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
+            className="p-2 rounded-full text-surface-400 hover:text-white hover:bg-surface-800 transition-colors cursor-pointer"
             title="Reset conversation"
           >
             <RotateCcw className="w-4 h-4" />
@@ -423,7 +423,7 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
           {/* Expand / Minimize */}
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="p-2 rounded-full text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer hidden md:block"
+            className="p-2 rounded-full text-surface-400 hover:text-white hover:bg-surface-800 transition-colors cursor-pointer hidden md:block"
             title={isExpanded ? 'Minimize' : 'Expand'}
           >
             {isExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
@@ -432,7 +432,7 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
           {/* Close */}
           <button
             onClick={onClose}
-            className="p-2 rounded-full text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors cursor-pointer"
+            className="p-2 rounded-full text-surface-400 hover:text-white hover:bg-surface-800 transition-colors cursor-pointer"
             title="Close Assistant"
           >
             <X className="w-4 h-4" />
@@ -441,8 +441,8 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
       </div>
 
       {/* Role Tabs */}
-      <div className="px-3 py-2 bg-slate-50 dark:bg-[#181F2A] border-b border-sky-100 dark:border-zinc-800 flex items-center gap-1.5 overflow-x-auto scrollbar-none text-xs">
-        <span className="text-[11px] font-semibold text-slate-500 dark:text-zinc-400 px-1 shrink-0">
+      <div className="px-3 py-2 bg-surface-50 dark:bg-[#181F2A] border-b border-brand-100 dark:border-surface-800 flex items-center gap-1.5 overflow-x-auto scrollbar-none text-xs">
+        <span className="text-micro font-semibold text-surface-500 dark:text-surface-400 px-1 shrink-0">
           Role:
         </span>
         {(Object.keys(ROLE_CONFIGS) as ChatRole[]).map((r) => {
@@ -454,8 +454,8 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
               onClick={() => handleRoleChange(r)}
               className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
                 isSelected
-                  ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25'
-                  : 'bg-white dark:bg-[#12161D] text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-700'
+                  ? 'bg-brand-600 text-white shadow-md shadow-brand-500/25'
+                  : 'bg-white dark:bg-[#12161D] text-surface-700 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-800 border border-surface-200 dark:border-surface-700'
               }`}
             >
               {cfg.icon}
@@ -466,7 +466,7 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
       </div>
 
       {/* Scrollable Message Thread */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50 dark:bg-[#0C1014]/80">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-surface-50/50 dark:bg-[#0C1014]/80">
         {messages.map((m) => {
           const isUser = m.role === 'user';
           return (
@@ -475,7 +475,7 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
               className={`flex gap-3 ${isUser ? 'justify-end' : 'justify-start'}`}
             >
               {!isUser && (
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 to-sky-500 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-brand-600 to-brand-500 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
                   <Bot className="w-4 h-4" />
                 </div>
               )}
@@ -483,20 +483,20 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
               <div
                 className={`max-w-[85%] rounded-2xl p-3.5 shadow-xs relative group ${
                   isUser
-                    ? 'bg-blue-600 text-white rounded-tr-xs'
-                    : 'bg-white dark:bg-[#181F2A] text-slate-800 dark:text-zinc-200 border border-sky-100 dark:border-zinc-700/60 rounded-tl-xs'
+                    ? 'bg-brand-600 text-white rounded-tr-xs'
+                    : 'bg-white dark:bg-[#181F2A] text-surface-800 dark:text-surface-200 border border-brand-100 dark:border-surface-700/60 rounded-tl-xs'
                 }`}
               >
                 {/* Message Header info for model response */}
                 {!isUser && (
-                  <div className="flex items-center justify-between gap-2 mb-2 pb-1.5 border-b border-slate-100 dark:border-zinc-800 text-[10px] text-slate-500 dark:text-zinc-400">
-                    <span className="font-semibold flex items-center gap-1 text-blue-600 dark:text-sky-400">
+                  <div className="flex items-center justify-between gap-2 mb-2 pb-1.5 border-b border-surface-100 dark:border-surface-800 text-micro text-surface-500 dark:text-surface-400">
+                    <span className="font-semibold flex items-center gap-1 text-brand-600 dark:text-brand-400">
                       <Sparkles className="w-3 h-3" />
                       {m.roleUsed ? ROLE_CONFIGS[m.roleUsed as ChatRole]?.title || 'ShopNiro AI' : 'ShopNiro AI'}
                     </span>
                     <div className="flex items-center gap-1.5">
                       {m.modelUsed && (
-                        <span className="px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 font-mono text-[9px]">
+                        <span className="px-1.5 py-0.5 rounded-full bg-surface-100 dark:bg-surface-800 text-surface-600 dark:text-surface-300 font-mono text-micro">
                           {MODEL_OPTIONS.find((option) => option.id === m.modelUsed)?.label || 'ShopNiro AI'}
                         </span>
                       )}
@@ -513,7 +513,7 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
                 )}
 
                 {/* Timestamp & Copy button */}
-                <div className={`mt-2 flex items-center gap-2 ${isUser ? 'justify-end text-blue-200' : 'justify-between text-slate-400 dark:text-zinc-500'} text-[10px]`}>
+                <div className={`mt-2 flex items-center gap-2 ${isUser ? 'justify-end text-brand-200' : 'justify-between text-surface-400 dark:text-surface-500'} text-micro`}>
                   {isUser ? (
                     <span>{m.timestamp}</span>
                   ) : (
@@ -521,11 +521,11 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
                       <span>ShopNiro Assistant</span>
                       <button
                         onClick={() => handleCopy(m.id, m.content)}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:text-slate-700 dark:hover:text-zinc-300 rounded cursor-pointer"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:text-surface-700 dark:hover:text-surface-300 rounded cursor-pointer"
                         title="Copy answer"
                       >
                         {copiedId === m.id ? (
-                          <span className="text-emerald-500 flex items-center gap-1">
+                          <span className="text-success-500 flex items-center gap-1">
                             <Check className="w-3 h-3" /> Copied
                           </span>
                         ) : (
@@ -538,7 +538,7 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
               </div>
 
               {isUser && (
-                <div className="w-8 h-8 rounded-xl bg-slate-200 dark:bg-[#181F2A] text-slate-700 dark:text-zinc-300 flex items-center justify-center shrink-0 mt-0.5">
+                <div className="w-8 h-8 rounded-xl bg-surface-200 dark:bg-[#181F2A] text-surface-700 dark:text-surface-300 flex items-center justify-center shrink-0 mt-0.5">
                   <User className="w-4 h-4" />
                 </div>
               )}
@@ -549,18 +549,18 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
         {/* Loading Indicator */}
         {isLoading && (
           <div className="flex items-start gap-3 justify-start">
-            <div className="w-8 h-8 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-sm animate-pulse">
+            <div className="w-8 h-8 rounded-xl bg-brand-600 text-white flex items-center justify-center shrink-0 shadow-sm animate-pulse">
               <Bot className="w-4 h-4" />
             </div>
-            <div className="bg-white dark:bg-[#181F2A] border border-sky-100 dark:border-zinc-700/60 rounded-2xl rounded-tl-xs p-3.5 shadow-xs space-y-2">
-              <div className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-zinc-400">
-                <Sparkles className="w-3.5 h-3.5 text-blue-500 animate-spin" />
+            <div className="bg-white dark:bg-[#181F2A] border border-brand-100 dark:border-surface-700/60 rounded-2xl rounded-tl-xs p-3.5 shadow-xs space-y-2">
+              <div className="flex items-center gap-2 text-xs font-medium text-surface-500 dark:text-surface-400">
+                <Sparkles className="w-3.5 h-3.5 text-brand-500 animate-spin" />
                 <span>Thinking with {selectedModel}...</span>
               </div>
               <div className="flex items-center gap-1.5 pl-1">
-                <span className="w-2 h-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                <span className="w-2 h-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                <span className="w-2 h-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                <span className="w-2 h-2 rounded-full bg-brand-500 animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                <span className="w-2 h-2 rounded-full bg-brand-500 animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                <span className="w-2 h-2 rounded-full bg-brand-500 animate-bounce" style={{ animationDelay: '300ms' }}></span>
               </div>
             </div>
           </div>
@@ -571,12 +571,12 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
 
       {/* Suggested Starters */}
       {messages.length <= 2 && (
-        <div className="px-4 py-2 border-t border-sky-100 dark:border-zinc-800 bg-slate-50 dark:bg-[#181F2A] overflow-x-auto scrollbar-none flex gap-2">
+        <div className="px-4 py-2 border-t border-brand-100 dark:border-surface-800 bg-surface-50 dark:bg-[#181F2A] overflow-x-auto scrollbar-none flex gap-2">
           {currentRoleConfig.starters.map((starter, i) => (
             <button
               key={i}
               onClick={() => handleSendMessage(starter)}
-              className="px-3 py-1.5 rounded-full bg-white dark:bg-[#12161D] hover:bg-sky-50 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-white text-xs font-medium whitespace-nowrap transition-colors cursor-pointer shrink-0 shadow-2xs"
+              className="px-3 py-1.5 rounded-full bg-white dark:bg-[#12161D] hover:bg-brand-50 dark:hover:bg-surface-800 border border-surface-200 dark:border-surface-700 text-surface-700 dark:text-surface-300 hover:text-brand-600 dark:hover:text-white text-xs font-medium whitespace-nowrap transition-colors cursor-pointer shrink-0 shadow-2xs"
             >
               💡 {starter}
             </button>
@@ -585,7 +585,7 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
       )}
 
       {/* Bottom Input Box */}
-      <div className="p-3 border-t border-sky-100 dark:border-zinc-800 bg-white dark:bg-[#12161D]">
+      <div className="p-3 border-t border-brand-100 dark:border-surface-800 bg-white dark:bg-[#12161D]">
         <form
           onSubmit={(e) => {
             e.preventDefault();
@@ -602,23 +602,23 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
               onKeyDown={handleKeyDown}
               disabled={isLoading}
               placeholder={`Ask ${currentRoleConfig.title}...`}
-              className="w-full pl-4 pr-10 py-2.5 bg-slate-100 dark:bg-[#181F2A] border border-slate-200 dark:border-zinc-700 rounded-full text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs md:text-sm disabled:opacity-50"
+              className="w-full pl-4 pr-10 py-2.5 bg-surface-100 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-full text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500 focus:outline-none focus:ring-2 focus:ring-brand-500 text-xs md:text-sm disabled:opacity-50"
             />
           </div>
 
           <button
             type="submit"
             disabled={!inputMessage.trim() || isLoading}
-            className="p-3 rounded-full bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md shadow-blue-500/25 cursor-pointer shrink-0"
+            className="p-3 rounded-full bg-brand-600 hover:bg-brand-500 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md shadow-brand-500/25 cursor-pointer shrink-0"
             title="Send message"
           >
             <Send className="w-4 h-4" />
           </button>
         </form>
 
-        <div className="mt-2 flex items-center justify-between text-[10px] text-slate-500 dark:text-zinc-400 px-2">
+        <div className="mt-2 flex items-center justify-between text-micro text-surface-500 dark:text-surface-400 px-2">
           <span className="flex items-center gap-1 font-medium">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            <span className="w-1.5 h-1.5 rounded-full bg-success-500"></span>
             Role: <strong>{currentRoleConfig.title}</strong>
           </span>
           <span className="font-mono">

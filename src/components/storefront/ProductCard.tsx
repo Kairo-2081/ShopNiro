@@ -88,8 +88,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       className="product-card group relative bg-[linear-gradient(180deg,rgba(246,245,239,0.98),rgba(228,226,213,0.96))] dark:bg-[linear-gradient(180deg,#292821,#151510)] rounded-2xl border border-[#d0c8a5]/20 dark:border-[#d0c8a5]/10 shadow-[0_18px_45px_rgba(6,6,4,0.18)] hover:shadow-[0_28px_60px_rgba(7,7,5,0.24)] hover:border-[#a99b72]/50 overflow-hidden flex flex-col cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5]"
     >
       {/* Product Image */}
-      <div className="relative aspect-[4/5] w-full bg-slate-100 dark:bg-[#0C1014] overflow-hidden">
-        <div className="absolute inset-0 bg-slate-200/70 dark:bg-zinc-800/80 shimmer skeleton-block" />
+      <div className="relative aspect-[4/5] w-full bg-surface-100 dark:bg-[#0C1014] overflow-hidden">
+        <div className="absolute inset-0 bg-surface-200/70 dark:bg-surface-800/80 shimmer skeleton-block" />
         {product.Image && !imgError ? (
           <img
             src={product.Image}
@@ -101,7 +101,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           />
         ) : (
           <div className="relative z-10 flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_top,_rgba(148,163,184,0.30),_transparent_60%),linear-gradient(135deg,#e2e8f0,#cbd5e1_40%,#f8fafc)] dark:bg-[radial-gradient(circle_at_top,_rgba(56,189,248,0.15),_transparent_60%),linear-gradient(135deg,#0f172a,#1e293b_40%,#111827)]">
-            <div className="flex h-20 w-20 items-center justify-center rounded-2xl border border-slate-200/80 bg-white/65 text-slate-600 shadow-sm backdrop-blur-sm dark:border-slate-700 dark:bg-slate-900/65 dark:text-slate-200">
+            <div className="flex h-20 w-20 items-center justify-center rounded-2xl border border-surface-200/80 bg-white/65 text-surface-600 shadow-sm backdrop-blur-sm dark:border-surface-700 dark:bg-surface-900/65 dark:text-surface-200">
               <PackageOpen className="h-9 w-9" />
             </div>
           </div>
@@ -119,15 +119,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         {/* Stock Badge */}
         <div className="absolute top-3 right-3 z-10">
           {isOutOfStock ? (
-            <span className="micro-badge bg-slate-900/80 text-slate-200 border-slate-700">
+            <span className="micro-badge bg-surface-900/80 text-surface-200 border-surface-700">
               Out of Stock
             </span>
           ) : isDeactivated ? (
-            <span className="micro-badge bg-rose-500/90 text-white border-rose-400 flex items-center gap-1">
+            <span className="micro-badge bg-danger-500/90 text-white border-danger-400 flex items-center gap-1">
               <Lock className="w-3 h-3" /> Deactivated
             </span>
           ) : (
-            <span className="micro-badge bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20 backdrop-blur">
+            <span className="micro-badge bg-success-500/10 text-success-700 dark:text-success-400 border-success-500/20 backdrop-blur">
               {product.Stock} in stock
             </span>
           )}
@@ -139,7 +139,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             aria-label={isWishlisted ? `Remove ${product.Name} from wishlist` : `Save ${product.Name} to wishlist`}
             aria-pressed={isWishlisted}
             onClick={(event) => { event.stopPropagation(); onToggleWishlist(product); }}
-            className="absolute bottom-3 right-3 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-white/60 bg-white/90 text-rose-600 shadow-lg transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] dark:border-zinc-700 dark:bg-[#181F2A]/90 dark:text-rose-300"
+            className="absolute bottom-3 right-3 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-white/60 bg-white/90 text-danger-600 shadow-lg transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] dark:border-surface-700 dark:bg-[#181F2A]/90 dark:text-danger-300"
           >
             <Heart className={`h-4 w-4 ${isWishlisted ? 'fill-current' : ''}`} />
           </button>
@@ -147,8 +147,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
         {/* Hover overlay preview action */}
         <div className="absolute inset-0 bg-white/12 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-5 pointer-events-none">
-          <span className="translate-y-2 group-hover:translate-y-0 transition-transform duration-300 bg-white/95 dark:bg-[#181F2A]/90 text-slate-900 dark:text-zinc-100 border border-slate-200 dark:border-zinc-700 text-[11px] font-semibold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5">
-            <Eye className="w-3.5 h-3.5 text-[#77775a] dark:text-sky-400" /> Quick View
+          <span className="translate-y-2 group-hover:translate-y-0 transition-transform duration-300 bg-white/95 dark:bg-[#181F2A]/90 text-surface-900 dark:text-surface-100 border border-surface-200 dark:border-surface-700 text-micro font-semibold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5">
+            <Eye className="w-3.5 h-3.5 text-[#77775a] dark:text-brand-400" /> Quick View
           </span>
         </div>
       </div>
@@ -157,20 +157,20 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       <div className="p-4 flex-1 flex flex-col justify-between">
         <div>
           {/* Category & Seller info */}
-          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-zinc-400 mb-1.5">
-            <span className="font-bold text-blue-600 dark:text-sky-400 text-[11px] uppercase tracking-wider">
+          <div className="flex items-center justify-between text-xs text-surface-500 dark:text-surface-400 mb-1.5">
+            <span className="font-bold text-brand-600 dark:text-brand-400 text-micro uppercase tracking-wider">
               {category?.Name || 'General'}
             </span>
             {seller && (
-              <span className="flex items-center gap-1 text-slate-500 dark:text-zinc-400 font-medium text-[11px] truncate max-w-[120px] transition-colors group-hover:text-[#80734f] dark:group-hover:text-[#d0c8a5]">
-                <Store className="w-3 h-3 text-slate-400 dark:text-zinc-500 shrink-0" />
+              <span className="flex items-center gap-1 text-surface-500 dark:text-surface-400 font-medium text-micro truncate max-w-[120px] transition-colors group-hover:text-[#80734f] dark:group-hover:text-[#d0c8a5]">
+                <Store className="w-3 h-3 text-surface-400 dark:text-surface-500 shrink-0" />
                 <span className="truncate">{seller.Name}</span>
               </span>
             )}
           </div>
 
           {/* Product Name */}
-          <h3 className="font-bold text-slate-900 dark:text-white line-clamp-2 text-sm group-hover:text-blue-600 dark:group-hover:text-sky-400 transition-colors">
+          <h3 className="font-bold text-surface-900 dark:text-white line-clamp-2 text-sm group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
             {product.Name}
           </h3>
 
@@ -181,24 +181,24 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         </div>
 
         {/* Price & Action */}
-        <div className="mt-4 pt-3 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-between">
+        <div className="mt-4 pt-3 border-t border-surface-100 dark:border-surface-800 flex items-center justify-between">
           <div>
-            <span className="text-[10px] text-slate-500 dark:text-zinc-500 uppercase tracking-wider block font-semibold">Price</span>
+            <span className="text-micro text-surface-500 dark:text-surface-500 uppercase tracking-wider block font-semibold">Price</span>
             {hasActiveVoucher ? (
               <>
-                <span className="block text-[10px] text-slate-500 line-through dark:text-zinc-500">{formatCurrency(Number(product.Price) || 0)}</span>
-                <span className="text-base font-black text-slate-900 dark:text-white">
+                <span className="block text-micro text-surface-500 line-through dark:text-surface-500">{formatCurrency(Number(product.Price) || 0)}</span>
+                <span className="text-base font-black text-surface-900 dark:text-white">
                   {formatCurrency(discountedPriceForVoucher(Number(product.Price) || 0, product.Voucher))}
                 </span>
-                <span className="block text-[9px] font-medium text-emerald-700 dark:text-emerald-300">with {product.Voucher}</span>
+                <span className="block text-micro font-medium text-success-700 dark:text-success-300">with {product.Voucher}</span>
               </>
             ) : (
-              <span className="text-base font-black text-slate-900 dark:text-white">
+              <span className="text-base font-black text-surface-900 dark:text-white">
                 {formatCurrency(Number(product.Price) || 0)}
               </span>
             )}
             {product.Featured_Deal && hasActiveVoucher && (
-              <span className="mt-1 block text-[9px] font-semibold text-amber-700 dark:text-amber-300">
+              <span className="mt-1 block text-micro font-semibold text-warning-700 dark:text-warning-300">
                 Featured deal{voucherCountdown ? ` · ${voucherCountdown}` : ''}
               </span>
             )}
@@ -210,7 +210,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             onClick={handleAddClick}
             className={`luxury-control min-h-9 px-3.5 rounded-full text-xs cursor-pointer ${
               isOutOfStock || isDeactivated
-                ? 'bg-slate-100 dark:bg-[#181F2A] text-slate-400 dark:text-zinc-600 cursor-not-allowed'
+                ? 'bg-surface-100 dark:bg-[#181F2A] text-surface-400 dark:text-surface-600 cursor-not-allowed'
                 : justAdded
                 ? 'bg-[#77775a] text-white shadow-[0_12px_24px_rgba(86,80,57,0.3)] ring-2 ring-[#d9d3b7]/50'
                 : 'premium-button text-white'

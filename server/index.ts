@@ -35,7 +35,16 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
+    app.use(express.static(distPath, {
+      setHeaders: (response, filePath) => {
+        const isHtml = filePath.endsWith('.html');
+        const isHashedAsset = /\.[a-f0-9]{8,}\./i.test(path.basename(filePath));
+        response.setHeader(
+          'Cache-Control',
+          isHashedAsset && !isHtml ? 'public, max-age=31536000, immutable' : 'no-cache'
+        );
+      },
+    }));
     app.get('*', (_req, res) => {
       res.sendFile(path.join(distPath, 'index.html'));
     });

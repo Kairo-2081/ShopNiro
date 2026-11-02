@@ -242,7 +242,7 @@ export const OrbitGlobe: React.FC<OrbitGlobeProps> = ({ onGreet }) => {
     <div className="relative flex flex-col items-center justify-center select-none py-2">
       {/* Speech Bubble when greeted */}
       {greetingText && (
-        <div className="absolute top-2 z-20 px-3.5 py-1.5 rounded-full bg-white dark:bg-zinc-900 border border-sky-200 dark:border-sky-800 text-blue-600 dark:text-sky-300 font-semibold text-xs shadow-lg animate-bounce">
+        <div className="absolute top-2 z-20 px-3.5 py-1.5 rounded-full bg-white dark:bg-surface-900 border border-brand-200 dark:border-brand-800 text-brand-600 dark:text-brand-300 font-semibold text-xs shadow-lg animate-bounce">
           {greetingText}
         </div>
       )}
@@ -265,7 +265,7 @@ export const OrbitGlobe: React.FC<OrbitGlobeProps> = ({ onGreet }) => {
       <button
         type="button"
         onClick={handleGlobeClick}
-        className="mt-1 inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-sky-50 dark:bg-sky-950/40 border border-sky-200/80 dark:border-sky-800/80 text-sky-700 dark:text-sky-300 text-[11px] font-medium tracking-wide shadow-2xs hover:bg-sky-100 dark:hover:bg-sky-900/50 transition-colors cursor-pointer"
+        className="mt-1 inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-brand-50 dark:bg-brand-950/40 border border-brand-200/80 dark:border-brand-800/80 text-brand-700 dark:text-brand-300 text-micro font-medium tracking-wide shadow-2xs hover:bg-brand-100 dark:hover:bg-brand-900/50 transition-colors cursor-pointer"
       >
         <span>🤏 Drag to rotate • Tap to greet</span>
       </button>
