@@ -90,7 +90,7 @@ test('admin approves a seller, who lists a product that a customer buys and a ri
       `SELECT rd.confirmation_code FROM rider_deliveries rd JOIN seller_fulfillments sf ON sf.id = rd.fulfillment_id
         WHERE sf.order_id = $1`, [orderId])).rows[0].confirmation_code as string);
     const customer = await asRole(browser, 'customer');
-    await customer.getByRole('button', { name: /Orders/ }).first().click();
+    await customer.getByRole('button', { name: /Orders|My orders/ }).first().click();
     await customer.getByPlaceholder('6-digit code').fill(code);
     await customer.getByRole('button', { name: 'Confirm received' }).click();
     await expect(customer.getByText(/Delivery confirmed/)).toBeVisible();

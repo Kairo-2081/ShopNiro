@@ -67,30 +67,30 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
     .slice(0, 3);
 
   return (
-    <section className="bg-white dark:bg-[#12161D] rounded-3xl p-6 sm:p-8 border border-sky-100 dark:border-zinc-800 shadow-xl space-y-6">
+    <section className="bg-white dark:bg-[#12161D] rounded-3xl p-6 sm:p-8 border border-brand-100 dark:border-surface-800 shadow-xl space-y-6">
       {/* Header and Filter Switcher */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-zinc-800/80 pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-surface-100 dark:border-surface-800/80 pb-5">
         <div>
-          <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white flex items-center gap-2">
+          <h2 className="text-xl sm:text-2xl font-black text-surface-900 dark:text-white flex items-center gap-2">
             Marketplace Charts &amp; Trends
           </h2>
-          <p className="text-xs text-slate-500 dark:text-zinc-400">
+          <p className="text-xs text-surface-500 dark:text-surface-400">
             Top products ranked by lifetime units sold across all customer orders.
           </p>
         </div>
 
         {/* Tab Pills */}
-        <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-[#18202D] rounded-2xl overflow-x-auto scrollbar-none text-xs font-semibold">
+        <div className="flex items-center gap-1.5 p-1 bg-surface-100 dark:bg-[#18202D] rounded-2xl overflow-x-auto scrollbar-none text-xs font-semibold">
           <button
             type="button"
             onClick={() => setActiveTab('trends')}
             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'trends'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+                ? 'bg-brand-600 text-white shadow-xs'
+                : 'text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white'
             }`}
           >
-            <Flame className="w-3.5 h-3.5 text-amber-300" />
+            <Flame className="w-3.5 h-3.5 text-warning-300" />
             <span>Top Trends</span>
           </button>
 
@@ -99,11 +99,11 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
             onClick={() => setActiveTab('top-rated')}
             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'top-rated'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+                ? 'bg-brand-600 text-white shadow-xs'
+                : 'text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white'
             }`}
           >
-            <Star className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
+            <Star className="w-3.5 h-3.5 text-warning-300 fill-warning-300" />
             <span>Top Rated</span>
           </button>
 
@@ -112,11 +112,11 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
             onClick={() => setActiveTab('new-arrivals')}
             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'new-arrivals'
-                ? 'bg-blue-600 text-white shadow-xs'
-                : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+                ? 'bg-brand-600 text-white shadow-xs'
+                : 'text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white'
             }`}
           >
-            <Sparkles className="w-3.5 h-3.5 text-sky-300" />
+            <Sparkles className="w-3.5 h-3.5 text-brand-300" />
             <span>New Arrivals</span>
           </button>
 
@@ -126,9 +126,9 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
       {/* Tab 1: Top Trends (Trending Products View) */}
       {activeTab === 'trends' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-zinc-400">
+          <div className="flex items-center justify-between text-xs text-surface-500 dark:text-surface-400">
             <span>Ranked by lifetime units sold across all accounts</span>
-            <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">
+            <span className="font-mono text-success-600 dark:text-success-400 font-bold">
               {trending.length} Best Sellers
             </span>
           </div>
@@ -139,14 +139,14 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
               return (
                 <div
                   key={item.product_id || idx}
-                  className="group relative p-4 rounded-2xl bg-slate-50/70 dark:bg-[#161E2A] border border-slate-200/80 dark:border-zinc-800 hover:border-blue-400 dark:hover:border-blue-500/60 transition-all hover:shadow-lg flex flex-col justify-between"
+                  className="group relative p-4 rounded-2xl bg-surface-50/70 dark:bg-[#161E2A] border border-surface-200/80 dark:border-surface-800 hover:border-brand-400 dark:hover:border-brand-500/60 transition-all hover:shadow-lg flex flex-col justify-between"
                 >
                   {/* Top Rank Badge */}
                   <div className="flex items-center justify-between mb-2">
-                    <span className="px-2 py-0.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-black font-mono">
+                    <span className="px-2 py-0.5 rounded-lg bg-warning-500/10 text-warning-600 dark:text-warning-400 text-micro font-black font-mono">
                       #{idx + 1} BEST SELLER
                     </span>
-                    <span className="text-[10px] font-bold text-sky-600 dark:text-sky-400 bg-sky-100 dark:bg-sky-950/70 px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <span className="text-micro font-bold text-brand-600 dark:text-brand-400 bg-brand-100 dark:bg-brand-950/70 px-2 py-0.5 rounded-full flex items-center gap-1">
                       <ShoppingBag className="w-2.5 h-2.5" />
                       {item.total_units_sold} sold
                     </span>
@@ -157,7 +157,7 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
                     onClick={() => fullProd && onSelectProduct && onSelectProduct(fullProd)}
                     className="cursor-pointer space-y-2.5"
                   >
-                    <div className="w-full h-36 rounded-xl overflow-hidden bg-slate-200 dark:bg-[#0C1014] relative">
+                    <div className="w-full h-36 rounded-xl overflow-hidden bg-surface-200 dark:bg-[#0C1014] relative">
                       <img
                         src={item.image || fullProd?.Image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400'}
                         alt={item.product_name}
@@ -166,22 +166,22 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
                       />
                     </div>
                     <div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                      <span className="text-micro font-bold uppercase tracking-wider text-surface-400 dark:text-surface-500">
                         {item.category_name}
                       </span>
-                      <h4 className="font-bold text-xs text-slate-900 dark:text-white line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-sky-400 transition-colors">
+                      <h4 className="font-bold text-xs text-surface-900 dark:text-white line-clamp-1 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
                         {item.product_name}
                       </h4>
                     </div>
                   </div>
 
                   {/* Price & Action */}
-                  <div className="mt-3 pt-2.5 border-t border-slate-200/60 dark:border-zinc-800/80 flex items-center justify-between">
+                  <div className="mt-3 pt-2.5 border-t border-surface-200/60 dark:border-surface-800/80 flex items-center justify-between">
                     <div>
-                      <span className="text-sm font-black text-slate-900 dark:text-white">
+                      <span className="text-sm font-black text-surface-900 dark:text-white">
                         {formatCurrency(Number(item.price))}
                       </span>
-                      <span className="block text-[10px] text-slate-400 dark:text-zinc-500">
+                      <span className="block text-micro text-surface-400 dark:text-surface-500">
                         {item.available_stock <= 0 ? 'Stock Out' : `Stock: ${item.available_stock}`}
                       </span>
                     </div>
@@ -191,7 +191,7 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
                         type="button"
                         disabled={item.available_stock <= 0 || Number(fullProd.Stock) <= 0 || fullProd.Product_Status !== 'active'}
                         onClick={() => onAddToCart(fullProd, 1)}
-                        className="p-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white transition-all shadow-xs cursor-pointer disabled:bg-slate-200 disabled:text-blue-900 disabled:cursor-not-allowed dark:disabled:bg-zinc-800 dark:disabled:text-sky-200"
+                        className="p-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white transition-all shadow-xs cursor-pointer disabled:bg-surface-200 disabled:text-brand-900 disabled:cursor-not-allowed dark:disabled:bg-surface-800 dark:disabled:text-brand-200"
                         title={item.available_stock <= 0 || Number(fullProd.Stock) <= 0 ? 'Out of stock' : 'Add to cart'}
                       >
                         {item.available_stock <= 0 || Number(fullProd.Stock) <= 0 ? 'Out' : <ShoppingBag className="w-3.5 h-3.5" />}
@@ -208,9 +208,9 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
       {/* Tab 2: Top Rated (Top Rated Products View) */}
       {activeTab === 'top-rated' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-zinc-400">
+          <div className="flex items-center justify-between text-xs text-surface-500 dark:text-surface-400">
             <span>Products with 3+ reviews and an average rating of 4.0 or higher</span>
-            <span className="font-mono text-amber-500 font-bold">
+            <span className="font-mono text-warning-500 font-bold">
               {topRated.length} of 3 Products
             </span>
           </div>
@@ -221,13 +221,13 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
               return (
                 <div
                   key={item.product_id || idx}
-                  className="group relative p-4 rounded-2xl bg-slate-50/70 dark:bg-[#161E2A] border border-slate-200/80 dark:border-zinc-800 hover:border-amber-400 dark:hover:border-amber-500/60 transition-all hover:shadow-lg flex flex-col justify-between"
+                  className="group relative p-4 rounded-2xl bg-surface-50/70 dark:bg-[#161E2A] border border-surface-200/80 dark:border-surface-800 hover:border-warning-400 dark:hover:border-warning-500/60 transition-all hover:shadow-lg flex flex-col justify-between"
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="px-2 py-0.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-black font-mono">
+                    <span className="px-2 py-0.5 rounded-lg bg-warning-500/10 text-warning-600 dark:text-warning-400 text-micro font-black font-mono">
                       ★ {item.average_rating} RATING
                     </span>
-                    <span className="text-[10px] text-slate-500 dark:text-zinc-400 font-semibold">
+                    <span className="text-micro text-surface-500 dark:text-surface-400 font-semibold">
                       {item.total_reviews} reviews
                     </span>
                   </div>
@@ -236,7 +236,7 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
                     onClick={() => fullProd && onSelectProduct && onSelectProduct(fullProd)}
                     className="cursor-pointer space-y-2.5"
                   >
-                    <div className="w-full h-36 rounded-xl overflow-hidden bg-slate-200 dark:bg-[#0C1014] relative">
+                    <div className="w-full h-36 rounded-xl overflow-hidden bg-surface-200 dark:bg-[#0C1014] relative">
                       <img
                         src={item.image || fullProd?.Image || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400'}
                         alt={item.product_name}
@@ -245,18 +245,18 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
                       />
                     </div>
                     <div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-zinc-500">
+                      <span className="text-micro font-bold uppercase tracking-wider text-surface-400 dark:text-surface-500">
                         {item.category_name} • {item.seller_name}
                       </span>
-                      <h4 className="font-bold text-xs text-slate-900 dark:text-white line-clamp-1 group-hover:text-amber-500 transition-colors">
+                      <h4 className="font-bold text-xs text-surface-900 dark:text-white line-clamp-1 group-hover:text-warning-500 transition-colors">
                         {item.product_name}
                       </h4>
                     </div>
                   </div>
 
-                  <div className="mt-3 pt-2.5 border-t border-slate-200/60 dark:border-zinc-800/80 flex items-center justify-between">
+                  <div className="mt-3 pt-2.5 border-t border-surface-200/60 dark:border-surface-800/80 flex items-center justify-between">
                     <div>
-                      <span className="text-sm font-black text-slate-900 dark:text-white">
+                      <span className="text-sm font-black text-surface-900 dark:text-white">
                         {formatCurrency(Number(item.price))}
                       </span>
                     </div>
@@ -266,7 +266,7 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
                         type="button"
                         disabled={Number(fullProd.Stock) <= 0 || fullProd.Product_Status !== 'active'}
                         onClick={() => onAddToCart(fullProd, 1)}
-                        className="p-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-white transition-all shadow-xs cursor-pointer disabled:bg-slate-200 disabled:text-blue-900 disabled:cursor-not-allowed dark:disabled:bg-zinc-800 dark:disabled:text-sky-200"
+                        className="p-2 rounded-xl bg-warning-500 hover:bg-warning-400 text-white transition-all shadow-xs cursor-pointer disabled:bg-surface-200 disabled:text-brand-900 disabled:cursor-not-allowed dark:disabled:bg-surface-800 dark:disabled:text-brand-200"
                         title={Number(fullProd.Stock) <= 0 ? 'Out of stock' : 'Add to cart'}
                       >
                         {Number(fullProd.Stock) <= 0 ? 'Out' : <ShoppingBag className="w-3.5 h-3.5" />}
@@ -276,15 +276,15 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
                 </div>
               );
             })}
-          </div> : <p className="py-8 text-center text-sm text-slate-500 dark:text-zinc-400">No products meet the 4.0 rating and 3-review minimum yet.</p>}
+          </div> : <p className="py-8 text-center text-sm text-surface-500 dark:text-surface-400">No products meet the 4.0 rating and 3-review minimum yet.</p>}
         </div>
       )}
 
       {activeTab === 'new-arrivals' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-zinc-400">
+          <div className="flex items-center justify-between text-xs text-surface-500 dark:text-surface-400">
             <span>Recently added active products</span>
-            <span className="font-mono text-sky-600 dark:text-sky-400 font-bold">
+            <span className="font-mono text-brand-600 dark:text-brand-400 font-bold">
               {newArrivals.length} Latest Listings
             </span>
           </div>
@@ -294,13 +294,13 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
               {newArrivals.map((product, idx) => (
                 <div
                   key={product.Product_ID}
-                  className="group relative p-4 rounded-2xl bg-slate-50/70 dark:bg-[#161E2A] border border-slate-200/80 dark:border-zinc-800 hover:border-sky-400 dark:hover:border-sky-500/60 transition-all hover:shadow-lg flex flex-col justify-between"
+                  className="group relative p-4 rounded-2xl bg-surface-50/70 dark:bg-[#161E2A] border border-surface-200/80 dark:border-surface-800 hover:border-brand-400 dark:hover:border-brand-500/60 transition-all hover:shadow-lg flex flex-col justify-between"
                 >
                   <div className="flex items-center justify-between mb-2">
-                    <span className="px-2 py-0.5 rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400 text-[10px] font-black font-mono">
+                    <span className="px-2 py-0.5 rounded-lg bg-brand-500/10 text-brand-600 dark:text-brand-400 text-micro font-black font-mono">
                       #{idx + 1} NEW ARRIVAL
                     </span>
-                    <span className="text-[10px] text-slate-500 dark:text-zinc-400 font-semibold">
+                    <span className="text-micro text-surface-500 dark:text-surface-400 font-semibold">
                       {product.Created_At && !Number.isNaN(Date.parse(product.Created_At))
                         ? new Date(product.Created_At).toLocaleDateString()
                         : 'Recently added'}
@@ -311,7 +311,7 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
                     onClick={() => onSelectProduct?.(product)}
                     className="cursor-pointer space-y-2.5"
                   >
-                    <div className="w-full h-36 rounded-xl overflow-hidden bg-slate-200 dark:bg-[#0C1014] relative">
+                    <div className="w-full h-36 rounded-xl overflow-hidden bg-surface-200 dark:bg-[#0C1014] relative">
                       <img
                         src={product.Image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400'}
                         alt={product.Name}
@@ -319,17 +319,17 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     </div>
-                    <h4 className="font-bold text-xs text-slate-900 dark:text-white line-clamp-1 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
+                    <h4 className="font-bold text-xs text-surface-900 dark:text-white line-clamp-1 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
                       {product.Name}
                     </h4>
                   </div>
 
-                  <div className="mt-3 pt-2.5 border-t border-slate-200/60 dark:border-zinc-800/80 flex items-center justify-between">
+                  <div className="mt-3 pt-2.5 border-t border-surface-200/60 dark:border-surface-800/80 flex items-center justify-between">
                     <div>
-                      <span className="text-sm font-black text-slate-900 dark:text-white">
+                      <span className="text-sm font-black text-surface-900 dark:text-white">
                         {formatCurrency(Number(product.Price))}
                       </span>
-                      <span className="block text-[10px] text-slate-400 dark:text-zinc-500">
+                      <span className="block text-micro text-surface-400 dark:text-surface-500">
                         {Number(product.Stock) <= 0 ? 'Stock Out' : `Stock: ${product.Stock}`}
                       </span>
                     </div>
@@ -339,7 +339,7 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
                         type="button"
                         disabled={Number(product.Stock) <= 0}
                         onClick={() => onAddToCart(product, 1)}
-                        className="p-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white transition-all shadow-xs cursor-pointer disabled:bg-slate-200 disabled:text-blue-900 disabled:cursor-not-allowed dark:disabled:bg-zinc-800 dark:disabled:text-sky-200"
+                        className="p-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white transition-all shadow-xs cursor-pointer disabled:bg-surface-200 disabled:text-brand-900 disabled:cursor-not-allowed dark:disabled:bg-surface-800 dark:disabled:text-brand-200"
                         title={Number(product.Stock) <= 0 ? 'Out of stock' : 'Add to cart'}
                       >
                         {Number(product.Stock) <= 0 ? 'Out' : <ShoppingBag className="w-3.5 h-3.5" />}
@@ -350,7 +350,7 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
               ))}
             </div>
           ) : (
-            <p className="py-8 text-center text-sm text-slate-500 dark:text-zinc-400">
+            <p className="py-8 text-center text-sm text-surface-500 dark:text-surface-400">
               No new products are available yet.
             </p>
           )}
