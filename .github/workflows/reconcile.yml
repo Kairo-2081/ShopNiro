@@ -1,0 +1,31 @@
+name: Nightly payment reconciliation
+
+on:
+  schedule:
+    - cron: '0 20 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reconcile payments
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$APP_URL" || -z "$CRON_SECRET" ]]; then
+            echo "APP_URL and CRON_SECRET repository secrets must be configured."
+            exit 1
+          fi
+          response="$(curl -fsS -X POST \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H "Content-Type: application/json" \
+            -d '{}' \
+            "${APP_URL%/}/api/cron/reconcile-payments")"
+          printf '%s\n' "$response" | jq '{runId, status, checked, matched, repaired, findingsOpened, highSeverityOpen}'
+          printf '%s\n' "$response" | jq -e '.status == "ok" and .highSeverityOpen == 0' >/dev/null

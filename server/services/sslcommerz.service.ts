@@ -5,6 +5,7 @@
  */
 
 import { newId } from '../lib/ids.ts';
+import { query } from '../db/index.ts';
 
 export interface SSLCommerzInitParams {
   tran_id: string;
@@ -69,6 +70,15 @@ export interface SSLCommerzRefundResult {
   status?: string;
   refund_ref_id?: string;
   errorReason?: string;
+}
+
+export interface SSLCommerzTransactionQueryResult {
+  status: string;
+  tran_id: string;
+  val_id: string | null;
+  amount: string | number | null;
+  currency: string | null;
+  bank_tran_id: string | null;
 }
 
 export class GatewayError extends Error {
@@ -294,6 +304,112 @@ class SSLCommerzService {
       ok,
       reason: ok ? undefined : 'gateway validation did not match the expected payment',
       raw: data,
+    };
+  }
+
+  public async queryTransactionByTranId(tranId: string): Promise<SSLCommerzTransactionQueryResult> {
+    if (this.paymentSimulatorEnabled) {
+      const result = await query<{
+        amount: string;
+        currency: string;
+        status: string;
+        val_id: string | null;
+        bank_tran_id: string | null;
+      }>(`
+        SELECT amount, currency, status, val_id, bank_tran_id
+        FROM payments
+        WHERE transaction_id = $1
+      `, [tranId]);
+      const payment = result.rows[0];
+      if (!payment) {
+        return { status: 'NOT_FOUND', tran_id: tranId, val_id: null, amount: null, currency: null, bank_tran_id: null };
+      }
+      return {
+        status: payment.status,
+        tran_id: tranId,
+        val_id: payment.val_id,
+        amount: payment.amount,
+        currency: payment.currency,
+        bank_tran_id: payment.bank_tran_id,
+      };
+    }
+
+    const params = new URLSearchParams({
+      tran_id: tranId,
+      store_id: this.storeId,
+      store_passwd: this.storePasswd,
+      format: 'json',
+    });
+    let response: Response;
+    try {
+      response = await fetch(
+        `${this.baseUrl}/validator/api/merchantTransIDvalidationAPI.php?${params.toString()}`,
+        { signal: AbortSignal.timeout(8000) }
+      );
+    } catch {
+      throw new GatewayError('SSLCommerz transaction query is unreachable.');
+    }
+    if (!response.ok) throw new GatewayError('SSLCommerz transaction query is unavailable.');
+
+    let data: {
+      no_of_trans_found?: string | number;
+      element?: unknown[] | Record<string, unknown>;
+      status?: unknown;
+      tran_id?: unknown;
+      val_id?: unknown;
+      amount?: unknown;
+      currency?: unknown;
+      bank_tran_id?: unknown;
+    };
+    try {
+      const payload: unknown = await response.json();
+      if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+        throw new GatewayError('SSLCommerz transaction query returned an invalid response.');
+      }
+      data = payload as typeof data;
+    } catch {
+      throw new GatewayError('SSLCommerz transaction query returned an invalid response.');
+    }
+
+    if (Number(data.no_of_trans_found) === 0) {
+      return { status: 'NOT_FOUND', tran_id: tranId, val_id: null, amount: null, currency: null, bank_tran_id: null };
+    }
+    const element = Array.isArray(data.element)
+      ? data.element[0] as Record<string, unknown> | undefined
+      : data.element ?? data;
+    if (!element || typeof element !== 'object') {
+      throw new GatewayError('SSLCommerz transaction query returned an invalid response.');
+    }
+    const transaction = element as Record<string, unknown>;
+    const status = transaction.status;
+    const responseTranId = transaction.tran_id;
+    const amount = transaction.amount;
+    const currency = transaction.currency;
+    const valId = transaction.val_id;
+    const bankTranId = transaction.bank_tran_id;
+    if (
+      typeof status !== 'string'
+      || typeof responseTranId !== 'string'
+      || responseTranId !== tranId
+      || (typeof amount !== 'string' && typeof amount !== 'number')
+      || (typeof amount === 'string' && !amount.trim())
+      || !Number.isFinite(Number(amount))
+      || Number(amount) <= 0
+      || typeof currency !== 'string'
+      || !currency
+      || (['VALID', 'VALIDATED'].includes(status.toUpperCase()) && (typeof valId !== 'string' || !valId.trim()))
+      || (valId != null && typeof valId !== 'string')
+      || (bankTranId != null && typeof bankTranId !== 'string')
+    ) {
+      throw new GatewayError('SSLCommerz transaction query returned an invalid response.');
+    }
+    return {
+      status,
+      tran_id: responseTranId,
+      val_id: typeof valId === 'string' ? valId : null,
+      amount,
+      currency,
+      bank_tran_id: typeof bankTranId === 'string' ? bankTranId : null,
     };
   }
 
