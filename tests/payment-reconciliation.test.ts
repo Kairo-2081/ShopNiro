@@ -147,6 +147,12 @@ const cleanup = async (
   fixture: OrderFixture,
   restoreConstraints: ('fk_payments_order' | 'chk_payments_order_required')[] = []
 ) => {
+  await query(`
+    DELETE FROM payment_reconciliation_findings
+    WHERE order_id = $1
+      OR payment_id = ANY($2::varchar[])
+      OR refund_id = ANY($3::varchar[])
+  `, [fixture.orderId, fixture.paymentIds, fixture.refundIds]);
   await query('DELETE FROM refunds WHERE order_id = $1 OR id = ANY($2::varchar[])', [fixture.orderId, fixture.refundIds]);
   await query('DELETE FROM payments WHERE id = ANY($1::varchar[])', [fixture.paymentIds]);
   for (const constraint of restoreConstraints) {
