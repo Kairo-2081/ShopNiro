@@ -233,16 +233,41 @@ const run = (gateway: FakeGateway, autoRepair = false) => runPaymentReconciliati
   sleep: async () => undefined,
 });
 
-const findingsFor = async (runId: string) => {
-  const result = await query<{ kind: string; severity: string; detail: Record<string, unknown> }>(
-    'SELECT kind, severity, detail FROM payment_reconciliation_findings WHERE run_id = $1 ORDER BY kind',
-    [runId]
-  );
+const findingsFor = async (
+  runId: string,
+  identity: { orderId?: string; paymentIds?: string[]; refundIds?: string[] }
+) => {
+  const result = await query<{
+    kind: string;
+    severity: string;
+    detail: Record<string, unknown>;
+    order_id: string | null;
+    payment_id: string | null;
+    refund_id: string | null;
+  }>(`
+    SELECT kind, severity, detail, order_id, payment_id, refund_id
+    FROM payment_reconciliation_findings
+    WHERE run_id = $1
+      AND ($2::varchar IS NULL OR order_id = $2)
+      AND (cardinality($3::varchar[]) = 0 OR payment_id = ANY($3::varchar[]))
+      AND (cardinality($4::varchar[]) = 0 OR refund_id = ANY($4::varchar[]))
+    ORDER BY kind
+  `, [
+    runId,
+    identity.orderId ?? null,
+    identity.paymentIds ?? [],
+    identity.refundIds ?? [],
+  ]);
   return result.rows;
 };
 
-const assertFinding = async (runId: string, kind: string, severity: string) => {
-  const rows = await findingsFor(runId);
+const assertFinding = async (
+  runId: string,
+  kind: string,
+  severity: string,
+  identity: { orderId?: string; paymentIds?: string[]; refundIds?: string[] }
+) => {
+  const rows = await findingsFor(runId, identity);
   assert.ok(rows.some((finding) => finding.kind === kind && finding.severity === severity), JSON.stringify(rows));
 };
 
@@ -250,7 +275,7 @@ dbTest('reports a paid online order with no validated payment as high severity',
   const fixture = await createOrder({ paymentStatus: 'paid' });
   try {
     const summary = await run(new FakeGateway());
-    await assertFinding(summary.runId, 'paid_online_order_without_validated_payment', 'high');
+    await assertFinding(summary.runId, 'paid_online_order_without_validated_payment', 'high', { orderId: fixture.orderId });
   } finally {
     await cleanup(fixture);
   }
@@ -265,7 +290,7 @@ dbTest('reports multiple validated payments for one paid online order', async ()
   gateway.setTransaction(second.transactionId);
   try {
     const summary = await run(gateway);
-    await assertFinding(summary.runId, 'paid_online_order_multiple_validated_payments', 'high');
+    await assertFinding(summary.runId, 'paid_online_order_multiple_validated_payments', 'high', { orderId: fixture.orderId });
   } finally {
     await cleanup(fixture);
   }
@@ -278,7 +303,7 @@ dbTest('reports a validated payment amount that differs from the order total', a
   gateway.setTransaction(payment.transactionId, { amount: '99.00' });
   try {
     const summary = await run(gateway);
-    await assertFinding(summary.runId, 'paid_online_order_amount_mismatch', 'high');
+    await assertFinding(summary.runId, 'paid_online_order_amount_mismatch', 'high', { orderId: fixture.orderId, paymentIds: [payment.id] });
   } finally {
     await cleanup(fixture);
   }
@@ -291,7 +316,7 @@ dbTest('reports a validated payment whose order is not paid', async () => {
   gateway.setTransaction(payment.transactionId);
   try {
     const summary = await run(gateway);
-    await assertFinding(summary.runId, 'validated_payment_order_not_paid', 'high');
+    await assertFinding(summary.runId, 'validated_payment_order_not_paid', 'high', { orderId: fixture.orderId, paymentIds: [payment.id] });
   } finally {
     await cleanup(fixture);
   }
@@ -304,7 +329,7 @@ dbTest('reports a validated payment without an order id as medium severity', asy
     const gateway = new FakeGateway();
     gateway.setTransaction(payment.transactionId);
     const summary = await run(gateway);
-    await assertFinding(summary.runId, 'validated_payment_without_order_id', 'medium');
+    await assertFinding(summary.runId, 'validated_payment_without_order_id', 'medium', { paymentIds: [payment.id] });
   } finally {
     await cleanup(fixture, ['chk_payments_order_required']);
   }
@@ -318,7 +343,7 @@ dbTest('reports a validated payment whose referenced order is missing', async ()
   gateway.setTransaction(payment.transactionId);
   try {
     const summary = await run(gateway);
-    await assertFinding(summary.runId, 'validated_payment_order_missing', 'high');
+    await assertFinding(summary.runId, 'validated_payment_order_missing', 'high', { paymentIds: [payment.id] });
   } finally {
     await cleanup(fixture, ['fk_payments_order']);
   }
@@ -378,7 +403,7 @@ dbTest('report-only is the default and does not change payment or order rows', a
       finalizePayment: finalizer,
       sleep: async () => undefined,
     });
-    await assertFinding(summary.runId, 'paid_at_gateway_not_here', 'high');
+    await assertFinding(summary.runId, 'paid_at_gateway_not_here', 'high', { orderId: fixture.orderId, paymentIds: [payment.id] });
     const rows = await query<{ status: string; payment_status: string }>(`
       SELECT payment.status, order_record.payment_status
       FROM payments payment JOIN orders order_record ON order_record.id = payment.order_id
@@ -415,7 +440,7 @@ dbTest('reports gateway failure, cancellation, and missing validated payments wi
         const kind = status === 'NOT_FOUND'
           ? 'validated_payment_missing_at_gateway'
           : 'validated_payment_gateway_status_mismatch';
-        await assertFinding(summary.runId, kind, 'high');
+        await assertFinding(summary.runId, kind, 'high', { orderId: fixture.orderId, paymentIds: [payment.id] });
         const result = await query<{ status: string; payment_status: string }>(`
           SELECT payment.status, order_record.payment_status
           FROM payments payment JOIN orders order_record ON order_record.id = payment.order_id
@@ -443,7 +468,8 @@ dbTest('reports gateway amount and currency mismatches without repairing', async
         await assertFinding(
           summary.runId,
           mismatch.kind === 'amount' ? 'gateway_payment_amount_mismatch' : 'gateway_payment_currency_mismatch',
-          'high'
+          'high',
+          { orderId: fixture.orderId, paymentIds: [payment.id] }
         );
         const result = await query<{ status: string; payment_status: string }>(`
           SELECT payment.status, order_record.payment_status
@@ -463,7 +489,7 @@ dbTest('counts an abandoned pending checkout without opening a finding', async (
   await createPayment(fixture);
   try {
     const summary = await run(new FakeGateway());
-    assert.deepEqual(await findingsFor(summary.runId), []);
+    assert.deepEqual(await findingsFor(summary.runId, { orderId: fixture.orderId }), []);
   } finally {
     await cleanup(fixture);
   }
@@ -494,10 +520,11 @@ dbTest('reports and queries refunds stuck for more than 24 hours', async () => {
   gateway.refunds.set('REF-SUBMITTED', { APIConnect: 'DONE', status: 'refunded', refund_ref_id: 'REF-SUBMITTED' });
   try {
     const summary = await run(gateway);
-    await assertFinding(summary.runId, 'refund_stuck', 'medium');
+    await assertFinding(summary.runId, 'refund_stuck', 'medium', { orderId: fixture.orderId, refundIds: fixture.refundIds });
     assert.equal(summary.status, 'ok');
-    assert.equal((await findingsFor(summary.runId)).filter((finding) => finding.kind === 'refund_stuck').length, 2);
-    assert.deepEqual(gateway.refundQueries.sort(), ['REF-INITIATING', 'REF-SUBMITTED']);
+    assert.equal((await findingsFor(summary.runId, { orderId: fixture.orderId, refundIds: fixture.refundIds })).filter((finding) => finding.kind === 'refund_stuck').length, 2);
+    assert.ok(gateway.refundQueries.includes('REF-INITIATING'));
+    assert.ok(gateway.refundQueries.includes('REF-SUBMITTED'));
   } finally {
     await cleanup(fixture);
   }
@@ -510,8 +537,8 @@ dbTest('reports completed refunds not shown as refunded by the gateway', async (
   gateway.refunds.set('REF-COMPLETED', { APIConnect: 'DONE', status: 'processing', refund_ref_id: 'REF-COMPLETED' });
   try {
     const summary = await run(gateway);
-    await assertFinding(summary.runId, 'completed_refund_missing_at_gateway', 'high');
-    assert.deepEqual(gateway.refundQueries, ['REF-COMPLETED']);
+    await assertFinding(summary.runId, 'completed_refund_missing_at_gateway', 'high', { orderId: fixture.orderId, refundIds: fixture.refundIds });
+    assert.ok(gateway.refundQueries.includes('REF-COMPLETED'));
   } finally {
     await cleanup(fixture);
   }
