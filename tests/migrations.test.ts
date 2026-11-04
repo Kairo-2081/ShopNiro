@@ -64,6 +64,7 @@ test('migration runner applies, verifies, and baselines schemas safely', {
       '0007_drop_items_json',
       '0008_checkout_idempotency',
       '0009_payment_reconciliation',
+      '0010_lock_public_schema',
     ]);
 
     await cp(path.join(migrationDirectory, '0001_baseline.sql'), path.join(baselineMigrations, '0001_baseline.sql'));
