@@ -600,15 +600,16 @@ dbTest('keeps an acknowledged finding acknowledged on later runs', async () => {
       WHERE run_id = $1 AND kind = 'paid_at_gateway_not_here'
     `, [first.runId, fixture.userId]);
     const second = await run(gateway);
-    const result = await query<{ status: string; last_seen_at: Date }>(`
-      SELECT status, last_seen_at
+    const result = await query<{ status: string; run_id: string; count: string }>(`
+      SELECT status, run_id, count(*) OVER ()::text AS count
       FROM payment_reconciliation_findings
       WHERE kind = 'paid_at_gateway_not_here' AND payment_id = $1
       ORDER BY first_seen_at DESC
       LIMIT 1
     `, [payment.id]);
-    assert.equal(second.findingsOpened, 0);
     assert.equal(result.rows[0]?.status, 'acknowledged');
+    assert.equal(result.rows[0]?.run_id, second.runId);
+    assert.equal(Number(result.rows[0]?.count), 1);
   } finally {
     await cleanup(fixture);
   }
