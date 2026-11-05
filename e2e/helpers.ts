@@ -44,10 +44,14 @@ export async function seedCart(lines: Record<string, number>) {
 
 export async function openCheckout(page: Page) {
   const proceed = page.getByRole('button', { name: /Proceed to Checkout/ });
-  // Adding an item opens the drawer by itself; otherwise open it from the header.
-  const drawerOpened = await proceed.waitFor({ state: 'visible', timeout: 1500 }).then(() => true, () => false);
-  if (!drawerOpened) await page.getByRole('button', { name: 'Shopping Cart' }).click();
-  await proceed.click();
+  const cartDrawer = page.getByRole('dialog', { name: /Your Cart/ });
+  // Adding an item opens the drawer by itself, but its lines arrive with a request of their own. Locally that is instant;
+  // on a remote host it can take over a second, so the button may not be there yet.
+  const ready = await proceed.waitFor({ state: 'visible', timeout: 1500 }).then(() => true, () => false);
+  // Open the drawer from the header only when it is closed. An open drawer covers the header button, so clicking it
+  // would wait until the test times out.
+  if (!ready && !(await cartDrawer.isVisible())) await page.getByRole('button', { name: 'Shopping Cart' }).click();
+  await proceed.click({ timeout: 20_000 });
   await expect(page.getByRole('dialog')).toBeVisible();
   await expect(page.getByTestId('checkout-total')).toBeVisible();
 }
