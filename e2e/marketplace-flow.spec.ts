@@ -5,6 +5,7 @@ import { blockNonLocalTraffic, openCheckout, parseMoney, withDb } from './helper
 
 // One story across four roles: an admin approves a new seller, the seller lists a product, a customer buys it
 // with cash on delivery, the seller ships it, and a rider delivers it with the customer's confirmation code.
+const STORY_TIMEOUT_MS = 120_000;
 const PRODUCT = { name: 'E2E Flow Kettle', price: 120, stock: 5 };
 
 async function asRole(browser: Browser, role: keyof typeof AUTH): Promise<Page> {
@@ -22,6 +23,8 @@ test.beforeAll(async () => { await resetWorld(); });
 test.afterAll(async () => { await resetWorld(); });
 
 test('admin approves a seller, who lists a product that a customer buys and a rider delivers', async ({ browser }) => {
+  // Four roles, each in its own browser context: about 35 s on a quiet laptop, so the usual 30 s is too tight even locally.
+  test.setTimeout(STORY_TIMEOUT_MS);
   await test.step('admin approves the new seller', async () => {
     const admin = await asRole(browser, 'admin');
     // Approval needs the review checklist, so it goes through the application panel, not the quick button.
