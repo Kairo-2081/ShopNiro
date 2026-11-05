@@ -8,9 +8,14 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: payment-reconciliation
+  cancel-in-progress: false
+
 jobs:
   reconcile:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Reconcile payments
         env:
@@ -22,7 +27,7 @@ jobs:
             echo "APP_URL and CRON_SECRET repository secrets must be configured."
             exit 1
           fi
-          response="$(curl -fsS -X POST \
+          response="$(curl -fsS --max-time 600 --retry 2 --retry-delay 30 -X POST \
             -H "Authorization: Bearer ${CRON_SECRET}" \
             -H "Content-Type: application/json" \
             -d '{}' \

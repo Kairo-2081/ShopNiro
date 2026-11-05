@@ -511,6 +511,26 @@ dbTest('marks a gateway outage partial and continues checking other payments', a
   }
 });
 
+dbTest('records and logs why a run failed, without a stack or request detail', async (context) => {
+  const fixture = await createOrder();
+  const payment = await createPayment(fixture);
+  const gateway = new FakeGateway();
+  gateway.queryTransactionByTranId = async () => { throw new TypeError('unexpected shape'); };
+  const logged: string[] = [];
+  context.mock.method(console, 'error', (...args: unknown[]) => { logged.push(args.join(' ')); });
+  try {
+    const summary = await run(gateway);
+    assert.equal(summary.status, 'failed');
+    const stored = await query<{ error: string }>('SELECT error FROM payment_reconciliation_runs WHERE id = $1', [summary.runId]);
+    assert.match(stored.rows[0]?.error ?? '', /TypeError: unexpected shape/);
+    assert.ok(logged.some((line) => line.includes(summary.runId) && line.includes('TypeError: unexpected shape')), logged.join('\n'));
+    assert.ok(logged.every((line) => !line.includes('\n    at ')), 'the log line must not carry a stack trace');
+    assert.ok(payment.transactionId);
+  } finally {
+    await cleanup(fixture);
+  }
+});
+
 dbTest('reports and queries refunds stuck for more than 24 hours', async () => {
   const fixture = await createOrder();
   await createRefund(fixture, null, { status: 'initiating', gatewayRef: 'REF-INITIATING', stale: true });
@@ -655,6 +675,43 @@ dbTest('rejects overlapping reconciliation runs with HTTP 409', async () => {
   } finally {
     await lockClient.query('SELECT pg_advisory_unlock(1572902391, 901)').catch(() => undefined);
     lockClient.release();
+    await new Promise<void>((resolve, reject) =>
+      server.close((error) => error ? reject(error) : resolve())
+    );
+    if (previousSecret === undefined) delete process.env.CRON_SECRET;
+    else process.env.CRON_SECRET = previousSecret;
+  }
+});
+
+dbTest('releases the reconciliation lock when a run finishes, so the next run is not blocked', async () => {
+  const previousSecret = process.env.CRON_SECRET;
+  process.env.CRON_SECRET = 'test-reconciliation-cron-secret';
+  const { default: cronRoutes } = await import('../server/routes/cron.routes.ts');
+  const app = express();
+  app.use(express.json());
+  app.use('/api/cron', cronRoutes);
+  const server = await listen(app);
+  const post = () => new Promise<number>((resolve, reject) => {
+    const address = server.address();
+    assert.ok(address && typeof address !== 'string');
+    const request = httpRequest({
+      hostname: '127.0.0.1',
+      port: address.port,
+      path: '/api/cron/reconcile-payments',
+      method: 'POST',
+      headers: { authorization: `Bearer ${process.env.CRON_SECRET}`, 'content-type': 'application/json' },
+    }, (res) => { res.resume(); res.on('end', () => resolve(res.statusCode || 0)); });
+    request.on('error', reject);
+    request.end('{}');
+  });
+  try {
+    assert.equal(await post(), 200);
+    assert.equal(await post(), 200);
+    const held = await query<{ count: string }>(
+      "SELECT count(*)::text AS count FROM pg_locks WHERE locktype = 'advisory' AND classid = 1572902391 AND objid = 901"
+    );
+    assert.equal(held.rows[0]?.count, '0');
+  } finally {
     await new Promise<void>((resolve, reject) =>
       server.close((error) => error ? reject(error) : resolve())
     );
