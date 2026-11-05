@@ -1,4 +1,4 @@
-import { query } from '../db/index.ts';
+import { pool, query } from '../db/index.ts';
 import {
   GatewayError,
   sslcommerz,
@@ -50,6 +50,62 @@ export interface PaymentReconciliationSummary {
   findingsOpened: number;
   highSeverityOpen: number;
 }
+
+/** Raised when another reconciliation run is in progress, so the endpoint can answer 409 instead of running twice. */
+export class ReconciliationBusyError extends Error {
+  constructor() {
+    super('Payment reconciliation is already running.');
+    this.name = 'ReconciliationBusyError';
+  }
+}
+
+// A run that never finished (the process died) stops blocking new runs after this long.
+const RUN_STALE_AFTER_MINUTES = 30;
+const RECONCILIATION_LOCK_CLASS = 1_572_902_391;
+const RECONCILIATION_LOCK_ID = 901;
+
+/**
+ * Creates the run row, refusing when another run is still in progress. The lock is transaction-scoped and only
+ * held while the row is created, so it behaves the same through a transaction pooler; the unfinished run row is
+ * what keeps other runs out for the rest of the run.
+ */
+const startRun = async (windowFrom: Date, windowTo: Date): Promise<string> => {
+  const client = await pool.connect();
+  let discard = false;
+  try {
+    await client.query('BEGIN');
+    const lock = await client.query<{ locked: boolean }>(
+      'SELECT pg_try_advisory_xact_lock($1, $2) AS locked',
+      [RECONCILIATION_LOCK_CLASS, RECONCILIATION_LOCK_ID]
+    );
+    if (lock.rows[0]?.locked !== true) throw new ReconciliationBusyError();
+    const running = await client.query(
+      `SELECT 1 FROM payment_reconciliation_runs
+       WHERE finished_at IS NULL AND started_at > current_timestamp - make_interval(mins => $1)
+       LIMIT 1`,
+      [RUN_STALE_AFTER_MINUTES]
+    );
+    if (running.rows.length > 0) throw new ReconciliationBusyError();
+    const inserted = await client.query<{ id: string }>(
+      'INSERT INTO payment_reconciliation_runs (window_from, window_to) VALUES ($1, $2) RETURNING id',
+      [windowFrom, windowTo]
+    );
+    const id = inserted.rows[0]?.id;
+    if (!id) throw new Error('Could not create reconciliation run.');
+    await client.query('COMMIT');
+    return id;
+  } catch (error) {
+    try { await client.query('ROLLBACK'); } catch { discard = true; }
+    throw error;
+  } finally {
+    client.release(discard);
+  }
+};
+
+const failureReason = (error: unknown): string => {
+  const text = error instanceof Error ? `${error.name}: ${error.message}` : 'unknown error';
+  return `Payment reconciliation failed before all checks completed (${text})`.slice(0, 500);
+};
 
 const delay = (milliseconds: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
@@ -151,13 +207,7 @@ export async function runPaymentReconciliation(
   const autoRepair = options.autoRepair ?? process.env.RECONCILE_AUTO_REPAIR === 'true';
   const windowFrom = new Date(now.getTime() - windowDays * 24 * 60 * 60 * 1000);
   const paymentWindowTo = new Date(now.getTime() - minAgeMinutes * 60 * 1000);
-  const runResult = await query<{ id: string }>(`
-    INSERT INTO payment_reconciliation_runs (window_from, window_to)
-    VALUES ($1, $2)
-    RETURNING id
-  `, [windowFrom, now]);
-  const runId = runResult.rows[0]?.id;
-  if (!runId) throw new Error('Could not create reconciliation run.');
+  const runId = await startRun(windowFrom, now);
 
   let checked = 0;
   let matched = 0;
@@ -569,14 +619,16 @@ export async function runPaymentReconciliation(
       status,
       error: partial ? 'One or more gateway checks or repairs failed.' : null,
     });
-  } catch {
+  } catch (error) {
+    const reason = failureReason(error);
+    console.error(reason);
     await updateRun(runId, {
       checked,
       matched,
       repaired,
       findingsOpened,
       status: 'failed',
-      error: 'Payment reconciliation failed before all checks completed.',
+      error: reason,
     });
   }
 

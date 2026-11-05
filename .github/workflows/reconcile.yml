@@ -11,6 +11,7 @@ permissions:
 jobs:
   reconcile:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Reconcile payments
         env:
@@ -22,10 +23,22 @@ jobs:
             echo "APP_URL and CRON_SECRET repository secrets must be configured."
             exit 1
           fi
-          response="$(curl -fsS -X POST \
+          response="$(curl -fsS --max-time 300 -X POST \
             -H "Authorization: Bearer ${CRON_SECRET}" \
             -H "Content-Type: application/json" \
             -d '{}' \
             "${APP_URL%/}/api/cron/reconcile-payments")"
           printf '%s\n' "$response" | jq '{runId, status, checked, matched, repaired, findingsOpened, highSeverityOpen}'
-          printf '%s\n' "$response" | jq -e '.status == "ok" and .highSeverityOpen == 0' >/dev/null
+          status="$(printf '%s\n' "$response" | jq -r '.status')"
+          high="$(printf '%s\n' "$response" | jq -r '.highSeverityOpen')"
+          if [[ "$status" == "partial" ]]; then
+            echo "::warning::Some gateway checks could not run this time. Open findings below are still reported."
+          fi
+          if [[ "$status" == "failed" ]]; then
+            echo "::error::The reconciliation run failed; the error is stored on the run and in the server log."
+            exit 1
+          fi
+          if [[ "$high" != "0" ]]; then
+            echo "::error::$high high-severity finding(s) are open. Review them with GET /api/payment/reconciliation."
+            exit 1
+          fi

@@ -5,7 +5,7 @@ import { request as httpRequest, type Server } from 'node:http';
 import { after, test, type TestContext } from 'node:test';
 import { pool, query } from '../server/db/index.ts';
 import { GatewayError, type SSLCommerzRefundResult, type SSLCommerzTransactionQueryResult } from '../server/services/sslcommerz.service.ts';
-import { runPaymentReconciliation, type ReconciliationGateway } from '../server/services/paymentReconciliation.service.ts';
+import { ReconciliationBusyError, runPaymentReconciliation, type ReconciliationGateway } from '../server/services/paymentReconciliation.service.ts';
 import { finalizeSslCommerzPayment } from '../server/routes/payment.routes.ts';
 
 if (process.env.CI && !process.env.DATABASE_URL) throw new Error('DATABASE_URL required in CI');
@@ -620,6 +620,17 @@ const listen = (app: express.Express): Promise<Server> =>
     const server = app.listen(0, '127.0.0.1', () => resolve(server));
   });
 
+const insertRun = async (startedMinutesAgo: number, finished: boolean): Promise<string> => {
+  const result = await query<{ id: string }>(
+    `INSERT INTO payment_reconciliation_runs (started_at, finished_at, window_from, window_to, status)
+     VALUES (current_timestamp - make_interval(mins => $1), CASE WHEN $2 THEN current_timestamp END,
+             current_timestamp - interval '3 days', current_timestamp, CASE WHEN $2 THEN 'ok' ELSE 'failed' END)
+     RETURNING id`,
+    [startedMinutesAgo, finished]
+  );
+  return result.rows[0].id;
+};
+
 dbTest('rejects overlapping reconciliation runs with HTTP 409', async () => {
   const previousSecret = process.env.CRON_SECRET;
   process.env.CRON_SECRET = 'test-reconciliation-cron-secret';
@@ -628,9 +639,8 @@ dbTest('rejects overlapping reconciliation runs with HTTP 409', async () => {
   app.use(express.json());
   app.use('/api/cron', cronRoutes);
   const server = await listen(app);
-  const lockClient = await pool.connect();
+  const runningId = await insertRun(1, false);
   try {
-    await lockClient.query('SELECT pg_advisory_lock(1572902391, 901)');
     const address = server.address();
     assert.ok(address && typeof address !== 'string');
     const response = await new Promise<{ status: number; body: string }>((resolve, reject) => {
@@ -653,13 +663,72 @@ dbTest('rejects overlapping reconciliation runs with HTTP 409', async () => {
     });
     assert.equal(response.status, 409);
   } finally {
-    await lockClient.query('SELECT pg_advisory_unlock(1572902391, 901)').catch(() => undefined);
-    lockClient.release();
+    await query('DELETE FROM payment_reconciliation_runs WHERE id = $1', [runningId]);
     await new Promise<void>((resolve, reject) =>
       server.close((error) => error ? reject(error) : resolve())
     );
     if (previousSecret === undefined) delete process.env.CRON_SECRET;
     else process.env.CRON_SECRET = previousSecret;
+  }
+});
+
+dbTest('a run that is still in progress blocks a second one, and a stale unfinished run does not', async () => {
+  const gateway = new FakeGateway();
+  const runningId = await insertRun(5, false);
+  try {
+    await assert.rejects(
+      runPaymentReconciliation({ gateway, sleep: async () => undefined }),
+      (error: unknown) => error instanceof ReconciliationBusyError
+    );
+  } finally {
+    await query('DELETE FROM payment_reconciliation_runs WHERE id = $1', [runningId]);
+  }
+
+  // A run that started over 30 minutes ago and never finished (the process died) must not block forever.
+  const staleId = await insertRun(45, false);
+  try {
+    const summary = await runPaymentReconciliation({ gateway, sleep: async () => undefined });
+    assert.notEqual(summary.runId, staleId);
+    assert.ok(['ok', 'partial'].includes(summary.status));
+    await query('DELETE FROM payment_reconciliation_findings WHERE run_id = $1', [summary.runId]);
+    await query('DELETE FROM payment_reconciliation_runs WHERE id = $1', [summary.runId]);
+  } finally {
+    await query('DELETE FROM payment_reconciliation_runs WHERE id = $1', [staleId]);
+  }
+});
+
+dbTest('a finished run does not block the next one', async () => {
+  const gateway = new FakeGateway();
+  const finishedId = await insertRun(1, true);
+  try {
+    const summary = await runPaymentReconciliation({ gateway, sleep: async () => undefined });
+    assert.notEqual(summary.runId, finishedId);
+    await query('DELETE FROM payment_reconciliation_findings WHERE run_id = $1', [summary.runId]);
+    await query('DELETE FROM payment_reconciliation_runs WHERE id = $1', [summary.runId]);
+  } finally {
+    await query('DELETE FROM payment_reconciliation_runs WHERE id = $1', [finishedId]);
+  }
+});
+
+dbTest('an unexpected failure is logged and stored on the run, not swallowed', async () => {
+  const fixture = await createOrder();
+  await createPayment(fixture, { status: 'PENDING' });
+  const gateway = new FakeGateway();
+  gateway.queryTransactionByTranId = async () => { throw new TypeError('boom'); };
+  const logged: string[] = [];
+  const originalError = console.error;
+  console.error = (...args: unknown[]) => { logged.push(args.map(String).join(' ')); };
+  try {
+    const summary = await runPaymentReconciliation({ gateway, sleep: async () => undefined });
+    assert.equal(summary.status, 'failed');
+    const run = await query<{ error: string }>('SELECT error FROM payment_reconciliation_runs WHERE id = $1', [summary.runId]);
+    assert.match(run.rows[0].error, /TypeError: boom/);
+    assert.ok(logged.some((line) => line.includes('TypeError: boom')), 'the cause should reach the server log');
+    await query('DELETE FROM payment_reconciliation_findings WHERE run_id = $1', [summary.runId]);
+    await query('DELETE FROM payment_reconciliation_runs WHERE id = $1', [summary.runId]);
+  } finally {
+    console.error = originalError;
+    await cleanup(fixture);
   }
 });
 
