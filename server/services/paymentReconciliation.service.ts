@@ -68,6 +68,14 @@ const transactionIsPaid = (status: string): boolean =>
 const isGatewayError = (error: unknown): error is GatewayError =>
   error instanceof GatewayError;
 
+// Names the failure without its stack or any request detail: a database or code error here has no gateway
+// credentials in it (gateway errors are replaced by fixed GatewayError messages), and it is cut short regardless.
+const describeFailure = (error: unknown): string => {
+  if (!(error instanceof Error)) return 'a non-error value was thrown';
+  const code = (error as { code?: unknown }).code;
+  return `${error.name}${typeof code === 'string' ? ` (${code})` : ''}: ${error.message}`.slice(0, 300);
+};
+
 const recordFinding = async (runId: string, finding: FindingInput): Promise<boolean> => {
   const result = await query<{ inserted: boolean }>(`
     WITH acknowledged AS (
@@ -177,6 +185,9 @@ export async function runPaymentReconciliation(
   };
 
   try {
+    // These two checks read every paid online order and every validated payment, not only the recent window, on
+    // purpose: a problem from months ago is still a problem. Revisit with a window or an index if the tables grow
+    // past tens of thousands of rows.
     const paidOrders = await query<{
       order_id: string;
       subtotal: string | number;
@@ -569,14 +580,16 @@ export async function runPaymentReconciliation(
       status,
       error: partial ? 'One or more gateway checks or repairs failed.' : null,
     });
-  } catch {
+  } catch (error) {
+    const reason = describeFailure(error);
+    console.error(`Payment reconciliation run ${runId} failed: ${reason}`);
     await updateRun(runId, {
       checked,
       matched,
       repaired,
       findingsOpened,
       status: 'failed',
-      error: 'Payment reconciliation failed before all checks completed.',
+      error: `Payment reconciliation failed before all checks completed: ${reason}`,
     });
   }
 

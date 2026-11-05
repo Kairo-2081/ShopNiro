@@ -32,16 +32,22 @@ router.post('/refunds', requireCronSecret, validateBody(emptyBody), async (_req,
 });
 
 router.post('/reconcile-payments', requireCronSecret, validateBody(emptyBody), async (_req, res) => {
+  // The lock is held by an open transaction on one dedicated connection. A session-level advisory lock would not
+  // be reliable through Supabase's transaction pooler (port 6543), which can hand the unlock to another server
+  // connection; a transaction pins one, and the lock is released when the transaction ends.
   let client: PoolClient | undefined;
-  let locked = false;
+  let inTransaction = false;
   try {
     client = await pool.connect();
+    await client.query('BEGIN');
+    inTransaction = true;
     const lock = await client.query<{ locked: boolean }>(
-      'SELECT pg_try_advisory_lock($1, $2) AS locked',
+      'SELECT pg_try_advisory_xact_lock($1, $2) AS locked',
       [RECONCILIATION_LOCK_CLASS, RECONCILIATION_LOCK_ID]
     );
-    locked = lock.rows[0]?.locked === true;
-    if (!locked) return res.status(409).json({ error: 'Payment reconciliation is already running.' });
+    if (lock.rows[0]?.locked !== true) {
+      return res.status(409).json({ error: 'Payment reconciliation is already running.' });
+    }
 
     const summary = await runPaymentReconciliation({
       finalizePayment: (tranId, valId) => finalizeSslCommerzPayment(tranId, valId, sslcommerz),
@@ -52,15 +58,13 @@ router.post('/reconcile-payments', requireCronSecret, validateBody(emptyBody), a
     return res.status(500).json({ error: 'Payment reconciliation failed.' });
   } finally {
     let discardClient = false;
-    if (locked) {
+    if (client && inTransaction) {
       try {
-        await client.query(
-          'SELECT pg_advisory_unlock($1, $2)',
-          [RECONCILIATION_LOCK_CLASS, RECONCILIATION_LOCK_ID]
-        );
+        await client.query('ROLLBACK');
       } catch {
+        // The connection may be gone (for example an idle-transaction timeout). Drop it instead of reusing it.
         discardClient = true;
-        _req.log.error('Could not release the payment reconciliation advisory lock.');
+        _req.log.error('Could not end the payment reconciliation lock transaction.');
       }
     }
     client?.release(discardClient);
