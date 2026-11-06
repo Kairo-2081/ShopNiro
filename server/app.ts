@@ -9,6 +9,7 @@ import pinoHttp from 'pino-http';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { randomUUID } from 'node:crypto';
 import { query } from './db/index.ts';
+import { migrationsPending } from './services/migrationReadiness.ts';
 import { errorHandler } from './middleware/errorHandler.ts';
 import { requireAuth, requireRole, optionalAuth, AuthRequest, OAUTH_REGISTRATION_COOKIE_NAME } from './middleware/auth.ts';
 import { enforcePublicApiPolicy } from './middleware/publicRoutes.ts';
@@ -108,12 +109,15 @@ app.get('/api/health', (_req, res) => {
 app.get('/api/ready', async (_req, res) => {
   let timeout: NodeJS.Timeout | undefined;
   try {
-    await Promise.race([
-      query('SELECT 1'),
-      new Promise((_, reject) => {
+    const [, pending] = await Promise.race([
+      Promise.all([query('SELECT 1'), migrationsPending((sql) => query(sql) as never)]),
+      new Promise<never>((_, reject) => {
         timeout = setTimeout(() => reject(new Error('timeout')), 2000);
       }),
     ]);
+    // A build that needs a migration the database has not had yet would fail on the first request that uses it, so
+    // it is not ready: the host keeps the previous version serving until the migration is applied.
+    if (pending) return res.status(503).json({ ok: false, reason: 'migrations_pending' });
     res.json({ ok: true });
   } catch {
     res.status(503).json({ ok: false });
