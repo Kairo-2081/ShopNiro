@@ -6,7 +6,7 @@ import { requireAuth, requireRole, AuthRequest } from '../middleware/auth.ts';
 import { GatewayError, sslcommerz } from '../services/sslcommerz.service.ts';
 import { publicMessage } from '../middleware/errorHandler.ts';
 import { validateBody } from '../middleware/validate.ts';
-import { gatewayReturnBody, paymentInitBody, simulatorCompleteBody, sslcommerzIpnBody, sslcommerzValidateBody } from '../validation/schemas.ts';
+import { emptyBody, gatewayReturnBody, paymentInitBody, simulatorCompleteBody, sslcommerzIpnBody, sslcommerzValidateBody } from '../validation/schemas.ts';
 import { calculateOrderTotal } from '../../src/lib/checkoutPricing.ts';
 
 const router = Router();
@@ -66,7 +66,12 @@ const simulatorProfiles: Record<string, { name: string; accountLabel: string; ac
   visa_mastercard: { name: 'Card', accountLabel: 'Demo card number', account: '4242424242424242', codeLabel: 'Demo verification code', code: '123456', securityLabel: 'Demo CVV', security: '123' },
 };
 
-const finalizeSslCommerzPayment = async (tranId: string, valId: string) => {
+export const finalizeSslCommerzPayment = async (
+  tranId: string,
+  valId: string,
+  validator: Pick<typeof sslcommerz, 'validatePayment'> = sslcommerz,
+  enqueueRefund: () => Promise<unknown> = processRefundQueue
+) => {
   const paymentResult = await query(
     `SELECT id, order_id, amount, status, payment_method, val_id, bank_tran_id,
       card_type, card_brand, card_issuer
@@ -79,7 +84,7 @@ const finalizeSslCommerzPayment = async (tranId: string, valId: string) => {
   // An EXPIRED payment is one the customer left or the expiry job closed. If the gateway confirms it late, the
   // money was really taken, so it is validated and refunded below instead of being turned away.
   const validation = ['PENDING', 'EXPIRED'].includes(payment.status)
-    ? await sslcommerz.validatePayment(valId, tranId, Number(payment.amount))
+    ? await validator.validatePayment(valId, tranId, Number(payment.amount))
     : undefined;
   if (validation && (!validation.ok || !validation.raw)) {
     throw new GatewayError('SSLCommerz could not verify this payment.');
@@ -155,8 +160,8 @@ const finalizeSslCommerzPayment = async (tranId: string, valId: string) => {
   }
   if (orderResult.rows[0]?.transaction_id !== tranId) duplicatePayment = true;
   if (duplicatePayment) {
-    void processRefundQueue().catch((error) => {
-      console.error('Duplicate payment refund reconciliation failed:', error);
+    void enqueueRefund().catch(() => {
+      console.error('Duplicate payment refund reconciliation failed.');
     });
   }
   return { orderId: String(payment.order_id), duplicatePayment };
@@ -768,6 +773,48 @@ router.get('/transactions', requireAuth, requireRole(['admin']), async (req, res
   } catch (error: any) {
     req.log.error({ err: error }, 'Error fetching transactions:');
     res.status(500).json({ error: 'Failed to fetch transactions' });
+  }
+});
+
+router.get('/reconciliation', requireAuth, requireRole(['admin']), async (req, res) => {
+  try {
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
+    const offset = Math.max(0, Number(req.query.offset) || 0);
+    const result = await query(`
+      SELECT id, run_id, payment_id, order_id, refund_id, kind, severity, detail,
+        status, acknowledged_by, acknowledged_at, first_seen_at, last_seen_at
+      FROM payment_reconciliation_findings
+      WHERE status = 'open'
+      ORDER BY first_seen_at ASC, id ASC
+      LIMIT $1 OFFSET $2
+    `, [limit + 1, offset]);
+    res.setHeader('X-Has-More', String(result.rows.length > limit));
+    return res.json(result.rows.slice(0, limit));
+  } catch (error) {
+    req.log.error({ err: error }, 'Could not list payment reconciliation findings.');
+    return res.status(500).json({ error: 'Could not list payment reconciliation findings.' });
+  }
+});
+
+router.patch('/reconciliation/:id/acknowledge', requireAuth, requireRole(['admin']), validateBody(emptyBody), async (req, res) => {
+  const findingId = String(req.params.id || '');
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(findingId)) {
+    return res.status(400).json({ error: 'A valid finding id is required.' });
+  }
+  try {
+    const result = await query(`
+      UPDATE payment_reconciliation_findings
+      SET status = 'acknowledged', acknowledged_by = $2, acknowledged_at = current_timestamp
+      WHERE id = $1 AND status = 'open'
+      RETURNING id, status, acknowledged_by, acknowledged_at
+    `, [findingId, (req as AuthRequest).user?.userId]);
+    if (result.rows[0]) return res.json(result.rows[0]);
+    const existing = await query('SELECT status FROM payment_reconciliation_findings WHERE id = $1', [findingId]);
+    if (!existing.rows[0]) return res.status(404).json({ error: 'Finding not found.' });
+    return res.status(409).json({ error: 'Finding has already been acknowledged.' });
+  } catch (error) {
+    req.log.error({ err: error }, 'Could not acknowledge payment reconciliation finding.');
+    return res.status(500).json({ error: 'Could not acknowledge payment reconciliation finding.' });
   }
 });
 
