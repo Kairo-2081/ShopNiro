@@ -14,6 +14,10 @@ export default defineConfig({
   fullyParallel: false,
   workers: 1,
   retries: process.env.CI ? 1 : 0,
+  // A remote site answers more slowly than the local one: every request crosses the internet, and the marketplace
+  // flow walks through four roles in one test. Give it room instead of failing on the clock.
+  timeout: target.remote ? 120_000 : 30_000,
+  expect: { timeout: target.remote ? 15_000 : 5_000 },
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: {
     baseURL: target.baseURL,
