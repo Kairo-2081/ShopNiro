@@ -4,11 +4,13 @@ import { api } from '../../lib/api';
 import { downloadFile } from '../../lib/downloadFile';
 import { money } from '../../lib/format';
 import { Check, Download, RefreshCw, X } from 'lucide-react';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 export const RiderApplicationsPanel: React.FC = () => {
   const [applications, setApplications] = React.useState<Rider[]>([]);
   const [withdrawals, setWithdrawals] = React.useState<any[]>([]);
   const [selected, setSelected] = React.useState<Rider | null>(null);
+  useEscapeKey(() => setSelected(null), Boolean(selected));
   const [loading, setLoading] = React.useState(true);
   const [busyId, setBusyId] = React.useState<string | null>(null);
   const [busyWithdrawalId, setBusyWithdrawalId] = React.useState<string | null>(null);
