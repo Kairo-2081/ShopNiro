@@ -237,8 +237,8 @@ export const CustomerOrders: React.FC<CustomerOrdersProps> = ({
         );
       case 'shipped':
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-brand-600 text-white shadow-xs animate-pulse">
-            <Truck className="w-3.5 h-3.5" /> In Flight • 2 Stops Away
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-brand-600 text-white shadow-xs">
+            <Truck className="w-3.5 h-3.5" /> Shipped
           </span>
         );
       case 'processing':
