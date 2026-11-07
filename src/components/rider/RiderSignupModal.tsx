@@ -5,6 +5,7 @@ import { prepareProfileImage } from '../../lib/profileImage';
 import { OAuthProviderButtons } from '../OAuthProviderButtons';
 import { AccountLocationPicker } from '../AccountLocationPicker';
 import { Lock, MapPin, ShieldCheck, Sparkles, Truck, UploadCloud, X } from 'lucide-react';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface RiderSignupModalProps {
   isOpen: boolean;
@@ -32,6 +33,7 @@ const toLines = (values: string[]) => values.join('\n');
 const fromLines = (value: string) => value.split('\n').map((line) => line.trim()).filter(Boolean);
 
 export const RiderSignupModal: React.FC<RiderSignupModalProps> = ({ isOpen, onClose, onOpenLogin, onSubmitted }) => {
+  useEscapeKey(onClose, isOpen);
   const [username, setUsername] = React.useState('');
   const [name, setName] = React.useState('');
   const [email, setEmail] = React.useState('');
