@@ -10,13 +10,13 @@
 @layer glass {
   :root {
     /* Light theme: milky glass over the warm paper background. */
-    --glass-blur: 22px;
-    --glass-blur-strong: 34px;
-    --glass-saturate: 1.7;
-    --glass-tint: rgba(255, 255, 255, 0.58);
+    --glass-blur: 26px;
+    --glass-blur-strong: 38px;
+    --glass-saturate: 1.9;
+    --glass-tint: rgba(255, 255, 255, 0.44);
     --glass-tint-strong: rgba(252, 251, 247, 0.84);
-    --glass-tint-soft: rgba(255, 255, 255, 0.34);
-    --glass-edge: rgba(255, 255, 255, 0.72);
+    --glass-tint-soft: rgba(255, 255, 255, 0.26);
+    --glass-edge: rgba(255, 255, 255, 0.85);
     --glass-edge-dim: rgba(128, 115, 79, 0.2);
     --glass-highlight: rgba(255, 255, 255, 0.9);
     --glass-shade: rgba(74, 62, 38, 0.16);
@@ -26,13 +26,13 @@
   }
 
   .dark {
-    --glass-blur: 24px;
-    --glass-blur-strong: 38px;
-    --glass-saturate: 1.5;
-    --glass-tint: rgba(34, 34, 28, 0.56);
+    --glass-blur: 28px;
+    --glass-blur-strong: 40px;
+    --glass-saturate: 1.7;
+    --glass-tint: rgba(30, 32, 30, 0.42);
     --glass-tint-strong: rgba(24, 24, 20, 0.84);
-    --glass-tint-soft: rgba(231, 229, 214, 0.07);
-    --glass-edge: rgba(231, 229, 214, 0.2);
+    --glass-tint-soft: rgba(231, 229, 214, 0.06);
+    --glass-edge: rgba(231, 229, 214, 0.3);
     --glass-edge-dim: rgba(231, 229, 214, 0.08);
     --glass-highlight: rgba(255, 255, 255, 0.32);
     --glass-shade: rgba(0, 0, 0, 0.4);
