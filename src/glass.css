@@ -254,4 +254,22 @@
       backdrop-filter: none;
     }
   }
+
+  /* ---- Print ------------------------------------------------------------------------------------------- */
+
+  /* Receipts and invoices are printed: no blur, no translucency, no shadows. */
+  @media print {
+    .glass,
+    .glass-strong,
+    .premium-surface,
+    .premium-card,
+    .luxury-input,
+    [role="dialog"] {
+      background: #fff !important;
+      color: #000;
+      -webkit-backdrop-filter: none !important;
+      backdrop-filter: none !important;
+      box-shadow: none !important;
+    }
+  }
 }
