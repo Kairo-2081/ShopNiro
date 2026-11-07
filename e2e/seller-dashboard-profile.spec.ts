@@ -35,6 +35,18 @@ async function openSellerDashboard(page: Parameters<typeof blockNonLocalTraffic>
   await expect(page.getByRole('heading', { name: E2E.newSeller.name, exact: true })).toBeVisible();
 }
 
+async function expectMetricsAboveFold(page: Parameters<typeof blockNonLocalTraffic>[0], width: number) {
+  await page.setViewportSize({ width, height: 768 });
+  await withSellerStatus('pending', async () => {
+    await openSellerDashboard(page);
+    const metrics = page.getByRole('region', { name: 'Seller performance metrics' });
+    await expect(metrics).toBeVisible();
+    const bounds = await metrics.boundingBox();
+    if (!bounds) throw new Error('Seller performance metrics have no visible bounds');
+    expect(bounds.y + bounds.height).toBeLessThanOrEqual(768);
+  });
+}
+
 test.describe('seller dashboard profile', () => {
   test.use({ storageState: AUTH.seller });
 
@@ -90,14 +102,10 @@ test.describe('seller dashboard profile', () => {
   });
 
   test('shows all performance metrics above the fold at desktop height', async ({ page }) => {
-    await page.setViewportSize({ width: 1280, height: 768 });
-    await withSellerStatus('pending', async () => {
-      await openSellerDashboard(page);
-      const metrics = page.getByRole('region', { name: 'Seller performance metrics' });
-      await expect(metrics).toBeVisible();
-      const bounds = await metrics.boundingBox();
-      if (!bounds) throw new Error('Seller performance metrics have no visible bounds');
-      expect(bounds.y + bounds.height).toBeLessThanOrEqual(768);
-    });
+    await expectMetricsAboveFold(page, 1280);
+  });
+
+  test('shows all performance metrics above the fold at tablet width', async ({ page }) => {
+    await expectMetricsAboveFold(page, 768);
   });
 });
