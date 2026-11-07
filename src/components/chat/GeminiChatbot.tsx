@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Send, Sparkles, Bot, User, RotateCcw, Zap, Brain, ShoppingBag, Store, ChevronDown, Copy, Check, Minimize2, Maximize2 } from 'lucide-react';
 import { api } from '../../lib/api';
+import { useLocale } from '../../lib/i18n';
 
 export type ChatRole = 'shopping-assistant' | 'seller-advisor' | 'order-specialist' | 'complex-analyst';
 export type AIModelChoice = 'flash' | 'flash-lite' | 'pro';
@@ -106,6 +107,7 @@ const MODEL_OPTIONS: { id: AIModelChoice; label: string; tag: string; descriptio
 ];
 
 export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, initialQuery }) => {
+  const { t } = useLocale();
   const [selectedRole, setSelectedRole] = useState<ChatRole>('shopping-assistant');
   const [selectedModel, setSelectedModel] = useState<AIModelChoice>('flash');
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
@@ -356,7 +358,7 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
                       : 'bg-warning-500/15 text-warning-300 border-warning-500/30'
                   }`}
                 >
-                  {aiStatus === 'ready' ? 'Ready' : aiStatus === 'setup' ? 'Setup needed' : aiStatus === 'unavailable' ? 'Unavailable' : 'Checking'}
+                  {aiStatus === 'ready' ? t('readyStatus') : aiStatus === 'setup' ? t('setupNeededStatus') : aiStatus === 'unavailable' ? t('unavailableStatus') : t('checkingStatus')}
                 </span>
               </h2>
             </div>
@@ -372,7 +374,7 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
             <button
               onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-800/80 hover:bg-surface-700/80 border border-surface-700 text-surface-200 text-xs font-medium transition-colors cursor-pointer"
-              title="Change ShopNiro AI mode"
+              title={t('changeAiMode')}
             >
               {activeModelObj.icon}
               <span className="hidden sm:inline">{activeModelObj.tag}</span>
@@ -382,7 +384,7 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
             {isModelDropdownOpen && (
               <div className="absolute right-0 mt-2 w-64 bg-[#12161D] border border-brand-500/25 rounded-2xl shadow-2xl p-2 z-50 text-xs space-y-1">
                 <div className="px-2 py-1 text-micro font-bold text-surface-400 uppercase tracking-wider">
-                  Select ShopNiro AI Mode
+                  {t('selectAiMode')}
                 </div>
                 {MODEL_OPTIONS.map((m) => (
                   <button
@@ -415,7 +417,7 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
           <button
             onClick={handleClearChat}
             className="p-2 rounded-full text-surface-400 hover:text-white hover:bg-surface-800 transition-colors cursor-pointer"
-            title="Reset conversation"
+            title={t('resetConversation')}
           >
             <RotateCcw className="w-4 h-4" />
           </button>
@@ -424,7 +426,7 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
           <button
             onClick={() => setIsExpanded(!isExpanded)}
             className="p-2 rounded-full text-surface-400 hover:text-white hover:bg-surface-800 transition-colors cursor-pointer hidden md:block"
-            title={isExpanded ? 'Minimize' : 'Expand'}
+            title={isExpanded ? t('minimize') : t('expand')}
           >
             {isExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
           </button>
@@ -433,7 +435,7 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
           <button
             onClick={onClose}
             className="p-2 rounded-full text-surface-400 hover:text-white hover:bg-surface-800 transition-colors cursor-pointer"
-            title="Close Assistant"
+            title={t('closeAssistant')}
           >
             <X className="w-4 h-4" />
           </button>
@@ -522,11 +524,11 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
                       <button
                         onClick={() => handleCopy(m.id, m.content)}
                         className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:text-surface-700 dark:hover:text-surface-300 rounded cursor-pointer"
-                        title="Copy answer"
+                        title={t('copyAnswer')}
                       >
                         {copiedId === m.id ? (
                           <span className="text-success-500 flex items-center gap-1">
-                            <Check className="w-3 h-3" /> Copied
+                            <Check className="w-3 h-3" /> {t('copied')}
                           </span>
                         ) : (
                           <Copy className="w-3 h-3" />
@@ -555,7 +557,7 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
             <div className="bg-white dark:bg-[#181F2A] border border-brand-100 dark:border-surface-700/60 rounded-2xl rounded-tl-xs p-3.5 shadow-xs space-y-2">
               <div className="flex items-center gap-2 text-xs font-medium text-surface-500 dark:text-surface-400">
                 <Sparkles className="w-3.5 h-3.5 text-brand-500 animate-spin" />
-                <span>Thinking with {selectedModel}...</span>
+                <span>{t('thinkingWithModel', { model: selectedModel })}</span>
               </div>
               <div className="flex items-center gap-1.5 pl-1">
                 <span className="w-2 h-2 rounded-full bg-brand-500 animate-bounce" style={{ animationDelay: '0ms' }}></span>
@@ -601,7 +603,7 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyDown={handleKeyDown}
               disabled={isLoading}
-              placeholder={`Ask ${currentRoleConfig.title}...`}
+              placeholder={t('askRolePlaceholder', { role: currentRoleConfig.title })}
               className="w-full pl-4 pr-10 py-2.5 bg-surface-100 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-full text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500 focus:outline-none focus:ring-2 focus:ring-brand-500 text-xs md:text-sm disabled:opacity-50"
             />
           </div>
@@ -610,7 +612,7 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
             type="submit"
             disabled={!inputMessage.trim() || isLoading}
             className="p-3 rounded-full bg-brand-600 hover:bg-brand-500 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-md shadow-brand-500/25 cursor-pointer shrink-0"
-            title="Send message"
+            title={t('sendMessage')}
           >
             <Send className="w-4 h-4" />
           </button>
@@ -619,10 +621,10 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
         <div className="mt-2 flex items-center justify-between text-micro text-surface-500 dark:text-surface-400 px-2">
           <span className="flex items-center gap-1 font-medium">
             <span className="w-1.5 h-1.5 rounded-full bg-success-500"></span>
-            Role: <strong>{currentRoleConfig.title}</strong>
+            {t('roleLabel')}: <strong>{currentRoleConfig.title}</strong>
           </span>
           <span className="font-mono">
-            Model: <strong>{selectedModel}</strong>
+            {t('modelLabel')}: <strong>{selectedModel}</strong>
           </span>
         </div>
       </div>
