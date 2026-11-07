@@ -45,4 +45,12 @@ test.describe('seller dashboard profile', () => {
       await expect(page.getByText(/Awaiting verification:|Account (rejected|suspended):/)).toHaveCount(0);
     });
   });
+
+  test('gives pending sellers a profile review next step', async ({ page }) => {
+    await withSellerStatus('pending', async () => {
+      await openSellerDashboard(page);
+      await expect(page.getByText('Awaiting verification:')).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Review profile' })).toBeVisible();
+    });
+  });
 });
