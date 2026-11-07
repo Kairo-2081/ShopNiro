@@ -1,8 +1,8 @@
 import React from 'react';
-import { Customer, Order, OrderCancellationRequest, Product, RiderDelivery, Seller } from '../../types';
+import { Customer, Order, OrderCancellationRequest, PaymentStatus, Product, RiderDelivery, Seller } from '../../types';
 import { api, formatCurrency, formatBDT, formatDate } from '../../lib/api';
 import { PaymentReceiptModal } from '../payment/PaymentReceiptModal';
-import { Package, Truck, CheckCircle2, Clock, MapPin, Search, AlertCircle, Radio, Receipt, X, XCircle } from 'lucide-react';
+import { Package, Truck, CheckCircle2, Clock, MapPin, Search, AlertCircle, Radio, Receipt, RotateCcw, X, XCircle } from 'lucide-react';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useLocale } from '../../lib/i18n';
 
@@ -249,8 +249,8 @@ export const CustomerOrders: React.FC<CustomerOrdersProps> = ({
         );
       case 'cancelled':
         return (
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-danger-100 dark:bg-danger-950/60 text-danger-700 dark:text-danger-300 border border-danger-200 dark:border-danger-800">
-            <XCircle className="w-3.5 h-3.5" /> Cancelled
+          <span data-testid="order-status-badge" data-status="cancelled" className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-surface-100 dark:bg-surface-800 text-surface-700 dark:text-surface-200 border border-surface-300 dark:border-surface-700">
+            <X className="w-3.5 h-3.5" /> Cancelled
           </span>
         );
       default:
@@ -263,41 +263,55 @@ export const CustomerOrders: React.FC<CustomerOrdersProps> = ({
   };
 
   const getPaymentBadge = (order: Order) => {
-    const isPaid = order.Payment_Status === 'paid';
+    const status: PaymentStatus = order.Payment_Status || 'pending';
     const method = order.Payment_Method || 'cash_on_delivery';
+    const methodLabel = ({
+      bkash: 'bKash',
+      nagad: 'Nagad',
+      rocket: 'Rocket',
+      visa_mastercard: 'Cards',
+      sslcommerz: 'SSLCOMMERZ',
+      cash_on_delivery: 'Cash on delivery',
+    } as Record<string, string>)[method] || method.replaceAll('_', ' ');
+    const statusPresentation: Record<PaymentStatus, {
+      label: string;
+      Icon: typeof CheckCircle2;
+      className: string;
+    }> = {
+      paid: {
+        label: 'Paid',
+        Icon: CheckCircle2,
+        className: 'bg-success-100 dark:bg-success-950/60 text-success-800 dark:text-success-200 border-success-300 dark:border-success-800',
+      },
+      pending: {
+        label: 'Pending',
+        Icon: Clock,
+        className: 'bg-warning-100 dark:bg-warning-950/60 text-warning-900 dark:text-warning-200 border-warning-300 dark:border-warning-800',
+      },
+      failed: {
+        label: 'Failed',
+        Icon: XCircle,
+        className: 'bg-danger-100 dark:bg-danger-950/60 text-danger-800 dark:text-danger-200 border-danger-300 dark:border-danger-800',
+      },
+      refunded: {
+        label: 'Refunded',
+        Icon: RotateCcw,
+        className: 'bg-surface-100 dark:bg-surface-800 text-surface-700 dark:text-surface-200 border-surface-300 dark:border-surface-700',
+      },
+    };
+    const { label, Icon, className } = statusPresentation[status];
 
-    if (method === 'bkash') {
-      return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-micro font-black uppercase tracking-wider bg-pink-100 dark:bg-pink-950/60 text-[#E2136E] border border-pink-300 dark:border-pink-900/60">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#E2136E]"></span>
-          bKash • SSLCOMMERZ {isPaid ? '(Paid)' : '(Pending)'}
-        </span>
-      );
-    }
-    if (method === 'nagad') {
-      return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-micro font-black uppercase tracking-wider bg-warning-100 dark:bg-warning-950/60 text-[#F7941D] border border-warning-300 dark:border-warning-900/60">
-          Nagad • SSLCOMMERZ
-        </span>
-      );
-    }
-    if (method === 'rocket') {
-      return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-micro font-black uppercase tracking-wider bg-brand-100 dark:bg-brand-950/60 text-[#8C3494] border border-brand-300 dark:border-brand-900/60">
-          Rocket • SSLCOMMERZ
-        </span>
-      );
-    }
-    if (method === 'visa_mastercard') {
-      return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-micro font-black uppercase tracking-wider bg-brand-100 dark:bg-brand-950/60 text-brand-700 dark:text-brand-400 border border-brand-300 dark:border-brand-900/60">
-          Cards • SSLCOMMERZ
-        </span>
-      );
-    }
     return (
-      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-micro font-black uppercase tracking-wider bg-success-100 dark:bg-success-950/60 text-success-700 dark:text-success-400 border border-success-300 dark:border-success-800">
-        Cash on Delivery
+      <span
+        data-testid="payment-status-badge"
+        data-status={status}
+        aria-label={`${label} payment via ${methodLabel}`}
+        className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold ${className}`}
+      >
+        <Icon aria-hidden="true" className="h-3.5 w-3.5 shrink-0" />
+        <span>{methodLabel}</span>
+        <span aria-hidden="true">·</span>
+        <span>{label}</span>
       </span>
     );
   };
