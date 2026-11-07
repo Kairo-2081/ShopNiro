@@ -7,12 +7,14 @@ import { AccountLocationPicker } from '../AccountLocationPicker';
 import { ChevronLeft, ChevronRight, FileText, Image as ImageIcon, Lock, Save, X } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 import pdfWorkerUrl from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
 type RiderCvDocument = Awaited<ReturnType<typeof pdfjsLib.getDocument>['promise']>;
 
 const RiderCvPreview: React.FC<{ url: string; onClose: () => void }> = ({ url, onClose }) => {
+  useEscapeKey(onClose);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const [pdfDocument, setPdfDocument] = React.useState<RiderCvDocument | null>(null);
@@ -123,6 +125,7 @@ const addressKey = (address: Address) => JSON.stringify([
 ]);
 
 export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, rider, onClose, onSaved, required = false }) => {
+  useEscapeKey(onClose, isOpen);
   const [username, setUsername] = React.useState(rider.Username);
   const [name, setName] = React.useState(rider.Name);
   const [email, setEmail] = React.useState(rider.Email);
