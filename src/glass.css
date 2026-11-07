@@ -383,4 +383,18 @@
       animation: none;
     }
   }
+
+  /* ---- Every panel ------------------------------------------------------------------------------------- */
+
+  /* Most panels in the app are plain containers with a rounded corner and a flat fill (white or surface-50 in
+     light mode, the navy greys in dark mode). Rather than edit hundreds of components, those containers are
+     recognised here and given glass. Form controls, buttons, table cells, badges and anything with a coloured
+     or gradient fill are not containers of this kind, so they are never matched. */
+  html:not(.dark) :is(div, section, article, aside, li, details, form)[class*="rounded-"]:is([class~="bg-white"], [class~="bg-surface-50"]) {
+    background: linear-gradient(160deg, var(--glass-tint), var(--glass-tint-soft));
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    border-color: var(--glass-edge);
+    box-shadow: var(--glass-shadow);
+  }
 }
