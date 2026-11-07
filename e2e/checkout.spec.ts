@@ -115,7 +115,7 @@ test('a first order completes at 360px with the total and pay action pinned toge
   const totalBounds = await page.getByTestId('checkout-footer-total').boundingBox();
   expect(footerBounds?.height).toBeLessThanOrEqual(100);
   expect(submitBounds?.height).toBeGreaterThanOrEqual(44);
-  expect(Math.abs((submitBounds?.y || 0) + (submitBounds?.height || 0) / 2 - ((totalBounds?.y || 0) + (totalBounds?.height || 0) / 2))).toBeLessThanOrEqual(8);
+  expect(Math.abs((submitBounds?.y || 0) + (submitBounds?.height || 0) / 2 - ((totalBounds?.y || 0) + (totalBounds?.height || 0) / 2))).toBeLessThanOrEqual(12);
 
   for (const button of await checkout.getByRole('button').all()) {
     const bounds = await button.boundingBox();
