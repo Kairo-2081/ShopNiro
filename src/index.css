@@ -690,12 +690,22 @@ html body > * {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    transform: none !important;
-    scroll-behavior: auto !important;
+  html {
+    scroll-behavior: auto;
+  }
+
+  .animate-fade-up,
+  .animate-bounce,
+  .animate-ping,
+  .animate-pulse,
+  .animate-spin,
+  .hero-glow,
+  .hero-orbit-wrap,
+  .floating-badge,
+  .brand-chip,
+  .logo-float,
+  .premium-skeleton::after {
+    animation: none !important;
   }
 }
 
