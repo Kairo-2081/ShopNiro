@@ -138,7 +138,9 @@ test('a first order completes at 360px with the total and pay action pinned toge
   await expect(submit).toBeDisabled();
   await expect(submit).toContainText('Processing');
   await expect(page.getByRole('heading', { name: 'Order placed' })).toBeVisible();
-  await expect(page.getByRole('dialog', { name: 'Direct Checkout & Payment' }).getByRole('button')).toHaveCount(1);
+  // The confirmation offers one action (View order) next to the always-present Close button.
+  await expect(page.getByRole('dialog', { name: 'Direct Checkout & Payment' }).getByRole('button')).toHaveCount(2);
+  await expect(page.getByRole('button', { name: 'View order' })).toBeVisible();
 
   await page.getByRole('button', { name: 'View order' }).click();
   const receiptButton = page.getByRole('button', { name: 'View SSLCommerz Receipt' });
