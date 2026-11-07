@@ -2,6 +2,7 @@ import React from 'react';
 import { Address, Seller } from '../../types';
 import { AccountLocationPicker } from '../AccountLocationPicker';
 import { FileText, MapPin, X } from 'lucide-react';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface SellerProfileModalProps {
   seller: Seller;
@@ -12,6 +13,7 @@ interface SellerProfileModalProps {
 }
 
 export const SellerProfileModal: React.FC<SellerProfileModalProps> = ({ seller, onClose, onSave, required = false, requireIdentityDocument = false }) => {
+  useEscapeKey(onClose, true);
   const [name, setName] = React.useState(seller.Name);
   const [username, setUsername] = React.useState(seller.Username || '');
   const [email, setEmail] = React.useState(seller.Email);
