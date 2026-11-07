@@ -35,3 +35,13 @@ test('both themes define every glass token', async () => {
     assert.ok(dark.includes(`${token}:`), `dark theme is missing ${token}`);
   }
 });
+
+test('the scrolling header keeps its glass tint but no backdrop-filter, which made its tab clicks unstable at 360 px', async () => {
+  const glass = await read('src/glass.css');
+  const start = glass.indexOf('  .glass-header {');
+  assert.ok(start > -1, 'glass-header rule exists');
+  const rule = glass.slice(start, glass.indexOf('}', start));
+  assert.doesNotMatch(rule, /backdrop-filter/);
+  const navbar = await read('src/components/Navbar.tsx');
+  assert.match(navbar, /<header className="glass-header /);
+});
