@@ -10,13 +10,13 @@
 @layer glass {
   :root {
     /* Light theme: milky glass over the warm paper background. */
-    --glass-blur: 22px;
-    --glass-blur-strong: 34px;
-    --glass-saturate: 1.7;
-    --glass-tint: rgba(255, 255, 255, 0.58);
+    --glass-blur: 26px;
+    --glass-blur-strong: 38px;
+    --glass-saturate: 1.9;
+    --glass-tint: rgba(255, 255, 255, 0.44);
     --glass-tint-strong: rgba(252, 251, 247, 0.84);
-    --glass-tint-soft: rgba(255, 255, 255, 0.34);
-    --glass-edge: rgba(255, 255, 255, 0.72);
+    --glass-tint-soft: rgba(255, 255, 255, 0.26);
+    --glass-edge: rgba(255, 255, 255, 0.85);
     --glass-edge-dim: rgba(128, 115, 79, 0.2);
     --glass-highlight: rgba(255, 255, 255, 0.9);
     --glass-shade: rgba(74, 62, 38, 0.16);
@@ -26,13 +26,13 @@
   }
 
   .dark {
-    --glass-blur: 24px;
-    --glass-blur-strong: 38px;
-    --glass-saturate: 1.5;
-    --glass-tint: rgba(34, 34, 28, 0.56);
+    --glass-blur: 28px;
+    --glass-blur-strong: 40px;
+    --glass-saturate: 1.7;
+    --glass-tint: rgba(30, 32, 30, 0.42);
     --glass-tint-strong: rgba(24, 24, 20, 0.84);
-    --glass-tint-soft: rgba(231, 229, 214, 0.07);
-    --glass-edge: rgba(231, 229, 214, 0.2);
+    --glass-tint-soft: rgba(231, 229, 214, 0.06);
+    --glass-edge: rgba(231, 229, 214, 0.3);
     --glass-edge-dim: rgba(231, 229, 214, 0.08);
     --glass-highlight: rgba(255, 255, 255, 0.32);
     --glass-shade: rgba(0, 0, 0, 0.4);
@@ -336,6 +336,134 @@
     .micro-badge {
       -webkit-backdrop-filter: none;
       backdrop-filter: none;
+    }
+  }
+
+  /* ---- Scene behind the glass --------------------------------------------------------------------------- */
+
+  /* Glass only reads as glass when there is something colourful to blur behind it. The existing ambient blobs
+     were faint (opacity 0.45, muted colours). These are stronger, and they are fixed, so panels visibly pick up
+     colour as the page scrolls over them. */
+  body::before,
+  body::after {
+    opacity: 0.95;
+  }
+
+  /* Blobs sit across the middle of the page, where the panels are, so the glass visibly picks up colour. */
+  html:not(.dark) body::before {
+    background:
+      radial-gradient(circle at 30% 30%, rgba(238, 176, 62, 0.8), transparent 30%),
+      radial-gradient(circle at 72% 42%, rgba(40, 170, 156, 0.62), transparent 28%),
+      radial-gradient(circle at 48% 80%, rgba(226, 96, 140, 0.56), transparent 30%);
+  }
+
+  html:not(.dark) body::after {
+    background:
+      radial-gradient(circle at 18% 64%, rgba(80, 150, 224, 0.62), transparent 28%),
+      radial-gradient(circle at 86% 18%, rgba(130, 196, 84, 0.5), transparent 26%),
+      radial-gradient(circle at 56% 52%, rgba(255, 255, 255, 0.5), transparent 22%);
+  }
+
+  html.dark body::before {
+    background:
+      radial-gradient(circle at 30% 30%, rgba(206, 156, 36, 0.78), transparent 30%),
+      radial-gradient(circle at 72% 42%, rgba(20, 160, 148, 0.7), transparent 28%),
+      radial-gradient(circle at 48% 80%, rgba(180, 50, 128, 0.62), transparent 30%);
+  }
+
+  html.dark body::after {
+    background:
+      radial-gradient(circle at 18% 64%, rgba(56, 100, 232, 0.66), transparent 28%),
+      radial-gradient(circle at 86% 18%, rgba(60, 176, 96, 0.5), transparent 26%),
+      radial-gradient(circle at 56% 52%, rgba(255, 255, 255, 0.06), transparent 22%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    body::before,
+    body::after {
+      animation: none;
+    }
+  }
+
+  /* ---- Every panel ------------------------------------------------------------------------------------- */
+
+  /* Most panels in the app are plain containers with a rounded corner and a flat fill (white or surface-50 in
+     light mode, the navy greys in dark mode). Rather than edit hundreds of components, those containers are
+     recognised here and given glass. Form controls, buttons, table cells, badges and anything with a coloured
+     or gradient fill are not containers of this kind, so they are never matched. */
+  html:not(.dark) :is(div, section, article, aside, li, details, form)[class*="rounded-"]:is([class~="bg-white"], [class~="bg-surface-50"]) {
+    background: linear-gradient(160deg, var(--glass-tint), var(--glass-tint-soft));
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    border-color: var(--glass-edge);
+    box-shadow: var(--glass-shadow);
+  }
+
+  html.dark :is(div, section, article, aside, li, details, form)[class*="rounded-"]:is(
+      [class~="dark:bg-[#181F2A]"],
+      [class~="dark:bg-[#12161D]"],
+      [class~="dark:bg-[#161C24]"],
+      [class~="dark:bg-[#161E2A]"],
+      [class~="dark:bg-[#18202D]"],
+      [class~="dark:bg-surface-800"]
+    ) {
+    background: linear-gradient(160deg, var(--glass-tint), var(--glass-tint-soft));
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    border-color: var(--glass-edge);
+    box-shadow: var(--glass-shadow);
+  }
+
+  /* Inside a dialog or drawer the panel behind is already glass, so inner cards only need the tint and the
+     edge. Stacking blurs inside one another costs a lot for no visible gain. */
+  [role="dialog"] :is(div, section, article, aside, li, details, form)[class*="rounded-"] {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  /* On phones, long lists of panels get the tint and edge without the blur. The scene is still visible through
+     the tint, and scrolling stays smooth on mid-range devices. */
+  @media (max-width: 767px) {
+    html:not(.dark) :is(div, section, article, aside, li, details, form)[class*="rounded-"]:is([class~="bg-white"], [class~="bg-surface-50"]),
+    html.dark :is(div, section, article, aside, li, details, form)[class*="rounded-"]:is(
+        [class~="dark:bg-[#181F2A]"],
+        [class~="dark:bg-[#12161D]"],
+        [class~="dark:bg-[#161C24]"],
+        [class~="dark:bg-[#161E2A]"],
+        [class~="dark:bg-[#18202D]"],
+        [class~="dark:bg-surface-800"]
+      ) {
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
+
+  /* Reduced transparency: no blur, and the mapped panels get a solid fill so text never sits on a see-through
+     tint. Everything else keeps the fill it was given. */
+  @media (prefers-reduced-transparency: reduce) {
+    html:not(.dark) :is(div, section, article, aside, li, details, form)[class*="rounded-"]:is([class~="bg-white"], [class~="bg-surface-50"]),
+    html.dark :is(div, section, article, aside, li, details, form)[class*="rounded-"]:is(
+        [class~="dark:bg-[#181F2A]"],
+        [class~="dark:bg-[#12161D]"],
+        [class~="dark:bg-[#161C24]"],
+        [class~="dark:bg-[#161E2A]"],
+        [class~="dark:bg-[#18202D]"],
+        [class~="dark:bg-surface-800"]
+      ) {
+      background: var(--glass-tint-strong);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+    body::before,
+    body::after {
+      opacity: 0.35;
+    }
+  }
+
+  @media (forced-colors: active) {
+    body::before,
+    body::after {
+      display: none;
     }
   }
 }
