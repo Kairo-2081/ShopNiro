@@ -53,4 +53,12 @@ test.describe('seller dashboard profile', () => {
       await expect(page.getByRole('button', { name: 'Review profile' })).toBeVisible();
     });
   });
+
+  test('explains the next step for rejected sellers', async ({ page }) => {
+    await withSellerStatus('rejected', async () => {
+      await openSellerDashboard(page);
+      await expect(page.getByText('Account rejected:')).toBeVisible();
+      await expect(page.getByText(/Contact platform support to ask about the restriction and next steps/)).toBeVisible();
+    });
+  });
 });
