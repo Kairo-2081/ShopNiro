@@ -240,10 +240,11 @@
     box-shadow: var(--glass-shadow), 0 30px 70px -20px var(--glass-shade);
   }
 
-  /* Header and footer bars inside dialogs used a flat near-opaque fill; let the glass show through them. */
-  [role="dialog"] .border-b[class*="bg-"],
-  [role="dialog"] .border-t[class*="bg-"] {
-    background: var(--glass-tint-soft);
+  /* The standard dialog header band (bg-*/50 over dark:bg-[#161C24]/80) lets the glass show through. Footers and
+     other bars are left alone: the checkout footer is sticky and content scrolls under it, so it must stay
+     nearly opaque, and coloured banners keep their colour. */
+  [role="dialog"] [class*="dark:bg-[#161C24]/80"] {
+    background: var(--glass-tint);
     border-color: var(--glass-edge-dim);
   }
 
