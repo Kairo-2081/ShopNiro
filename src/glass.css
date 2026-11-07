@@ -128,7 +128,6 @@
     backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
     border: 1px solid var(--glass-edge);
     box-shadow: var(--glass-shadow);
-    position: relative;
   }
 
   .dark .premium-card {
@@ -187,20 +186,10 @@
   /* ---- Buttons ----------------------------------------------------------------------------------------- */
 
   /* Primary actions stay brand-coloured so they remain the loudest thing on the page. The glass look comes from
-     the lit top edge and the soft coloured shadow, not from transparency. */
+     a lit inner top edge and a soft coloured shadow, not from transparency or an overlay, so label contrast is unchanged. */
   .premium-button {
-    position: relative;
     box-shadow: 0 1px 0 rgba(255, 255, 255, 0.45) inset, 0 -1px 0 rgba(0, 0, 0, 0.22) inset,
       0 14px 26px -12px rgba(52, 40, 20, 0.5);
-  }
-
-  .premium-button::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    pointer-events: none;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 46%);
   }
 
   .premium-button:hover {
