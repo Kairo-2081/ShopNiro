@@ -135,23 +135,30 @@ const recordFinding = async (runId: string, finding: FindingInput): Promise<bool
         AND refund_id IS NOT DISTINCT FROM $5
       RETURNING id
     ),
+    updated AS (
+      UPDATE payment_reconciliation_findings
+      SET run_id = $1, severity = $7, detail = $6::jsonb, last_seen_at = current_timestamp
+      WHERE status = 'open' AND kind = $2
+        AND payment_id IS NOT DISTINCT FROM $3
+        AND order_id IS NOT DISTINCT FROM $4
+        AND refund_id IS NOT DISTINCT FROM $5
+        AND NOT EXISTS (SELECT 1 FROM acknowledged)
+      RETURNING id
+    ),
     upserted AS (
       INSERT INTO payment_reconciliation_findings (
         run_id, payment_id, order_id, refund_id, kind, severity, detail
       )
       SELECT $1, $3, $4, $5, $2, $7, $6::jsonb
       WHERE NOT EXISTS (SELECT 1 FROM acknowledged)
+        AND NOT EXISTS (SELECT 1 FROM updated)
       ON CONFLICT (
         kind, (coalesce(payment_id, '')), (coalesce(order_id, '')), (coalesce(refund_id, ''))
       ) WHERE status = 'open'
-      DO UPDATE SET
-        run_id = EXCLUDED.run_id,
-        severity = EXCLUDED.severity,
-        detail = EXCLUDED.detail,
-        last_seen_at = current_timestamp
-      RETURNING (xmax = 0) AS inserted
+      DO NOTHING
+      RETURNING id
     )
-    SELECT COALESCE((SELECT inserted FROM upserted), false) AS inserted
+    SELECT EXISTS (SELECT 1 FROM upserted) AS inserted
   `, [
     runId,
     finding.kind,

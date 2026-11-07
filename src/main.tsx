@@ -3,6 +3,7 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import LegalPage from './components/legal/LegalPage.tsx';
 import { AppErrorBoundary } from './components/AppErrorBoundary.tsx';
+import { NetworkStatusBanner } from './components/NetworkStatusBanner.tsx';
 import { LocaleProvider } from './lib/i18n.tsx';
 import { policyByPath } from './components/legal/policies.ts';
 import './index.css';
@@ -29,6 +30,7 @@ const policy = typeof window !== 'undefined' ? policyByPath(window.location.path
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AppErrorBoundary>
+      <NetworkStatusBanner />
       <LocaleProvider>{policy ? <LegalPage policy={policy} /> : <App />}</LocaleProvider>
     </AppErrorBoundary>
   </StrictMode>,
