@@ -1404,13 +1404,6 @@ export default function App() {
             </button>
             <span>•</span>
             <button
-              onClick={() => setViewMode('landing')}
-              className="hover:text-brand-500 dark:hover:text-brand-400 transition-colors cursor-pointer"
-            >
-              Marketplace Landing
-            </button>
-            <span>•</span>
-            <button
               onClick={() => setIsChatOpen(true)}
               className="hover:text-brand-500 dark:hover:text-brand-400 transition-colors cursor-pointer text-brand-600 dark:text-brand-400 font-bold"
             >
