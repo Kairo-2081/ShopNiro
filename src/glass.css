@@ -296,4 +296,24 @@
       backdrop-filter: none;
     }
   }
+
+  /* ---- Chips and pills --------------------------------------------------------------------------------- */
+
+  .micro-badge {
+    -webkit-backdrop-filter: blur(8px) saturate(1.4);
+    backdrop-filter: blur(8px) saturate(1.4);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.22) inset;
+  }
+
+  .pay-pill {
+    background-color: var(--glass-tint-soft);
+    -webkit-backdrop-filter: blur(10px) saturate(1.4);
+    backdrop-filter: blur(10px) saturate(1.4);
+    box-shadow: 0 1px 0 var(--glass-edge) inset;
+  }
+
+  .pay-pill:hover {
+    border-color: var(--glass-edge);
+    background-color: var(--glass-tint);
+  }
 }
