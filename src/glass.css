@@ -276,6 +276,15 @@
     box-shadow: 0 1px 0 var(--glass-edge) inset, 0 10px 28px -16px var(--glass-shade);
   }
 
+  /* The top header scrolls away with the page, so nothing passes under it and a blur would add nothing. It also
+     broke a 360 px browser test (clicks on its tab buttons never became stable) when it had backdrop-filter, so
+     it only gets the glass tint and edge. */
+  .glass-header {
+    background: linear-gradient(180deg, var(--glass-tint-strong), var(--glass-tint));
+    border-color: var(--glass-edge-dim);
+    box-shadow: 0 1px 0 var(--glass-edge) inset, 0 10px 28px -16px var(--glass-shade);
+  }
+
   nav.glass-bar {
     box-shadow: 0 1px 0 var(--glass-edge) inset, 0 -10px 28px -16px var(--glass-shade);
   }
