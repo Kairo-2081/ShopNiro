@@ -5,6 +5,7 @@ import { api } from '../lib/api';
 import { OAuthProviderButtons } from './OAuthProviderButtons';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { PolicyLinks } from './legal/PolicyLinks';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -25,6 +26,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   initialTab = 'login',
   initialRole = 'customer',
 }) => {
+  useEscapeKey(onClose, isOpen);
   const [activeTab, setActiveTab] = useState<'login' | 'register'>(initialTab);
   
   // Login fields
