@@ -540,12 +540,12 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                               {restockingProductId === p.Product_ID ? (
                                 <form onSubmit={(event) => { event.preventDefault(); void restockProduct(p); }} className="flex flex-wrap items-center gap-1.5">
                                   <input type="number" min="1" step="1" required value={restockQuantity} onChange={(event) => setRestockQuantity(event.target.value)} aria-label={`Quantity to add for ${p.Name}`} placeholder="Qty" className="luxury-input h-9 min-h-9 w-20 rounded-lg px-2 text-xs tabular-nums" />
-                                  <button type="submit" disabled={isRestocking} className="rounded-lg bg-[#77775a] px-2.5 py-2 text-micro font-bold text-white hover:bg-[#66664c] disabled:opacity-50">{isRestocking ? 'Saving…' : 'Save'}</button>
-                                  <button type="button" onClick={() => { setRestockingProductId(null); setRestockError(''); }} aria-label={`Cancel restock for ${p.Name}`} className="grid h-9 w-9 place-items-center rounded-lg text-surface-500 hover:bg-surface-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] dark:text-surface-300 dark:hover:bg-surface-800"><X className="h-4 w-4" /></button>
+                                  <button type="submit" disabled={isRestocking} title={`Save restock quantity for ${p.Name}`} className="min-h-10 rounded-lg bg-[#77775a] px-3 py-2 text-micro font-bold text-white hover:bg-[#66664c] disabled:opacity-50">{isRestocking ? 'Saving…' : 'Save'}</button>
+                                  <button type="button" onClick={() => { setRestockingProductId(null); setRestockError(''); }} aria-label={`Cancel restock for ${p.Name}`} title={`Cancel restock for ${p.Name}`} className="grid h-10 w-10 place-items-center rounded-lg text-surface-500 hover:bg-surface-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] dark:text-surface-300 dark:hover:bg-surface-800"><X className="h-4 w-4" /></button>
                                   {restockError && <span role="alert" className="w-full text-micro text-danger-600 dark:text-danger-300">{restockError}</span>}
                                 </form>
                               ) : (
-                                <button type="button" onClick={() => { setRestockError(''); setRestockQuantity(''); setRestockingProductId(p.Product_ID); }} className="rounded-md px-1.5 py-1 text-micro font-semibold text-[#70674a] underline decoration-[#a99b72]/40 underline-offset-2 hover:text-[#514b3d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] dark:text-[#d0c8a5]">Restock</button>
+                                <button type="button" onClick={() => { setRestockError(''); setRestockQuantity(''); setRestockingProductId(p.Product_ID); }} title={`Restock ${p.Name}`} className="inline-flex min-h-10 items-center rounded-md px-3 py-2 text-micro font-semibold text-[#70674a] underline decoration-[#a99b72]/40 underline-offset-2 hover:text-[#514b3d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] dark:text-[#d0c8a5]">Restock</button>
                               )}
                             </div>
                           </td>
@@ -571,7 +571,8 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                                   p.Product_Status === 'active' ? 'inactive' : 'active'
                                 )
                               }
-                              className={`px-2.5 py-1 rounded-full text-micro font-bold uppercase transition-all duration-200 cursor-pointer hover:-translate-y-px hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] ${
+                              title={`${p.Product_Status === 'active' ? 'Pause' : 'Activate'} ${p.Name}`}
+                              className={`inline-flex min-h-10 items-center justify-center px-3 py-1 rounded-full text-micro font-bold uppercase transition-all duration-200 cursor-pointer hover:-translate-y-px hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] ${
                                 p.Product_Status === 'active'
                                   ? 'bg-success-500/15 text-success-500 border border-success-500/30'
                                   : 'bg-surface-800 text-surface-400 border border-surface-700'
@@ -590,7 +591,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                                   setIsProductModalOpen(true);
                                 }}
                                 className="grid h-10 w-10 place-items-center rounded-lg text-surface-600 transition-colors hover:bg-[#a99b72]/10 hover:text-[#80734f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] dark:text-surface-400 dark:hover:bg-[#d0c8a5]/10 dark:hover:text-[#d0c8a5]"
-                                title="Edit Product"
+                                title={`Edit ${p.Name}`}
                               >
                                 <Edit className="w-4 h-4" />
                               </button>
