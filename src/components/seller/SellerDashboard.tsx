@@ -23,6 +23,7 @@ import {
   Tag,
   X,
 } from 'lucide-react';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 const compactSellerValue = (value: number) => value >= 1000 ? `${(value / 1000).toFixed(1)}k` : String(Math.round(value));
 interface SellerDashboardProps {
@@ -62,6 +63,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
   const [productToEdit, setProductToEdit] = React.useState<Product | null>(null);
   const [productToDelete, setProductToDelete] = React.useState<Product | null>(null);
   const [isDeletingProduct, setIsDeletingProduct] = React.useState(false);
+  useEscapeKey(() => { if (!isDeletingProduct) setProductToDelete(null); }, Boolean(productToDelete));
   const [deleteProductError, setDeleteProductError] = React.useState('');
   const [restockingProductId, setRestockingProductId] = React.useState<string | null>(null);
   const [restockQuantity, setRestockQuantity] = React.useState('');
