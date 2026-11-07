@@ -159,4 +159,28 @@
       backdrop-filter: none;
     }
   }
+
+  /* ---- Form fields ------------------------------------------------------------------------------------- */
+
+  .luxury-input {
+    background: var(--glass-tint-soft);
+    -webkit-backdrop-filter: blur(10px) saturate(1.4);
+    backdrop-filter: blur(10px) saturate(1.4);
+    border: 1px solid var(--glass-edge-dim);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06) inset;
+  }
+
+  .luxury-input:focus {
+    background: var(--glass-tint);
+    border-color: rgba(169, 155, 114, 0.8);
+    box-shadow: 0 0 0 3px rgba(169, 155, 114, 0.22), 0 1px 2px rgba(0, 0, 0, 0.06) inset;
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .luxury-input {
+      background: var(--glass-tint-strong);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
 }
