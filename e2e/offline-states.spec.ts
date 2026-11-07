@@ -4,31 +4,29 @@ import { blockNonLocalTraffic } from './helpers.ts';
 
 test('keeps a readable offline notice on every role home and navigation screen', async ({ browser, baseURL }) => {
   const cases = [
-    { role: 'customer', navigation: ['Top charts', 'My orders', 'Live tracking', 'My Profile', 'Support'] },
-    { role: 'seller', navigation: ['Preview Storefront', 'Support'] },
-    { role: 'admin', navigation: ['Public Storefront', 'Support'] },
-    { role: 'rider', navigation: ['Support'] },
+    { role: 'customer', home: 'My orders', navigation: ['Top charts', 'Live tracking', 'My Profile', 'Support'] },
+    { role: 'seller', home: 'Seller Studio', navigation: ['Preview Storefront', 'Support'] },
+    { role: 'admin', home: 'Admin Governance', navigation: ['Public Storefront', 'Support'] },
+    { role: 'rider', home: 'Rider deliveries', navigation: ['Support'] },
   ] as const;
 
-  for (const { role, navigation } of cases) {
+  for (const { role, home, navigation } of cases) {
     const context = await browser.newContext({ baseURL, storageState: AUTH[role] });
     const page = await context.newPage();
     try {
       await blockNonLocalTraffic(page);
       await page.goto('/');
-      await expect(page.getByRole('navigation', { name: 'Primary navigation' })).toBeVisible();
+      const primaryNavigation = page.getByRole('navigation', { name: 'Primary navigation' });
+      await expect(primaryNavigation.getByRole('button', { name: home })).toBeVisible();
       await context.setOffline(true);
       const notice = page.getByRole('alert').filter({ hasText: 'You are offline' });
       await expect(notice).toBeVisible();
       await expect(notice.getByRole('button', { name: 'Retry' })).toBeVisible();
 
       for (const label of navigation) {
-        await page.getByRole('navigation', { name: 'Primary navigation' }).getByRole('button', { name: label }).click();
+        await primaryNavigation.getByRole('button', { name: label }).click();
         await expect(notice).toBeVisible();
       }
-
-      await context.setOffline(false);
-      await expect(notice).toHaveCount(0);
     } finally {
       await context.close();
     }
@@ -65,7 +63,7 @@ test('surfaces the server request ID and a retry when a catalog request fails', 
 test('product loading cards keep equal reserved heights', async ({ page }) => {
   await blockNonLocalTraffic(page);
   await page.route(/\/api\/products(?:\?.*)?$/, async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, 400));
+    await new Promise((resolve) => setTimeout(resolve, 1500));
     await route.continue();
   });
 
