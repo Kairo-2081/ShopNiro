@@ -27,10 +27,23 @@ jobs:
             echo "APP_URL and CRON_SECRET repository secrets must be configured."
             exit 1
           fi
-          response="$(curl -fsS --max-time 600 --retry 2 --retry-delay 30 -X POST \
+          body_file="$(mktemp)"
+          http_code="$(curl -sS --max-time 600 --retry 2 --retry-delay 30 -X POST \
             -H "Authorization: Bearer ${CRON_SECRET}" \
             -H "Content-Type: application/json" \
             -d '{}' \
+            -o "$body_file" -w '%{http_code}' \
             "${APP_URL%/}/api/cron/reconcile-payments")"
+          response="$(cat "$body_file")"
+          if [[ "$http_code" != "200" ]]; then
+            echo "Reconciliation endpoint returned HTTP ${http_code}."
+            echo "Response body: ${response}"
+            case "$http_code" in
+              401) echo "Hint: CRON_SECRET in GitHub does not match CRON_SECRET on the app (the app that APP_URL points at)." ;;
+              503) echo "Hint: the app has no CRON_SECRET set, or its database is not ready (check /api/ready)." ;;
+              409) echo "Hint: another reconciliation run is still in progress; try again shortly." ;;
+            esac
+            exit 1
+          fi
           printf '%s\n' "$response" | jq '{runId, status, checked, matched, repaired, findingsOpened, highSeverityOpen}'
           printf '%s\n' "$response" | jq -e '.status == "ok" and .highSeverityOpen == 0' >/dev/null
