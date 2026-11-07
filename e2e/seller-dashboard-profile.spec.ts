@@ -69,4 +69,11 @@ test.describe('seller dashboard profile', () => {
       await expect(page.getByText(/Contact platform support to ask about the restriction and next steps/)).toBeVisible();
     });
   });
+
+  test('shows membership as month and year only', async ({ page }) => {
+    await withSellerStatus('approved', async () => {
+      await openSellerDashboard(page);
+      await expect(page.getByText(/^Member since /)).toHaveText(/^Member since [A-Z][a-z]+ \d{4}$/);
+    });
+  });
 });
