@@ -33,6 +33,8 @@ interface SellerDashboardProps {
   orders: Order[];
   reviews: Review[];
   isLoading?: boolean;
+  productsLoadError?: string | null;
+  onRetryProducts?: () => void;
   onSaveProduct: (data: Partial<Product>) => Promise<void>;
   onDeleteProduct: (productId: string) => Promise<void>;
   onUpdateProductStatus: (productId: string, status: ProductStatus) => Promise<void>;
@@ -49,6 +51,8 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
   orders,
   reviews,
   isLoading = false,
+  productsLoadError = null,
+  onRetryProducts,
   onSaveProduct,
   onDeleteProduct,
   onUpdateProductStatus,
@@ -324,21 +328,24 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
               <Edit className="w-4 h-4" />
               <span>Edit store details</span>
             </button>
-            <button
-              disabled={currentSeller.Status !== 'approved'}
-              onClick={() => {
-                setProductToEdit(null);
-                setIsProductModalOpen(true);
-              }}
-              className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-xs shadow-lg transition-all cursor-pointer ${
-                currentSeller.Status !== 'approved'
-                  ? 'bg-surface-200 dark:bg-surface-800 text-surface-400 dark:text-surface-600 cursor-not-allowed'
-                  : 'premium-button text-white shadow-md hover:-translate-y-0.5'
-              }`}
-            >
-              <Plus className="w-4 h-4" />
-              <span>Add New Product Listing</span>
-            </button>
+            {sellerProducts.length > 0 && (
+              <button
+                type="button"
+                disabled={currentSeller.Status !== 'approved'}
+                onClick={() => {
+                  setProductToEdit(null);
+                  setIsProductModalOpen(true);
+                }}
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-xs shadow-lg transition-all cursor-pointer ${
+                  currentSeller.Status !== 'approved'
+                    ? 'bg-surface-200 dark:bg-surface-800 text-surface-400 dark:text-surface-600 cursor-not-allowed'
+                    : 'premium-button text-white shadow-md hover:-translate-y-0.5'
+                }`}
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add New Product Listing</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -485,13 +492,42 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
       {/* Tab 1: Product Management */}
       {activeTab === 'products' && (
         <div className="space-y-4">
-          {sellerProducts.length === 0 ? (
+          {isLoading ? (
+            <div role="status" aria-label="Loading seller products" aria-busy="true" className="divide-y divide-surface-200 overflow-hidden rounded-xl border border-surface-200 bg-white dark:divide-surface-800 dark:border-surface-800 dark:bg-[#12161D]">
+              {Array.from({ length: 4 }, (_, index) => (
+                <div key={index} className="flex h-[5.5rem] items-center gap-4 px-4">
+                  <span className="premium-skeleton h-12 w-12 shrink-0 rounded-xl" />
+                  <span className="premium-skeleton h-4 w-2/5 rounded-full" />
+                  <span className="premium-skeleton ml-auto h-4 w-20 rounded-full" />
+                </div>
+              ))}
+            </div>
+          ) : sellerProducts.length === 0 && productsLoadError ? (
+            <div role="alert" className="space-y-4 rounded-2xl border border-danger-300 bg-danger-50 p-6 text-center text-danger-800 dark:border-danger-900 dark:bg-danger-950/40 dark:text-danger-200">
+              <h3 className="font-bold">Products could not be loaded</h3>
+              <p className="text-sm">{productsLoadError}</p>
+              {onRetryProducts && <button type="button" onClick={onRetryProducts} className="min-h-11 rounded-full bg-danger-700 px-5 font-bold text-white">Retry</button>}
+            </div>
+          ) : sellerProducts.length === 0 ? (
             <div className="text-center py-16 bg-white dark:bg-[#12161D] rounded-3xl border border-brand-100 dark:border-brand-500/20 p-8 space-y-3">
               <Package className="w-12 h-12 text-surface-300 dark:text-surface-600 mx-auto" />
               <h3 className="font-bold text-surface-800 dark:text-surface-200">No products created yet</h3>
               <p className="text-xs text-surface-500 dark:text-surface-400">
-                Click "+ Add New Product Listing" above to publish products under your seller brand.
+                Add a listing to start building your store catalog.
               </p>
+              {currentSeller.Status === 'approved' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setProductToEdit(null);
+                    setIsProductModalOpen(true);
+                  }}
+                  className="premium-button inline-flex min-h-11 items-center gap-2 rounded-full px-5 font-bold text-white"
+                >
+                  <Plus aria-hidden="true" className="h-4 w-4" />
+                  Add your first product
+                </button>
+              )}
             </div>
           ) : (
             <div className="premium-surface overflow-hidden rounded-xl shadow-xs">
