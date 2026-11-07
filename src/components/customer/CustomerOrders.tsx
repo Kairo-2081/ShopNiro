@@ -2,7 +2,7 @@ import React from 'react';
 import { Customer, Order, OrderCancellationRequest, Product, RiderDelivery, Seller } from '../../types';
 import { api, formatCurrency, formatBDT, formatDate } from '../../lib/api';
 import { PaymentReceiptModal } from '../payment/PaymentReceiptModal';
-import { Package, Truck, CheckCircle2, Clock, MapPin, Search, AlertCircle, Radio, Receipt, X } from 'lucide-react';
+import { Package, Truck, CheckCircle2, Clock, MapPin, Search, AlertCircle, Radio, Receipt, X, XCircle } from 'lucide-react';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useLocale } from '../../lib/i18n';
 
@@ -245,6 +245,12 @@ export const CustomerOrders: React.FC<CustomerOrdersProps> = ({
         return (
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-warning-100 dark:bg-warning-950/60 text-warning-700 dark:text-warning-300 border border-warning-200 dark:border-warning-800">
             <Clock className="w-3.5 h-3.5" /> Processing Order
+          </span>
+        );
+      case 'cancelled':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-danger-100 dark:bg-danger-950/60 text-danger-700 dark:text-danger-300 border border-danger-200 dark:border-danger-800">
+            <XCircle className="w-3.5 h-3.5" /> Cancelled
           </span>
         );
       default:
