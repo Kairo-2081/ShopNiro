@@ -25,6 +25,9 @@ test('public and role-specific pages have no critical or serious axe violations'
           help: violation.help,
           targets: violation.nodes.map((node) => node.target),
         }));
+      if (violations.length) {
+        console.error(JSON.stringify({ page: label, theme, violations }, null, 2));
+      }
       expect(violations, `${label} (${theme}) has critical or serious accessibility violations`).toEqual([]);
     };
 
@@ -140,8 +143,10 @@ test('reduced motion stops the orbit globe animation without hiding its content'
   const page = await context.newPage();
   try {
     await blockNonLocalTraffic(page);
+    console.log('Opening the marketplace with reduced motion enabled.');
     await page.goto('/');
     const globe = page.locator('canvas');
+    console.log('Waiting for the orbit globe canvas.');
     await expect(globe).toBeVisible();
     const initialFrame = await globe.evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL());
     await page.waitForTimeout(150);
