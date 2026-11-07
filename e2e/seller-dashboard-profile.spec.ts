@@ -61,4 +61,12 @@ test.describe('seller dashboard profile', () => {
       await expect(page.getByText(/Contact platform support to ask about the restriction and next steps/)).toBeVisible();
     });
   });
+
+  test('explains the next step for suspended sellers', async ({ page }) => {
+    await withSellerStatus('suspended', async () => {
+      await openSellerDashboard(page);
+      await expect(page.getByText('Account suspended:')).toBeVisible();
+      await expect(page.getByText(/Contact platform support to ask about the restriction and next steps/)).toBeVisible();
+    });
+  });
 });
