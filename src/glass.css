@@ -316,4 +316,26 @@
     border-color: var(--glass-edge);
     background-color: var(--glass-tint);
   }
+
+  /* ---- Performance ------------------------------------------------------------------------------------- */
+
+  /* Long product and order lists create many blurred layers at once. On phones use a smaller blur radius so
+     scrolling stays smooth on mid-range devices. */
+  @media (max-width: 767px) {
+    :root {
+      --glass-blur: 14px;
+      --glass-blur-strong: 22px;
+    }
+    .dark {
+      --glass-blur: 14px;
+      --glass-blur-strong: 22px;
+    }
+    .luxury-input,
+    .luxury-control,
+    .pay-pill,
+    .micro-badge {
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
 }
