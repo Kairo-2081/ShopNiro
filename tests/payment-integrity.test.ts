@@ -438,15 +438,39 @@ dbTest('plaintext stored passwords are rejected with the same message as unknown
     process.env.SSLCOMMERZ_IPN_TOKEN ??= 'test-payment-integrity-ipn-token';
     const fixture = await createCheckoutFixture();
     const order = await placeCartOrder(fixture, 'online');
-    let checkedOutDuringGatewayCall = -1;
+    const heldClients = [];
+    const heldClientCount = Math.max(0, (pool.options.max ?? 10) - 1);
+    for (let index = 0; index < heldClientCount; index += 1) {
+      heldClients.push(await pool.connect());
+    }
+
+    let markGatewayStarted!: () => void;
+    let releaseGateway!: () => void;
+    const gatewayStarted = new Promise<void>((resolve) => { markGatewayStarted = resolve; });
+    const gatewayGate = new Promise<void>((resolve) => { releaseGateway = resolve; });
     t.mock.method(sslcommerz, 'initPayment', async () => {
-      checkedOutDuringGatewayCall = pool.totalCount - pool.idleCount;
+      markGatewayStarted();
+      await gatewayGate;
       return { status: 'SUCCESS', GatewayPageURL: 'https://gateway.example.test/session' };
     });
 
-    const response = await request(server, '/api/payment/init', 'POST', { orderId: order.Order_ID }, fixture.customerCookie);
-    assert.equal(response.status, 200, JSON.stringify(response.body));
-    assert.equal(checkedOutDuringGatewayCall, 0);
+    try {
+      const responsePromise = request(server, '/api/payment/init', 'POST', { orderId: order.Order_ID }, fixture.customerCookie);
+      await gatewayStarted;
+      const availableConnectionQuery = query('SELECT 1');
+      const connectionAvailableDuringGateway = await Promise.race([
+        availableConnectionQuery.then(() => true),
+        new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 500)),
+      ]);
+      releaseGateway();
+      const response = await responsePromise;
+      await availableConnectionQuery;
+      assert.equal(response.status, 200, JSON.stringify(response.body));
+      assert.equal(connectionAvailableDuringGateway, true);
+    } finally {
+      releaseGateway();
+      heldClients.forEach((client) => client.release());
+    }
   });
 
   dbTest('concurrent payment init waits for the in-flight gateway session instead of calling the gateway again', async (t) => {
