@@ -6,7 +6,7 @@ import { calculateCheckoutPricing, calculateOrderTotal, fromPaisa } from '../../
 import { describeVoucher, getVoucherRule, isVoucherExpired, normalizeVoucherCode } from '../../lib/vouchers';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { SSLCommerzModal } from '../payment/SSLCommerzModal';
-import { X, CheckCircle2, Truck, ShieldCheck, MapPin, CreditCard, ArrowRight, Package, Banknote, Lock, Sparkles } from 'lucide-react';
+import { X, CheckCircle2, MapPin, CreditCard, ArrowRight, Package, Banknote, Lock, Sparkles, LoaderCircle, Truck } from 'lucide-react';
 import { money } from '../../lib/format';
 import { useLocale } from '../../lib/i18n';
 
@@ -15,6 +15,7 @@ interface CheckoutModalProps {
   onClose: () => void;
   currentCustomer: Customer;
   previousOrderCount: number;
+  initialPaymentMethod?: 'bkash' | 'nagad' | 'rocket' | 'visa_mastercard' | 'cash_on_delivery';
   cartItems: CartItem[];
   isLoadingCart?: boolean;
   onRefreshCart: () => Promise<void>;
@@ -41,6 +42,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   onClose,
   currentCustomer,
   previousOrderCount,
+  initialPaymentMethod = 'bkash',
   cartItems,
   isLoadingCart = false,
   onRefreshCart,
@@ -73,7 +75,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
   const [paymentMethod, setPaymentMethod] = React.useState<
     'bkash' | 'nagad' | 'rocket' | 'visa_mastercard' | 'cash_on_delivery'
-  >('bkash');
+  >(initialPaymentMethod);
   const [isSSLModalOpen, setIsSSLModalOpen] = React.useState(false);
   const [additionalNotes, setAdditionalNotes] = React.useState(currentCustomer.Address?.Additional_Info || '');
   const [isSuggestingInstructions, setIsSuggestingInstructions] = React.useState(false);
@@ -352,88 +354,35 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
           {/* Modal Body */}
           <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
             {createdOrder ? (
-              /* Order Success State matching the live waypoint card with SSLCommerz bKash badge */
-              <div className="text-center py-8 space-y-6 max-w-lg mx-auto animate-in zoom-in-95 duration-200">
-                <div className="w-20 h-20 bg-success-100 dark:bg-success-950/60 rounded-full flex items-center justify-center mx-auto text-success-600 dark:text-success-400 border border-success-200 dark:border-success-800 shadow-lg">
-                  <CheckCircle2 className="w-10 h-10" />
+              <div className="mx-auto max-w-md py-8 text-center">
+                <div className="mx-auto grid h-14 w-14 place-items-center rounded-full border border-success-200 bg-success-100 text-success-700 dark:border-success-800 dark:bg-success-950/60 dark:text-success-300">
+                  <CheckCircle2 aria-hidden="true" className="h-7 w-7" />
                 </div>
-
-                <div>
-                  <h3 className="text-2xl font-black text-surface-900 dark:text-white">Order Placed</h3>
-                  <p className="text-xs text-surface-500 dark:text-surface-400 mt-1">
-                    Thank you, <strong className="text-surface-800 dark:text-surface-200">{currentCustomer.Name}</strong>. Your order is pending until the authorized payment or delivery lifecycle is completed.
-                  </p>
-                </div>
-
-                {/* Payment Verification Card */}
-                <div className="p-4 rounded-3xl bg-surface-50 dark:bg-[#161C24] border border-surface-200 dark:border-surface-800 text-left text-xs space-y-2.5">
-                  <div className="flex items-center justify-between pb-2 border-b border-surface-200 dark:border-surface-800">
-                    <span className="font-bold text-surface-700 dark:text-surface-300 flex items-center gap-1.5">
-                      <ShieldCheck className="w-4 h-4 text-success-500" />
-                      Payment Status:
-                    </span>
-                    <span
-                      className={`px-3 py-1 rounded-full text-micro font-bold uppercase ${
-                        createdOrder.Payment_Status === 'paid'
-                          ? 'bg-success-100 dark:bg-success-950/80 text-success-700 dark:text-success-300 border border-success-300 dark:border-success-800'
-                          : 'bg-warning-100 dark:bg-warning-950/80 text-warning-700 dark:text-warning-300 border border-warning-300 dark:border-warning-800'
-                      }`}
-                    >
-                      {createdOrder.Payment_Status === 'paid' ? 'PAID & VERIFIED' : 'CASH ON DELIVERY (PENDING)'}
-                    </span>
+                <h3 className="mt-4 text-2xl font-bold text-surface-900 dark:text-white">Order placed</h3>
+                <p className="mt-2 text-sm text-surface-600 dark:text-surface-300">
+                  {createdOrder.Payment_Status === 'paid' ? 'Payment confirmed.' : 'Pay the courier when your order arrives.'}
+                </p>
+                <dl className="mt-6 space-y-3 rounded-xl border border-surface-200 bg-surface-50 p-4 text-left text-sm dark:border-surface-800 dark:bg-[#181F2A]">
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-surface-500 dark:text-surface-400">Order number</dt>
+                    <dd className="break-all text-right font-mono font-semibold text-surface-900 dark:text-white">{createdOrder.Order_ID}</dd>
                   </div>
-
-                  <div className="flex justify-between">
-                    <span className="text-surface-500 dark:text-surface-400">Channel / Gateway:</span>
-                    <span className="font-bold text-surface-800 dark:text-surface-200">
-                      {createdOrder.Payment_Method?.toUpperCase()} · {createdOrder.Payment_Status === 'paid' ? 'SSLCommerz' : 'Awaiting authorized collection'}
-                    </span>
+                  <div className="flex justify-between gap-4">
+                    <dt className="text-surface-500 dark:text-surface-400">Total</dt>
+                    <dd className="font-bold tabular-nums text-surface-900 dark:text-white">{formatBDT(createdOrder.Subtotal + createdOrder.Shipping_Fee)}</dd>
                   </div>
-
-                  {createdOrder.Transaction_ID && (
-                    <div className="flex justify-between">
-                      <span className="text-surface-500 dark:text-surface-400">Transaction ID:</span>
-                      <span className="font-mono font-bold text-brand-600 dark:text-brand-400">
-                        {createdOrder.Transaction_ID}
-                      </span>
-                    </div>
-                  )}
-
-                  <div className="flex justify-between">
-                    <span className="text-surface-500 dark:text-surface-400">Total BDT Paid:</span>
-                    <span className="font-black text-surface-900 dark:text-white text-sm">
-                      {formatCurrency(createdOrder.Subtotal + createdOrder.Shipping_Fee)}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Tracking ID is assigned at placement; live tracking starts after shipment. */}
-                <div className="p-5 rounded-3xl bg-[#0F1D2B] border border-brand-900/60 text-center space-y-2 shadow-xl">
-                  <span className="text-micro uppercase tracking-widest font-extrabold text-brand-400 block">
-                    ORDER TRACKING ID
-                  </span>
-                  <div className="text-2xl font-black font-mono text-white tracking-widest">
-                    {createdOrder.Tracking_ID}
-                  </div>
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-600 text-white text-micro font-bold">
-                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
-                    <span>AWAITING VENDOR DISPATCH</span>
-                  </div>
-                </div>
-
-                <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onOrderSuccess(createdOrder);
-                      onClose();
-                    }}
-                    className="premium-button flex-1 rounded-full py-3.5 text-xs font-bold text-white transition-all flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    <Package className="w-4 h-4 text-warning-300" />
-                    <span>View Order Status</span>
-                  </button>
-                </div>
+                </dl>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onOrderSuccess(createdOrder);
+                    onClose();
+                  }}
+                  className="premium-button mt-6 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-bold text-white"
+                >
+                  <Package aria-hidden="true" className="h-4 w-4" />
+                  View order
+                </button>
               </div>
             ) : (
               /* Checkout Form */
@@ -481,7 +430,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                         value={shippingAddress.House_Name}
                         onChange={(e) => setShippingAddress({ ...shippingAddress, House_Name: e.target.value })}
                         placeholder="e.g. Apt 4B or Road 11, Block D"
-                        className="luxury-input w-full p-2.5 bg-white dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-warning-500/40 text-surface-900 dark:text-white"
+                        className="luxury-input min-h-11 w-full px-3 py-2.5 bg-white dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-warning-500/40 text-surface-900 dark:text-white"
                       />
                     </div>
 
@@ -495,7 +444,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                         value={shippingAddress.Street}
                         onChange={(e) => setShippingAddress({ ...shippingAddress, Street: e.target.value, Latitude: undefined, Longitude: undefined })}
                         placeholder="e.g. Banani, Gulshan, or Dhanmondi"
-                        className="luxury-input w-full p-2.5 bg-white dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-warning-500/40 text-surface-900 dark:text-white"
+                        className="luxury-input min-h-11 w-full px-3 py-2.5 bg-white dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-warning-500/40 text-surface-900 dark:text-white"
                       />
                     </div>
 
@@ -509,7 +458,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                         value={shippingAddress.City}
                         onChange={(e) => setShippingAddress({ ...shippingAddress, City: e.target.value, Latitude: undefined, Longitude: undefined })}
                         placeholder="e.g. Dhaka or Chittagong"
-                        className="luxury-input w-full p-2.5 bg-white dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-warning-500/40 text-surface-900 dark:text-white"
+                        className="luxury-input min-h-11 w-full px-3 py-2.5 bg-white dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-warning-500/40 text-surface-900 dark:text-white"
                       />
                     </div>
 
@@ -523,7 +472,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                         value={shippingAddress.Postal_Code}
                         onChange={(e) => setShippingAddress({ ...shippingAddress, Postal_Code: e.target.value })}
                         placeholder="e.g. 1213"
-                        className="luxury-input w-full p-2.5 bg-white dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-warning-500/40 text-surface-900 dark:text-white"
+                        className="luxury-input min-h-11 w-full px-3 py-2.5 bg-white dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-warning-500/40 text-surface-900 dark:text-white"
                       />
                     </div>
                   </div>
@@ -531,7 +480,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   <div>
                                           <div className="flex flex-wrap items-center justify-between gap-2">
                       <label htmlFor="delivery-instructions" className="block text-surface-600 dark:text-surface-400 font-medium text-xs">Delivery Instructions</label>
-                      <button type="button" onClick={() => void suggestDeliveryInstructions()} disabled={isSuggestingInstructions} className="inline-flex items-center gap-1.5 rounded-lg border border-brand-300 px-3 py-2 text-xs font-bold text-brand-700 disabled:opacity-50 dark:border-brand-900 dark:text-brand-300"><Sparkles className="h-3.5 w-3.5" />{isSuggestingInstructions ? 'Suggesting...' : 'Suggest with AI'}</button>
+                      <button type="button" onClick={() => void suggestDeliveryInstructions()} disabled={isSuggestingInstructions} className="inline-flex min-h-11 items-center gap-1.5 rounded-lg border border-brand-300 px-3 py-2 text-xs font-bold text-brand-700 disabled:opacity-50 dark:border-brand-900 dark:text-brand-300"><Sparkles className="h-3.5 w-3.5" />{isSuggestingInstructions ? 'Suggesting...' : 'Suggest with AI'}</button>
                     </div>
                     <textarea
                       id="delivery-instructions"
@@ -539,7 +488,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       value={additionalNotes}
                       onChange={(e) => setAdditionalNotes(e.target.value)}
                       placeholder="Add access details or preferences for your rider"
-                      className="luxury-input w-full p-2.5 bg-white dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-warning-500/40 text-xs text-surface-900 dark:text-white"
+                      className="luxury-input min-h-11 w-full px-3 py-2.5 bg-white dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-warning-500/40 text-xs text-surface-900 dark:text-white"
                     />
                     {instructionError && <p role="alert" className="text-xs text-danger-600 dark:text-danger-300">{instructionError}</p>}
                   </div>
@@ -744,10 +693,10 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                         onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); applyVoucher(); } }}
                         placeholder="e.g. SAVE20"
                         aria-invalid={Boolean(voucherError)}
-                        className="luxury-input min-w-0 flex-[1_1_8rem] rounded-lg border border-surface-300 bg-white px-3 py-2 text-xs uppercase text-surface-900 placeholder:normal-case placeholder:text-surface-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-warning-500/40 dark:border-surface-700 dark:bg-[#181F2A] dark:text-white"
+                        className="luxury-input min-h-11 min-w-0 flex-[1_1_8rem] rounded-lg border border-surface-300 bg-white px-3 py-2 text-xs uppercase text-surface-900 placeholder:normal-case placeholder:text-surface-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-warning-500/40 dark:border-surface-700 dark:bg-[#181F2A] dark:text-white"
                       />
-                      <button type="button" onClick={applyVoucher} className="premium-button rounded-lg px-4 py-2 text-xs font-bold text-white">Apply</button>
-                      {appliedVoucher && <button type="button" onClick={() => { setAppliedVoucher(''); setVoucherInput(''); setVoucherError(''); }} className="shrink-0 rounded-lg border border-surface-300 px-3 py-2 text-xs font-semibold text-surface-700 dark:border-surface-700 dark:text-surface-200">Remove</button>}
+                      <button type="button" onClick={applyVoucher} className="premium-button min-h-11 rounded-lg px-4 py-2 text-xs font-bold text-white">Apply</button>
+                      {appliedVoucher && <button type="button" onClick={() => { setAppliedVoucher(''); setVoucherInput(''); setVoucherError(''); }} className="min-h-11 shrink-0 rounded-lg border border-surface-300 px-3 py-2 text-xs font-semibold text-surface-700 dark:border-surface-700 dark:text-surface-200">Remove</button>}
                     </div>
                     {voucherError && <p role="alert" className="text-xs text-danger-700 dark:text-danger-300">{voucherError}</p>}
                     {appliedVoucher && <p role="status" className="text-xs font-semibold text-success-700 dark:text-success-300">{appliedVoucher} applied: {describeVoucher(appliedVoucher)}</p>}
@@ -829,34 +778,28 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   </div>
                 </div>
 
-                <label className="flex items-start gap-2 text-micro text-surface-600 dark:text-surface-400 cursor-pointer">
+                <label className="flex min-h-11 items-center gap-2 text-micro text-surface-600 dark:text-surface-400 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={acceptedPolicies}
                     onChange={(e) => setAcceptedPolicies(e.target.checked)}
-                    className="mt-0.5 h-3.5 w-3.5 shrink-0 cursor-pointer"
+                    className="h-4 w-4 shrink-0 cursor-pointer"
                   />
                   <span>
                     I have read and agree to the <PolicyLinks ids={['terms', 'refunds', 'delivery']} />.
                   </span>
                 </label>
 
-                <div className="sticky bottom-0 -mx-4 -mb-4 flex flex-col-reverse items-stretch gap-2 border-t border-surface-200 bg-white/95 p-4 pt-3 shadow-[0_-8px_24px_rgba(20,20,16,0.08)] backdrop-blur-md dark:border-surface-800 dark:bg-[#12161D]/95 sm:-mx-6 sm:-mb-6 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:p-6">
-                  <p className="flex items-center justify-between gap-3 text-sm font-bold text-surface-900 dark:text-white sm:mr-auto">
-                    <span>Total</span>
-                    <span className="tabular-nums">{money(grandTotalBDT)}</span>
+                <div data-testid="checkout-action-footer" className="sticky bottom-0 -mx-4 -mb-4 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-t border-surface-200 bg-white/95 p-3 shadow-[0_-8px_24px_rgba(20,20,16,0.08)] backdrop-blur-md dark:border-surface-800 dark:bg-[#12161D]/95 sm:-mx-6 sm:-mb-6 sm:p-5">
+                  <p className="min-w-0 text-xs font-semibold text-surface-600 dark:text-surface-300">
+                    <span className="block text-micro text-surface-500 dark:text-surface-400">Total</span>
+                    <span data-testid="checkout-footer-total" className="block truncate text-base font-black tabular-nums text-surface-900 dark:text-white">{money(grandTotalBDT)}</span>
                   </p>
                   <button
-                    type="button"
-                    onClick={onClose}
-                    className="min-h-11 w-full rounded-full px-5 text-center text-sm font-semibold text-surface-700 transition-colors hover:bg-surface-100 dark:text-surface-300 dark:hover:bg-surface-800 sm:w-auto sm:py-2.5 sm:text-xs"
-                  >
-                    Cancel
-                  </button>
-                  <button
+                    data-testid="checkout-submit"
                     type="submit"
                     disabled={isSubmitting || isLoadingCart || isLoadingBundles || cartItems.length === 0}
-                    className={`flex w-full min-w-0 items-center justify-center gap-2 rounded-full px-3 py-3.5 text-center text-xs font-bold leading-tight text-white shadow-lg transition-all active:scale-98 sm:w-auto sm:px-6 ${
+                    className={`flex min-h-12 min-w-0 max-w-[190px] items-center justify-center gap-2 rounded-full px-4 py-2 text-center text-xs font-bold leading-tight text-white shadow-lg transition-all active:scale-98 disabled:cursor-wait disabled:opacity-70 sm:max-w-none sm:px-6 ${
                       paymentMethod === 'bkash'
                         ? 'bg-[#E2136E] hover:bg-[#c20f5e] shadow-[#E2136E]/30'
                         : paymentMethod === 'nagad'
@@ -869,23 +812,26 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     }`}
                   >
                     {isSubmitting ? (
-                      'Processing Order...'
+                      <>
+                        <LoaderCircle aria-hidden="true" className="h-4 w-4 animate-spin" />
+                        <span>Processing…</span>
+                      </>
                     ) : isLoadingCart || isLoadingBundles ? (
                       'Calculating order total...'
                     ) : cartItems.length === 0 ? (
                       'Your cart is empty'
                     ) : paymentMethod === 'cash_on_delivery' ? (
                       <>
-                        <span className="min-w-0 break-words">Confirm Order (Cash on Delivery)</span>
-                        <ArrowRight className="w-4 h-4" />
+                        <span className="min-w-0 break-words">Place order</span>
+                        <ArrowRight aria-hidden="true" className="h-4 w-4 shrink-0" />
                       </>
                     ) : (
                       <>
-                        <Lock className="w-4 h-4" />
+                        <Lock aria-hidden="true" className="h-4 w-4 shrink-0" />
                         <span className="min-w-0 break-words">
-                          Pay with {paymentMethod === 'bkash' ? 'bKash' : paymentMethod.toUpperCase()} (SSLCommerz) • {formatBDT(grandTotalBDT)}
+                          Pay with {paymentMethod === 'visa_mastercard' ? 'card' : paymentMethod === 'bkash' ? 'bKash' : paymentMethod}
                         </span>
-                        <ArrowRight className="w-4 h-4" />
+                        <ArrowRight aria-hidden="true" className="h-4 w-4 shrink-0" />
                       </>
                     )}
                   </button>
