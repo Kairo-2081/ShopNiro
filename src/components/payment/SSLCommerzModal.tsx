@@ -4,6 +4,7 @@ import { formatBDT } from '../../lib/api';
 import { api } from '../../lib/api';
 import { apiUrl } from '../../apiConfig';
 import { X, ShieldCheck, CheckCircle2, Lock, ArrowRight, CreditCard, RefreshCw, AlertCircle, HelpCircle } from 'lucide-react';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 interface SSLCommerzModalProps {
   isOpen: boolean;
@@ -42,6 +43,7 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
   const [failureStatus, setFailureStatus] = React.useState<'restoring' | 'restored' | 'restore-failed' | null>(null);
   const [paymentAmountBDT, setPaymentAmountBDT] = React.useState(orderTotal);
   const [isSandbox, setIsSandbox] = React.useState(false);
+  const dialogRef = useFocusTrap<HTMLDivElement>(isOpen);
 
   React.useEffect(() => {
     if (!isOpen) return;
@@ -153,7 +155,7 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150">
-      <div className="bg-white dark:bg-[#12161D] w-full max-w-xl rounded-3xl shadow-2xl border border-brand-100 dark:border-surface-800 overflow-hidden flex flex-col my-4">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="sslcommerz-dialog-title" tabIndex={-1} className="bg-white dark:bg-[#12161D] w-full max-w-xl rounded-3xl shadow-2xl border border-brand-100 dark:border-surface-800 overflow-hidden flex flex-col my-4">
         {/* SSLCommerz Security Banner */}
         <div className="bg-gradient-to-r from-surface-900 via-[#0F1D2B] to-surface-900 px-6 py-3 border-b border-brand-500/20 flex items-center justify-between text-white">
           <div className="flex items-center gap-2">
@@ -162,10 +164,12 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <span className="text-xs font-black tracking-wider text-white">SSLCOMMERZ</span>
-                <span className="px-1.5 py-0.5 rounded text-micro font-bold bg-success-500/20 text-success-400 border border-success-500/30">
-                  SANDBOX 256-BIT SECURE
-                </span>
+                <span id="sslcommerz-dialog-title" className="text-xs font-black tracking-wider text-white">SSLCOMMERZ</span>
+                {isSandbox && (
+                  <span className="px-1.5 py-0.5 rounded text-micro font-bold bg-success-500/20 text-success-400 border border-success-500/30">
+                    SANDBOX
+                  </span>
+                )}
               </div>
               <p className="text-micro text-surface-400">Official Payment Gateway Partner of ShopNiro</p>
             </div>
@@ -173,7 +177,8 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
 
           <button
             onClick={onClose}
-            className="p-1 rounded-full text-surface-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+            aria-label="Close secure checkout"
+            className="grid h-11 w-11 place-items-center rounded-full text-surface-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -212,7 +217,7 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
               setStep('number');
               setErrorMsg(null);
             }}
-            className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
+            className={`min-h-11 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
               selectedChannel === 'bkash'
                 ? 'bg-[#E2136E] text-white shadow-md shadow-[#E2136E]/30'
                 : 'bg-surface-100 dark:bg-[#181F2A] text-surface-600 dark:text-surface-400 hover:bg-surface-200'
@@ -230,7 +235,7 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
               setStep('number');
               setErrorMsg(null);
             }}
-            className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
+            className={`min-h-11 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
               selectedChannel === 'nagad'
                 ? 'bg-[#F7941D] text-white shadow-md shadow-[#F7941D]/30'
                 : 'bg-surface-100 dark:bg-[#181F2A] text-surface-600 dark:text-surface-400 hover:bg-surface-200'
@@ -246,7 +251,7 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
               setStep('number');
               setErrorMsg(null);
             }}
-            className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
+            className={`min-h-11 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
               selectedChannel === 'rocket'
                 ? 'bg-[#8C3494] text-white shadow-md shadow-[#8C3494]/30'
                 : 'bg-surface-100 dark:bg-[#181F2A] text-surface-600 dark:text-surface-400 hover:bg-surface-200'
@@ -262,7 +267,7 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
               setStep('number');
               setErrorMsg(null);
             }}
-            className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
+            className={`min-h-11 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shrink-0 ${
               selectedChannel === 'cards'
                 ? 'bg-brand-600 text-white shadow-md shadow-brand-600/30'
                 : 'bg-surface-100 dark:bg-[#181F2A] text-surface-600 dark:text-surface-400 hover:bg-surface-200'
@@ -301,8 +306,8 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
             </div>
           )}
           {failureStatus === 'restored' && (
-            <button type="button" onClick={onClose} className="mb-4 w-full rounded-xl bg-surface-900 px-4 py-3 text-sm font-bold text-white hover:bg-surface-700 dark:bg-surface-100 dark:text-surface-900 dark:hover:bg-white">
-              Return to checkout
+            <button type="button" onClick={onClose} className="mb-4 min-h-11 w-full rounded-xl bg-surface-900 px-4 py-3 text-sm font-bold text-white hover:bg-surface-700 dark:bg-surface-100 dark:text-surface-900 dark:hover:bg-white">
+              Try again
             </button>
           )}
           {errorMsg && (
@@ -417,32 +422,35 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
                     <p className="font-semibold">
                       A 6-digit verification code was simulated for <span className="font-mono font-bold">{phone}</span>.
                     </p>
-                    <p className="text-micro opacity-80 mt-0.5">SSLCommerz Sandbox Test OTP: <strong className="font-mono">123456</strong></p>
+                    {isSandbox && <p className="text-micro opacity-80 mt-0.5">SSLCommerz Sandbox Test OTP: <strong className="font-mono">123456</strong></p>}
                   </div>
 
                   <div>
                     <div className="flex justify-between items-center mb-1.5">
-                      <label className="text-xs font-bold text-surface-700 dark:text-surface-300">
+                      <label htmlFor="payment-otp" className="text-xs font-bold text-surface-700 dark:text-surface-300">
                         Enter bKash Verification Code (OTP)
                       </label>
-                      <button
+                      {isSandbox && <button
                         type="button"
                         onClick={() => setOtp('123456')}
-                        className="text-xs font-bold text-[#E2136E] hover:underline cursor-pointer"
+                        className="min-h-11 px-2 text-xs font-bold text-[#E2136E] hover:underline cursor-pointer"
                       >
                         Auto-fill 123456
-                      </button>
+                      </button>}
                     </div>
 
                     <input
+                      id="payment-otp"
                       type="text"
                       required
+                      inputMode="numeric"
+                      autoComplete="one-time-code"
                       value={otp}
                       onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ''))}
                       placeholder="e.g. 123456"
                       maxLength={6}
                       autoFocus
-                      className="w-full text-center tracking-widest text-xl font-mono font-black py-3 bg-white dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-2xl text-surface-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#E2136E]"
+                      className="min-h-11 w-full text-center tracking-widest text-xl font-mono font-black py-3 bg-white dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-2xl text-surface-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#E2136E]"
                     />
                   </div>
 
@@ -454,7 +462,7 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
                       <button
                         type="button"
                         onClick={() => setTimer(60)}
-                        className="font-bold text-[#E2136E] hover:underline cursor-pointer flex items-center gap-1"
+                        className="min-h-11 font-bold text-[#E2136E] hover:underline cursor-pointer flex items-center gap-1"
                       >
                         <RefreshCw className="w-3 h-3" /> Resend OTP
                       </button>
@@ -465,14 +473,14 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
                     <button
                       type="button"
                       onClick={() => setStep('number')}
-                      className="w-1/3 py-3 rounded-full text-xs font-bold text-surface-600 dark:text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors cursor-pointer"
+                      className="min-h-11 w-1/3 py-3 rounded-full text-xs font-bold text-surface-600 dark:text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors cursor-pointer"
                     >
                       Back
                     </button>
                     <button
                       type="submit"
                       disabled={otp.length < 4}
-                      className="w-2/3 py-3 bg-[#E2136E] hover:bg-[#c20f5e] disabled:opacity-50 text-white font-bold rounded-full text-xs shadow-lg shadow-[#E2136E]/30 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                      className="min-h-11 w-2/3 py-3 bg-[#E2136E] hover:bg-[#c20f5e] disabled:opacity-50 text-white font-bold rounded-full text-xs shadow-lg shadow-[#E2136E]/30 flex items-center justify-center gap-2 transition-all cursor-pointer"
                     >
                       <span>Confirm OTP</span>
                       <ArrowRight className="w-4 h-4" />
@@ -486,19 +494,20 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
                 <form onSubmit={handlePinSubmit} className="space-y-4">
                   <div>
                     <div className="flex justify-between items-center mb-1.5">
-                      <label className="text-xs font-bold text-surface-700 dark:text-surface-300">
+                      <label htmlFor="payment-pin" className="text-xs font-bold text-surface-700 dark:text-surface-300">
                         Enter bKash Account PIN
                       </label>
-                      <button
+                      {isSandbox && <button
                         type="button"
                         onClick={() => setPin('12345')}
-                        className="text-xs font-bold text-[#E2136E] hover:underline cursor-pointer"
+                        className="min-h-11 px-2 text-xs font-bold text-[#E2136E] hover:underline cursor-pointer"
                       >
                         Auto-fill 12345
-                      </button>
+                      </button>}
                     </div>
 
                     <input
+                      id="payment-pin"
                       type="password"
                       required
                       value={pin}
@@ -506,7 +515,7 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
                       placeholder="•••••"
                       maxLength={5}
                       autoFocus
-                      className="w-full text-center tracking-widest text-2xl font-mono font-black py-3 bg-white dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-2xl text-surface-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#E2136E]"
+                      className="min-h-11 w-full text-center tracking-widest text-2xl font-mono font-black py-3 bg-white dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-2xl text-surface-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-[#E2136E]"
                     />
                   </div>
 
@@ -519,14 +528,14 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
                     <button
                       type="button"
                       onClick={() => setStep('otp')}
-                      className="w-1/3 py-3 rounded-full text-xs font-bold text-surface-600 dark:text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors cursor-pointer"
+                      className="min-h-11 w-1/3 py-3 rounded-full text-xs font-bold text-surface-600 dark:text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors cursor-pointer"
                     >
                       Back
                     </button>
                     <button
                       type="submit"
                       disabled={pin.length < 4 || isSubmitting}
-                      className="w-2/3 py-3 bg-[#E2136E] hover:bg-[#c20f5e] disabled:opacity-50 text-white font-bold rounded-full text-xs shadow-lg shadow-[#E2136E]/30 flex items-center justify-center gap-2 transition-all cursor-pointer"
+                      className="min-h-11 w-2/3 py-3 bg-[#E2136E] hover:bg-[#c20f5e] disabled:opacity-50 text-white font-bold rounded-full text-xs shadow-lg shadow-[#E2136E]/30 flex items-center justify-center gap-2 transition-all cursor-pointer"
                     >
                       <Lock className="w-4 h-4" />
                       <span>Confirm &amp; Pay {formatBDT(paymentAmountBDT)}</span>
@@ -553,15 +562,18 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-surface-700 dark:text-surface-300 mb-1.5">
+                <label htmlFor="alternate-payment-phone" className="block text-xs font-bold text-surface-700 dark:text-surface-300 mb-1.5">
                   {selectedChannel.toUpperCase()} Account Number
                 </label>
                 <input
+                  id="alternate-payment-phone"
                   type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="01XXXXXXXXX"
-                  className="w-full px-4 py-3 bg-white dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-2xl text-surface-900 dark:text-white font-mono text-sm"
+                  className="min-h-11 w-full px-4 py-3 bg-white dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-2xl text-surface-900 dark:text-white font-mono text-sm"
                 />
               </div>
 
@@ -569,7 +581,7 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
                 type="button"
                     onClick={() => void startPayment()}
                 disabled={isSubmitting || failureStatus === 'restored'}
-                className={`w-full py-3.5 text-white font-bold rounded-full text-xs shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 ${
+                className={`min-h-11 w-full py-3.5 text-white font-bold rounded-full text-xs shadow-lg transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50 ${
                   selectedChannel === 'nagad' ? 'bg-[#F7941D] hover:bg-[#df8213]' : 'bg-[#8C3494] hover:bg-[#77287e]'
                 }`}
               >
@@ -601,7 +613,7 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
                 type="button"
                 onClick={() => void startPayment()}
                 disabled={isSubmitting || failureStatus === 'restored'}
-                className="w-full py-3.5 bg-brand-600 hover:bg-brand-500 text-white font-bold rounded-full text-xs shadow-lg shadow-brand-600/30 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                className="min-h-11 w-full py-3.5 bg-brand-600 hover:bg-brand-500 text-white font-bold rounded-full text-xs shadow-lg shadow-brand-600/30 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
               >
                 <Lock className="w-4 h-4" />
                 <span>Pay {formatBDT(paymentAmountBDT)} via SSLCommerz Card Gateway</span>
