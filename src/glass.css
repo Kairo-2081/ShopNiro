@@ -272,4 +272,28 @@
       box-shadow: none !important;
     }
   }
+
+  /* ---- Bars -------------------------------------------------------------------------------------------- */
+
+  /* Top header and the phone bottom navigation. The bottom bar is fixed, so page content scrolls underneath it
+     and the blur is actually visible there. */
+  .glass-bar {
+    background: linear-gradient(180deg, var(--glass-tint-strong), var(--glass-tint));
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    border-color: var(--glass-edge-dim);
+    box-shadow: 0 1px 0 var(--glass-edge) inset, 0 10px 28px -16px var(--glass-shade);
+  }
+
+  nav.glass-bar {
+    box-shadow: 0 1px 0 var(--glass-edge) inset, 0 -10px 28px -16px var(--glass-shade);
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .glass-bar {
+      background: var(--glass-tint-strong);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
 }
