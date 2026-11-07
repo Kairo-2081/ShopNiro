@@ -1,0 +1,89 @@
+/*
+ * Liquid glass layer.
+ *
+ * Everything here lives in its own cascade layer that sorts after Tailwind's utilities, so it can restyle the
+ * app's shared surface classes (premium-surface, premium-card, luxury-input, ...) without touching every
+ * component. Remove the `@import "./glass.css"` line in index.css to switch the whole look off.
+ */
+@layer theme, base, components, utilities, glass;
+
+@layer glass {
+  :root {
+    /* Light theme: milky glass over the warm paper background. */
+    --glass-blur: 22px;
+    --glass-blur-strong: 34px;
+    --glass-saturate: 1.7;
+    --glass-tint: rgba(255, 255, 255, 0.58);
+    --glass-tint-strong: rgba(252, 251, 247, 0.84);
+    --glass-tint-soft: rgba(255, 255, 255, 0.34);
+    --glass-edge: rgba(255, 255, 255, 0.72);
+    --glass-edge-dim: rgba(128, 115, 79, 0.2);
+    --glass-highlight: rgba(255, 255, 255, 0.9);
+    --glass-shade: rgba(74, 62, 38, 0.16);
+    --glass-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 -1px 0 rgba(128, 115, 79, 0.1) inset,
+      0 10px 30px -12px rgba(74, 62, 38, 0.28), 0 2px 6px rgba(74, 62, 38, 0.08);
+    --glass-scrim: rgba(40, 36, 24, 0.38);
+  }
+
+  .dark {
+    --glass-blur: 24px;
+    --glass-blur-strong: 38px;
+    --glass-saturate: 1.5;
+    --glass-tint: rgba(34, 34, 28, 0.56);
+    --glass-tint-strong: rgba(24, 24, 20, 0.84);
+    --glass-tint-soft: rgba(231, 229, 214, 0.07);
+    --glass-edge: rgba(231, 229, 214, 0.2);
+    --glass-edge-dim: rgba(231, 229, 214, 0.08);
+    --glass-highlight: rgba(255, 255, 255, 0.32);
+    --glass-shade: rgba(0, 0, 0, 0.4);
+    --glass-shadow: 0 1px 0 rgba(255, 255, 255, 0.1) inset, 0 -1px 0 rgba(0, 0, 0, 0.35) inset,
+      0 14px 36px -14px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.3);
+    --glass-scrim: rgba(4, 4, 3, 0.58);
+  }
+
+  /* Base recipe other rules reuse. Opt in anywhere with class="glass". */
+  .glass {
+    background: linear-gradient(160deg, var(--glass-tint), var(--glass-tint-soft));
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    border: 1px solid var(--glass-edge);
+    box-shadow: var(--glass-shadow);
+  }
+
+  .glass-strong {
+    background: linear-gradient(160deg, var(--glass-tint-strong), var(--glass-tint));
+    -webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
+    border: 1px solid var(--glass-edge);
+    box-shadow: var(--glass-shadow);
+  }
+
+  /* No blur support: fall back to the strong tint so text stays readable on whatever is behind. */
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .glass,
+    .glass-strong {
+      background: var(--glass-tint-strong);
+    }
+  }
+
+  /* Users who ask for less transparency, and forced-colors modes, get solid surfaces. */
+  @media (prefers-reduced-transparency: reduce) {
+    .glass,
+    .glass-strong {
+      background: var(--glass-tint-strong);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .glass,
+    .glass-strong {
+      background: Canvas;
+      border-color: CanvasText;
+      box-shadow: none;
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
+}
