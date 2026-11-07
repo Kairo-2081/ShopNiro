@@ -209,4 +209,22 @@
       backdrop-filter: none;
     }
   }
+
+  /* ---- Overlays ---------------------------------------------------------------------------------------- */
+
+  /* Full-screen scrims behind dialogs and the cart drawer: a tinted, lightly blurred veil instead of flat black.
+     The page behind stays recognisable, which is what makes the glass panel on top read as glass. */
+  .fixed.inset-0[class*="bg-black/"] {
+    background: var(--glass-scrim);
+    -webkit-backdrop-filter: blur(8px) saturate(1.2);
+    backdrop-filter: blur(8px) saturate(1.2);
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .fixed.inset-0[class*="bg-black/"] {
+      background: rgba(0, 0, 0, 0.72);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
 }
