@@ -70,8 +70,11 @@ jobs:
       - name: Build bundle
         run: npm run build
 
+      # The job runs with NODE_ENV=test, which builds React's larger development bundle, so measure a production build.
       - name: Check bundle budget
-        run: node scripts/check-bundle-budget.mjs
+        run: |
+          NODE_ENV=production npm run build
+          node scripts/check-bundle-budget.mjs
 
       - name: Audit dependencies
         run: npm audit --audit-level=high
