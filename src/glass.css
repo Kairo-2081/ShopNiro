@@ -119,4 +119,44 @@
       backdrop-filter: none;
     }
   }
+
+  /* ---- Cards ------------------------------------------------------------------------------------------- */
+
+  .premium-card {
+    background: linear-gradient(160deg, var(--glass-tint), var(--glass-tint-soft));
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    border: 1px solid var(--glass-edge);
+    box-shadow: var(--glass-shadow);
+    position: relative;
+  }
+
+  .dark .premium-card {
+    background: linear-gradient(160deg, var(--glass-tint), var(--glass-tint-soft));
+    border-color: var(--glass-edge);
+    box-shadow: var(--glass-shadow);
+  }
+
+  /* The dark card variant used on light pages stays dark, but gets the same glass edge. */
+  html:not(.dark) .premium-card-dark {
+    background: linear-gradient(160deg, rgba(43, 43, 34, 0.78), rgba(23, 23, 19, 0.7));
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+    backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+    border: 1px solid rgba(231, 229, 214, 0.2);
+  }
+
+  .premium-card:hover,
+  html:not(.dark) .premium-card:not(.premium-card-dark):hover {
+    border-color: var(--glass-edge);
+    box-shadow: var(--glass-shadow), 0 18px 40px -16px var(--glass-shade);
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .premium-card,
+    .dark .premium-card {
+      background: var(--glass-tint-strong);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
 }
