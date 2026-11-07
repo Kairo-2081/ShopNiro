@@ -98,7 +98,7 @@ test.describe('admin dashboard row actions', () => {
     await remove.click({ trial: true });
     await edit.click();
     const save = page.getByRole('button', { name: 'Save' });
-    const cancel = page.getByRole('button', { name: 'Cancel' });
+    const cancel = page.getByRole('button', { name: 'Cancel', exact: true });
     await expect(save).toBeVisible();
     await expect(cancel).toBeVisible();
     expect((await save.boundingBox())?.height).toBeGreaterThanOrEqual(40);
