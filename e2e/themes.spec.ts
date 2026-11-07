@@ -15,14 +15,14 @@ for (const theme of ['dark', 'light'] as const) {
 
     await page.getByText('Cash on Delivery (COD)').click();
     await page.getByRole('checkbox').check();
-    const confirm = page.getByRole('button', { name: /Confirm Order \(Cash on Delivery\)/ });
+    const confirm = page.getByTestId('checkout-submit');
     await expect(confirm).toBeVisible();
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow, 'page scrolls sideways').toBeLessThanOrEqual(1);
 
     const shown = parseMoney(await page.getByTestId('checkout-total').innerText());
     await confirm.click();
-    await expect(page.getByRole('heading', { name: 'Order Placed' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Order placed' })).toBeVisible();
     const order = await latestOrder();
     expect(shown).toBeCloseTo(order!.subtotal + order!.shipping_fee, 2);
   });
