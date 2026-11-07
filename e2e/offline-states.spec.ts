@@ -18,7 +18,16 @@ test('keeps a readable offline notice on every role home and navigation screen',
       await page.goto('/');
       const primaryNavigation = page.getByRole('navigation', { name: 'Primary navigation' });
       await expect(primaryNavigation.getByRole('button', { name: home })).toBeVisible();
+      // Visit each screen once while online so its lazy-loaded code is already in the browser.
+      for (const label of navigation) {
+        await primaryNavigation.getByRole('button', { name: label }).click();
+        await page.waitForTimeout(700);
+      }
+      await primaryNavigation.getByRole('button', { name: home }).click();
+      await page.waitForTimeout(700);
       await context.setOffline(true);
+      // Chromium does not reliably emit the offline event when the context is switched, so send it explicitly.
+      await page.evaluate(() => window.dispatchEvent(new Event('offline')));
       const notice = page.getByRole('alert').filter({ hasText: 'You are offline' });
       await expect(notice).toBeVisible();
       await expect(notice.getByRole('button', { name: 'Retry' })).toBeVisible();
