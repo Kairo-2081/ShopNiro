@@ -1084,7 +1084,7 @@ export default function App() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 pt-4 pb-16 app-panel animate-fade-up sm:px-6 lg:px-8 lg:pt-6">
+      <main className={`flex-1 max-w-7xl w-full mx-auto px-3 pt-4 ${activeTab === 'storefront' ? 'pb-24' : 'pb-16'} app-panel animate-fade-up sm:px-6 lg:px-8 lg:pt-6`}>
         <React.Suspense fallback={<div className="flex min-h-[40vh] items-center justify-center text-sm text-surface-500 dark:text-surface-400">Loading marketplace...</div>}>
         {/* Authentication Notice Banner if set */}
         {isLoggedIn && !profileComplete && (

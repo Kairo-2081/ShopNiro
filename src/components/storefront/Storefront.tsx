@@ -157,7 +157,7 @@ export const Storefront: React.FC<StorefrontProps> = ({
   );
 
   return (
-    <div className="space-y-8 pb-24 text-surface-900 dark:text-surface-100 md:pb-16">
+    <div className="space-y-8 text-surface-900 dark:text-surface-100">
       {/* Search & Hero Banner matching the landing page theme */}
       <div className="text-white rounded-[32px] p-6 md:p-8 border border-[#d0c8a5]/20 shadow-[0_36px_80px_rgba(9,9,7,0.42)] relative overflow-hidden bg-[radial-gradient(circle_at_20%_15%,rgba(208,200,165,0.22),transparent_18%),radial-gradient(circle_at_82%_12%,rgba(119,119,90,0.5),transparent_22%),linear-gradient(135deg,#77775a_0%,#514c38_23%,#292820_52%,#11110f_100%)]">
         {/* Soft atmospheric glow */}
