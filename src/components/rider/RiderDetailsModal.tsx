@@ -14,6 +14,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 type RiderCvDocument = Awaited<ReturnType<typeof pdfjsLib.getDocument>['promise']>;
 
 const RiderCvPreview: React.FC<{ url: string; onClose: () => void }> = ({ url, onClose }) => {
+  useEscapeKey(onClose);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const [pdfDocument, setPdfDocument] = React.useState<RiderCvDocument | null>(null);
