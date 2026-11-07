@@ -199,7 +199,8 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
           </div>
 
           {hasRecentOrders ? (
-            <div role="img" aria-label="Monthly order count and order value for the past 12 months" className="h-[290px] w-full">
+            <>
+            <div role="img" aria-label="Monthly order count and order value for the past 12 months" aria-describedby="monthly-orders-data-caption" className="h-[290px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={monthlyMetrics} margin={{ top: 8, right: 8, bottom: 4, left: -14 }}>
                   <defs>
@@ -265,6 +266,36 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
+            <p id="monthly-orders-data-caption" className="sr-only">
+              A data table with each month, order count, and order value is available below.
+            </p>
+            <details className="mt-2 text-xs">
+              <summary className="min-h-11 cursor-pointer py-3 font-semibold text-brand-700 underline decoration-brand-300 underline-offset-4 dark:text-brand-300">
+                View monthly chart data as a table
+              </summary>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[28rem] border-collapse text-left">
+                  <caption className="sr-only">Monthly order count and order value for the past 12 months</caption>
+                  <thead>
+                    <tr className="border-b border-surface-200 dark:border-surface-700">
+                      <th scope="col" className="p-2">Month</th>
+                      <th scope="col" className="p-2">Orders</th>
+                      <th scope="col" className="p-2">Order value</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {monthlyMetrics.map((month) => (
+                      <tr key={month.month} className="border-b border-surface-100 dark:border-surface-800">
+                        <th scope="row" className="p-2 font-medium">{month.month}</th>
+                        <td className="p-2">{month.orderCount.toLocaleString()}</td>
+                        <td className="p-2">{formatBDT(month.orderValue)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </details>
+            </>
           ) : (
             <div className="flex h-[280px] items-center justify-center text-center text-xs text-surface-500 dark:text-surface-400 sm:h-[320px]">
               No orders were placed in the past 12 months.
@@ -333,7 +364,7 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
               <h3 className="text-sm font-bold text-surface-900 dark:text-white">Revenue by Month</h3>
               <p className="mt-1 text-micro text-surface-600 dark:text-surface-300">Order value trend over the last 12 months</p>
             </div>
-            <div className="h-[220px] w-full rounded-2xl bg-surface-950/20 p-2">
+            <div role="img" aria-label="Revenue by month for the past 12 months" aria-describedby="monthly-revenue-data-caption" className="h-[220px] w-full rounded-2xl bg-surface-950/20 p-2">
               <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={monthlyMetrics} margin={{ top: 8, right: 8, left: -12, bottom: 4 }}>
                     <defs>
@@ -358,6 +389,33 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
                 </BarChart>
               </ResponsiveContainer>
             </div>
+            <p id="monthly-revenue-data-caption" className="sr-only">
+              A data table with each month and order value is available below.
+            </p>
+            <details className="mt-2 text-xs">
+              <summary className="min-h-11 cursor-pointer py-3 font-semibold text-brand-700 underline decoration-brand-300 underline-offset-4 dark:text-brand-300">
+                View revenue data as a table
+              </summary>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[20rem] border-collapse text-left">
+                  <caption className="sr-only">Revenue by month for the past 12 months</caption>
+                  <thead>
+                    <tr className="border-b border-surface-200 dark:border-surface-700">
+                      <th scope="col" className="p-2">Month</th>
+                      <th scope="col" className="p-2">Order value</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {monthlyMetrics.map((month) => (
+                      <tr key={month.month} className="border-b border-surface-100 dark:border-surface-800">
+                        <th scope="row" className="p-2 font-medium">{month.month}</th>
+                        <td className="p-2">{formatBDT(month.orderValue)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </details>
           </section>
 
           <section className="premium-surface w-full min-w-0 rounded-xl p-5 shadow-xs transition-all hover:shadow-md">
