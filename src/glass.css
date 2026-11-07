@@ -412,4 +412,35 @@
     border-color: var(--glass-edge);
     box-shadow: var(--glass-shadow);
   }
+
+  /* Inside a dialog or drawer the panel behind is already glass, so inner cards only need the tint and the
+     edge. Stacking blurs inside one another costs a lot for no visible gain. */
+  [role="dialog"] :is(div, section, article, aside, li, details, form)[class*="rounded-"] {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  /* On phones, long lists of panels get the tint and edge without the blur. The scene is still visible through
+     the tint, and scrolling stays smooth on mid-range devices. */
+  @media (max-width: 767px) {
+    html:not(.dark) :is(div, section, article, aside, li, details, form)[class*="rounded-"]:is([class~="bg-white"], [class~="bg-surface-50"]),
+    html.dark :is(div, section, article, aside, li, details, form)[class*="rounded-"]:is(
+        [class~="dark:bg-[#181F2A]"],
+        [class~="dark:bg-[#12161D]"],
+        [class~="dark:bg-[#161C24]"],
+        [class~="dark:bg-[#161E2A]"],
+        [class~="dark:bg-[#18202D]"],
+        [class~="dark:bg-surface-800"]
+      ) {
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    :is(div, section, article, aside, li, details, form)[class*="rounded-"] {
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
 }
