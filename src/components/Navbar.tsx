@@ -118,7 +118,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Logo & Brand matching Landing Page */}
           <button
             type="button"
-            aria-label={t('storefrontCatalog')}
+            aria-label={`ShopNiro ${t('storefrontCatalog')}`}
             onClick={() => setActiveTab('storefront')}
             className="order-1 flex min-h-11 shrink-0 items-center gap-2 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 sm:gap-2.5 md:order-none"
           >
@@ -397,7 +397,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 type="button"
                 onClick={() => setLocale(locale === 'en' ? 'bn' : 'en')}
                 className="luxury-control min-h-11 gap-1.5 rounded-full border border-surface-200 bg-white px-3 text-xs font-semibold text-surface-800 hover:bg-surface-50 dark:border-surface-700 dark:bg-[#161C24] dark:text-surface-200 dark:hover:bg-surface-800"
-                aria-label={locale === 'en' ? t('switchToBangla') : t('switchToEnglish')}
+                aria-label={`${t('language')}: ${locale === 'en' ? t('switchToBangla') : t('switchToEnglish')}`}
                 title="Change language"
               >
                 <Languages className="h-4 w-4" />
