@@ -183,12 +183,15 @@ export const Storefront: React.FC<StorefrontProps> = ({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search products by title, specs, category, or merchant..."
+              aria-label={t('shopSearch')}
+              placeholder={t('shopSearch')}
               className="luxury-input w-full pl-12 pr-10 py-3 bg-[#181F2A] border rounded-xl text-white placeholder-surface-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] text-sm shadow-inner"
             />
             {searchQuery && (
               <button
+                type="button"
                 onClick={() => setSearchQuery('')}
+                aria-label={t('clearSearch')}
                 className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-surface-400 hover:text-white rounded-lg transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
@@ -206,24 +209,25 @@ export const Storefront: React.FC<StorefrontProps> = ({
             {/* Sorting Dropdown */}
             <div className="flex items-center gap-2">
               <ArrowUpDown className="w-3.5 h-3.5 text-surface-500 dark:text-surface-400" />
-              <span className="text-surface-600 dark:text-surface-400 font-medium">Sort By:</span>
+              <span className="text-surface-600 dark:text-surface-400 font-medium">{t('sortBy')}:</span>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as StorefrontSort)}
+                aria-label={t('sortProducts')}
                 className="luxury-input bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-lg px-3 text-xs font-semibold text-surface-800 dark:text-surface-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] cursor-pointer"
               >
-                <option value="featured">Featured / Default</option>
-                <option value="price-asc">Price: Low to High</option>
-                <option value="price-desc">Price: High to Low</option>
-                <option value="rating">Highest Rated</option>
-                <option value="newest">Newest Listed</option>
+                <option value="featured">{t('sortFeatured')}</option>
+                <option value="price-asc">{t('sortPriceLow')}</option>
+                <option value="price-desc">{t('sortPriceHigh')}</option>
+                <option value="rating">{t('sortRating')}</option>
+                <option value="newest">{t('sortNewest')}</option>
               </select>
             </div>
 
             {/* Price Slider */}
             <div className="flex items-center gap-2 pl-3 border-l border-surface-200 dark:border-surface-800">
               <SlidersHorizontal className="w-3.5 h-3.5 text-surface-500 dark:text-surface-400" />
-              <span className="text-surface-600 dark:text-surface-400 font-medium">Max:</span>
+              <span className="text-surface-600 dark:text-surface-400 font-medium">{t('maxPrice')}:</span>
               <span className="font-bold text-[#80734f] dark:text-[#d0c8a5]">{formatCurrency(maxPrice)}</span>
               <input
                 type="range"
@@ -232,6 +236,7 @@ export const Storefront: React.FC<StorefrontProps> = ({
                 step={10}
                 value={maxPrice}
                 onChange={(e) => setMaxPrice(Number(e.target.value))}
+                aria-label={`${t('maxPrice')}: ${formatCurrency(maxPrice)}`}
                 className="w-24 md:w-32 accent-[var(--shopniro-orange)] cursor-pointer"
               />
             </div>
@@ -241,6 +246,7 @@ export const Storefront: React.FC<StorefrontProps> = ({
             {/* Stock Toggle */}
               <button
               onClick={() => setStockFilter(stockFilter === 'all' ? 'inStock' : 'all')}
+              aria-pressed={stockFilter === 'inStock'}
               className={`luxury-control px-3 rounded-full text-xs cursor-pointer ${
                 stockFilter === 'inStock'
                   ? 'bg-success-600 text-white font-bold shadow-xs'
@@ -250,16 +256,17 @@ export const Storefront: React.FC<StorefrontProps> = ({
               {stockFilter === 'inStock' ? (
                 <>
                   <Check className="w-3.5 h-3.5" />
-                  <span>In Stock Only</span>
+                  <span>{t('inStockOnly')}</span>
                 </>
               ) : (
-                <span>All Stock</span>
+                <span>{t('allStock')}</span>
               )}
             </button>
 
             {/* Reset Filters button if any filter active */}
             {(searchQuery !== '' || stockFilter !== 'all' || maxPrice < maxPossiblePrice) && (
               <button
+                type="button"
                 onClick={() => {
                   setSearchQuery('');
                   setMaxPrice(maxPossiblePrice);
@@ -269,7 +276,7 @@ export const Storefront: React.FC<StorefrontProps> = ({
                 className="luxury-control min-h-9 px-3 rounded-full text-surface-600 hover:text-[#555541] dark:text-surface-400 dark:hover:text-[#d0c8a5] hover:bg-[#d0c8a5]/15 dark:hover:bg-[#a99b72]/15 font-medium cursor-pointer"
                 title="Reset all filters"
               >
-                Reset
+                {t('reset')}
               </button>
             )}
           </div>
@@ -277,22 +284,22 @@ export const Storefront: React.FC<StorefrontProps> = ({
       </div>
 
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl border border-success-200 bg-success-50/80 px-4 py-3 text-xs text-success-900 dark:border-success-900/60 dark:bg-success-950/25 dark:text-success-200">
-        <span className="inline-flex items-center gap-2 font-semibold"><Truck className="h-4 w-4" />Free shipping on orders of {money(400)}+</span>
-        <span className="inline-flex items-center gap-2"><Tag className="h-3.5 w-3.5" />Automatic 5% cart savings at {money(500)}+</span>
+        <span className="inline-flex items-center gap-2 font-semibold"><Truck className="h-4 w-4" />{t('freeShipping')} {money(400)}+</span>
+        <span className="inline-flex items-center gap-2"><Tag className="h-3.5 w-3.5" />{t('automaticSavings')} {money(500)}+</span>
       </div>
 
       {(featuredDeals.length > 0 || visibleBundles.length > 0) && (
         <section aria-labelledby="offers-bundles-title" className="space-y-5 border-y border-warning-200 py-5 dark:border-warning-900/60">
           <header className="flex flex-wrap items-end justify-between gap-2">
             <div>
-              <h2 id="offers-bundles-title" className="text-lg font-black text-surface-900 dark:text-white">Offers &amp; Bundles</h2>
-              <p className="text-xs text-surface-500 dark:text-surface-400">Active voucher offers and seller bundle savings.</p>
+              <h2 id="offers-bundles-title" className="text-lg font-black text-surface-900 dark:text-white">{t('offersAndBundles')}</h2>
+              <p className="text-xs text-surface-500 dark:text-surface-400">{t('activeOffers')}</p>
             </div>
             <Tag className="h-5 w-5 text-warning-600 dark:text-warning-300" />
           </header>
           {featuredDeals.length > 0 && (
             <div className="space-y-2">
-              <h3 className="text-xs font-bold uppercase text-warning-800 dark:text-warning-300">Featured offers</h3>
+              <h3 className="text-xs font-bold uppercase text-warning-800 dark:text-warning-300">{t('featuredOffers')}</h3>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {featuredDeals.map((product) => {
                   const countdown = getVoucherCountdownLabel(product.Voucher_Expires_At);
@@ -304,7 +311,7 @@ export const Storefront: React.FC<StorefrontProps> = ({
                         <p className="text-micro font-semibold text-warning-700 dark:text-warning-300">{product.Voucher}{countdown ? ` · ${countdown}` : ''}</p>
                         <p className="text-micro font-bold text-surface-700 dark:text-surface-200">{formatCurrency(discountedPriceForVoucher(product.Price, product.Voucher))}</p>
                       </div>
-                      <button type="button" onClick={() => onSelectProduct(product)} className="shrink-0 text-micro font-bold text-brand-700 hover:underline dark:text-brand-300">View</button>
+                      <button type="button" onClick={() => onSelectProduct(product)} className="shrink-0 text-micro font-bold text-brand-700 hover:underline dark:text-brand-300">{t('viewProduct')}</button>
                     </article>
                   );
                 })}
@@ -313,7 +320,7 @@ export const Storefront: React.FC<StorefrontProps> = ({
           )}
           {visibleBundles.length > 0 && (
             <div className="space-y-2">
-              <h3 className="text-xs font-bold uppercase text-warning-800 dark:text-warning-300">Bundle offers</h3>
+              <h3 className="text-xs font-bold uppercase text-warning-800 dark:text-warning-300">{t('bundleOffers')}</h3>
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                 {visibleBundles.map((bundle) => {
                   const bundleProducts = bundle.Product_IDs.map((productId) => products.find((product) => product.Product_ID === productId)).filter((product): product is Product => Boolean(product));
@@ -330,7 +337,7 @@ export const Storefront: React.FC<StorefrontProps> = ({
                         <p className="truncate text-micro text-surface-500 dark:text-surface-400">{bundleProducts.map((product) => product.Name).join(' + ')}</p>
                         <p className="text-micro font-semibold text-success-700 dark:text-success-300">{bundle.Discount_Percent}% off together · {formatCurrency(bundlePrice)}</p>
                       </div>
-                      {firstProduct && <button type="button" onClick={() => onSelectProduct(firstProduct)} className="shrink-0 text-micro font-bold text-brand-700 hover:underline dark:text-brand-300">View bundle</button>}
+                      {firstProduct && <button type="button" onClick={() => onSelectProduct(firstProduct)} className="shrink-0 text-micro font-bold text-brand-700 hover:underline dark:text-brand-300">{t('viewProduct')}</button>}
                     </article>
                   );
                 })}
