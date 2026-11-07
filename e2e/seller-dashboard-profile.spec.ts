@@ -76,4 +76,16 @@ test.describe('seller dashboard profile', () => {
       await expect(page.getByText(/^Member since /)).toHaveText(/^Member since [A-Z][a-z]+ \d{4}$/);
     });
   });
+
+  test('keeps seller email and one logout action in the account menu', async ({ page }) => {
+    await withSellerStatus('approved', async () => {
+      await openSellerDashboard(page);
+      await expect(page.getByText(/Authenticated as/i)).toHaveCount(0);
+      await page.getByRole('button', { name: 'Open account menu' }).click();
+
+      const accountMenu = page.getByRole('menu');
+      await expect(accountMenu).toContainText(E2E.newSeller.email);
+      await expect(accountMenu.getByRole('menuitem', { name: /log out/i })).toHaveCount(1);
+    });
+  });
 });
