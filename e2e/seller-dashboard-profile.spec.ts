@@ -108,4 +108,11 @@ test.describe('seller dashboard profile', () => {
   test('shows all performance metrics above the fold at tablet width', async ({ page }) => {
     await expectMetricsAboveFold(page, 768);
   });
+
+  test('does not show a marketplace landing control without a back-link destination', async ({ page }) => {
+    await withSellerStatus('approved', async () => {
+      await openSellerDashboard(page);
+      await expect(page.getByText('Marketplace Landing', { exact: true })).toHaveCount(0);
+    });
+  });
 });
