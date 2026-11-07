@@ -25,6 +25,7 @@ import { AuthenticationGuard } from './components/AuthenticationGuard';
 import { ChatFloatingTrigger } from './components/chat/ChatFloatingTrigger';
 import { rememberFocusTarget } from './hooks/useFocusTrap';
 import { AlertCircle, CheckCircle2, Info, Radio, X } from 'lucide-react';
+import type { PaymentResultStatus } from './components/payment/PaymentResultModal';
 
 type ToastTone = 'success' | 'error' | 'info';
 
@@ -40,7 +41,7 @@ const MarketplaceTrendsTopCharts = React.lazy(() => import('./components/storefr
 const ProductDetailModal = React.lazy(() => import('./components/storefront/ProductDetailModal').then((module) => ({ default: module.ProductDetailModal })));
 const CartDrawer = React.lazy(() => import('./components/storefront/CartDrawer').then((module) => ({ default: module.CartDrawer })));
 const CheckoutModal = React.lazy(() => import('./components/storefront/CheckoutModal').then((module) => ({ default: module.CheckoutModal })));
-const PaymentReceiptModal = React.lazy(() => import('./components/payment/PaymentReceiptModal').then((module) => ({ default: module.PaymentReceiptModal })));
+const PaymentResultModal = React.lazy(() => import('./components/payment/PaymentResultModal').then((module) => ({ default: module.PaymentResultModal })));
 const CustomerOrders = React.lazy(() => import('./components/customer/CustomerOrders').then((module) => ({ default: module.CustomerOrders })));
 const CustomerProfile = React.lazy(() => import('./components/customer/CustomerProfile').then((module) => ({ default: module.CustomerProfile })));
 const SupportPage = React.lazy(() => import('./components/support/SupportPage').then((module) => ({ default: module.SupportPage })));
@@ -150,7 +151,10 @@ export default function App() {
   const [loginModalInitialRole, setLoginModalInitialRole] = React.useState<'customer' | 'seller' | 'rider'>('customer');
   const [authNotice, setAuthNotice] = React.useState<string | null>(null);
   const [, setIsValidatingAuth] = React.useState<boolean>(false);
-  const [paymentReceiptOrder, setPaymentReceiptOrder] = React.useState<Order | null>(null);
+  const [paymentResult, setPaymentResult] = React.useState<{ status: PaymentResultStatus; orderId: string; order: Order | null } | null>(null);
+  const [checkoutInitialPaymentMethod, setCheckoutInitialPaymentMethod] = React.useState<
+    'bkash' | 'nagad' | 'rocket' | 'visa_mastercard' | 'cash_on_delivery'
+  >('bkash');
   const paymentReturnHandledRef = React.useRef(false);
 
   const openSignup = (role: 'customer' | 'seller' | 'rider') => {
@@ -523,8 +527,7 @@ export default function App() {
         const order = await api.getOrder(orderId);
         setOrders((current) => [order, ...current.filter((existing) => existing.Order_ID !== order.Order_ID)]);
         if (order.Payment_Status === 'paid') {
-          setPaymentReceiptOrder(order);
-          showToast('Payment complete. Your receipt is ready; tracking is available in My Orders.', 'success');
+          setPaymentResult({ status: 'paid', orderId, order });
         } else {
           showToast('SSLCommerz returned your order, but payment verification is still pending. Your order has been kept safe.', 'info');
         }
@@ -548,16 +551,23 @@ export default function App() {
           ]);
           setCart(updatedCart);
           setProducts(updatedProducts);
+          const order = await api.getOrder(orderId).catch((error: unknown) => {
+            console.error('Could not load the order after payment recovery:', error);
+            return null;
+          });
+          if (order) setOrders((current) => [order, ...current.filter((existing) => existing.Order_ID !== order.Order_ID)]);
           setActiveTab('storefront');
-          setIsCartOpen(true);
-          showToast(paymentStatus === 'cancelled' ? 'Payment cancelled. Your items are back in your cart.' : 'Payment failed. Your items are back in your cart.', 'info');
+          setPaymentResult({
+            status: paymentStatus,
+            orderId,
+            order,
+          });
         } catch (error: any) {
           const completedOrder = await api.getOrder(orderId).catch(() => null);
           if (completedOrder?.Payment_Status === 'paid') {
             setOrders((current) => [completedOrder, ...current.filter((existing) => existing.Order_ID !== completedOrder.Order_ID)]);
-            setPaymentReceiptOrder(completedOrder);
+            setPaymentResult({ status: 'paid', orderId, order: completedOrder });
             setActiveTab('orders');
-            showToast('Payment complete. Your order is safe; the receipt is ready and tracking is available in My Orders.', 'success');
             return;
           }
           setActiveTab('orders');
@@ -1464,9 +1474,13 @@ export default function App() {
       {selectedCustomer && isCheckoutOpen && (
         <CheckoutModal
           isOpen={isCheckoutOpen}
-          onClose={() => setIsCheckoutOpen(false)}
+          onClose={() => {
+            setIsCheckoutOpen(false);
+            setCheckoutInitialPaymentMethod('bkash');
+          }}
           currentCustomer={selectedCustomer}
           previousOrderCount={orders.filter((order) => order.Customer_ID === selectedCustomer.Customer_ID).length}
+          initialPaymentMethod={checkoutInitialPaymentMethod}
           cartItems={cart}
           isLoadingCart={isCartLoading}
           onRefreshCart={async () => {
@@ -1485,17 +1499,26 @@ export default function App() {
         />
       )}
 
-      {paymentReceiptOrder && selectedCustomer && (
-        <React.Suspense fallback={<div role="status" className="fixed inset-0 z-[60] grid place-items-center bg-black/70 text-sm text-white">Loading receipt…</div>}>
-          <PaymentReceiptModal
-            isOpen={Boolean(paymentReceiptOrder)}
-            onClose={() => setPaymentReceiptOrder(null)}
-            order={paymentReceiptOrder}
-            customer={selectedCustomer}
-            onViewOrder={() => {
-              setPaymentReceiptOrder(null);
-              setActiveTab('orders');
+      {paymentResult && (
+        <React.Suspense fallback={<div role="status" className="fixed inset-0 z-[60] grid place-items-center bg-black/70 text-sm text-white">Loading payment result…</div>}>
+          <PaymentResultModal
+            status={paymentResult.status}
+            orderId={paymentResult.orderId}
+            order={paymentResult.order}
+            onAction={() => {
+              const { status } = paymentResult;
+              setPaymentResult(null);
+              if (status === 'paid') {
+                setActiveTab('orders');
+                setViewMode('app');
+                return;
+              }
+
+              setCheckoutInitialPaymentMethod(status === 'cancelled' ? 'cash_on_delivery' : 'bkash');
+              setActiveTab('storefront');
               setViewMode('app');
+              setIsCartOpen(false);
+              setIsCheckoutOpen(true);
             }}
           />
         </React.Suspense>
