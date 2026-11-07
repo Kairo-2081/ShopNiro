@@ -122,6 +122,7 @@ export default function App() {
   const [admins, setAdmins] = React.useState<Admin[]>([]);
   const [isInitialDataLoading, setIsInitialDataLoading] = React.useState(true);
   const [storefrontLoadError, setStorefrontLoadError] = React.useState<string | null>(null);
+  const [productsLoadError, setProductsLoadError] = React.useState<string | null>(null);
   const [hasMoreStoreProducts, setHasMoreStoreProducts] = React.useState(false);
   const [isLoadingMoreStoreProducts, setIsLoadingMoreStoreProducts] = React.useState(false);
   const [isCartLoading, setIsCartLoading] = React.useState(false);
@@ -228,7 +229,6 @@ export default function App() {
         return false;
       }
     } catch {
-      setIsLoggedIn(false);
       return false;
     } finally {
       setIsValidatingAuth(false);
@@ -333,6 +333,7 @@ export default function App() {
   const loadInitialData = React.useCallback(async () => {
     setIsInitialDataLoading(true);
     setStorefrontLoadError(null);
+    setProductsLoadError(null);
     setOrdersLoadError(null);
     try {
       const storefrontFailures: string[] = [];
@@ -351,6 +352,7 @@ export default function App() {
         api.getProductsPage({ limit: STORE_PRODUCT_PAGE_SIZE, offset: 0 }).catch((err) => {
           console.error('Error fetching products:', err);
           storefrontFailures.push('products');
+          setProductsLoadError(err instanceof Error ? err.message : 'Could not load products.');
           return { items: [], hasMore: false };
         }),
         api.getReviews().catch((err) => {
@@ -382,9 +384,15 @@ export default function App() {
         setActiveTab(!complete && auth.role === 'customer' ? 'profile' : auth.role === 'admin' ? 'admin-dashboard' : auth.role === 'seller' ? 'seller-dashboard' : auth.role === 'rider' ? 'rider-dashboard' : 'storefront');
 
         if (auth.role === 'admin' || auth.role === 'seller') {
-          const allProducts = await api.getProducts();
-          setProducts(allProducts);
-          setHasMoreStoreProducts(false);
+          try {
+            const allProducts = await api.getProducts();
+            setProducts(allProducts);
+            setProductsLoadError(null);
+            setHasMoreStoreProducts(false);
+          } catch (error) {
+            setProductsLoadError(error instanceof Error ? error.message : 'Could not load products.');
+            throw error;
+          }
         }
 
         if (auth.role === 'admin') {
@@ -1292,6 +1300,8 @@ export default function App() {
               orders={orders}
               reviews={reviews}
               isLoading={isInitialDataLoading}
+              productsLoadError={productsLoadError}
+              onRetryProducts={() => void loadInitialData()}
               onSaveProduct={handleSaveProduct}
               onDeleteProduct={handleDeleteProduct}
               onUpdateProductStatus={handleUpdateProductStatus}

@@ -26,6 +26,30 @@ import { money } from './format';
 const ANALYTICS_SESSION_KEY = 'shopniro_analytics_session';
 const PUBLIC_CATALOG_CACHE_TTL = 30_000;
 const publicCatalogCache = new Map<string, { expiresAt: number; value: unknown }>();
+export const API_FAILURE_EVENT = 'shopniro:api-failure';
+
+export interface ApiFailureEventDetail {
+  message: string;
+  requestId?: string;
+  status?: number;
+}
+
+export class ApiRequestError extends Error {
+  constructor(
+    message: string,
+    readonly status?: number,
+    readonly requestId?: string
+  ) {
+    super(message);
+    this.name = 'ApiRequestError';
+  }
+}
+
+function notifyApiFailure(detail: ApiFailureEventDetail) {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent<ApiFailureEventDetail>(API_FAILURE_EVENT, { detail }));
+  }
+}
 let hasValidatedSession = false;
 
 if (typeof window !== 'undefined') {
@@ -94,11 +118,21 @@ async function fetchJson<T>(url: string, options?: RequestInit, handleAuthErrors
     ...(options?.headers as Record<string, string> || {}),
   };
 
-  const res = await fetch(apiUrl(url), {
-    ...options,
-    credentials: 'include',
-    headers,
-  });
+  let res: Response;
+  try {
+    res = await fetch(apiUrl(url), {
+      ...options,
+      credentials: 'include',
+      headers,
+    });
+  } catch (error) {
+    const message = typeof navigator !== 'undefined' && !navigator.onLine
+      ? 'You are offline. Check your connection and try again.'
+      : 'Could not connect to ShopNiro. Check your connection and try again.';
+    console.error('API request failed before receiving a response:', error);
+    notifyApiFailure({ message });
+    throw new ApiRequestError(message);
+  }
 
   if (!res.ok) {
     // If server responds with 401 Unauthorized, automatically invalidate session and alert application
@@ -130,7 +164,11 @@ async function fetchJson<T>(url: string, options?: RequestInit, handleAuthErrors
     if (res.status === 403 && errorData?.code === 'PROFILE_INCOMPLETE' && typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('profile:incomplete', { detail: { missingFields: errorData.missingFields || [] } }));
     }
-    throw new Error(errorMsg);
+    const requestId = typeof errorData?.requestId === 'string' ? errorData.requestId : undefined;
+    if (res.status >= 500) {
+      notifyApiFailure({ message: errorMsg, requestId, status: res.status });
+    }
+    throw new ApiRequestError(errorMsg, res.status, requestId);
   }
   const data = await res.json() as T;
   if (shouldCache) {
