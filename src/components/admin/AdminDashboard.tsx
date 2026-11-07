@@ -605,7 +605,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               type="button"
                               onClick={() => openSellerReview(seller)}
                               disabled={updatingSellerId === seller.Seller_ID}
-                              className="px-3 py-1 bg-success-600 hover:bg-success-500 disabled:opacity-50 text-white rounded-full text-micro font-bold transition-all cursor-pointer shadow-sm shadow-success-500/20"
+                              title={`Review ${seller.Name}`}
+                              className="inline-flex min-h-10 items-center px-3 py-1 bg-success-600 hover:bg-success-500 disabled:opacity-50 text-white rounded-full text-micro font-bold transition-all cursor-pointer shadow-sm shadow-success-500/20"
                             >
                               Review &amp; approve
                             </button>
@@ -615,7 +616,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               type="button"
                               onClick={() => void handleSellerStatusChange(seller, 'suspended')}
                               disabled={updatingSellerId === seller.Seller_ID}
-                              className="px-3 py-1 bg-danger-600/80 hover:bg-danger-500 disabled:opacity-50 text-white rounded-full text-micro font-bold transition-all cursor-pointer"
+                              title={`Suspend ${seller.Name}`}
+                              className="inline-flex min-h-10 items-center px-3 py-1 bg-danger-600/80 hover:bg-danger-500 disabled:opacity-50 text-white rounded-full text-micro font-bold transition-all cursor-pointer"
                             >
                               Suspend
                             </button>
@@ -791,7 +793,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               type="button"
                               onClick={() => openSellerReview(seller)}
                               disabled={updatingSellerId === seller.Seller_ID}
-                              className="px-3 py-1 bg-success-600 hover:bg-success-500 disabled:opacity-50 text-white rounded-full text-xs font-bold transition-all cursor-pointer shadow-sm shadow-success-500/20"
+                              title={`Review ${seller.Name}`}
+                              className="inline-flex min-h-10 items-center px-3 py-1 bg-success-600 hover:bg-success-500 disabled:opacity-50 text-white rounded-full text-xs font-bold transition-all cursor-pointer shadow-sm shadow-success-500/20"
                             >
                               Review &amp; approve
                             </button>
@@ -801,7 +804,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               type="button"
                               onClick={() => void handleSellerStatusChange(seller, 'rejected')}
                               disabled={updatingSellerId === seller.Seller_ID}
-                              className="px-3 py-1 bg-surface-200 hover:bg-surface-300 dark:bg-surface-700 dark:hover:bg-surface-600 disabled:opacity-50 text-surface-800 dark:text-surface-200 rounded-full text-xs font-bold transition-colors cursor-pointer"
+                              title={`Reject ${seller.Name}`}
+                              className="inline-flex min-h-10 items-center px-3 py-1 bg-surface-200 hover:bg-surface-300 dark:bg-surface-700 dark:hover:bg-surface-600 disabled:opacity-50 text-surface-800 dark:text-surface-200 rounded-full text-xs font-bold transition-colors cursor-pointer"
                             >
                               Reject
                             </button>
@@ -811,7 +815,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               type="button"
                               onClick={() => void handleSellerStatusChange(seller, 'suspended')}
                               disabled={updatingSellerId === seller.Seller_ID}
-                              className="px-3 py-1 bg-danger-600/80 hover:bg-danger-500 disabled:opacity-50 text-white rounded-full text-xs font-bold transition-all cursor-pointer"
+                              title={`Suspend ${seller.Name}`}
+                              className="inline-flex min-h-10 items-center px-3 py-1 bg-danger-600/80 hover:bg-danger-500 disabled:opacity-50 text-white rounded-full text-xs font-bold transition-all cursor-pointer"
                             >
                               Suspend
                             </button>
@@ -894,14 +899,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       {isEditing ? (
                         <>
                           <button
+                            type="button"
                             onClick={() => handleSaveCategoryEdit(cat.Category_ID)}
-                            className="px-3 py-1 bg-success-600 hover:bg-success-500 text-white font-bold rounded-full text-micro cursor-pointer"
+                            title={`Save ${cat.Name}`}
+                            className="min-h-10 px-4 py-2 bg-success-600 hover:bg-success-500 text-white font-bold rounded-full text-micro cursor-pointer"
                           >
                             Save
                           </button>
                           <button
+                            type="button"
                             onClick={() => setEditingCategoryId(null)}
-                            className="px-3 py-1 bg-surface-200 dark:bg-surface-800 text-surface-700 dark:text-surface-400 font-bold rounded-full text-micro cursor-pointer"
+                            title={`Cancel editing ${cat.Name}`}
+                            className="min-h-10 px-4 py-2 bg-surface-200 dark:bg-surface-800 text-surface-700 dark:text-surface-400 font-bold rounded-full text-micro cursor-pointer"
                           >
                             Cancel
                           </button>
@@ -909,22 +918,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       ) : (
                         <>
                           <button
+                            type="button"
                             onClick={() => {
                               setEditingCategoryId(cat.Category_ID);
                               setEditingCategoryName(cat.Name);
                             }}
-                            className="p-1.5 text-surface-400 dark:text-surface-400 hover:text-brand-500 dark:hover:text-brand-400 transition-colors cursor-pointer"
-                            title="Edit Category Name"
+                            aria-label={`Edit category ${cat.Name}`}
+                            className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-surface-400 dark:text-surface-400 hover:bg-brand-500/10 hover:text-brand-500 dark:hover:text-brand-400 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                            title={`Edit category ${cat.Name}`}
                           >
                             <Edit className="w-4 h-4" />
                           </button>
                           <button
+                            type="button"
                             onClick={() => {
                               onDeleteCategory(cat.Category_ID);
                               showNotification(`Deleted category "${cat.Name}"`);
                             }}
-                            className="p-1.5 text-surface-400 dark:text-surface-400 hover:text-danger-500 dark:hover:text-danger-400 transition-colors cursor-pointer"
-                            title="Delete Category"
+                            aria-label={`Delete category ${cat.Name}`}
+                            className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-surface-400 dark:text-surface-400 hover:bg-danger-500/10 hover:text-danger-500 dark:hover:text-danger-400 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger-500"
+                            title={`Delete category ${cat.Name}`}
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -989,12 +1002,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       </td>
                       <td className="p-4 text-right">
                         <button
+                          type="button"
                           onClick={() => {
                             const newStatus = p.Product_Status === 'deactivated' ? 'active' : 'deactivated';
                             onUpdateProductStatus(p.Product_ID, newStatus);
                             showNotification(`Updated ${p.Name} status to ${newStatus}`);
                           }}
-                          className={`px-3.5 py-1 rounded-full text-xs font-bold transition-all cursor-pointer shadow-sm ${
+                          title={`${p.Product_Status === 'deactivated' ? 'Reinstate' : 'Deactivate'} ${p.Name}`}
+                          className={`inline-flex min-h-10 items-center px-3.5 py-1 rounded-full text-xs font-bold transition-all cursor-pointer shadow-sm ${
                             p.Product_Status === 'deactivated'
                               ? 'bg-success-600 hover:bg-success-500 text-white shadow-success-500/20'
                               : 'bg-danger-600/80 hover:bg-danger-500 text-white'
