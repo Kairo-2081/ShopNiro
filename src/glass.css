@@ -230,7 +230,7 @@
     box-shadow: var(--glass-shadow), 0 30px 70px -20px var(--glass-shade);
   }
 
-  /* The standard dialog header band (bg-*/50 over dark:bg-[#161C24]/80) lets the glass show through. Footers and
+  /* The standard dialog header band (a faint surface fill, dark:bg-[#161C24]/80 in dark mode) lets the glass show through. Footers and
      other bars are left alone: the checkout footer is sticky and content scrolls under it, so it must stay
      nearly opaque, and coloured banners keep their colour. */
   [role="dialog"] [class*="dark:bg-[#161C24]/80"] {
