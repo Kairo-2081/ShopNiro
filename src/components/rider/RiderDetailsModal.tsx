@@ -8,6 +8,7 @@ import { ChevronLeft, ChevronRight, FileText, Image as ImageIcon, Lock, Save, X 
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 import pdfWorkerUrl from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
@@ -15,6 +16,7 @@ type RiderCvDocument = Awaited<ReturnType<typeof pdfjsLib.getDocument>['promise'
 
 const RiderCvPreview: React.FC<{ url: string; onClose: () => void }> = ({ url, onClose }) => {
   useEscapeKey(onClose);
+  const dialogRef = useFocusTrap<HTMLElement>(true);
   const containerRef = React.useRef<HTMLDivElement>(null);
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const [pdfDocument, setPdfDocument] = React.useState<RiderCvDocument | null>(null);
@@ -83,7 +85,7 @@ const RiderCvPreview: React.FC<{ url: string; onClose: () => void }> = ({ url, o
 
   return (
     <div className="fixed inset-0 z-[85] flex items-center justify-center bg-black/80 p-2 sm:p-5">
-      <section role="dialog" aria-modal="true" aria-labelledby="rider-cv-title" className="flex max-h-[96dvh] w-full max-w-4xl flex-col overflow-hidden rounded-xl border border-surface-300 bg-white shadow-2xl dark:border-surface-700 dark:bg-[#12161D]">
+      <section ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="rider-cv-title" tabIndex={-1} className="flex max-h-[96dvh] w-full max-w-4xl flex-col overflow-hidden rounded-xl border border-surface-300 bg-white shadow-2xl dark:border-surface-700 dark:bg-[#12161D]">
         <header className="flex flex-wrap items-center justify-between gap-3 border-b border-surface-200 px-4 py-3 dark:border-surface-800">
           <h2 id="rider-cv-title" className="font-bold text-surface-900 dark:text-white">My CV</h2>
           <div className="flex items-center gap-2">
@@ -125,7 +127,6 @@ const addressKey = (address: Address) => JSON.stringify([
 ]);
 
 export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, rider, onClose, onSaved, required = false }) => {
-  useEscapeKey(onClose, isOpen);
   const [username, setUsername] = React.useState(rider.Username);
   const [name, setName] = React.useState(rider.Name);
   const [email, setEmail] = React.useState(rider.Email);
@@ -144,6 +145,8 @@ export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, ri
   const [cvUrl, setCvUrl] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [notice, setNotice] = React.useState<string | null>(null);
+  useEscapeKey(onClose, isOpen && !cvUrl);
+  const dialogRef = useFocusTrap<HTMLElement>(isOpen && !cvUrl);
 
   React.useEffect(() => () => {
     if (cvUrl) URL.revokeObjectURL(cvUrl);
@@ -282,7 +285,7 @@ export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, ri
   return (
     <>
     <div className="fixed inset-0 z-[75] flex items-center justify-center bg-black/75 p-3 backdrop-blur-sm sm:p-5">
-      <section role="dialog" aria-modal="true" aria-labelledby="rider-details-title" className="flex max-h-[94vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-success-200 bg-white shadow-2xl dark:border-success-900 dark:bg-[#12161D]">
+      <section ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="rider-details-title" tabIndex={-1} className="flex max-h-[94vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-success-200 bg-white shadow-2xl dark:border-success-900 dark:bg-[#12161D]">
         <header className="flex items-center justify-between gap-4 border-b border-surface-200 bg-success-50/70 px-5 py-4 dark:border-surface-800 dark:bg-success-950/20 sm:px-7">
           <div>
             <h2 id="rider-details-title" className="font-bold text-surface-900 dark:text-white">My details</h2>
