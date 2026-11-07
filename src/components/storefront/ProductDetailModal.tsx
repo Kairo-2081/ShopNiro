@@ -5,6 +5,7 @@ import { StarRating } from '../StarRating';
 import { api, fetchRelatedProducts, formatCurrency, formatDate } from '../../lib/api';
 import { describeVoucher, discountedPriceForVoucher, getVoucherCountdownLabel, isVoucherExpired } from '../../lib/vouchers';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 import {
   X,
   ShoppingCart,
@@ -51,6 +52,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   onOpenLogin,
   onAskAI,
 }) => {
+  useEscapeKey(onClose, Boolean(product));
   const [quantity, setQuantity] = React.useState(1);
   const [selectedSize, setSelectedSize] = React.useState('');
   const [galleryIndex, setGalleryIndex] = React.useState(0);

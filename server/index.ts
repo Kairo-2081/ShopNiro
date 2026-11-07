@@ -4,6 +4,7 @@ import http from 'node:http';
 import path from 'node:path';
 import { createServer as createViteServer } from 'vite';
 import { app } from './app.ts';
+import { isFingerprintedAsset } from './services/assetCache.ts';
 import { seedDatabaseIfEmpty } from './db/seed.ts';
 import { startRefundProcessor } from './routes/payment.routes.ts';
 
@@ -38,7 +39,7 @@ async function startServer() {
     app.use(express.static(distPath, {
       setHeaders: (response, filePath) => {
         const isHtml = filePath.endsWith('.html');
-        const isHashedAsset = /\.[a-f0-9]{8,}\./i.test(path.basename(filePath));
+        const isHashedAsset = isFingerprintedAsset(filePath);
         response.setHeader(
           'Cache-Control',
           isHashedAsset && !isHtml ? 'public, max-age=31536000, immutable' : 'no-cache'

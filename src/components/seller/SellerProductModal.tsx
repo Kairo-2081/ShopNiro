@@ -6,6 +6,7 @@ import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { X, Package, Save, Sparkles, Plus, Trash2, Upload } from 'lucide-react';
 import { prepareProductImage } from '../../lib/productImage';
 import { money } from '../../lib/format';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 const toLocalDateTimeInput = (value?: string) => {
   if (!value) return '';
   const date = new Date(value);
@@ -81,6 +82,7 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
   currentSeller,
   onSaveProduct,
 }) => {
+  useEscapeKey(onClose, isOpen);
   const dialogRef = useFocusTrap<HTMLDivElement>(isOpen);
   const [name, setName] = React.useState('');
   const [image, setImage] = React.useState('');

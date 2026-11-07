@@ -5,6 +5,7 @@ import { RiderApplicationsPanel } from './RiderApplicationsPanel';
 import { AdminMarketplaceMetrics } from './AdminMarketplaceMetrics';
 import { Section } from '../Section';
 import { BarChart3, ShieldCheck, Store, FolderTree, Package, CheckCircle2, Clock, Plus, Edit, Trash2, Activity, Search, Lock, RefreshCw, ExternalLink, X, AlertCircle, Truck, RotateCcw, LifeBuoy } from 'lucide-react';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 const AdminOverviewAnalytics = React.lazy(() =>
   import('./AdminOverviewAnalytics').then(({ AdminOverviewAnalytics: Component }) => ({ default: Component }))
@@ -62,6 +63,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [feedbackTone, setFeedbackTone] = React.useState<'success' | 'error'>('success');
   const [updatingSellerId, setUpdatingSellerId] = React.useState<string | null>(null);
   const [selectedSellerId, setSelectedSellerId] = React.useState<string | null>(null);
+  useEscapeKey(() => setSelectedSellerId(null), Boolean(selectedSellerId));
   const [sellerChecklist, setSellerChecklist] = React.useState({ identityVerified: false, documentsReviewed: false, payoutVerified: false });
   const [transactions, setTransactions] = React.useState<any[]>([]);
   const [loadingTransactions, setLoadingTransactions] = React.useState(false);
