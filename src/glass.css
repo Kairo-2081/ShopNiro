@@ -438,10 +438,32 @@
     }
   }
 
+  /* Reduced transparency: no blur, and the mapped panels get a solid fill so text never sits on a see-through
+     tint. Everything else keeps the fill it was given. */
   @media (prefers-reduced-transparency: reduce) {
-    :is(div, section, article, aside, li, details, form)[class*="rounded-"] {
+    html:not(.dark) :is(div, section, article, aside, li, details, form)[class*="rounded-"]:is([class~="bg-white"], [class~="bg-surface-50"]),
+    html.dark :is(div, section, article, aside, li, details, form)[class*="rounded-"]:is(
+        [class~="dark:bg-[#181F2A]"],
+        [class~="dark:bg-[#12161D]"],
+        [class~="dark:bg-[#161C24]"],
+        [class~="dark:bg-[#161E2A]"],
+        [class~="dark:bg-[#18202D]"],
+        [class~="dark:bg-surface-800"]
+      ) {
+      background: var(--glass-tint-strong);
       -webkit-backdrop-filter: none;
       backdrop-filter: none;
+    }
+    body::before,
+    body::after {
+      opacity: 0.35;
+    }
+  }
+
+  @media (forced-colors: active) {
+    body::before,
+    body::after {
+      display: none;
     }
   }
 }
