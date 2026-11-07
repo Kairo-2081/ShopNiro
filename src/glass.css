@@ -227,4 +227,31 @@
       backdrop-filter: none;
     }
   }
+
+  /* ---- Dialog and drawer panels ------------------------------------------------------------------------ */
+
+  /* Panels that do not use premium-surface (the cart drawer, receipt, rider and seller sections) get the same
+     strong glass so every overlay looks like one family. */
+  [role="dialog"]:not(.premium-surface) {
+    background: linear-gradient(160deg, var(--glass-tint-strong), var(--glass-tint));
+    -webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
+    border-color: var(--glass-edge);
+    box-shadow: var(--glass-shadow), 0 30px 70px -20px var(--glass-shade);
+  }
+
+  /* Header and footer bars inside dialogs used a flat near-opaque fill; let the glass show through them. */
+  [role="dialog"] .border-b[class*="bg-"],
+  [role="dialog"] .border-t[class*="bg-"] {
+    background: var(--glass-tint-soft);
+    border-color: var(--glass-edge-dim);
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    [role="dialog"]:not(.premium-surface) {
+      background: var(--glass-tint-strong);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
 }
