@@ -6,6 +6,7 @@ import { OAuthProviderButtons } from '../OAuthProviderButtons';
 import { AccountLocationPicker } from '../AccountLocationPicker';
 import { Lock, MapPin, ShieldCheck, Sparkles, Truck, UploadCloud, X } from 'lucide-react';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 interface RiderSignupModalProps {
   isOpen: boolean;
@@ -34,6 +35,7 @@ const fromLines = (value: string) => value.split('\n').map((line) => line.trim()
 
 export const RiderSignupModal: React.FC<RiderSignupModalProps> = ({ isOpen, onClose, onOpenLogin, onSubmitted }) => {
   useEscapeKey(onClose, isOpen);
+  const dialogRef = useFocusTrap<HTMLElement>(isOpen);
   const [username, setUsername] = React.useState('');
   const [name, setName] = React.useState('');
   const [email, setEmail] = React.useState('');
@@ -202,7 +204,7 @@ export const RiderSignupModal: React.FC<RiderSignupModalProps> = ({ isOpen, onCl
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/75 p-3 backdrop-blur-sm sm:p-5">
-      <section role="dialog" aria-modal="true" aria-labelledby="rider-application-title" className="flex max-h-[94vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-success-200 bg-white shadow-2xl dark:border-success-900 dark:bg-[#12161D]">
+      <section ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="rider-application-title" tabIndex={-1} className="flex max-h-[94vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-success-200 bg-white shadow-2xl dark:border-success-900 dark:bg-[#12161D]">
         <header className="flex items-center justify-between gap-4 border-b border-surface-200 bg-success-50/70 px-5 py-4 dark:border-surface-800 dark:bg-success-950/20 sm:px-7">
           <div className="flex items-center gap-3">
             <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-success-700 text-white"><Truck className="h-5 w-5" /></span>

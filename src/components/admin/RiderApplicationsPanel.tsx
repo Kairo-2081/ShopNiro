@@ -5,12 +5,14 @@ import { downloadFile } from '../../lib/downloadFile';
 import { money } from '../../lib/format';
 import { Check, Download, RefreshCw, X } from 'lucide-react';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 export const RiderApplicationsPanel: React.FC = () => {
   const [applications, setApplications] = React.useState<Rider[]>([]);
   const [withdrawals, setWithdrawals] = React.useState<any[]>([]);
   const [selected, setSelected] = React.useState<Rider | null>(null);
   useEscapeKey(() => setSelected(null), Boolean(selected));
+  const dialogRef = useFocusTrap<HTMLElement>(Boolean(selected));
   const [loading, setLoading] = React.useState(true);
   const [busyId, setBusyId] = React.useState<string | null>(null);
   const [busyWithdrawalId, setBusyWithdrawalId] = React.useState<string | null>(null);
@@ -126,7 +128,7 @@ export const RiderApplicationsPanel: React.FC = () => {
 
       {selected && (
         <div className="fixed inset-0 z-[65] flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm animate-in fade-in duration-150" onClick={(event) => { if (event.target === event.currentTarget) setSelected(null); }}>
-          <section role="dialog" aria-modal="true" aria-labelledby="rider-review-title" className="w-full max-w-xl space-y-5 rounded-2xl border border-brand-100 bg-white p-5 shadow-2xl ring-1 ring-white/10 animate-in fade-in slide-in-from-bottom-2 duration-200 dark:border-brand-500/20 dark:bg-[#12161D]">
+          <section ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="rider-review-title" tabIndex={-1} className="w-full max-w-xl space-y-5 rounded-2xl border border-brand-100 bg-white p-5 shadow-2xl ring-1 ring-white/10 animate-in fade-in slide-in-from-bottom-2 duration-200 dark:border-brand-500/20 dark:bg-[#12161D]">
             <header className="flex items-start justify-between gap-4"><div><h3 id="rider-review-title" className="text-lg font-bold text-surface-900 dark:text-white">{selected.Name}</h3><p className="text-xs text-surface-500">{selected.Email} · {selected.Number}</p></div><button type="button" onClick={() => setSelected(null)} aria-label="Close details" className="rounded-full p-2 hover:bg-surface-100 dark:hover:bg-surface-800"><X className="h-4 w-4" /></button></header>
             <div className="max-h-[55vh] space-y-4 overflow-y-auto text-sm">
               <div><h4 className="mb-1 text-xs font-bold uppercase text-surface-500">Present address</h4><p className="text-surface-800 dark:text-surface-200">{Object.values(selected.Present_Address || {}).filter(Boolean).join(', ') || 'Not supplied'}</p></div>

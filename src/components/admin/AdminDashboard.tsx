@@ -6,6 +6,7 @@ import { AdminMarketplaceMetrics } from './AdminMarketplaceMetrics';
 import { Section } from '../Section';
 import { BarChart3, ShieldCheck, Store, FolderTree, Package, CheckCircle2, Clock, Plus, Edit, Trash2, Activity, Search, Lock, RefreshCw, ExternalLink, X, AlertCircle, Truck, RotateCcw, LifeBuoy } from 'lucide-react';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 const AdminOverviewAnalytics = React.lazy(() =>
   import('./AdminOverviewAnalytics').then(({ AdminOverviewAnalytics: Component }) => ({ default: Component }))
@@ -64,6 +65,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [updatingSellerId, setUpdatingSellerId] = React.useState<string | null>(null);
   const [selectedSellerId, setSelectedSellerId] = React.useState<string | null>(null);
   useEscapeKey(() => setSelectedSellerId(null), Boolean(selectedSellerId));
+  const sellerDialogRef = useFocusTrap<HTMLElement>(Boolean(selectedSellerId));
   const [sellerChecklist, setSellerChecklist] = React.useState({ identityVerified: false, documentsReviewed: false, payoutVerified: false });
   const [transactions, setTransactions] = React.useState<any[]>([]);
   const [loadingTransactions, setLoadingTransactions] = React.useState(false);
@@ -1233,9 +1235,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           }}
         >
           <section
+            ref={sellerDialogRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="seller-application-title"
+            tabIndex={-1}
             className="my-auto w-full max-w-xl overflow-hidden rounded-2xl border border-brand-100 bg-white shadow-2xl ring-2 ring-white/10 animate-in fade-in slide-in-from-bottom-2 duration-200 dark:border-brand-500/20 dark:bg-[#12161D]"
           >
             <header className="flex items-start justify-between gap-4 border-b border-surface-200 p-5 dark:border-surface-800">
