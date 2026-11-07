@@ -283,8 +283,8 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
               <span className="text-micro text-surface-400 dark:text-surface-500 uppercase font-bold block">
                 Payment Channel
               </span>
-              <span className="font-bold text-surface-900 dark:text-white uppercase">
-                {method}
+              <span className="font-bold text-surface-900 dark:text-white">
+                  {paymentBrand}
               </span>
             </div>
           </div>
@@ -372,7 +372,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
             <button
               type="button"
               onClick={handleDownload}
-              className="min-h-11 rounded-full border border-surface-300 px-3 text-xs font-bold text-surface-700 transition-colors hover:bg-surface-100 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800"
+              className="min-h-11 min-w-11 rounded-full border border-surface-300 px-3 text-xs font-bold text-surface-700 transition-colors hover:bg-surface-100 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800"
               aria-label="Download receipt as HTML"
               title="Download receipt"
             >
