@@ -86,4 +86,37 @@
       backdrop-filter: none;
     }
   }
+
+  /* ---- Surfaces ---------------------------------------------------------------------------------------- */
+
+  /* premium-surface is the app's panel: dialogs, dashboard sections, empty states. Content heavy, so it uses
+     the strong tint and keeps text well above contrast limits. */
+  .premium-surface {
+    background: linear-gradient(160deg, var(--glass-tint-strong), var(--glass-tint));
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    border: 1px solid var(--glass-edge);
+    box-shadow: var(--glass-shadow);
+  }
+
+  .dark .premium-surface {
+    background: linear-gradient(160deg, var(--glass-tint-strong), var(--glass-tint));
+    border-color: var(--glass-edge);
+    box-shadow: var(--glass-shadow);
+  }
+
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .premium-surface,
+    .dark .premium-surface {
+      background: var(--glass-tint-strong);
+    }
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .premium-surface {
+      background: var(--glass-tint-strong);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
 }
