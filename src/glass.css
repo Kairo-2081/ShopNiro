@@ -1,0 +1,341 @@
+/*
+ * Liquid glass layer.
+ *
+ * Everything here lives in its own cascade layer that sorts after Tailwind's utilities, so it can restyle the
+ * app's shared surface classes (premium-surface, premium-card, luxury-input, ...) without touching every
+ * component. Remove the `@import "./glass.css"` line in index.css to switch the whole look off.
+ */
+@layer theme, base, components, utilities, glass;
+
+@layer glass {
+  :root {
+    /* Light theme: milky glass over the warm paper background. */
+    --glass-blur: 22px;
+    --glass-blur-strong: 34px;
+    --glass-saturate: 1.7;
+    --glass-tint: rgba(255, 255, 255, 0.58);
+    --glass-tint-strong: rgba(252, 251, 247, 0.84);
+    --glass-tint-soft: rgba(255, 255, 255, 0.34);
+    --glass-edge: rgba(255, 255, 255, 0.72);
+    --glass-edge-dim: rgba(128, 115, 79, 0.2);
+    --glass-highlight: rgba(255, 255, 255, 0.9);
+    --glass-shade: rgba(74, 62, 38, 0.16);
+    --glass-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 -1px 0 rgba(128, 115, 79, 0.1) inset,
+      0 10px 30px -12px rgba(74, 62, 38, 0.28), 0 2px 6px rgba(74, 62, 38, 0.08);
+    --glass-scrim: rgba(40, 36, 24, 0.38);
+  }
+
+  .dark {
+    --glass-blur: 24px;
+    --glass-blur-strong: 38px;
+    --glass-saturate: 1.5;
+    --glass-tint: rgba(34, 34, 28, 0.56);
+    --glass-tint-strong: rgba(24, 24, 20, 0.84);
+    --glass-tint-soft: rgba(231, 229, 214, 0.07);
+    --glass-edge: rgba(231, 229, 214, 0.2);
+    --glass-edge-dim: rgba(231, 229, 214, 0.08);
+    --glass-highlight: rgba(255, 255, 255, 0.32);
+    --glass-shade: rgba(0, 0, 0, 0.4);
+    --glass-shadow: 0 1px 0 rgba(255, 255, 255, 0.1) inset, 0 -1px 0 rgba(0, 0, 0, 0.35) inset,
+      0 14px 36px -14px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.3);
+    --glass-scrim: rgba(4, 4, 3, 0.58);
+  }
+
+  /* Base recipe other rules reuse. Opt in anywhere with class="glass". */
+  .glass {
+    background: linear-gradient(160deg, var(--glass-tint), var(--glass-tint-soft));
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    border: 1px solid var(--glass-edge);
+    box-shadow: var(--glass-shadow);
+  }
+
+  .glass-strong {
+    background: linear-gradient(160deg, var(--glass-tint-strong), var(--glass-tint));
+    -webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
+    border: 1px solid var(--glass-edge);
+    box-shadow: var(--glass-shadow);
+  }
+
+  /* No blur support: fall back to the strong tint so text stays readable on whatever is behind. */
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .glass,
+    .glass-strong {
+      background: var(--glass-tint-strong);
+    }
+  }
+
+  /* Users who ask for less transparency, and forced-colors modes, get solid surfaces. */
+  @media (prefers-reduced-transparency: reduce) {
+    .glass,
+    .glass-strong {
+      background: var(--glass-tint-strong);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
+
+  @media (forced-colors: active) {
+    .glass,
+    .glass-strong {
+      background: Canvas;
+      border-color: CanvasText;
+      box-shadow: none;
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
+
+  /* ---- Surfaces ---------------------------------------------------------------------------------------- */
+
+  /* premium-surface is the app's panel: dialogs, dashboard sections, empty states. Content heavy, so it uses
+     the strong tint and keeps text well above contrast limits. */
+  .premium-surface {
+    background: linear-gradient(160deg, var(--glass-tint-strong), var(--glass-tint));
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    border: 1px solid var(--glass-edge);
+    box-shadow: var(--glass-shadow);
+  }
+
+  .dark .premium-surface {
+    background: linear-gradient(160deg, var(--glass-tint-strong), var(--glass-tint));
+    border-color: var(--glass-edge);
+    box-shadow: var(--glass-shadow);
+  }
+
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .premium-surface,
+    .dark .premium-surface {
+      background: var(--glass-tint-strong);
+    }
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .premium-surface {
+      background: var(--glass-tint-strong);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
+
+  /* ---- Cards ------------------------------------------------------------------------------------------- */
+
+  .premium-card {
+    background: linear-gradient(160deg, var(--glass-tint), var(--glass-tint-soft));
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    border: 1px solid var(--glass-edge);
+    box-shadow: var(--glass-shadow);
+  }
+
+  .dark .premium-card {
+    background: linear-gradient(160deg, var(--glass-tint), var(--glass-tint-soft));
+    border-color: var(--glass-edge);
+    box-shadow: var(--glass-shadow);
+  }
+
+  /* The dark card variant used on light pages stays dark, but gets the same glass edge. */
+  html:not(.dark) .premium-card-dark {
+    background: linear-gradient(160deg, rgba(43, 43, 34, 0.78), rgba(23, 23, 19, 0.7));
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+    backdrop-filter: blur(var(--glass-blur)) saturate(1.4);
+    border: 1px solid rgba(231, 229, 214, 0.2);
+  }
+
+  .premium-card:hover,
+  html:not(.dark) .premium-card:not(.premium-card-dark):hover {
+    border-color: var(--glass-edge);
+    box-shadow: var(--glass-shadow), 0 18px 40px -16px var(--glass-shade);
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .premium-card,
+    .dark .premium-card {
+      background: var(--glass-tint-strong);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
+
+  /* ---- Form fields ------------------------------------------------------------------------------------- */
+
+  /* Fields keep the background and text colours each screen gives them: they sit on dark panels in both themes
+     (the storefront hero) and on light dialogs, so one tint cannot be right for all. Glass is limited to a
+     soft inner edge and a clearer focus glow. */
+  .luxury-input {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08) inset, 0 1px 0 var(--glass-edge-dim);
+  }
+
+  .luxury-input:focus {
+    border-color: rgba(169, 155, 114, 0.8);
+    box-shadow: 0 0 0 3px rgba(169, 155, 114, 0.24), 0 1px 2px rgba(0, 0, 0, 0.08) inset;
+  }
+
+  /* ---- Buttons ----------------------------------------------------------------------------------------- */
+
+  /* Primary actions stay brand-coloured so they remain the loudest thing on the page. The glass look comes from
+     a lit inner top edge and a soft coloured shadow, not from transparency or an overlay, so label contrast is unchanged. */
+  .premium-button {
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.45) inset, 0 -1px 0 rgba(0, 0, 0, 0.22) inset,
+      0 14px 26px -12px rgba(52, 40, 20, 0.5);
+  }
+
+  .premium-button:hover {
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.5) inset, 0 -1px 0 rgba(0, 0, 0, 0.22) inset,
+      0 18px 30px -12px rgba(86, 80, 57, 0.55);
+  }
+
+  /* Secondary controls (icon buttons, toggles, tabs) get a light glass pill. */
+  .luxury-control {
+    -webkit-backdrop-filter: blur(12px) saturate(1.5);
+    backdrop-filter: blur(12px) saturate(1.5);
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .luxury-control {
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
+
+  /* ---- Overlays ---------------------------------------------------------------------------------------- */
+
+  /* Full-screen scrims behind dialogs and the cart drawer: a tinted, lightly blurred veil instead of flat black.
+     The page behind stays recognisable, which is what makes the glass panel on top read as glass. */
+  .fixed.inset-0[class*="bg-black/"] {
+    background: var(--glass-scrim);
+    -webkit-backdrop-filter: blur(8px) saturate(1.2);
+    backdrop-filter: blur(8px) saturate(1.2);
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .fixed.inset-0[class*="bg-black/"] {
+      background: rgba(0, 0, 0, 0.72);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
+
+  /* ---- Dialog and drawer panels ------------------------------------------------------------------------ */
+
+  /* Panels that do not use premium-surface (the cart drawer, receipt, rider and seller sections) get the same
+     strong glass so every overlay looks like one family. */
+  [role="dialog"]:not(.premium-surface) {
+    background: linear-gradient(160deg, var(--glass-tint-strong), var(--glass-tint));
+    -webkit-backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur-strong)) saturate(var(--glass-saturate));
+    border-color: var(--glass-edge);
+    box-shadow: var(--glass-shadow), 0 30px 70px -20px var(--glass-shade);
+  }
+
+  /* The standard dialog header band (a faint surface fill, dark:bg-[#161C24]/80 in dark mode) lets the glass show through. Footers and
+     other bars are left alone: the checkout footer is sticky and content scrolls under it, so it must stay
+     nearly opaque, and coloured banners keep their colour. */
+  [role="dialog"] [class*="dark:bg-[#161C24]/80"] {
+    background: var(--glass-tint);
+    border-color: var(--glass-edge-dim);
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    [role="dialog"]:not(.premium-surface) {
+      background: var(--glass-tint-strong);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
+
+  /* ---- Print ------------------------------------------------------------------------------------------- */
+
+  /* Receipts and invoices are printed: no blur, no translucency, no shadows. */
+  @media print {
+    .glass,
+    .glass-strong,
+    .premium-surface,
+    .premium-card,
+    .luxury-input,
+    [role="dialog"] {
+      background: #fff !important;
+      color: #000;
+      -webkit-backdrop-filter: none !important;
+      backdrop-filter: none !important;
+      box-shadow: none !important;
+    }
+  }
+
+  /* ---- Bars -------------------------------------------------------------------------------------------- */
+
+  /* Top header and the phone bottom navigation. The bottom bar is fixed, so page content scrolls underneath it
+     and the blur is actually visible there. */
+  .glass-bar {
+    background: linear-gradient(180deg, var(--glass-tint-strong), var(--glass-tint));
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    border-color: var(--glass-edge-dim);
+    box-shadow: 0 1px 0 var(--glass-edge) inset, 0 10px 28px -16px var(--glass-shade);
+  }
+
+  /* The top header scrolls away with the page, so nothing passes under it and a blur would add nothing. It also
+     broke a 360 px browser test (clicks on its tab buttons never became stable) when it had backdrop-filter, so
+     it only gets the glass tint and edge. */
+  .glass-header {
+    background: linear-gradient(180deg, var(--glass-tint-strong), var(--glass-tint));
+    border-color: var(--glass-edge-dim);
+    box-shadow: 0 1px 0 var(--glass-edge) inset, 0 10px 28px -16px var(--glass-shade);
+  }
+
+  nav.glass-bar {
+    box-shadow: 0 1px 0 var(--glass-edge) inset, 0 -10px 28px -16px var(--glass-shade);
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .glass-bar {
+      background: var(--glass-tint-strong);
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
+
+  /* ---- Chips and pills --------------------------------------------------------------------------------- */
+
+  .micro-badge {
+    -webkit-backdrop-filter: blur(8px) saturate(1.4);
+    backdrop-filter: blur(8px) saturate(1.4);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.22) inset;
+  }
+
+  .pay-pill {
+    background-color: var(--glass-tint-soft);
+    -webkit-backdrop-filter: blur(10px) saturate(1.4);
+    backdrop-filter: blur(10px) saturate(1.4);
+    box-shadow: 0 1px 0 var(--glass-edge) inset;
+  }
+
+  .pay-pill:hover {
+    border-color: var(--glass-edge);
+    background-color: var(--glass-tint);
+  }
+
+  /* ---- Performance ------------------------------------------------------------------------------------- */
+
+  /* Long product and order lists create many blurred layers at once. On phones use a smaller blur radius so
+     scrolling stays smooth on mid-range devices. */
+  @media (max-width: 767px) {
+    :root {
+      --glass-blur: 14px;
+      --glass-blur-strong: 22px;
+    }
+    .dark {
+      --glass-blur: 14px;
+      --glass-blur-strong: 22px;
+    }
+    .luxury-input,
+    .luxury-control,
+    .pay-pill,
+    .micro-badge {
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
+}
