@@ -1576,7 +1576,7 @@ export default function App() {
       </React.Suspense>
 
       {/* Floating Chat Trigger */}
-      {activeTab === 'storefront' && (!isLoggedIn || currentRole === 'customer') && (
+      {activeTab === 'storefront' && !isCheckoutOpen && (!isLoggedIn || currentRole === 'customer') && (
         <ChatFloatingTrigger isOpen={isChatOpen} onClick={() => setIsChatOpen(true)} />
       )}
     </div>
