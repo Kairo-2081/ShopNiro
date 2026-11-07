@@ -45,3 +45,18 @@ test('the scrolling header keeps its glass tint but no backdrop-filter, which ma
   const navbar = await read('src/components/Navbar.tsx');
   assert.match(navbar, /<header className="glass-header /);
 });
+
+test('mapped panels get a solid fill under reduced transparency and the scene is dimmed or hidden', async () => {
+  const glass = await read('src/glass.css');
+  const reduced = glass.slice(glass.lastIndexOf('@media (prefers-reduced-transparency: reduce)'));
+  assert.match(reduced, /background: var\(--glass-tint-strong\)/);
+  assert.match(reduced, /body::before/);
+  assert.match(glass, /@media \(forced-colors: active\) \{\s*body::before/);
+});
+
+test('the scene behind the glass has colour blobs for both themes', async () => {
+  const glass = await read('src/glass.css');
+  assert.match(glass, /html:not\(\.dark\) body::before \{/);
+  assert.match(glass, /html\.dark body::before \{/);
+  assert.match(glass, /@media \(prefers-reduced-motion: reduce\) \{\s*body::before/);
+});
