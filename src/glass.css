@@ -397,4 +397,19 @@
     border-color: var(--glass-edge);
     box-shadow: var(--glass-shadow);
   }
+
+  html.dark :is(div, section, article, aside, li, details, form)[class*="rounded-"]:is(
+      [class~="dark:bg-[#181F2A]"],
+      [class~="dark:bg-[#12161D]"],
+      [class~="dark:bg-[#161C24]"],
+      [class~="dark:bg-[#161E2A]"],
+      [class~="dark:bg-[#18202D]"],
+      [class~="dark:bg-surface-800"]
+    ) {
+    background: linear-gradient(160deg, var(--glass-tint), var(--glass-tint-soft));
+    -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    border-color: var(--glass-edge);
+    box-shadow: var(--glass-shadow);
+  }
 }
