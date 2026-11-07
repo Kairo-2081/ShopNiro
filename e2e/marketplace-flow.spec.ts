@@ -59,8 +59,8 @@ test('admin approves a seller, who lists a product that a customer buys and a ri
     await customer.getByText('Cash on Delivery (COD)').click();
     await customer.getByRole('checkbox').check();
     const shown = parseMoney(await customer.getByTestId('checkout-total').innerText());
-    await customer.getByRole('button', { name: /Confirm Order \(Cash on Delivery\)/ }).click();
-    await expect(customer.getByRole('heading', { name: 'Order Placed' })).toBeVisible();
+    await customer.getByTestId('checkout-submit').click();
+    await expect(customer.getByRole('heading', { name: 'Order placed' })).toBeVisible();
     const order = await withDb(async (c) => (await c.query(
       `SELECT o.id, o.subtotal::float8 + o.shipping_fee::float8 AS total FROM orders o
         JOIN order_items oi ON oi.order_id = o.id WHERE oi.product_name = $1 ORDER BY o.order_placed_at DESC LIMIT 1`, [PRODUCT.name])).rows[0]);
