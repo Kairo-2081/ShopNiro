@@ -10,6 +10,8 @@ const rolePages = [
   { role: 'rider', home: 'Rider deliveries', pages: ['Support'] },
 ] as const;
 
+const guestStorageState = { cookies: [], origins: [] };
+
 test('public and role-specific pages have no critical or serious axe violations', async ({ browser, baseURL }, testInfo) => {
   test.setTimeout(180_000);
   test.skip(testInfo.project.name !== 'desktop', 'The full page sweep runs once per CI workflow.');
@@ -40,7 +42,7 @@ test('public and role-specific pages have no critical or serious axe violations'
     }
   };
 
-  const publicContext = await browser.newContext({ baseURL });
+  const publicContext = await browser.newContext({ baseURL, storageState: guestStorageState });
   const publicPage = await publicContext.newPage();
   try {
     await blockNonLocalTraffic(publicPage);
@@ -75,7 +77,7 @@ test('public and role-specific pages have no critical or serious axe violations'
 
 test('storefront controls are keyboard reachable and the login dialog traps and restores focus', async ({ browser, baseURL }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop', 'The keyboard sweep runs once per CI workflow.');
-  const context = await browser.newContext({ baseURL });
+  const context = await browser.newContext({ baseURL, storageState: guestStorageState });
   const page = await context.newPage();
   try {
     await blockNonLocalTraffic(page);
@@ -139,7 +141,7 @@ test('storefront controls are keyboard reachable and the login dialog traps and 
 
 test('reduced motion stops the orbit globe animation without hiding its content', async ({ browser, baseURL }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop', 'The motion preference check runs once per CI workflow.');
-  const context = await browser.newContext({ baseURL, reducedMotion: 'reduce' });
+  const context = await browser.newContext({ baseURL, storageState: guestStorageState, reducedMotion: 'reduce' });
   const page = await context.newPage();
   try {
     await blockNonLocalTraffic(page);
