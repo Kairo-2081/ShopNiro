@@ -112,7 +112,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   }, [isAccountMenuOpen]);
 
   return (
-    <header className="relative z-30 bg-[#f6f5ef] dark:bg-[#10100f] border-b border-[#80734f]/20 dark:border-white/10 shadow-[0_8px_24px_rgba(41,40,33,0.10)] dark:shadow-[0_12px_32px_rgba(6,6,4,0.25)] transition-colors duration-200">
+    <header className="glass-header relative z-30 bg-[#f6f5ef] dark:bg-[#10100f] border-b border-[#80734f]/20 dark:border-white/10 shadow-[0_8px_24px_rgba(41,40,33,0.10)] dark:shadow-[0_12px_32px_rgba(6,6,4,0.25)] transition-colors duration-200">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         <div className="flex min-h-16 flex-wrap items-center justify-between gap-2 py-2 sm:gap-3 md:flex-nowrap">
           {/* Logo & Brand matching Landing Page */}
@@ -440,7 +440,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
       </div>
-      <nav aria-label="Mobile navigation" className="fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-[#a99b72]/25 bg-[#f6f5ef]/95 px-2 pt-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] shadow-[0_-8px_24px_rgba(41,40,33,0.12)] backdrop-blur-xl dark:border-white/10 dark:bg-[#10100f]/95 md:hidden" style={{ gridTemplateColumns: `repeat(${mobileNavItems(isLoggedIn, currentRole, t).length}, minmax(0, 1fr))` }}>
+      <nav aria-label="Mobile navigation" className="glass-bar fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-[#a99b72]/25 bg-[#f6f5ef]/95 px-2 pt-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] shadow-[0_-8px_24px_rgba(41,40,33,0.12)] backdrop-blur-xl dark:border-white/10 dark:bg-[#10100f]/95 md:hidden" style={{ gridTemplateColumns: `repeat(${mobileNavItems(isLoggedIn, currentRole, t).length}, minmax(0, 1fr))` }}>
         {mobileNavItems(isLoggedIn, currentRole, t).map(({ tab, label, icon: Icon }) => {
           const isActive = activeTab === tab;
           return (
