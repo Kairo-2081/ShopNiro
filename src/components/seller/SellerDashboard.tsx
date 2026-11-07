@@ -346,7 +346,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div role="region" aria-label="Seller performance metrics" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="premium-card flex items-center justify-between rounded-3xl p-5">
           <div>
             <span className="text-micro uppercase tracking-wider font-semibold text-surface-500 dark:text-surface-400">
