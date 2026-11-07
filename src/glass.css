@@ -338,4 +338,28 @@
       backdrop-filter: none;
     }
   }
+
+  /* ---- Scene behind the glass --------------------------------------------------------------------------- */
+
+  /* Glass only reads as glass when there is something colourful to blur behind it. The existing ambient blobs
+     were faint (opacity 0.45, muted colours). These are stronger, and they are fixed, so panels visibly pick up
+     colour as the page scrolls over them. */
+  body::before,
+  body::after {
+    opacity: 0.95;
+  }
+
+  html:not(.dark) body::before {
+    background:
+      radial-gradient(circle at 14% 22%, rgba(226, 178, 84, 0.62), transparent 26%),
+      radial-gradient(circle at 70% 14%, rgba(70, 160, 150, 0.5), transparent 24%),
+      radial-gradient(circle at 86% 70%, rgba(214, 120, 150, 0.42), transparent 28%);
+  }
+
+  html:not(.dark) body::after {
+    background:
+      radial-gradient(circle at 26% 76%, rgba(112, 170, 210, 0.5), transparent 25%),
+      radial-gradient(circle at 56% 48%, rgba(255, 255, 255, 0.5), transparent 22%),
+      radial-gradient(circle at 92% 34%, rgba(150, 190, 110, 0.4), transparent 22%);
+  }
 }
