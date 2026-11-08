@@ -1,6 +1,6 @@
 import React from 'react';
 import { UserRole, Customer, Seller, Admin, AppTab } from '../types';
-import { shopNiroLogo } from '../lib/branding';
+import { shopNiroLogoSmall } from '../lib/branding';
 import {
   ShoppingBag,
   ShoppingCart,
@@ -123,7 +123,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="order-1 flex min-h-11 shrink-0 items-center gap-2 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 sm:gap-2.5 md:order-none"
           >
             <img
-              src={shopNiroLogo}
+              src={shopNiroLogoSmall}
               alt="ShopNiro"
               className="h-9 w-9 rounded-full object-cover border border-[#d0c8a5]/50 shadow-[0_8px_20px_rgba(169,155,114,0.24)] sm:h-10 sm:w-10"
             />
