@@ -1104,7 +1104,7 @@ export default function App() {
 
       {/* Main Content Area */}
       <main className={`flex-1 max-w-7xl w-full mx-auto px-3 pt-4 ${activeTab === 'storefront' ? 'pb-24' : 'pb-16'} app-panel animate-fade-up sm:px-6 lg:px-8 lg:pt-6`}>
-        <React.Suspense fallback={<div className="flex min-h-[40vh] items-center justify-center text-sm text-surface-500 dark:text-surface-400">Loading marketplace...</div>}>
+        <React.Suspense fallback={<div className="flex min-h-[40vh] items-center justify-center text-sm text-surface-900 dark:text-surface-200">Loading marketplace...</div>}>
         {/* Authentication Notice Banner if set */}
         {isLoggedIn && !profileComplete && (
           <div role="status" className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-warning-500/30 bg-warning-500/10 p-4 text-xs text-warning-800 shadow-xs dark:text-warning-200">
@@ -1373,7 +1373,7 @@ export default function App() {
       </main>
 
       {/* Unified Marketplace Footer */}
-      <footer className="border-t border-white/10 bg-white/10 dark:bg-[#0C1014]/65 py-8 px-4 mt-auto space-y-7 backdrop-blur-xl shadow-[0_-10px_30px_rgba(8,17,20,0.18)]">
+      <footer className="border-t border-white/10 bg-white dark:bg-[#0C1014] py-8 px-4 mt-auto space-y-7 shadow-[0_-10px_30px_rgba(8,17,20,0.18)]">
         <div className="max-w-7xl mx-auto">
           <MarketplaceClosing stats={marketplaceStats} />
         </div>
@@ -1388,7 +1388,7 @@ export default function App() {
               <div className="font-extrabold text-surface-900 dark:text-white tracking-tight text-sm">
                 ShopNiro
               </div>
-              <p className="text-micro text-surface-400 dark:text-surface-500">shop smart, ship fast</p>
+              <p className="text-micro text-surface-600 dark:text-surface-400">shop smart, ship fast</p>
             </div>
           </div>
 
@@ -1432,7 +1432,7 @@ export default function App() {
             </button>
           </div>
 
-          <div className="text-micro text-surface-400 dark:text-surface-500 font-mono text-center md:text-right">
+          <div className="text-micro text-surface-600 dark:text-surface-400 font-mono text-center md:text-right">
             <span>© {new Date().getFullYear()} ShopNiro • Smart commerce network</span>
             <nav aria-label="Policies" className="mt-1 flex flex-wrap justify-center gap-x-3 md:justify-end">
               {POLICIES.map((policy) => (

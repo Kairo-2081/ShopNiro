@@ -3,6 +3,7 @@ import { Address, Seller } from '../../types';
 import { AccountLocationPicker } from '../AccountLocationPicker';
 import { FileText, MapPin, X } from 'lucide-react';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 interface SellerProfileModalProps {
   seller: Seller;
@@ -14,6 +15,7 @@ interface SellerProfileModalProps {
 
 export const SellerProfileModal: React.FC<SellerProfileModalProps> = ({ seller, onClose, onSave, required = false, requireIdentityDocument = false }) => {
   useEscapeKey(onClose, true);
+  const dialogRef = useFocusTrap<HTMLElement>(true);
   const [name, setName] = React.useState(seller.Name);
   const [username, setUsername] = React.useState(seller.Username || '');
   const [email, setEmail] = React.useState(seller.Email);
@@ -98,7 +100,7 @@ export const SellerProfileModal: React.FC<SellerProfileModalProps> = ({ seller, 
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-4">
-      <section role="dialog" aria-modal="true" aria-labelledby="seller-profile-title" className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-surface-200 bg-white shadow-2xl dark:border-surface-800 dark:bg-[#12161D]">
+      <section ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="seller-profile-title" tabIndex={-1} className="flex max-h-[92vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-surface-200 bg-white shadow-2xl dark:border-surface-800 dark:bg-[#12161D]">
         <header className="flex items-center justify-between border-b border-surface-200 px-5 py-4 dark:border-surface-800">
           <div><h2 id="seller-profile-title" className="font-bold text-surface-900 dark:text-white">Edit store details</h2><p className="text-xs text-surface-500 dark:text-surface-400">Changes return the store to admin review.</p></div>
           <button type="button" onClick={onClose} aria-label="Close store details" className="rounded-full p-2 text-surface-500 hover:bg-surface-100 dark:hover:bg-surface-800"><X className="h-4 w-4" /></button>

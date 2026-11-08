@@ -4,6 +4,7 @@ import { MapContainer, Marker, TileLayer, Tooltip, useMap, useMapEvents } from '
 import { Address } from '../types';
 import { api } from '../lib/api';
 import { LocateFixed, MapPin } from 'lucide-react';
+import { useLocale, type MessageKey } from '../lib/i18n';
 import 'leaflet/dist/leaflet.css';
 
 interface AccountLocationPickerProps {
@@ -49,8 +50,9 @@ function MapViewport({ center }: { center: [number, number] | null }) {
 }
 
 function LocationMap({ onAddressSelected, initialLocation }: AccountLocationPickerProps) {
+  const { t } = useLocale();
   const [marker, setMarker] = React.useState<{ lat: number; lng: number } | null>(initialLocation || null);
-  const [status, setStatus] = React.useState('Select a point on the map or use your current location.');
+  const [status, setStatus] = React.useState<MessageKey>('mapInstruction');
   const [isResolving, setIsResolving] = React.useState(false);
   const [isLocating, setIsLocating] = React.useState(false);
   const [mapCenter, setMapCenter] = React.useState<[number, number] | null>(
@@ -64,14 +66,14 @@ function LocationMap({ onAddressSelected, initialLocation }: AccountLocationPick
 
   const selectLocation = async (coordinates: { lat: number; lng: number }) => {
     setMarker(coordinates);
-    setStatus('Finding the address...');
+    setStatus('findingAddress');
     setIsResolving(true);
     onAddressSelected(null);
 
     try {
       const address = await api.reverseGeocode(coordinates.lat, coordinates.lng);
       onAddressSelected({ ...address, Latitude: coordinates.lat, Longitude: coordinates.lng });
-      setStatus('Location selected. Review the address below.');
+      setStatus('locationSelected');
     } catch (error: any) {
       onAddressSelected({
         House_Name: '',
@@ -82,7 +84,7 @@ function LocationMap({ onAddressSelected, initialLocation }: AccountLocationPick
         Latitude: coordinates.lat,
         Longitude: coordinates.lng,
       });
-      setStatus('Map pin saved. Enter the street and city manually.');
+      setStatus('mapPinSaved');
       console.error('OpenStreetMap reverse geocoding failed:', error.message);
     } finally {
       setIsResolving(false);
@@ -91,12 +93,12 @@ function LocationMap({ onAddressSelected, initialLocation }: AccountLocationPick
 
   const useCurrentLocation = () => {
     if (!navigator.geolocation) {
-      setStatus('Location access is unavailable. Select your location on the map instead.');
+      setStatus('locationUnavailable');
       return;
     }
 
     setIsLocating(true);
-    setStatus('Requesting location permission...');
+    setStatus('requestingLocation');
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
         const coordinates = { lat: coords.latitude, lng: coords.longitude };
@@ -107,10 +109,10 @@ function LocationMap({ onAddressSelected, initialLocation }: AccountLocationPick
       (error) => {
         setIsLocating(false);
         setStatus(error.code === 1
-          ? 'Location permission was denied. Allow access in your browser or select a point on the map.'
+          ? 'locationPermissionDenied'
           : error.code === 3
-            ? 'Location request timed out. Try again or select a point on the map.'
-            : 'Could not get your location. Select a point on the map instead.');
+            ? 'locationTimedOut'
+            : 'locationLookupFailed');
       },
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 }
     );
@@ -119,7 +121,7 @@ function LocationMap({ onAddressSelected, initialLocation }: AccountLocationPick
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-micro text-surface-500 dark:text-surface-400">Tap the map or use GPS. Your browser will ask before sharing location.</p>
+        <p className="text-micro text-surface-500 dark:text-surface-400">{t('mapInstruction')}</p>
         <button
           type="button"
           onClick={useCurrentLocation}
@@ -127,7 +129,7 @@ function LocationMap({ onAddressSelected, initialLocation }: AccountLocationPick
           className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-success-300 bg-white px-3 py-2 text-xs font-semibold text-success-800 hover:bg-success-50 disabled:opacity-50 dark:border-success-800 dark:bg-[#12161D] dark:text-success-300 dark:hover:bg-success-950/30"
         >
           <LocateFixed className="h-4 w-4" />
-          {isLocating ? 'Finding you...' : 'Use current location'}
+          {isLocating ? t('findingYou') : t('useCurrentLocation')}
         </button>
       </div>
       <div className="relative h-56 w-full touch-pan-x touch-pan-y overflow-hidden rounded-xl border border-surface-200 bg-surface-100 dark:border-surface-700 dark:bg-[#181F2A] sm:h-72">
@@ -136,6 +138,7 @@ function LocationMap({ onAddressSelected, initialLocation }: AccountLocationPick
           zoom={initialLocation ? 15 : 11}
           scrollWheelZoom
           className="h-full w-full"
+          aria-label={t('mapInstruction')}
         >
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>'
@@ -145,24 +148,24 @@ function LocationMap({ onAddressSelected, initialLocation }: AccountLocationPick
           <MapViewport center={mapCenter} />
           <LocationMapEvents onSelectLocation={selectLocation} />
           {marker && (
-            <Marker position={marker} icon={selectedLocationIcon}>
-              <Tooltip permanent>Selected location</Tooltip>
+            <Marker position={marker} icon={selectedLocationIcon} alt={t('selectedLocation')} title={t('selectedLocation')}>
+              <Tooltip permanent>{t('selectedLocation')}</Tooltip>
             </Marker>
           )}
         </MapContainer>
         {(isResolving || isLocating) && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/30 text-white text-xs font-semibold" role="status">
-            {isLocating ? 'Finding your location...' : 'Finding address...'}
+            {isLocating ? t('findingYourLocation') : t('findAddress')}
           </div>
         )}
       </div>
       <p
-        className={`flex items-center gap-1.5 text-micro ${status.startsWith('Location selected') || status.startsWith('Map pin saved') ? 'text-success-700 dark:text-success-300' : 'text-surface-500 dark:text-surface-400'}`}
+        className={`flex items-center gap-1.5 text-micro ${status === 'locationSelected' || status === 'mapPinSaved' ? 'text-success-700 dark:text-success-300' : 'text-surface-500 dark:text-surface-400'}`}
         role="status"
         aria-live="polite"
       >
         <MapPin className="w-3.5 h-3.5 shrink-0" />
-        {status}
+        {t(status)}
       </p>
     </div>
   );
