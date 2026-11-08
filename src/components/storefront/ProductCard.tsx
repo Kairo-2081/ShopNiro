@@ -163,7 +163,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             </span>
             {seller && (
               <span className="flex items-center gap-1 text-surface-500 dark:text-surface-400 font-medium text-micro truncate max-w-[120px] transition-colors group-hover:text-[#80734f] dark:group-hover:text-[#d0c8a5]">
-                <Store className="w-3 h-3 text-surface-400 dark:text-surface-500 shrink-0" />
+                <Store className="w-3 h-3 text-surface-500 dark:text-surface-500 shrink-0" />
                 <span className="truncate">{seller.Name}</span>
               </span>
             )}
@@ -210,7 +210,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             onClick={handleAddClick}
             className={`luxury-control min-h-9 px-3.5 rounded-full text-xs cursor-pointer ${
               isOutOfStock || isDeactivated
-                ? 'bg-surface-100 dark:bg-[#181F2A] text-surface-400 dark:text-surface-600 cursor-not-allowed'
+                ? 'bg-surface-100 dark:bg-[#181F2A] text-surface-500 dark:text-surface-600 cursor-not-allowed'
                 : justAdded
                 ? 'bg-[#77775a] text-white shadow-[0_12px_24px_rgba(86,80,57,0.3)] ring-2 ring-[#d9d3b7]/50'
                 : 'premium-button text-white'
