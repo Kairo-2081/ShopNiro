@@ -42,7 +42,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   return (
     <div className="min-h-screen text-surface-100 font-sans pb-28 transition-colors duration-200 selection:bg-[#80734f] selection:text-white">
       {/* Centered Mobile/Responsive Container matching the reference design */}
-      <div className="max-w-md sm:max-w-xl md:max-w-7xl mx-auto px-4 sm:px-6 md:px-8 pt-3 md:pt-5 pb-8 md:pb-12 space-y-6 md:space-y-8">
+      <main className="max-w-md sm:max-w-xl md:max-w-7xl mx-auto px-4 sm:px-6 md:px-8 pt-3 md:pt-5 pb-8 md:pb-12 space-y-6 md:space-y-8">
         
         {/* 1. Header / Navbar */}
         <header className="flex items-center justify-between gap-3 md:gap-4 py-2.5 rounded-full md:rounded-2xl border border-[#d0c8a5]/15 bg-[#10100f]/75 backdrop-blur-xl px-3 sm:px-4 shadow-[0_12px_32px_rgba(6,6,4,0.24)]">
@@ -93,6 +93,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <button
                 type="button"
                 onClick={onToggleTheme}
+                aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
                 className="w-9 h-9 rounded-full bg-[#161C24] border border-surface-800 text-surface-300 flex items-center justify-center hover:bg-surface-800 transition-colors shadow-2xs cursor-pointer md:hidden"
                 title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
               >
@@ -104,6 +105,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <button
               type="button"
               onClick={onEnterAsGuest}
+              aria-label="Filter catalog"
               className="w-9 h-9 rounded-full bg-[#161C24] border border-surface-800 text-surface-300 flex items-center justify-center hover:bg-surface-800 transition-colors shadow-2xs cursor-pointer"
               title="Filter Catalog"
             >
@@ -114,6 +116,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <button
               type="button"
               onClick={onOpenLogin}
+              aria-label="Sign in or manage accounts"
               className="w-10 h-10 rounded-full bg-[linear-gradient(135deg,#d0c8a5,#a99b72,#77775a)] text-white flex items-center justify-center shadow-[0_10px_25px_rgba(86,80,57,0.35)] hover:brightness-110 transition-all cursor-pointer"
               title="Sign In / Accounts"
             >
@@ -542,7 +545,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </section>
 
         {/* Browse the current catalog */}
-        <section className="rounded-3xl p-6 sm:p-7 bg-brand-600 text-white text-center space-y-3.5 shadow-2xl relative overflow-hidden animate-fade-up">
+        <section className="rounded-3xl p-6 sm:p-7 bg-brand-800 text-white text-center space-y-3.5 shadow-2xl relative overflow-hidden animate-fade-up">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 border border-white/25 text-white text-micro font-semibold tracking-wide">
             <Tag className="w-3 h-3 text-brand-200" />
             <span>ShopNiro marketplace</span>
@@ -573,7 +576,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </section>
 
         <MarketplaceClosing stats={stats} />
-      </div>
+      </main>
 
       {/* 10. Bottom Mobile Navigation Bar */}
       <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#0C1014]/95 backdrop-blur-md border-t border-surface-800/90 py-2.5 px-6 shadow-2xl md:hidden">
@@ -616,6 +619,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <button
             type="button"
             onClick={onEnterAsGuest}
+            aria-label="Browse catalog and shop"
             className="w-12 h-12 -mt-6 rounded-full bg-brand-600 text-white flex items-center justify-center shadow-lg shadow-brand-600/50 hover:bg-brand-500 transition-all cursor-pointer transform hover:scale-105"
             title="Browse Catalog & Shop"
           >
