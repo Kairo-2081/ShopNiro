@@ -807,7 +807,9 @@ dbTest('plaintext stored passwords are rejected with the same message as unknown
     const second = await request(server, '/api/payment/sslcommerz/validate', 'POST', body, fixture.customerCookie);
     assert.equal(first.status, 200, JSON.stringify(first.body));
     assert.equal(second.status, 200, JSON.stringify(second.body));
-    assert.equal(fetchMock.mock.callCount(), 1);
+    // Other tests can leave background gateway calls behind, so count only this payment's validator call.
+    const validatorCalls = fetchMock.mock.calls.filter((call) => String(call.arguments[0]).includes(`val_id=${validationId}`));
+    assert.equal(validatorCalls.length, 1);
     const finalized = await query('SELECT o.payment_status, o.payment_method, p.status FROM orders o JOIN payments p ON p.order_id = o.id WHERE o.id = $1', [order.Order_ID]);
     assert.equal(finalized.rows[0].payment_status, 'paid');
     assert.equal(finalized.rows[0].payment_method, 'bkash');

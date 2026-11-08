@@ -37,7 +37,8 @@ test('admin approves a seller, who lists a product that a customer buys and a ri
 
   await test.step('seller lists a product', async () => {
     const seller = await asRole(browser, 'seller');
-    await seller.getByRole('button', { name: 'Add New Product Listing' }).click();
+    // A seller with no products sees the first-product prompt; the header button appears after the first listing.
+    await seller.getByRole('button', { name: 'Add your first product' }).click();
     await seller.getByPlaceholder('e.g. Wireless Noise-Canceling Headphones').fill(PRODUCT.name);
     // The form's labels are not tied to their inputs, so the fields are found by type and order.
     await seller.locator('select[required]').first().selectOption({ label: 'E2E Category' });
