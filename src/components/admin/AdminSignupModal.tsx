@@ -121,7 +121,7 @@ export const AdminSignupModal: React.FC<AdminSignupModalProps> = ({
                   onChange={(e) => setUsername(e.target.value)}
                   className="w-full p-2.5 pl-8 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500 focus:ring-2 focus:ring-brand-500 focus:outline-none"
                 />
-                <User className="w-3.5 h-3.5 text-surface-400 dark:text-surface-500 absolute left-2.5 top-3" />
+                <User className="w-3.5 h-3.5 text-surface-500 dark:text-surface-500 absolute left-2.5 top-3" />
               </div>
             </div>
 
@@ -150,7 +150,7 @@ export const AdminSignupModal: React.FC<AdminSignupModalProps> = ({
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full p-2.5 pl-8 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500 focus:ring-2 focus:ring-brand-500 focus:outline-none"
                 />
-                <Mail className="w-3.5 h-3.5 text-surface-400 dark:text-surface-500 absolute left-2.5 top-3" />
+                <Mail className="w-3.5 h-3.5 text-surface-500 dark:text-surface-500 absolute left-2.5 top-3" />
               </div>
             </div>
 
@@ -165,7 +165,7 @@ export const AdminSignupModal: React.FC<AdminSignupModalProps> = ({
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full p-2.5 pl-8 pr-9 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500 focus:ring-2 focus:ring-brand-500 focus:outline-none"
                 />
-                <Lock className="w-3.5 h-3.5 text-surface-400 dark:text-surface-500 absolute left-2.5 top-3" />
+                <Lock className="w-3.5 h-3.5 text-surface-500 dark:text-surface-500 absolute left-2.5 top-3" />
                 <button
                   type="button"
                   onClick={() => setShowPasswordState(!showPasswordState)}
@@ -189,7 +189,7 @@ export const AdminSignupModal: React.FC<AdminSignupModalProps> = ({
                   onChange={(e) => setNumber(e.target.value)}
                   className="w-full p-2.5 pl-8 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500 focus:ring-2 focus:ring-brand-500 focus:outline-none"
                 />
-                <Phone className="w-3.5 h-3.5 text-surface-400 dark:text-surface-500 absolute left-2.5 top-3" />
+                <Phone className="w-3.5 h-3.5 text-surface-500 dark:text-surface-500 absolute left-2.5 top-3" />
               </div>
             </div>
 

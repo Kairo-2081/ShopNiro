@@ -7,6 +7,7 @@ import { Section } from '../Section';
 import { BarChart3, ShieldCheck, Store, FolderTree, Package, CheckCircle2, Clock, Plus, Edit, Trash2, Activity, Search, Lock, RefreshCw, ExternalLink, X, AlertCircle, Truck, RotateCcw, LifeBuoy } from 'lucide-react';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { fallbackToBrandLogo } from '../../lib/branding';
 
 const AdminOverviewAnalytics = React.lazy(() =>
   import('./AdminOverviewAnalytics').then(({ AdminOverviewAnalytics: Component }) => ({ default: Component }))
@@ -570,12 +571,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         >
                           <img
                             src={seller.Logo}
+              onError={fallbackToBrandLogo}
                             alt={seller.Name}
                             className="w-9 h-9 rounded-xl object-cover border border-brand-100 dark:border-surface-700 bg-surface-100 dark:bg-[#181F2A]"
                           />
                           <div>
                             <p className="font-semibold text-surface-900 dark:text-white">{seller.Name}</p>
-                            <p className="text-micro text-surface-400 dark:text-surface-500 font-mono">ID: {seller.Seller_ID}</p>
+                            <p className="text-micro text-surface-500 dark:text-surface-500 font-mono">ID: {seller.Seller_ID}</p>
                             <p className="text-micro text-brand-600 dark:text-brand-400">View application</p>
                           </div>
                         </button>
@@ -692,7 +694,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <div className="space-y-4">
           <div className="bg-white dark:bg-[#12161D] p-4 rounded-3xl border border-brand-100 dark:border-brand-500/20 flex flex-wrap items-center justify-between gap-4 shadow-xs">
             <div className="relative w-full sm:w-80">
-              <Search className="w-4 h-4 text-surface-400 dark:text-surface-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Search className="w-4 h-4 text-surface-500 dark:text-surface-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={sellerSearch}
@@ -748,6 +750,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <div className="flex items-center gap-3">
                           <img
                             src={seller.Logo}
+              onError={fallbackToBrandLogo}
                             alt={seller.Name}
                             className="w-10 h-10 rounded-xl object-cover bg-surface-100 dark:bg-[#181F2A] border border-brand-100 dark:border-surface-700"
                           />
@@ -757,14 +760,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             className="text-left rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                           >
                             <span className="font-bold text-surface-900 dark:text-white block">{seller.Name}</span>
-                            <span className="text-micro text-surface-400 dark:text-surface-500 font-mono block">ID: {seller.Seller_ID}</span>
+                            <span className="text-micro text-surface-500 dark:text-surface-500 font-mono block">ID: {seller.Seller_ID}</span>
                             <span className="text-micro text-brand-600 dark:text-brand-400 block">View application</span>
                           </button>
                         </div>
                       </td>
                       <td className="p-4 text-surface-700 dark:text-surface-300">
                         <p>{seller.Email}</p>
-                        <p className="text-surface-400 dark:text-surface-500">{seller.Number}</p>
+                        <p className="text-surface-500 dark:text-surface-500">{seller.Number}</p>
                       </td>
                       <td className="p-4 text-surface-600 dark:text-surface-400 max-w-xs">
                         {seller.Address.House_Name}, {seller.Address.Street}, {seller.Address.City} ({seller.Address.Postal_Code})
@@ -890,7 +893,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       ) : (
                         <div>
                           <span className="font-bold text-surface-900 dark:text-white block">{cat.Name}</span>
-                          <span className="text-micro text-surface-400 dark:text-surface-500 font-mono">ID: {cat.Category_ID} • {count} Products listed</span>
+                          <span className="text-micro text-surface-500 dark:text-surface-500 font-mono">ID: {cat.Category_ID} • {count} Products listed</span>
                         </div>
                       )}
                     </div>
@@ -924,7 +927,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               setEditingCategoryName(cat.Name);
                             }}
                             aria-label={`Edit category ${cat.Name}`}
-                            className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-surface-400 dark:text-surface-400 hover:bg-brand-500/10 hover:text-brand-500 dark:hover:text-brand-400 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
+                            className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-surface-500 dark:text-surface-400 hover:bg-brand-500/10 hover:text-brand-500 dark:hover:text-brand-400 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                             title={`Edit category ${cat.Name}`}
                           >
                             <Edit className="w-4 h-4" />
@@ -936,7 +939,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               showNotification(`Deleted category "${cat.Name}"`);
                             }}
                             aria-label={`Delete category ${cat.Name}`}
-                            className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-surface-400 dark:text-surface-400 hover:bg-danger-500/10 hover:text-danger-500 dark:hover:text-danger-400 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger-500"
+                            className="grid h-10 w-10 shrink-0 place-items-center rounded-lg text-surface-500 dark:text-surface-400 hover:bg-danger-500/10 hover:text-danger-500 dark:hover:text-danger-400 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger-500"
                             title={`Delete category ${cat.Name}`}
                           >
                             <Trash2 className="w-4 h-4" />
@@ -983,7 +986,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           />
                           <div>
                             <span className="font-bold text-surface-900 dark:text-white block">{p.Name}</span>
-                            <span className="text-micro text-surface-400 dark:text-surface-500 font-mono">ID: {p.Product_ID}</span>
+                            <span className="text-micro text-surface-500 dark:text-surface-500 font-mono">ID: {p.Product_ID}</span>
                           </div>
                         </div>
                       </td>
@@ -995,7 +998,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             ? 'bg-success-500/10 text-success-600 dark:text-success-400 border-success-500/20'
                             : p.Product_Status === 'deactivated'
                             ? 'bg-danger-500/10 text-danger-600 dark:text-danger-400 border-danger-500/20'
-                            : 'bg-surface-800 text-surface-400 border-surface-700'
+                            : 'bg-surface-800 text-surface-500 border-surface-700'
                         }`}>
                           {p.Product_Status}
                         </span>
@@ -1034,7 +1037,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white dark:bg-[#12161D] border border-brand-100 dark:border-brand-500/20 rounded-3xl p-5 shadow-xs flex flex-col justify-between">
               <div>
-                <span className="text-micro font-bold text-surface-400 dark:text-surface-500 uppercase tracking-wider block">
+                <span className="text-micro font-bold text-surface-500 dark:text-surface-500 uppercase tracking-wider block">
                   Total Order Volume
                 </span>
                 <div className="text-2xl font-black text-surface-900 dark:text-white mt-1">
@@ -1048,7 +1051,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
             <div className="bg-white dark:bg-[#12161D] border border-brand-100 dark:border-brand-500/20 rounded-3xl p-5 shadow-xs flex flex-col justify-between">
               <div>
-                <span className="text-micro font-bold text-surface-400 dark:text-surface-500 uppercase tracking-wider block">
+                <span className="text-micro font-bold text-surface-500 dark:text-surface-500 uppercase tracking-wider block">
                   bKash Transactions
                 </span>
                 <div className="text-2xl font-black text-[#E2136E] mt-1">
@@ -1062,7 +1065,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
             <div className="bg-white dark:bg-[#12161D] border border-brand-100 dark:border-brand-500/20 rounded-3xl p-5 shadow-xs flex flex-col justify-between">
               <div>
-                <span className="text-micro font-bold text-surface-400 dark:text-surface-500 uppercase tracking-wider block">
+                <span className="text-micro font-bold text-surface-500 dark:text-surface-500 uppercase tracking-wider block">
                   Cards &amp; Other MFS
                 </span>
                 <div className="text-2xl font-black text-brand-500 mt-1">
@@ -1076,7 +1079,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
             <div className="bg-white dark:bg-[#12161D] border border-brand-100 dark:border-brand-500/20 rounded-3xl p-5 shadow-xs flex flex-col justify-between">
               <div>
-                <span className="text-micro font-bold text-surface-400 dark:text-surface-500 uppercase tracking-wider block">
+                <span className="text-micro font-bold text-surface-500 dark:text-surface-500 uppercase tracking-wider block">
                   Gateway Status
                 </span>
                 <div className="text-sm font-black text-success-500 mt-1 flex items-center gap-1.5">
@@ -1131,7 +1134,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
-                  <tr className="bg-surface-50/50 dark:bg-[#161C24]/80 border-b border-brand-100 dark:border-surface-800 text-micro uppercase font-bold tracking-wider text-surface-400 dark:text-surface-500">
+                  <tr className="bg-surface-50/50 dark:bg-[#161C24]/80 border-b border-brand-100 dark:border-surface-800 text-micro uppercase font-bold tracking-wider text-surface-500 dark:text-surface-500">
                     <th className="p-4">Transaction ID (tran_id)</th>
                     <th className="p-4">Channel</th>
                     <th className="p-4">Order ID</th>
@@ -1144,7 +1147,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <tbody className="divide-y divide-brand-100/50 dark:divide-surface-800/80">
                   {filteredTransactions.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="p-8 text-center text-surface-400 dark:text-surface-500">
+                      <td colSpan={7} className="p-8 text-center text-surface-500 dark:text-surface-500">
                         {loadingTransactions ? 'Loading online payment transactions...' : paymentFilter === 'all' ? 'No online payment transactions recorded yet.' : `No ${paymentChannelLabel(paymentFilter)} transactions recorded yet.`}
                       </td>
                     </tr>
