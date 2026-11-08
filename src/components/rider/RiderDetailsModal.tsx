@@ -5,14 +5,22 @@ import { getProfileCompletion } from '../../lib/profileCompletion';
 import { prepareProfileImage } from '../../lib/profileImage';
 import { AccountLocationPicker } from '../AccountLocationPicker';
 import { ChevronLeft, ChevronRight, FileText, Image as ImageIcon, Lock, Save, X } from 'lucide-react';
-import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
-import pdfWorkerUrl from 'pdfjs-dist/legacy/build/pdf.worker.min.mjs?url';
+import type * as PdfJs from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
 
-type RiderCvDocument = Awaited<ReturnType<typeof pdfjsLib.getDocument>['promise']>;
+// pdf.js is large, so it is loaded the first time a CV is previewed, not with the rider dashboard.
+async function loadPdfJs(): Promise<typeof PdfJs> {
+  const [pdfjsLib, worker] = await Promise.all([
+    import('pdfjs-dist/legacy/build/pdf.mjs'),
+    import('pdfjs-dist/legacy/build/pdf.worker.min.mjs?url'),
+  ]);
+  pdfjsLib.GlobalWorkerOptions.workerSrc = worker.default;
+  return pdfjsLib;
+}
+
+type RiderCvDocument = Awaited<ReturnType<typeof PdfJs.getDocument>['promise']>;
 
 const RiderCvPreview: React.FC<{ url: string; onClose: () => void }> = ({ url, onClose }) => {
   useEscapeKey(onClose);
@@ -25,19 +33,24 @@ const RiderCvPreview: React.FC<{ url: string; onClose: () => void }> = ({ url, o
   const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
-    const loadingTask = pdfjsLib.getDocument(url);
     let isActive = true;
+    let destroy: (() => Promise<void>) | undefined;
     setPdfDocument(null);
     setPageNumber(1);
     setError(null);
-    loadingTask.promise.then((document) => {
-      if (isActive) setPdfDocument(document);
+    loadPdfJs().then((pdfjsLib) => {
+      if (!isActive) return undefined;
+      const loadingTask = pdfjsLib.getDocument(url);
+      destroy = () => loadingTask.destroy();
+      return loadingTask.promise;
+    }).then((document) => {
+      if (isActive && document) setPdfDocument(document);
     }).catch(() => {
       if (isActive) setError('Could not render this CV.');
     });
     return () => {
       isActive = false;
-      void loadingTask.destroy().catch(() => undefined);
+      void destroy?.().catch(() => undefined);
     };
   }, [url]);
 

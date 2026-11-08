@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Customer, Seller, Admin } from '../types';
-import { shopNiroLogo } from '../lib/branding';
+import { shopNiroLogoSmall } from '../lib/branding';
 import { OrbitGlobe } from './landing/OrbitGlobe';
 import { MarketplaceClosing, MarketplaceStat } from './MarketplaceClosing';
 import { ShoppingBag, SlidersHorizontal, User, Truck, ArrowRight, Sparkles, Users, Store, ShieldCheck, Compass, Tag, Radio, Package, Plus, Sun, Moon, Shield, BadgeCheck } from 'lucide-react';
@@ -49,7 +49,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           {/* Brand Logo & Name */}
           <div className="flex items-center gap-2.5">
             <img
-              src={shopNiroLogo}
+              src={shopNiroLogoSmall}
               alt="ShopNiro"
               className="w-10 h-10 rounded-full object-cover border border-brand-100 dark:border-surface-700 shadow-md shadow-brand-600/20"
             />
@@ -192,7 +192,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               ].map((item, index) => (
                 <div key={`${item.name}-${index}`} className={`brand-chip ${item.accent}`}>
                   <img
-                    src={shopNiroLogo}
+                    src={shopNiroLogoSmall}
                     alt=""
                     aria-hidden="true"
                     className="brand-logo logo-float"
