@@ -299,7 +299,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
       {/* Seller Store Header */}
       <div className="bg-white dark:bg-[#12161D] p-6 rounded-3xl border border-brand-100 dark:border-brand-500/20 shadow-xs space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center sm:gap-4">
+          <div className="flex min-w-0 flex-[1_1_16rem] items-start gap-3 sm:items-center sm:gap-4">
             <img
               src={currentSeller.Logo}
               alt={currentSeller.Name}
