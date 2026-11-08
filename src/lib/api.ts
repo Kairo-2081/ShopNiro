@@ -530,12 +530,14 @@ export const api = {
   },
 
   // Validate Authentication for Page Navigation & HTTP Gatekeeping
-  validateAuth: async (): Promise<{ authenticated: boolean; user?: any; role?: UserRole; entity?: any; profileComplete?: boolean; profileMissingFields?: string[] }> => {
+  validateAuth: async (options?: { throwOnNetworkError?: boolean }): Promise<{ authenticated: boolean; user?: any; role?: UserRole; entity?: any; profileComplete?: boolean; profileMissingFields?: string[] }> => {
     try {
       const res = await fetchJson<{ authenticated: boolean; user?: any; role?: UserRole; entity?: any; profileComplete?: boolean; profileMissingFields?: string[] }>('/api/auth/me', undefined, false);
       hasValidatedSession = res.authenticated;
       return res;
-    } catch {
+    } catch (error) {
+      // A connection failure says nothing about the session, so callers can ask to keep their state.
+      if (options?.throwOnNetworkError && error instanceof ApiRequestError && error.status === undefined) throw error;
       hasValidatedSession = false;
       return { authenticated: false };
     }

@@ -174,7 +174,8 @@ export default function App() {
   const validateAuthForPage = React.useCallback(async (targetTab: string) => {
     setIsValidatingAuth(true);
     try {
-      const auth = await api.validateAuth();
+      // Offline, keep the signed-in state instead of treating the failed check as a logout.
+      const auth = await api.validateAuth({ throwOnNetworkError: true });
       if (auth.authenticated && auth.role && auth.entity) {
         setIsLoggedIn(true);
         setCurrentRole(auth.role);
