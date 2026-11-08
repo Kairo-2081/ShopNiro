@@ -614,8 +614,8 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                               title={`${p.Product_Status === 'active' ? 'Pause' : 'Activate'} ${p.Name}`}
                               className={`inline-flex min-h-10 items-center justify-center px-3 py-1 rounded-full text-micro font-bold uppercase transition-all duration-200 cursor-pointer hover:-translate-y-px hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] ${
                                 p.Product_Status === 'active'
-                                  ? 'bg-success-500/15 text-success-500 border border-success-500/30'
-                                  : 'bg-surface-800 text-surface-400 border border-surface-700'
+                                  ? 'bg-success-100 text-success-700 border border-success-300 dark:bg-success-500/15 dark:text-success-300 dark:border-success-500/30'
+                                  : 'bg-surface-100 text-surface-600 border border-surface-300 dark:bg-surface-800 dark:text-surface-400 dark:border-surface-700'
                               }`}
                             >
                               {p.Product_Status}
