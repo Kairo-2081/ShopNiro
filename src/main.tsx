@@ -8,6 +8,17 @@ import { LocaleProvider } from './lib/i18n.tsx';
 import { policyByPath } from './components/legal/policies.ts';
 import './index.css';
 
+const brandFonts = document.getElementById('brand-fonts') as HTMLLinkElement | null;
+if (brandFonts) {
+  const enableBrandFonts = () => {
+    window.requestAnimationFrame(() => {
+      brandFonts.media = 'all';
+    });
+  };
+  if (brandFonts.sheet) enableBrandFonts();
+  else brandFonts.addEventListener('load', enableBrandFonts, { once: true });
+}
+
 // Suppress benign Vite dev server WebSocket HMR rejections in sandboxed preview iframe
 if (typeof window !== 'undefined') {
   window.addEventListener('unhandledrejection', (event) => {
