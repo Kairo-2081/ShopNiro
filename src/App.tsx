@@ -1394,39 +1394,47 @@ export default function App() {
 
           <div className="flex flex-wrap items-center justify-center gap-4 text-micro font-medium">
             <button
+              type="button"
+              tabIndex={0}
               onClick={() => {
                 setActiveTab('storefront');
                 scrollViewportToTop();
               }}
-              className="hover:text-brand-500 dark:hover:text-brand-400 transition-colors cursor-pointer"
+              className="hover:text-brand-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 dark:hover:text-brand-400 transition-colors cursor-pointer"
             >
               Catalog Storefront
             </button>
             <span>•</span>
             <button
+              type="button"
+              tabIndex={0}
               onClick={() => {
                 setActiveTab('orders');
                 scrollViewportToTop();
               }}
-              className="hover:text-brand-500 dark:hover:text-brand-400 transition-colors cursor-pointer"
+              className="hover:text-brand-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 dark:hover:text-brand-400 transition-colors cursor-pointer"
             >
               Order Tracking Radar
             </button>
             <span>•</span>
             <button
+              type="button"
+              tabIndex={0}
               onClick={() => {
                 setActiveTab('live-tracking');
                 scrollViewportToTop();
               }}
-              className="hover:text-brand-500 dark:hover:text-brand-400 transition-colors cursor-pointer flex items-center gap-1 font-semibold text-brand-600 dark:text-brand-400"
+              className="hover:text-brand-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 dark:hover:text-brand-400 transition-colors cursor-pointer flex items-center gap-1 font-semibold text-brand-600 dark:text-brand-400"
             >
               <Radio className="w-3 h-3 text-brand-400 animate-pulse" />
               <span>Live Delivery Tracking</span>
             </button>
             <span>•</span>
             <button
+              type="button"
+              tabIndex={0}
               onClick={() => setIsChatOpen(true)}
-              className="hover:text-brand-500 dark:hover:text-brand-400 transition-colors cursor-pointer text-brand-600 dark:text-brand-400 font-bold"
+              className="hover:text-brand-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 dark:hover:text-brand-400 transition-colors cursor-pointer text-brand-600 dark:text-brand-400 font-bold"
             >
               AI Assistant
             </button>
