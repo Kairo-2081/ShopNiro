@@ -566,7 +566,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <button
                           type="button"
                           onClick={() => setSelectedSellerId(seller.Seller_ID)}
-                          aria-label={`View ${seller.Name} application details`}
                           className="flex items-center gap-3 text-left rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                         >
                           <img
@@ -755,7 +754,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                           <button
                             type="button"
                             onClick={() => openSellerReview(seller)}
-                            aria-label={`View ${seller.Name} application details`}
                             className="text-left rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
                           >
                             <span className="font-bold text-surface-900 dark:text-white block">{seller.Name}</span>
