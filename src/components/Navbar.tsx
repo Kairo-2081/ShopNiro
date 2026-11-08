@@ -116,18 +116,23 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         <div className="flex min-h-16 flex-wrap items-center justify-between gap-2 py-2 sm:gap-3 md:flex-nowrap">
           {/* Logo & Brand matching Landing Page */}
-          <div className="order-1 flex shrink-0 items-center gap-2 cursor-pointer sm:gap-2.5 md:order-none" onClick={() => setActiveTab('storefront')}>
+          <button
+            type="button"
+            aria-label={`ShopNiro ${t('storefrontCatalog')}`}
+            onClick={() => setActiveTab('storefront')}
+            className="order-1 flex min-h-11 shrink-0 items-center gap-2 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 sm:gap-2.5 md:order-none"
+          >
             <img
               src={shopNiroLogoSmall}
               alt="ShopNiro"
               className="h-9 w-9 rounded-full object-cover border border-[#d0c8a5]/50 shadow-[0_8px_20px_rgba(169,155,114,0.24)] sm:h-10 sm:w-10"
             />
-            <div>
+            <span>
               <span className="font-display text-lg font-normal leading-none text-[#0f1f1d] dark:text-white sm:text-xl">
                 ShopNiro
               </span>
-            </div>
-          </div>
+            </span>
+          </button>
 
           {/* Navigation Links according to Active Role and Login State */}
           <nav aria-label="Primary navigation" className="order-3 flex w-full min-w-0 max-w-full flex-nowrap items-center justify-start gap-1.5 overflow-x-auto pb-1 md:order-none md:flex-1 md:justify-center md:pb-0">
@@ -135,7 +140,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             {!isLoggedIn && (
               <>
                 <button
+                  type="button"
                   onClick={() => setActiveTab('storefront')}
+                  aria-current={activeTab === 'storefront' ? 'page' : undefined}
                   className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                     activeTab === 'storefront'
                       ? 'premium-button text-white shadow-[0_12px_26px_rgba(235,127,45,0.34)]'
@@ -145,7 +152,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                   {t('storefrontCatalog')}
                 </button>
                 <button
+                  type="button"
                   onClick={() => setActiveTab('charts')}
+                  aria-current={activeTab === 'charts' ? 'page' : undefined}
                   className={`flex shrink-0 items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                     activeTab === 'charts'
                       ? 'premium-button text-white shadow-[0_12px_26px_rgba(235,127,45,0.34)]'
@@ -156,7 +165,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                   {t('topCharts')}
                 </button>
                 <button
+                  type="button"
                   onClick={() => setActiveTab('orders')}
+                  aria-current={activeTab === 'orders' ? 'page' : undefined}
                   className={`flex shrink-0 items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                     activeTab === 'orders'
                       ? 'premium-button text-white shadow-[0_12px_26px_rgba(235,127,45,0.34)]'
@@ -167,7 +178,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                   {t('myOrders')}
                 </button>
                 <button
+                  type="button"
                   onClick={() => setActiveTab('live-tracking')}
+                  aria-current={activeTab === 'live-tracking' ? 'page' : undefined}
                   className={`flex shrink-0 items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                     activeTab === 'live-tracking'
                       ? 'premium-button text-white shadow-[0_12px_26px_rgba(235,127,45,0.34)]'
@@ -178,7 +191,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                   {t('liveTracking')}
                 </button>
                 <button
+                  type="button"
                   onClick={() => setActiveTab('seller-dashboard')}
+                  aria-current={activeTab === 'seller-dashboard' ? 'page' : undefined}
                   className={`flex shrink-0 items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                     activeTab === 'seller-dashboard'
                       ? 'bg-[#77775a] text-white shadow-[0_12px_26px_rgba(86,80,57,0.3)]'
@@ -189,7 +204,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                   {t('sellerStudio')}
                 </button>
                 <button
+                  type="button"
                   onClick={() => setActiveTab('admin-dashboard')}
+                  aria-current={activeTab === 'admin-dashboard' ? 'page' : undefined}
                   className={`flex shrink-0 items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                     activeTab === 'admin-dashboard'
                       ? 'bg-[#522750] text-white shadow-[0_12px_26px_rgba(82,39,80,0.28)]'
@@ -206,7 +223,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             {isLoggedIn && currentRole === 'customer' && (
               <>
                 <button
+                  type="button"
                   onClick={() => setActiveTab('storefront')}
+                  aria-current={activeTab === 'storefront' ? 'page' : undefined}
                   className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                     activeTab === 'storefront'
                       ? 'premium-button text-white shadow-[0_12px_26px_rgba(235,127,45,0.34)]'
@@ -216,7 +235,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                   {t('storefrontCatalog')}
                 </button>
                 <button
+                  type="button"
                   onClick={() => setActiveTab('charts')}
+                  aria-current={activeTab === 'charts' ? 'page' : undefined}
                   className={`flex shrink-0 items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                     activeTab === 'charts'
                       ? 'premium-button text-white shadow-[0_12px_26px_rgba(235,127,45,0.34)]'
@@ -227,7 +248,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                   {t('topCharts')}
                 </button>
                 <button
+                  type="button"
                   onClick={() => setActiveTab('orders')}
+                  aria-current={activeTab === 'orders' ? 'page' : undefined}
                   className={`flex shrink-0 items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                     activeTab === 'orders'
                       ? 'premium-button text-white shadow-[0_12px_26px_rgba(235,127,45,0.34)]'
@@ -238,7 +261,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                   {t('myOrders')}
                 </button>
                 <button
+                  type="button"
                   onClick={() => setActiveTab('live-tracking')}
+                  aria-current={activeTab === 'live-tracking' ? 'page' : undefined}
                   className={`flex shrink-0 items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                     activeTab === 'live-tracking'
                       ? 'premium-button text-white shadow-[0_12px_26px_rgba(235,127,45,0.34)]'
@@ -249,7 +274,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                   {t('liveTracking')}
                 </button>
                 <button
+                  type="button"
                   onClick={() => setActiveTab('profile')}
+                  aria-current={activeTab === 'profile' ? 'page' : undefined}
                   className={`flex shrink-0 items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                     activeTab === 'profile'
                       ? 'premium-button text-white shadow-[0_10px_25px_rgba(235,127,45,0.35)]'
@@ -266,7 +293,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             {isLoggedIn && currentRole === 'seller' && (
               <>
                 <button
+                  type="button"
                   onClick={() => setActiveTab('seller-dashboard')}
+                  aria-current={activeTab === 'seller-dashboard' ? 'page' : undefined}
                   className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                     activeTab === 'seller-dashboard'
                       ? 'bg-[#77775a] text-white shadow-[0_12px_26px_rgba(86,80,57,0.3)]'
@@ -277,7 +306,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                   {t('sellerStudio')}
                 </button>
                 <button
+                  type="button"
                   onClick={() => setActiveTab('storefront')}
+                  aria-current={activeTab === 'storefront' ? 'page' : undefined}
                   className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                     activeTab === 'storefront'
                       ? 'bg-[#77775a] text-white shadow-[0_12px_26px_rgba(86,80,57,0.3)]'
@@ -293,7 +324,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             {isLoggedIn && currentRole === 'admin' && (
               <>
                 <button
+                  type="button"
                   onClick={() => setActiveTab('admin-dashboard')}
+                  aria-current={activeTab === 'admin-dashboard' ? 'page' : undefined}
                   className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                     activeTab === 'admin-dashboard'
                       ? 'bg-[#522750] text-white shadow-[0_12px_26px_rgba(82,39,80,0.28)]'
@@ -304,7 +337,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                   Admin Governance
                 </button>
                 <button
+                  type="button"
                   onClick={() => setActiveTab('storefront')}
+                  aria-current={activeTab === 'storefront' ? 'page' : undefined}
                   className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                     activeTab === 'storefront'
                       ? 'bg-[#522750] text-white shadow-[0_12px_26px_rgba(82,39,80,0.28)]'
@@ -318,7 +353,9 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {isLoggedIn && currentRole === 'rider' && (
               <button
+                type="button"
                 onClick={() => setActiveTab('rider-dashboard')}
+                aria-current={activeTab === 'rider-dashboard' ? 'page' : undefined}
                 className={`flex shrink-0 items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                   activeTab === 'rider-dashboard'
                     ? 'bg-success-700 text-white shadow-[0_12px_26px_rgba(5,100,70,0.24)]'
@@ -346,7 +383,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 type="button"
                 onClick={onOpenChat}
-                aria-label="Open ShopNiro AI Assistant"
+                aria-label="Ask AI: Open ShopNiro AI Assistant"
                 className="luxury-control min-h-9 items-center gap-1.5 rounded-full border border-[#d0c8a5]/25 bg-[#d0c8a5]/10 px-3 text-xs text-[#d0c8a5] hover:bg-[#d0c8a5]/15 cursor-pointer group"
                 title="Open ShopNiro AI Assistant"
               >
@@ -360,7 +397,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 type="button"
                 onClick={() => setLocale(locale === 'en' ? 'bn' : 'en')}
                 className="luxury-control min-h-11 gap-1.5 rounded-full border border-surface-200 bg-white px-3 text-xs font-semibold text-surface-800 hover:bg-surface-50 dark:border-surface-700 dark:bg-[#161C24] dark:text-surface-200 dark:hover:bg-surface-800"
-                aria-label={locale === 'en' ? 'Switch language to Bangla' : 'Switch language to English'}
+                aria-label={`${t('language')}: ${locale === 'en' ? t('switchToBangla') : t('switchToEnglish')}`}
                 title="Change language"
               >
                 <Languages className="h-4 w-4" />
@@ -371,9 +408,11 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Theme Toggle Button */}
             {onToggleTheme && (
               <button
+                type="button"
                 onClick={onToggleTheme}
                 className="luxury-control h-9 w-9 min-h-9 rounded-full bg-surface-100 dark:bg-[#161C24] text-surface-700 dark:text-surface-300 border border-surface-200 dark:border-surface-800 hover:bg-surface-200 dark:hover:bg-surface-800 cursor-pointer"
-                title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+                aria-label={theme === 'dark' ? t('changeThemeToLight') : t('changeThemeToDark')}
+                title={theme === 'dark' ? t('changeThemeToLight') : t('changeThemeToDark')}
               >
                 {theme === 'dark' ? (
                   <Sun className="w-4 h-4 text-warning-400" />
@@ -415,20 +454,19 @@ export const Navbar: React.FC<NavbarProps> = ({
                   type="button"
                   onClick={() => setIsAccountMenuOpen((open) => !open)}
                   aria-label="Open account menu"
-                  aria-haspopup="menu"
                   aria-expanded={isAccountMenuOpen}
+                  aria-controls="account-menu"
                   className="luxury-control min-h-11 gap-1.5 rounded-full border border-surface-200 bg-white px-3 text-xs font-semibold text-surface-800 hover:bg-surface-50 dark:border-surface-700 dark:bg-[#161C24] dark:text-surface-200 dark:hover:bg-surface-800"
                 >
                   <User className="h-4 w-4" />
                   <span className="hidden sm:inline">Account</span>
                 </button>
                 {isAccountMenuOpen && (
-                  <div role="menu" className="absolute right-0 top-full z-50 mt-2 w-64 rounded-xl border border-surface-200 bg-white p-3 text-surface-900 shadow-xl dark:border-surface-700 dark:bg-[#171713] dark:text-surface-100">
+                  <div id="account-menu" className="absolute right-0 top-full z-50 mt-2 w-64 rounded-xl border border-surface-200 bg-white p-3 text-surface-900 shadow-xl dark:border-surface-700 dark:bg-[#171713] dark:text-surface-100">
                     <p className="truncate text-sm font-bold">{accountName}</p>
                     {accountEmail && <p className="mt-1 break-all text-xs text-surface-700 dark:text-surface-300">{accountEmail}</p>}
                     <button
                       type="button"
-                      role="menuitem"
                       onClick={() => { setIsAccountMenuOpen(false); onLogout(); }}
                       className="mt-3 flex min-h-11 w-full items-center gap-2 rounded-lg px-3 text-left text-sm font-semibold text-danger-700 hover:bg-danger-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger-500 dark:text-danger-300 dark:hover:bg-danger-950/50"
                     >

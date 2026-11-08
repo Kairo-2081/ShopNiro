@@ -95,9 +95,10 @@ test.describe('seller dashboard profile', () => {
       await expect(page.getByText(/Authenticated as/i)).toHaveCount(0);
       await page.getByRole('button', { name: 'Open account menu' }).click();
 
-      const accountMenu = page.getByRole('menu');
+      // The account panel is a disclosure (aria-expanded and aria-controls), so it holds a plain Log out button, not a menu item.
+      const accountMenu = page.locator('#account-menu');
       await expect(accountMenu).toContainText(E2E.newSeller.email);
-      await expect(accountMenu.getByRole('menuitem', { name: /log out/i })).toHaveCount(1);
+      await expect(accountMenu.getByRole('button', { name: /log out/i })).toHaveCount(1);
     });
   });
 

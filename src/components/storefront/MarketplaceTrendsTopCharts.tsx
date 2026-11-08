@@ -8,6 +8,7 @@ import {
 } from '../../lib/api';
 import { Product } from '../../types';
 import { Star, Flame, Sparkles, ShoppingBag } from 'lucide-react';
+import { useLocale } from '../../lib/i18n';
 
 interface MarketplaceTrendsTopChartsProps {
   onSelectProduct?: (product: Product) => void;
@@ -20,6 +21,7 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
   onAddToCart,
   allProducts = [],
 }) => {
+  const { t } = useLocale();
   const [activeTab, setActiveTab] = useState<'trends' | 'top-rated' | 'new-arrivals'>('trends');
   const [trending, setTrending] = useState<TrendingProduct[]>([]);
   const [topRated, setTopRated] = useState<TopRatedProduct[]>([]);
@@ -72,10 +74,10 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-surface-100 dark:border-surface-800/80 pb-5">
         <div>
           <h2 className="text-xl sm:text-2xl font-black text-surface-900 dark:text-white flex items-center gap-2">
-            Marketplace Charts &amp; Trends
+            {t('chartTitle')}
           </h2>
           <p className="text-xs text-surface-500 dark:text-surface-400">
-            Top products ranked by lifetime units sold across all customer orders.
+            {t('chartDescription')}
           </p>
         </div>
 
@@ -84,40 +86,43 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
           <button
             type="button"
             onClick={() => setActiveTab('trends')}
+            aria-pressed={activeTab === 'trends'}
             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'trends'
                 ? 'bg-brand-600 text-white shadow-xs'
-                : 'text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white'
+                : 'bg-white text-surface-900 hover:bg-surface-50 hover:text-surface-950 dark:bg-[#12161D] dark:text-surface-100 dark:hover:bg-[#18202D] dark:hover:text-white'
             }`}
           >
             <Flame className="w-3.5 h-3.5 text-warning-300" />
-            <span>Top Trends</span>
+            <span>{t('topTrends')}</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('top-rated')}
+            aria-pressed={activeTab === 'top-rated'}
             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'top-rated'
                 ? 'bg-brand-600 text-white shadow-xs'
-                : 'text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white'
+                : 'bg-white text-surface-900 hover:bg-surface-50 hover:text-surface-950 dark:bg-[#12161D] dark:text-surface-100 dark:hover:bg-[#18202D] dark:hover:text-white'
             }`}
           >
             <Star className="w-3.5 h-3.5 text-warning-300 fill-warning-300" />
-            <span>Top Rated</span>
+            <span>{t('topRated')}</span>
           </button>
 
           <button
             type="button"
             onClick={() => setActiveTab('new-arrivals')}
+            aria-pressed={activeTab === 'new-arrivals'}
             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'new-arrivals'
                 ? 'bg-brand-600 text-white shadow-xs'
-                : 'text-surface-600 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white'
+                : 'bg-white text-surface-900 hover:bg-surface-50 hover:text-surface-950 dark:bg-[#12161D] dark:text-surface-100 dark:hover:bg-[#18202D] dark:hover:text-white'
             }`}
           >
             <Sparkles className="w-3.5 h-3.5 text-brand-300" />
-            <span>New Arrivals</span>
+            <span>{t('newArrivals')}</span>
           </button>
 
         </div>
@@ -127,9 +132,9 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
       {activeTab === 'trends' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between text-xs text-surface-500 dark:text-surface-400">
-            <span>Ranked by lifetime units sold across all accounts</span>
+            <span>{t('rankedBySales')}</span>
             <span className="font-mono text-success-600 dark:text-success-400 font-bold">
-              {trending.length} Best Sellers
+              {trending.length} {t('bestSellers')}
             </span>
           </div>
 
@@ -144,36 +149,35 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
                   {/* Top Rank Badge */}
                   <div className="flex items-center justify-between mb-2">
                     <span className="px-2 py-0.5 rounded-lg bg-warning-500/10 text-warning-600 dark:text-warning-400 text-micro font-black font-mono">
-                      #{idx + 1} BEST SELLER
+                      #{idx + 1} {t('bestSellers').toUpperCase()}
                     </span>
                     <span className="text-micro font-bold text-brand-600 dark:text-brand-400 bg-brand-100 dark:bg-brand-950/70 px-2 py-0.5 rounded-full flex items-center gap-1">
                       <ShoppingBag className="w-2.5 h-2.5" />
-                      {item.total_units_sold} sold
+                      {item.total_units_sold} {t('sold')}
                     </span>
                   </div>
 
                   {/* Product Image & Info */}
-                  <div
-                    onClick={() => fullProd && onSelectProduct && onSelectProduct(fullProd)}
-                    className="cursor-pointer space-y-2.5"
+                  <button
+                    type="button"
+                    disabled={!fullProd || !onSelectProduct}
+                    onClick={() => fullProd && onSelectProduct?.(fullProd)}
+                    aria-label={`${t('viewProduct')}: ${item.product_name}`}
+                    className="block w-full overflow-hidden rounded-xl text-left disabled:cursor-default"
                   >
-                    <div className="w-full h-36 rounded-xl overflow-hidden bg-surface-200 dark:bg-[#0C1014] relative">
-                      <img
-                        src={item.image || fullProd?.Image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400'}
-                        alt={item.product_name}
-                        referrerPolicy="no-referrer"
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    </div>
-                    <div>
-                      <span className="text-micro font-bold uppercase tracking-wider text-surface-400 dark:text-surface-500">
-                        {item.category_name}
-                      </span>
-                      <h4 className="font-bold text-xs text-surface-900 dark:text-white line-clamp-1 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
-                        {item.product_name}
-                      </h4>
-                    </div>
-                  </div>
+                    <img
+                      src={item.image || fullProd?.Image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400'}
+                      alt=""
+                      referrerPolicy="no-referrer"
+                      className="h-36 w-full rounded-xl bg-surface-200 object-cover transition-transform duration-300 group-hover:scale-105 dark:bg-[#0C1014]"
+                    />
+                    <span className="mt-2 block text-micro font-bold uppercase tracking-wider text-surface-400 dark:text-surface-400">
+                      {item.category_name}
+                    </span>
+                    <span className="block truncate text-xs font-bold text-surface-900 transition-colors group-hover:text-brand-600 dark:text-white dark:group-hover:text-brand-400">
+                      {item.product_name}
+                    </span>
+                  </button>
 
                   {/* Price & Action */}
                   <div className="mt-3 pt-2.5 border-t border-surface-200/60 dark:border-surface-800/80 flex items-center justify-between">
@@ -181,7 +185,7 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
                       <span className="text-sm font-black text-surface-900 dark:text-white">
                         {formatCurrency(Number(item.price))}
                       </span>
-                      <span className="block text-micro text-surface-400 dark:text-surface-500">
+                      <span className="block text-micro text-surface-400 dark:text-surface-400">
                         {item.available_stock <= 0 ? 'Stock Out' : `Stock: ${item.available_stock}`}
                       </span>
                     </div>
@@ -191,6 +195,7 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
                         type="button"
                         disabled={item.available_stock <= 0 || Number(fullProd.Stock) <= 0 || fullProd.Product_Status !== 'active'}
                         onClick={() => onAddToCart(fullProd, 1)}
+                        aria-label={item.available_stock <= 0 || Number(fullProd.Stock) <= 0 ? `${item.product_name}: Out of stock` : `${t('addToCart')}: ${item.product_name}`}
                         className="p-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white transition-all shadow-xs cursor-pointer disabled:bg-surface-200 disabled:text-brand-900 disabled:cursor-not-allowed dark:disabled:bg-surface-800 dark:disabled:text-brand-200"
                         title={item.available_stock <= 0 || Number(fullProd.Stock) <= 0 ? 'Out of stock' : 'Add to cart'}
                       >
@@ -232,27 +237,26 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
                     </span>
                   </div>
 
-                  <div
-                    onClick={() => fullProd && onSelectProduct && onSelectProduct(fullProd)}
-                    className="cursor-pointer space-y-2.5"
+                  <button
+                    type="button"
+                    disabled={!fullProd || !onSelectProduct}
+                    onClick={() => fullProd && onSelectProduct?.(fullProd)}
+                    aria-label={`${t('viewProduct')}: ${item.product_name}`}
+                    className="block w-full overflow-hidden rounded-xl text-left disabled:cursor-default"
                   >
-                    <div className="w-full h-36 rounded-xl overflow-hidden bg-surface-200 dark:bg-[#0C1014] relative">
-                      <img
-                        src={item.image || fullProd?.Image || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400'}
-                        alt={item.product_name}
-                        referrerPolicy="no-referrer"
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    </div>
-                    <div>
-                      <span className="text-micro font-bold uppercase tracking-wider text-surface-400 dark:text-surface-500">
-                        {item.category_name} • {item.seller_name}
-                      </span>
-                      <h4 className="font-bold text-xs text-surface-900 dark:text-white line-clamp-1 group-hover:text-warning-500 transition-colors">
-                        {item.product_name}
-                      </h4>
-                    </div>
-                  </div>
+                    <img
+                      src={item.image || fullProd?.Image || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400'}
+                      alt=""
+                      referrerPolicy="no-referrer"
+                      className="h-36 w-full rounded-xl bg-surface-200 object-cover transition-transform duration-300 group-hover:scale-105 dark:bg-[#0C1014]"
+                    />
+                    <span className="mt-2 block truncate text-micro font-bold uppercase tracking-wider text-surface-400 dark:text-surface-400">
+                      {item.category_name} • {item.seller_name}
+                    </span>
+                    <span className="block truncate text-xs font-bold text-surface-900 transition-colors group-hover:text-warning-500 dark:text-white">
+                      {item.product_name}
+                    </span>
+                  </button>
 
                   <div className="mt-3 pt-2.5 border-t border-surface-200/60 dark:border-surface-800/80 flex items-center justify-between">
                     <div>
@@ -266,6 +270,7 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
                         type="button"
                         disabled={Number(fullProd.Stock) <= 0 || fullProd.Product_Status !== 'active'}
                         onClick={() => onAddToCart(fullProd, 1)}
+                        aria-label={Number(fullProd.Stock) <= 0 ? `${item.product_name}: Out of stock` : `${t('addToCart')}: ${item.product_name}`}
                         className="p-2 rounded-xl bg-warning-500 hover:bg-warning-400 text-white transition-all shadow-xs cursor-pointer disabled:bg-surface-200 disabled:text-brand-900 disabled:cursor-not-allowed dark:disabled:bg-surface-800 dark:disabled:text-brand-200"
                         title={Number(fullProd.Stock) <= 0 ? 'Out of stock' : 'Add to cart'}
                       >
@@ -307,29 +312,29 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
                     </span>
                   </div>
 
-                  <div
+                  <button
+                    type="button"
                     onClick={() => onSelectProduct?.(product)}
-                    className="cursor-pointer space-y-2.5"
+                    aria-label={`${t('viewProduct')}: ${product.Name}`}
+                    className="block w-full overflow-hidden rounded-xl text-left"
                   >
-                    <div className="w-full h-36 rounded-xl overflow-hidden bg-surface-200 dark:bg-[#0C1014] relative">
-                      <img
-                        src={product.Image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400'}
-                        alt={product.Name}
-                        referrerPolicy="no-referrer"
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    </div>
-                    <h4 className="font-bold text-xs text-surface-900 dark:text-white line-clamp-1 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
+                    <img
+                      src={product.Image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400'}
+                      alt=""
+                      referrerPolicy="no-referrer"
+                      className="h-36 w-full rounded-xl bg-surface-200 object-cover transition-transform duration-300 group-hover:scale-105 dark:bg-[#0C1014]"
+                    />
+                    <span className="mt-2 block truncate text-xs font-bold text-surface-900 transition-colors group-hover:text-brand-600 dark:text-white dark:group-hover:text-brand-400">
                       {product.Name}
-                    </h4>
-                  </div>
+                    </span>
+                  </button>
 
                   <div className="mt-3 pt-2.5 border-t border-surface-200/60 dark:border-surface-800/80 flex items-center justify-between">
                     <div>
                       <span className="text-sm font-black text-surface-900 dark:text-white">
                         {formatCurrency(Number(product.Price))}
                       </span>
-                      <span className="block text-micro text-surface-400 dark:text-surface-500">
+                      <span className="block text-micro text-surface-400 dark:text-surface-400">
                         {Number(product.Stock) <= 0 ? 'Stock Out' : `Stock: ${product.Stock}`}
                       </span>
                     </div>
@@ -339,6 +344,7 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
                         type="button"
                         disabled={Number(product.Stock) <= 0}
                         onClick={() => onAddToCart(product, 1)}
+                        aria-label={Number(product.Stock) <= 0 ? `${product.Name}: Out of stock` : `${t('addToCart')}: ${product.Name}`}
                         className="p-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white transition-all shadow-xs cursor-pointer disabled:bg-surface-200 disabled:text-brand-900 disabled:cursor-not-allowed dark:disabled:bg-surface-800 dark:disabled:text-brand-200"
                         title={Number(product.Stock) <= 0 ? 'Out of stock' : 'Add to cart'}
                       >

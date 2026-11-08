@@ -2,6 +2,7 @@ import React from 'react';
 import { Customer, Address } from '../../types';
 import { User, Mail, Phone, MapPin, Save, CheckCircle2 } from 'lucide-react';
 import { AccountLocationPicker } from '../AccountLocationPicker';
+import { useLocale } from '../../lib/i18n';
 
 interface CustomerProfileProps {
   currentCustomer: Customer;
@@ -9,6 +10,7 @@ interface CustomerProfileProps {
 }
 
 export const CustomerProfile: React.FC<CustomerProfileProps> = ({ currentCustomer, onUpdateCustomer }) => {
+  const { t } = useLocale();
   const [name, setName] = React.useState(currentCustomer.Name);
   const [email, setEmail] = React.useState(currentCustomer.Email);
   const [number, setNumber] = React.useState(currentCustomer.Number);
@@ -58,7 +60,7 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ currentCustome
     e.preventDefault();
     if (isResolvingLocation) return;
     if (!hasMapLocation) {
-      setProfileError('Select your shipping location on the map before saving.');
+      setProfileError(t('chooseShippingLocation'));
       return;
     }
     setProfileError(null);
@@ -81,7 +83,7 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ currentCustome
             {currentCustomer.Name.charAt(0)}
           </div>
           <div>
-            <h1 className="text-xl font-black text-surface-900 dark:text-white">Customer Account &amp; Address</h1>
+            <h1 className="text-xl font-black text-surface-900 dark:text-white">{t('customerAccountAddress')}</h1>
             <p className="text-xs text-surface-500 dark:text-surface-400 font-mono">ID: {currentCustomer.Customer_ID}</p>
           </div>
         </div>
@@ -90,7 +92,7 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ currentCustome
       {savedSuccess && (
         <div className="p-4 bg-success-50 text-success-700 dark:bg-success-950/60 dark:text-success-300 rounded-3xl text-xs font-semibold flex items-center gap-2 border border-success-500/20 shadow-md">
           <CheckCircle2 className="w-5 h-5 text-success-500" />
-          Profile and Address details saved successfully!
+          {t('profileSaved')}
         </div>
       )}
 
@@ -101,16 +103,17 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ currentCustome
         <div className="space-y-4">
           <h3 className="text-sm font-bold text-surface-900 dark:text-white flex items-center gap-2 border-b border-surface-100 dark:border-surface-800 pb-3">
             <User className="w-4 h-4 text-brand-600 dark:text-brand-400" />
-            Personal Contact Information
+            {t('personalContact')}
           </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
             <div>
-              <label className="block text-surface-600 dark:text-surface-400 mb-1 font-medium">Full Name</label>
+              <label htmlFor="customer-profile-name" className="block text-surface-600 dark:text-surface-400 mb-1 font-medium">{t('fullName')}</label>
               <div className="relative">
                 <User className="w-4 h-4 text-surface-400 dark:text-surface-500 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
+                  id="customer-profile-name"
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -120,11 +123,12 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ currentCustome
             </div>
 
             <div>
-              <label className="block text-surface-600 dark:text-surface-400 mb-1 font-medium">Email Address</label>
+              <label htmlFor="customer-profile-email" className="block text-surface-600 dark:text-surface-400 mb-1 font-medium">{t('emailAddress')}</label>
               <div className="relative">
                 <Mail className="w-4 h-4 text-surface-400 dark:text-surface-500 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="email"
+                  id="customer-profile-email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -134,11 +138,14 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ currentCustome
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-surface-600 dark:text-surface-400 mb-1 font-medium">Phone Number</label>
+              <label htmlFor="customer-profile-phone" className="block text-surface-600 dark:text-surface-400 mb-1 font-medium">{t('phoneNumber')}</label>
               <div className="relative">
                 <Phone className="w-4 h-4 text-surface-400 dark:text-surface-500 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
-                  type="text"
+                  type="tel"
+                  id="customer-profile-phone"
+                  inputMode="tel"
+                  autoComplete="tel"
                   required
                   value={number}
                   onChange={(e) => setNumber(e.target.value)}
@@ -153,7 +160,7 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ currentCustome
         <div className="space-y-4 pt-4 border-t border-surface-100 dark:border-surface-800">
           <h3 className="text-sm font-bold text-surface-900 dark:text-white flex items-center gap-2 border-b border-surface-100 dark:border-surface-800 pb-3">
               <MapPin className="w-4 h-4 text-brand-600 dark:text-brand-400" />
-              Default Shipping Destination
+              {t('defaultShipping')}
           </h3>
 
           <div id="customer-profile-location-picker" className="space-y-2">
@@ -180,9 +187,11 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ currentCustome
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
             <div>
-              <label className="block text-surface-600 dark:text-surface-400 mb-1 font-medium">House / Apartment / Unit</label>
+              <label htmlFor="customer-profile-house" className="block text-surface-600 dark:text-surface-400 mb-1 font-medium">{t('houseApartment')}</label>
               <input
                 type="text"
+                id="customer-profile-house"
+                autoComplete="address-line2"
                 required
                 value={address.House_Name}
                 onChange={(e) => setAddress({ ...address, House_Name: e.target.value })}
@@ -191,9 +200,11 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ currentCustome
             </div>
 
             <div>
-              <label className="block text-surface-600 dark:text-surface-400 mb-1 font-medium">Street Name</label>
+              <label htmlFor="customer-profile-street" className="block text-surface-600 dark:text-surface-400 mb-1 font-medium">{t('streetName')}</label>
               <input
                 type="text"
+                id="customer-profile-street"
+                autoComplete="street-address"
                 required
                 value={address.Street}
                 onChange={(e) => updateLocationText('Street', e.target.value)}
@@ -202,9 +213,11 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ currentCustome
             </div>
 
             <div>
-              <label className="block text-surface-600 dark:text-surface-400 mb-1 font-medium">City</label>
+              <label htmlFor="customer-profile-city" className="block text-surface-600 dark:text-surface-400 mb-1 font-medium">{t('city')}</label>
               <input
                 type="text"
+                id="customer-profile-city"
+                autoComplete="address-level2"
                 required
                 value={address.City}
                 onChange={(e) => updateLocationText('City', e.target.value)}
@@ -213,9 +226,11 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ currentCustome
             </div>
 
             <div>
-              <label className="block text-surface-600 dark:text-surface-400 mb-1 font-medium">Postal / ZIP Code</label>
+              <label htmlFor="customer-profile-postal" className="block text-surface-600 dark:text-surface-400 mb-1 font-medium">{t('postalCode')}</label>
               <input
                 type="text"
+                id="customer-profile-postal"
+                autoComplete="postal-code"
                 required
                 value={address.Postal_Code}
                 onChange={(e) => setAddress({ ...address, Postal_Code: e.target.value })}
@@ -224,9 +239,10 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ currentCustome
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-surface-600 dark:text-surface-400 mb-1 font-medium">Delivery Notes / Landmarks</label>
+              <label htmlFor="customer-profile-notes" className="block text-surface-600 dark:text-surface-400 mb-1 font-medium">{t('deliveryNotes')}</label>
               <input
                 type="text"
+                id="customer-profile-notes"
                 value={address.Additional_Info}
                 onChange={(e) => setAddress({ ...address, Additional_Info: e.target.value })}
                 className="w-full p-2.5 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 text-surface-900 dark:text-white"
@@ -242,7 +258,7 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ currentCustome
             className="flex items-center gap-2 px-6 py-3 bg-brand-600 hover:bg-brand-500 text-white font-bold rounded-full text-xs shadow-lg shadow-brand-600/30 transition-all cursor-pointer transform hover:-translate-y-0.5"
           >
             <Save className="w-4 h-4" />
-            <span>Save Profile &amp; Address</span>
+            <span>{t('saveProfileAddress')}</span>
           </button>
         </div>
       </form>

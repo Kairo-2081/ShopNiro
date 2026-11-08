@@ -73,6 +73,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               <button
                 key={pay}
                 type="button"
+                aria-label={pay}
                 className="pay-pill flex-1 py-2 px-2 rounded-full border border-surface-200 dark:border-surface-700 bg-white dark:bg-[#1C2430] text-micro font-bold text-surface-700 dark:text-surface-200 hover:border-surface-300 dark:hover:border-surface-600 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/20"
               >
                 {pay}
@@ -87,14 +88,15 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
             <div className="w-8 h-8 rounded-full bg-brand-600/10 dark:bg-brand-950 flex items-center justify-center text-brand-600 dark:text-brand-400">
               <ShoppingCart className="w-4 h-4" />
             </div>
-            <h2 id="cart-drawer-title" className="font-bold text-surface-900 dark:text-white text-base">Your Cart</h2>
+            <h2 id="cart-drawer-title" className="font-bold text-surface-900 dark:text-white text-base">{t('cartTitle')}</h2>
             <span className="bg-brand-100 dark:bg-brand-950 text-brand-700 dark:text-brand-300 text-xs font-bold px-2.5 py-0.5 rounded-full border border-brand-200 dark:border-brand-900">
               {cartItems.length}
             </span>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            aria-label="Close cart"
+            aria-label={t('closeCart')}
             className="grid h-11 w-11 place-items-center rounded-full text-surface-600 hover:text-surface-900 dark:text-surface-300 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/20"
           >
             <X className="w-5 h-5" />
@@ -162,7 +164,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                         <button
                           type="button"
                           onClick={() => onUpdateQuantity(item.Cart_ID, item.Quantity - 1)}
-                          aria-label={`Decrease ${product.Name} quantity`}
+                          aria-label={`${t('decreaseQuantity')} ${product.Name}`}
                           className="px-2.5 py-0.5 hover:bg-surface-100 dark:hover:bg-surface-800 text-surface-600 dark:text-surface-300 font-bold cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/20"
                         >
                           <Minus className="w-3 h-3" />
@@ -173,7 +175,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                         <button
                           type="button"
                           onClick={() => onUpdateQuantity(item.Cart_ID, item.Quantity + 1)}
-                          aria-label={`Increase ${product.Name} quantity`}
+                          aria-label={`${t('increaseQuantity')} ${product.Name}`}
                           disabled={item.Quantity >= Number(product.Stock)}
                           className="px-2.5 py-0.5 hover:bg-surface-100 dark:hover:bg-surface-800 disabled:opacity-40 disabled:cursor-not-allowed text-surface-600 dark:text-surface-300 font-bold cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/20"
                         >
@@ -184,9 +186,9 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                       <button
                         type="button"
                         onClick={() => onRemoveItem(item.Cart_ID)}
-                        aria-label={`Remove ${product.Name} from cart`}
+                        aria-label={`${t('removeFromCart')}: ${product.Name}`}
                         className="text-surface-400 hover:text-danger-500 transition-colors p-1 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/20"
-                        title="Remove Item"
+                        title={t('remove')}
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -207,16 +209,16 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
           <div className="p-6 border-t border-surface-100 dark:border-surface-800 bg-surface-50/50 dark:bg-[#161C24]/80 space-y-4">
             <div className="space-y-2 text-xs">
               <div className="flex justify-between text-surface-600 dark:text-surface-400">
-                <span>Subtotal</span>
+                <span>{t('subtotal')}</span>
                 <span className="font-semibold text-surface-900 dark:text-white">
                   {formatCurrency(subtotal)}
                 </span>
               </div>
               <div className="flex justify-between text-surface-600 dark:text-surface-400">
-                <span>Shipping Fee</span>
+                <span>{t('shippingFee')}</span>
                 <span className="font-semibold text-surface-900 dark:text-white">
                   {shippingFee === 0 ? (
-                    <strong className="text-success-500 font-bold">FREE</strong>
+                    <strong className="text-success-500 font-bold">{t('free')}</strong>
                   ) : (
                     formatCurrency(shippingFee)
                   )}
@@ -225,7 +227,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               {subtotal > 0 && subtotal < freeShippingThreshold && (
                 <div className="space-y-2 pt-1">
                   <div className="flex items-center justify-between text-micro text-surface-500 dark:text-surface-400">
-                    <span>Free shipping progress</span>
+                    <span>{t('freeShippingProgress')}</span>
                     <span>{Math.min(100, Math.round((subtotal / freeShippingThreshold) * 100))}%</span>
                   </div>
                   <div className="h-2 w-full rounded-full bg-surface-200 dark:bg-surface-800 overflow-hidden">
@@ -235,12 +237,12 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
                     />
                   </div>
                   <p className="text-micro text-surface-500 dark:text-surface-400 italic">
-                    Add {formatCurrency(freeShippingThreshold - subtotal)} more for free shipping!
+                    {formatCurrency(freeShippingThreshold - subtotal)} {t('addForFreeShipping')}!
                   </p>
                 </div>
               )}
               <div className="pt-2 border-t border-surface-200 dark:border-surface-700 flex justify-between text-sm font-bold text-surface-900 dark:text-white">
-                <span>Total Amount</span>
+                <span>{t('total')}</span>
                 <span className="text-brand-600 dark:text-brand-400 text-base font-black">
                   {formatCurrency(total)}
                 </span>
@@ -255,13 +257,13 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               }}
               className="w-full py-3.5 px-4 bg-brand-600 hover:bg-brand-500 text-white font-bold rounded-full shadow-lg shadow-brand-600/30 flex items-center justify-center gap-2 transition-all active:scale-98 text-sm cursor-pointer"
             >
-              <span>Proceed to Checkout</span>
+              <span>{t('proceedToCheckout')}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
 
             <div className="flex items-center justify-center gap-1.5 text-micro text-surface-400 dark:text-surface-500">
               <ShieldCheck className="w-3.5 h-3.5 text-success-500" />
-              <span>Encrypted Checkout &amp; Order Guarantee</span>
+              <span>{t('secureCheckout')}</span>
             </div>
           </div>
         )}

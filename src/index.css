@@ -81,6 +81,7 @@
   --shopniro-teal: #77775a;
   --shopniro-teal-deep: #555541;
   --shopniro-forest: #101010;
+  --focus-ring: #57523b;
   --shopniro-surface: rgba(20, 20, 17, 0.84);
   --shopniro-card: rgba(24, 24, 20, 0.82);
   --shopniro-card-soft: rgba(231, 229, 214, 0.06);
@@ -92,6 +93,7 @@
   color-scheme: dark;
   --bg: #10100f;
   --fg: #f4f3ec;
+  --focus-ring: #e7e5d6;
 }
 
 @layer base {
@@ -131,8 +133,10 @@
   a:focus-visible,
   input:focus-visible,
   select:focus-visible,
-  textarea:focus-visible {
-    outline: 2px solid var(--shopniro-amber);
+  textarea:focus-visible,
+  summary:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 2px solid var(--focus-ring) !important;
     outline-offset: 3px;
   }
 
@@ -690,12 +694,22 @@ html body > * {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    transform: none !important;
-    scroll-behavior: auto !important;
+  html {
+    scroll-behavior: auto;
+  }
+
+  .animate-fade-up,
+  .animate-bounce,
+  .animate-ping,
+  .animate-pulse,
+  .animate-spin,
+  .hero-glow,
+  .hero-orbit-wrap,
+  .floating-badge,
+  .brand-chip,
+  .logo-float,
+  .premium-skeleton::after {
+    animation: none !important;
   }
 }
 

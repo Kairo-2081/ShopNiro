@@ -43,7 +43,7 @@ export async function seedCart(lines: Record<string, number>) {
 }
 
 export async function openCheckout(page: Page) {
-  const proceed = page.getByRole('button', { name: /Proceed to Checkout/ });
+  const proceed = page.getByRole('button', { name: /Proceed to checkout/i });
   const cartDrawer = page.getByRole('dialog', { name: /Your Cart/ });
   // Adding an item opens the drawer by itself, but its lines arrive with a request of their own. Locally that is instant;
   // on a remote host it can take over a second, so the button may not be there yet.

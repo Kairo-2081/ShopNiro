@@ -3,6 +3,7 @@ import { Banknote, CheckCircle2, Package, RotateCcw, X, XCircle } from 'lucide-r
 import { formatBDT } from '../../lib/api';
 import type { Order } from '../../types';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { useLocale } from '../../lib/i18n';
 
 export type PaymentResultStatus = 'paid' | 'failed' | 'cancelled';
 
@@ -50,6 +51,7 @@ const paymentMethodLabels: Record<string, string> = {
 };
 
 export const PaymentResultModal: React.FC<PaymentResultModalProps> = ({ status, orderId, order, onAction }) => {
+  const { t } = useLocale();
   const dialogRef = useFocusTrap<HTMLDivElement>(true);
   const presentation = presentations[status];
   const Icon = presentation.Icon;
@@ -57,6 +59,13 @@ export const PaymentResultModal: React.FC<PaymentResultModalProps> = ({ status, 
   const paymentMethod = order?.Payment_Method || 'sslcommerz';
   const paymentMethodLabel = paymentMethodLabels[paymentMethod] || paymentMethod.replaceAll('_', ' ');
   const total = order ? Number(order.Subtotal) + Number(order.Shipping_Fee) : null;
+  const title = status === 'paid' ? t('paymentCompleteTitle') : status === 'failed' ? t('paymentFailedTitle') : t('paymentCancelledTitle');
+  const description = status === 'paid'
+    ? t('paymentCompleteDescription')
+    : status === 'failed'
+      ? t('paymentFailedDescription')
+      : t('paymentCancelledDescription');
+  const action = status === 'paid' ? t('viewOrderAction') : status === 'failed' ? t('tryAgainAction') : t('chooseCashAction');
 
   return (
     <div className="fixed inset-0 z-[60] grid place-items-center overflow-y-auto bg-black/75 p-4 backdrop-blur-xs">
@@ -72,24 +81,24 @@ export const PaymentResultModal: React.FC<PaymentResultModalProps> = ({ status, 
           <Icon aria-hidden="true" className="h-7 w-7" />
         </div>
         <h1 id="payment-result-title" className="mt-4 text-center text-2xl font-bold text-surface-900 dark:text-white">
-          {presentation.title}
+          {title}
         </h1>
         <p className="mx-auto mt-2 max-w-sm text-center text-sm leading-6 text-surface-600 dark:text-surface-300">
-          {presentation.description}
+          {description}
         </p>
 
         <dl className="mt-6 space-y-3 rounded-xl border border-surface-200 bg-surface-50 p-4 text-sm dark:border-surface-800 dark:bg-[#181F2A]">
           <div className="flex items-start justify-between gap-4">
-            <dt className="text-surface-500 dark:text-surface-400">Order number</dt>
+            <dt className="text-surface-500 dark:text-surface-400">{t('orderNumber')}</dt>
             <dd className="break-all text-right font-mono font-semibold text-surface-900 dark:text-white">{orderId}</dd>
           </div>
           <div className="flex items-start justify-between gap-4">
-            <dt className="text-surface-500 dark:text-surface-400">Payment method</dt>
+            <dt className="text-surface-500 dark:text-surface-400">{t('paymentMethodLabel')}</dt>
             <dd className="text-right font-semibold text-surface-900 dark:text-white">{paymentMethodLabel}</dd>
           </div>
           {total !== null && (
             <div className="flex items-start justify-between gap-4 border-t border-surface-200 pt-3 dark:border-surface-700">
-              <dt className="font-semibold text-surface-700 dark:text-surface-300">Amount</dt>
+              <dt className="font-semibold text-surface-700 dark:text-surface-300">{t('amount')}</dt>
               <dd className="font-bold tabular-nums text-surface-900 dark:text-white">{formatBDT(total)}</dd>
             </div>
           )}
@@ -101,7 +110,7 @@ export const PaymentResultModal: React.FC<PaymentResultModalProps> = ({ status, 
           className="mt-6 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-brand-700 px-5 py-3 text-sm font-bold text-white transition-colors hover:bg-brand-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
         >
           <ActionIcon aria-hidden="true" className="h-4 w-4" />
-          {presentation.action}
+          {action}
         </button>
       </div>
     </div>

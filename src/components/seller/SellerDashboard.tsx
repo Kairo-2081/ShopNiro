@@ -24,6 +24,7 @@ import {
   X,
 } from 'lucide-react';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
 
 const compactSellerValue = (value: number) => value >= 1000 ? `${(value / 1000).toFixed(1)}k` : String(Math.round(value));
 interface SellerDashboardProps {
@@ -68,6 +69,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
   const [productToDelete, setProductToDelete] = React.useState<Product | null>(null);
   const [isDeletingProduct, setIsDeletingProduct] = React.useState(false);
   useEscapeKey(() => { if (!isDeletingProduct) setProductToDelete(null); }, Boolean(productToDelete));
+  const deleteDialogRef = useFocusTrap<HTMLElement>(Boolean(productToDelete));
   const [deleteProductError, setDeleteProductError] = React.useState('');
   const [restockingProductId, setRestockingProductId] = React.useState<string | null>(null);
   const [restockQuantity, setRestockQuantity] = React.useState('');
@@ -887,7 +889,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
 
       {productToDelete && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/65 p-4 backdrop-blur-sm" onClick={(event) => { if (event.target === event.currentTarget && !isDeletingProduct) setProductToDelete(null); }}>
-          <section role="dialog" aria-modal="true" aria-labelledby="delete-product-title" className="premium-surface w-full max-w-md space-y-4 rounded-xl p-5 shadow-2xl">
+          <section ref={deleteDialogRef} role="dialog" aria-modal="true" aria-labelledby="delete-product-title" tabIndex={-1} className="premium-surface w-full max-w-md space-y-4 rounded-xl p-5 shadow-2xl">
             <div>
               <h2 id="delete-product-title" className="text-base font-bold text-surface-900 dark:text-white">Delete {productToDelete.Name}?</h2>
               <p className="mt-2 text-sm text-surface-600 dark:text-surface-300">Orders already placed keep their copy.</p>

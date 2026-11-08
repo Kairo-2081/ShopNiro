@@ -67,7 +67,7 @@ export const MarketplaceClosing: React.FC<MarketplaceClosingProps> = ({ stats })
 
     <div className="min-w-0 flex-1 space-y-4">
       <div>
-        <p className="text-micro font-bold tracking-[0.16em] uppercase text-[#77775a] dark:text-[#d0c8a5]">
+        <p className="text-micro font-bold tracking-[0.16em] uppercase text-brand-900 dark:text-brand-200">
           ShopNiro
         </p>
         <h2 className="mt-1 text-2xl sm:text-3xl text-surface-900 dark:text-white">
@@ -82,7 +82,7 @@ export const MarketplaceClosing: React.FC<MarketplaceClosingProps> = ({ stats })
             className={`min-w-0 px-2 first:pl-0 ${index > 0 ? 'border-l border-[#d0c8a5]/25' : ''}`}
           >
             <AnimatedStat stat={stat} index={index} />
-            <dt className="mt-1.5 text-micro sm:text-xs leading-snug text-surface-600 dark:text-surface-400">
+            <dt className="mt-1.5 text-micro sm:text-xs leading-snug text-surface-900 dark:text-surface-300">
               {stat.label}
             </dt>
           </div>

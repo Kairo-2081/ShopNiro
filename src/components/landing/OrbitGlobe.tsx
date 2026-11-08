@@ -11,9 +11,20 @@ export const OrbitGlobe: React.FC<OrbitGlobeProps> = ({ onGreet }) => {
   const [dragStartX, setDragStartX] = useState<number>(0);
   const [isWaving, setIsWaving] = useState<boolean>(false);
   const [greetingText, setGreetingText] = useState<string | null>(null);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(() =>
+    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
+
+  useEffect(() => {
+    const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const updatePreference = () => setPrefersReducedMotion(preference.matches);
+    preference.addEventListener('change', updatePreference);
+    return () => preference.removeEventListener('change', updatePreference);
+  }, []);
 
   // Rotation animation loop
   useEffect(() => {
+    if (prefersReducedMotion) return;
     let animationFrameId: number;
     const animate = () => {
       if (!isDragging) {
@@ -23,7 +34,7 @@ export const OrbitGlobe: React.FC<OrbitGlobeProps> = ({ onGreet }) => {
     };
     animationFrameId = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(animationFrameId);
-  }, [isDragging]);
+  }, [isDragging, prefersReducedMotion]);
 
   // Render planet on canvas
   useEffect(() => {
@@ -242,7 +253,7 @@ export const OrbitGlobe: React.FC<OrbitGlobeProps> = ({ onGreet }) => {
     <div className="relative flex flex-col items-center justify-center select-none py-2">
       {/* Speech Bubble when greeted */}
       {greetingText && (
-        <div className="absolute top-2 z-20 px-3.5 py-1.5 rounded-full bg-white dark:bg-surface-900 border border-brand-200 dark:border-brand-800 text-brand-600 dark:text-brand-300 font-semibold text-xs shadow-lg animate-bounce">
+        <div role="status" className="absolute top-2 z-20 px-3.5 py-1.5 rounded-full bg-white dark:bg-surface-900 border border-brand-200 dark:border-brand-800 text-brand-600 dark:text-brand-300 font-semibold text-xs shadow-lg animate-bounce">
           {greetingText}
         </div>
       )}
@@ -250,15 +261,17 @@ export const OrbitGlobe: React.FC<OrbitGlobeProps> = ({ onGreet }) => {
       {/* Interactive 3D Canvas */}
       <canvas
         ref={canvasRef}
+        aria-hidden="true"
         width={300}
         height={240}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
         onPointerLeave={handlePointerUp}
         onClick={handleGlobeClick}
         className="cursor-grab active:cursor-grabbing touch-none transition-transform hover:scale-102"
-        title="Drag to rotate, click to greet courier"
+        title="Drag to rotate the globe"
       />
 
       {/* Pill Badge Instruction */}
@@ -267,7 +280,7 @@ export const OrbitGlobe: React.FC<OrbitGlobeProps> = ({ onGreet }) => {
         onClick={handleGlobeClick}
         className="mt-1 inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-brand-50 dark:bg-brand-950/40 border border-brand-200/80 dark:border-brand-800/80 text-brand-700 dark:text-brand-300 text-micro font-medium tracking-wide shadow-2xs hover:bg-brand-100 dark:hover:bg-brand-900/50 transition-colors cursor-pointer"
       >
-        <span>🤏 Drag to rotate • Tap to greet</span>
+        <span>Drag to rotate. Activate to greet the courier.</span>
       </button>
     </div>
   );
