@@ -197,7 +197,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   className={`flex shrink-0 items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                     activeTab === 'seller-dashboard'
                       ? 'bg-[#77775a] text-white shadow-[0_12px_26px_rgba(86,80,57,0.3)]'
-                      : 'text-surface-700 dark:text-surface-300 hover:text-[#0f1f1d] dark:hover:text-white hover:bg-white/10 dark:hover:bg-[#181F2A]'
+                      : 'bg-[#f6f5ef] text-surface-700 dark:bg-[#10100f] dark:text-surface-300 hover:text-[#0f1f1d] dark:hover:text-white hover:bg-[#edece3] dark:hover:bg-[#181F2A]'
                   }`}
                 >
                   <Store className="w-3.5 h-3.5" />
@@ -312,7 +312,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                     activeTab === 'storefront'
                       ? 'bg-[#77775a] text-white shadow-[0_12px_26px_rgba(86,80,57,0.3)]'
-                      : 'text-surface-700 dark:text-surface-300 hover:text-[#0f1f1d] dark:hover:text-white hover:bg-white/10 dark:hover:bg-[#181F2A]'
+                      : 'bg-[#f6f5ef] text-surface-700 dark:bg-[#10100f] dark:text-surface-300 hover:text-[#0f1f1d] dark:hover:text-white hover:bg-[#edece3] dark:hover:bg-[#181F2A]'
                   }`}
                 >
                   Preview Storefront
