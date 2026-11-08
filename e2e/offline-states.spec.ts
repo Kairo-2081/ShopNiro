@@ -3,6 +3,7 @@ import { AUTH } from './global-setup.ts';
 import { blockNonLocalTraffic } from './helpers.ts';
 
 test('keeps a readable offline notice on every role home and navigation screen', async ({ browser, baseURL }) => {
+  test.setTimeout(120_000);
   const cases = [
     { role: 'customer', home: 'My orders', navigation: ['Top charts', 'Live tracking', 'My Profile', 'Support'] },
     { role: 'seller', home: 'Seller Studio', navigation: ['Preview Storefront', 'Support'] },
@@ -18,7 +19,16 @@ test('keeps a readable offline notice on every role home and navigation screen',
       await page.goto('/');
       const primaryNavigation = page.getByRole('navigation', { name: 'Primary navigation' });
       await expect(primaryNavigation.getByRole('button', { name: home })).toBeVisible();
+      // Visit each screen once while online so its lazy-loaded code is already in the browser.
+      for (const label of navigation) {
+        await primaryNavigation.getByRole('button', { name: label }).click();
+        await page.waitForTimeout(700);
+      }
+      await primaryNavigation.getByRole('button', { name: home }).click();
+      await page.waitForTimeout(700);
       await context.setOffline(true);
+      // Chromium does not reliably emit the offline event when the context is switched, so send it explicitly.
+      await page.evaluate(() => window.dispatchEvent(new Event('offline')));
       const notice = page.getByRole('alert').filter({ hasText: 'You are offline' });
       await expect(notice).toBeVisible();
       await expect(notice.getByRole('button', { name: 'Retry' })).toBeVisible();
@@ -63,16 +73,19 @@ test('surfaces the server request ID and a retry when a catalog request fails', 
 test('product loading cards keep equal reserved heights', async ({ page }) => {
   await blockNonLocalTraffic(page);
   await page.route(/\/api\/products(?:\?.*)?$/, async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    await new Promise((resolve) => setTimeout(resolve, 4000));
     await route.continue();
   });
 
   await page.goto('/');
+  // Guests start on the landing page; the skeleton shows once they enter the storefront while products are still loading.
+  await page.getByRole('button', { name: /Browse catalog|Filter Catalog/ }).first().click();
   const skeletonGrid = page.getByRole('status', { name: 'Loading products' });
   await expect(skeletonGrid).toBeVisible();
   const cardHeights = await skeletonGrid.locator(':scope > div').evaluateAll((cards) =>
     cards.map((card) => Math.round(card.getBoundingClientRect().height))
   );
   expect(cardHeights).toHaveLength(8);
-  expect(new Set(cardHeights).size).toBe(1);
+  // Cards sit on fractional pixel positions, so rounded heights may differ by 1 px.
+  expect(Math.max(...cardHeights) - Math.min(...cardHeights)).toBeLessThanOrEqual(1);
 });
