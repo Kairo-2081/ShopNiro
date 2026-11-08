@@ -171,7 +171,7 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
                       referrerPolicy="no-referrer"
                       className="h-36 w-full rounded-xl bg-surface-200 object-cover transition-transform duration-300 group-hover:scale-105 dark:bg-[#0C1014]"
                     />
-                    <span className="mt-2 block text-micro font-bold uppercase tracking-wider text-surface-400 dark:text-surface-500">
+                    <span className="mt-2 block text-micro font-bold uppercase tracking-wider text-surface-400 dark:text-surface-400">
                       {item.category_name}
                     </span>
                     <span className="block truncate text-xs font-bold text-surface-900 transition-colors group-hover:text-brand-600 dark:text-white dark:group-hover:text-brand-400">
@@ -185,7 +185,7 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
                       <span className="text-sm font-black text-surface-900 dark:text-white">
                         {formatCurrency(Number(item.price))}
                       </span>
-                      <span className="block text-micro text-surface-400 dark:text-surface-500">
+                      <span className="block text-micro text-surface-400 dark:text-surface-400">
                         {item.available_stock <= 0 ? 'Stock Out' : `Stock: ${item.available_stock}`}
                       </span>
                     </div>
@@ -250,7 +250,7 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
                       referrerPolicy="no-referrer"
                       className="h-36 w-full rounded-xl bg-surface-200 object-cover transition-transform duration-300 group-hover:scale-105 dark:bg-[#0C1014]"
                     />
-                    <span className="mt-2 block truncate text-micro font-bold uppercase tracking-wider text-surface-400 dark:text-surface-500">
+                    <span className="mt-2 block truncate text-micro font-bold uppercase tracking-wider text-surface-400 dark:text-surface-400">
                       {item.category_name} • {item.seller_name}
                     </span>
                     <span className="block truncate text-xs font-bold text-surface-900 transition-colors group-hover:text-warning-500 dark:text-white">
@@ -334,7 +334,7 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
                       <span className="text-sm font-black text-surface-900 dark:text-white">
                         {formatCurrency(Number(product.Price))}
                       </span>
-                      <span className="block text-micro text-surface-400 dark:text-surface-500">
+                      <span className="block text-micro text-surface-400 dark:text-surface-400">
                         {Number(product.Stock) <= 0 ? 'Stock Out' : `Stock: ${product.Stock}`}
                       </span>
                     </div>
