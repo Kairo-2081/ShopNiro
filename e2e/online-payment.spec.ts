@@ -25,7 +25,7 @@ async function startBkashPayment(page: Page) {
   await page.getByRole('checkbox').check();
   const shownTotal = parseMoney(await page.getByTestId('checkout-total').innerText());
   await page.getByRole('button', { name: /Select bKash as payment method/ }).click();
-  await page.getByRole('button', { name: /Pay with bKash \(SSLCommerz\)/ }).click();
+  await page.getByRole('button', { name: /Pay with bKash/ }).click();
   await page.getByRole('button', { name: /Continue to SSLCommerz/ }).click();
   await expect(page.getByRole('heading', { name: /payment demo/ })).toBeVisible();
   return shownTotal;
@@ -53,7 +53,8 @@ test('a failed gateway payment returns the items to the cart and the stock at on
   await startBkashPayment(page);
   await page.getByRole('link', { name: 'Simulate failed payment' }).click();
 
-  await expect(page.getByText(/Payment failed\. Your items are back in your cart/)).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Payment failed' })).toBeVisible();
+  await expect(page.getByText(/Your items are back in your cart/)).toBeVisible();
   const order = await latestOrder();
   expect(order?.payment_status).toBe('expired');
   expect((await latestPayment())?.status).toBe('EXPIRED');
@@ -65,7 +66,8 @@ test('cancelling at the gateway also restores the cart at once', async ({ page }
   await startBkashPayment(page);
   await page.getByRole('link', { name: 'Cancel payment' }).click();
 
-  await expect(page.getByText(/Payment cancelled\. Your items are back in your cart/)).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Payment cancelled' })).toBeVisible();
+  await expect(page.getByText(/Your items are back in your cart/)).toBeVisible();
   expect(await cartQuantity(blanket.id)).toBe(1);
   expect((await latestOrder())?.payment_status).toBe('expired');
 });
