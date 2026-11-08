@@ -427,7 +427,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 onClick={onOpenCart}
                 className="luxury-control relative h-9 w-9 min-h-9 rounded-full bg-surface-100 dark:bg-[#161C24] border border-surface-200 dark:border-surface-800 text-surface-700 dark:text-surface-300 hover:bg-surface-200 dark:hover:bg-surface-800 cursor-pointer"
-                aria-label="Shopping Cart"
+                aria-label={cartCount > 0 ? `Shopping Cart: ${cartCount}` : "Shopping Cart"}
               >
                 <ShoppingCart className="w-4 h-4" />
                 {cartCount > 0 && (
