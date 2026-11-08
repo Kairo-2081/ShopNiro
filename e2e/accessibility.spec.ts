@@ -183,3 +183,37 @@ test('reduced motion stops the orbit globe animation without hiding its content'
     await context.close();
   }
 });
+
+test('checkout and cart dialogs have no critical or serious axe violations in either theme', async ({ browser, baseURL }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'The dialog sweep runs once per CI workflow.');
+  test.setTimeout(120_000);
+  const context = await browser.newContext({ baseURL, storageState: AUTH.customer });
+  const page = await context.newPage();
+  try {
+    await blockNonLocalTraffic(page);
+    await page.goto('/');
+    await page.getByRole('navigation', { name: 'Primary navigation' }).getByRole('button', { name: 'My orders' }).waitFor();
+    const card = page.locator('[data-testid="product-card"]').first();
+    await card.scrollIntoViewIfNeeded();
+    await card.getByRole('button', { name: 'Add to Cart' }).click();
+
+    const scan = async (label: string) => {
+      for (const theme of ['light', 'dark']) {
+        await page.evaluate((isDark) => document.documentElement.classList.toggle('dark', isDark), theme === 'dark');
+        await page.waitForTimeout(1200);
+        const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
+        const serious = results.violations.filter((violation) => violation.impact === 'serious' || violation.impact === 'critical');
+        expect(serious.map((violation) => ({ label, theme, id: violation.id, targets: violation.nodes.map((node) => node.target.join(' ')).slice(0, 4) })), `${label} (${theme})`).toEqual([]);
+      }
+    };
+
+    await page.getByRole('button', { name: /cart/i }).first().click();
+    await expect(page.getByRole('button', { name: /Proceed to checkout/i })).toBeVisible();
+    await scan('Cart drawer');
+    await page.getByRole('button', { name: /Proceed to checkout/i }).click();
+    await expect(page.getByTestId('checkout-submit')).toBeVisible();
+    await scan('Checkout dialog');
+  } finally {
+    await context.close();
+  }
+});
