@@ -4,6 +4,7 @@ import { CircleMarker, MapContainer, Polyline, Popup, TileLayer, Tooltip, useMap
 import { Address, Order, Seller } from '../../types';
 import { formatCurrency } from '../../lib/api';
 import { Truck, MapPin, Radio, CheckCircle2, ShieldCheck, RefreshCw, Phone, X, Navigation } from 'lucide-react';
+import { useLocale } from '../../lib/i18n';
 import 'leaflet/dist/leaflet.css';
 
 interface TrackingCoordinates {
@@ -135,6 +136,7 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
   onClose,
   isModal = false,
 }) => {
+  const { t } = useLocale();
   const trackableOrders = Array.from(
     new globalThis.Map<string, Order>(
       [...orders, ...(initialOrder ? [initialOrder] : [])]
@@ -379,6 +381,7 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
             <button
               type="button"
               onClick={onClose}
+              aria-label={t('close')}
               className="w-9 h-9 rounded-full bg-surface-200 dark:bg-surface-800 text-surface-700 dark:text-surface-300 flex items-center justify-center hover:bg-surface-300 dark:hover:bg-surface-700 transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
@@ -399,8 +402,8 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
               <span className="text-surface-500">•</span>
               <span className="text-success-400 font-bold">
                 {routeStatus === 'ready' && route
-                  ? `Road distance: ${(route.distanceMeters / 1000).toFixed(1)} km`
-                  : routeStatus === 'loading' ? 'Finding road distance...' : 'Road distance unavailable'}
+                  ? t('roadDistance', { distance: (route.distanceMeters / 1000).toFixed(1) })
+                  : routeStatus === 'loading' ? t('findingRoadDistance') : t('roadDistanceUnavailable')}
               </span>
             </div>
 
@@ -434,29 +437,29 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
               </CircleMarker>
               {courierLocation && <CircleMarker center={courierLocation} radius={12} pathOptions={{ color: '#fff', weight: 3, fillColor: '#2772ce', fillOpacity: 1 }}>
                 <Tooltip direction="top">{activeOrder.Items[0]?.Name || 'Parcel in transit'}</Tooltip>
-                <Popup>Courier in transit</Popup>
+                <Popup>{t('courierInTransit')}</Popup>
               </CircleMarker>}
               <CircleMarker center={deliveryDestination} radius={9} pathOptions={{ color: '#fff', weight: 3, fillColor: '#7d7e5e', fillOpacity: 1 }}>
-                <Tooltip permanent direction="top">Customer Destination</Tooltip>
+                <Tooltip permanent direction="top">{t('customerDestination')}</Tooltip>
                 <Popup>{activeOrder.Shipping_Address.Street}, {activeOrder.Shipping_Address.City}</Popup>
               </CircleMarker>
             </MapContainer>
-            {routeStatus === 'error' && <div className="absolute bottom-3 left-3 z-10 rounded bg-white/95 px-3 py-2 text-xs text-danger-700 shadow dark:bg-surface-900/95 dark:text-danger-300">Road route is unavailable right now.</div>}
+            {routeStatus === 'error' && <div className="absolute bottom-3 left-3 z-10 rounded bg-white/95 px-3 py-2 text-xs text-danger-700 shadow dark:bg-surface-900/95 dark:text-danger-300">{t('roadRouteUnavailable')}</div>}
           </div> : <div className="flex flex-1 min-h-[420px] items-center justify-center bg-surface-100 px-6 text-center text-sm text-surface-600 dark:bg-[#161F2C] dark:text-surface-300">
-            {!shopLocation ? 'The seller shop location is missing map coordinates.' : 'The customer destination is missing map coordinates.'}
+            {!shopLocation ? t('missingSellerCoords') : t('missingCustomerCoords')}
           </div>}
 
           {/* Bottom Map Legend */}
           <div className="p-3 bg-surface-900/90 backdrop-blur-md border-t border-surface-800 text-surface-300 text-xs flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-4 text-micro">
               <span className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-surface-400" /> Shop: {activeSeller?.Name || activeFulfillment?.Seller_Name || 'Seller'}
+                <span className="w-2.5 h-2.5 rounded-full bg-surface-400" /> {t('shopLabel', { name: activeSeller?.Name || activeFulfillment?.Seller_Name || 'Seller' })}
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-brand-500 animate-pulse" /> Live Product Location
+                <span className="w-2.5 h-2.5 rounded-full bg-brand-500 animate-pulse" /> {t('liveProductLocation')}
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-success-500" /> Destination: {activeOrder.Shipping_Address.Street}
+                <span className="w-2.5 h-2.5 rounded-full bg-success-500" /> {t('destinationLabel', { street: activeOrder.Shipping_Address.Street })}
               </span>
             </div>
             <span className="text-micro text-surface-500 font-mono">
@@ -471,7 +474,7 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
           {orders.length > 1 && (
             <div className="space-y-1.5">
               <label className="text-micro font-bold uppercase tracking-wider text-surface-500 dark:text-surface-400 block">
-                Select Order to Track
+                {t('selectOrderToTrack')}
               </label>
               <select
                 value={activeOrder.Order_ID}
@@ -494,7 +497,7 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
           {activeFulfillments.length > 1 && (
             <div className="space-y-1.5">
               <label className="text-micro font-bold uppercase tracking-wider text-surface-500 dark:text-surface-400 block" htmlFor="tracking-fulfillment">
-                Select Shop Shipment
+                {t('selectShopShipment')}
               </label>
               <select
                 id="tracking-fulfillment"
@@ -516,21 +519,21 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
             <div className="flex items-center justify-between text-xs font-bold">
               <span className="text-surface-900 dark:text-white flex items-center gap-1.5">
                 <Navigation className="w-4 h-4 text-brand-600 dark:text-brand-400" />
-                Delivery Milestones
+                {t('deliveryMilestones')}
               </span>
               <span className="text-micro text-brand-600 dark:text-brand-400 font-bold bg-brand-100 dark:bg-brand-950/60 px-2 py-0.5 rounded-full">
-                {Math.round(movementStep * 100)}% Completed
+                {t('completedPercentage', { percent: Math.round(movementStep * 100) })}
               </span>
             </div>
 
             {isCompletingDelivery && (
               <p className="text-micro text-surface-500 dark:text-surface-400" role="status">
-                Route complete. Updating order status to delivered...
+                {t('routeCompleteUpdating')}
               </p>
             )}
             {activeOrder.Status === 'delivered' && (
               <p className="text-micro text-success-700 dark:text-success-300" role="status">
-                Shipment delivered successfully.
+                {t('shipmentDeliveredSuccess')}
               </p>
             )}
             {deliveryUpdateError && (
@@ -541,7 +544,7 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
                   onClick={() => void completeDelivery(activeOrder.Order_ID)}
                   className="font-bold underline underline-offset-2 shrink-0"
                 >
-                  Retry
+                  {t('retry')}
                 </button>
               </div>
             )}
