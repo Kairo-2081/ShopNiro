@@ -246,7 +246,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                     onChange={(e) => setLoginUsername(e.target.value)}
                     className="w-full p-2.5 pl-9 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500 focus:ring-2 focus:ring-brand-500 focus:outline-none"
                   />
-                  <User className="w-4 h-4 text-surface-400 dark:text-surface-500 absolute left-3 top-3" />
+                  <User className="w-4 h-4 text-surface-500 dark:text-surface-500 absolute left-3 top-3" />
                 </div>
               </div>
 
@@ -264,7 +264,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                     onChange={(e) => setLoginPassword(e.target.value)}
                     className="w-full p-2.5 pl-9 pr-10 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500 focus:ring-2 focus:ring-brand-500 focus:outline-none"
                   />
-                  <Lock className="w-4 h-4 text-surface-400 dark:text-surface-500 absolute left-3 top-3" />
+                  <Lock className="w-4 h-4 text-surface-500 dark:text-surface-500 absolute left-3 top-3" />
                   <button
                     type="button"
                     onClick={() => setShowLoginPassword(!showLoginPassword)}
