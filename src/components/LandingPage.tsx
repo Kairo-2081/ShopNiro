@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Customer, Seller, Admin } from '../types';
 import { shopNiroLogoSmall } from '../lib/branding';
-import { OrbitGlobe } from './landing/OrbitGlobe';
 import { MarketplaceClosing, MarketplaceStat } from './MarketplaceClosing';
 import { ShoppingBag, SlidersHorizontal, User, Truck, ArrowRight, Sparkles, Users, Store, ShieldCheck, Compass, Tag, Radio, Package, Plus, Sun, Moon, Shield, BadgeCheck } from 'lucide-react';
+
+const OrbitGlobe = React.lazy(() => import('./landing/OrbitGlobe').then((module) => ({ default: module.OrbitGlobe })));
 
 interface LandingPageProps {
   customers: Customer[];
@@ -140,7 +141,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <div className="py-1 md:py-2 relative hero-orbit-wrap">
             <div className="floating-badge floating-badge-left">Shop products</div>
             <div className="floating-badge floating-badge-right">Seller approved</div>
-            <OrbitGlobe />
+            <React.Suspense fallback={<div aria-hidden="true" className="h-[284px]" />}>
+              <OrbitGlobe />
+            </React.Suspense>
           </div>
 
           {/* Hero CTA Buttons */}
