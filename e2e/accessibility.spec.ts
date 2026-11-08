@@ -92,7 +92,9 @@ test('public and role-specific pages have no critical or serious axe violations'
     await scanTheme('default theme');
     const themeToggle = page.getByRole('button', { name: /switch to (light|dark) mode/i });
     if (await themeToggle.count()) {
+      const isDark = await page.evaluate(() => document.documentElement.classList.contains('dark'));
       await themeToggle.click();
+      await expect.poll(() => page.evaluate(() => document.documentElement.classList.contains('dark'))).toBe(!isDark);
       await settleThemeTransition(page);
       await scanTheme('alternate theme');
       await themeToggle.click();
