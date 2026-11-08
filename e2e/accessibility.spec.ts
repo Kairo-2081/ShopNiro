@@ -82,6 +82,8 @@ test('storefront controls are keyboard reachable and the login dialog traps and 
   try {
     await blockNonLocalTraffic(page);
     await page.goto('/');
+    const signIn = page.getByRole('button', { name: 'Sign In / Accounts', exact: true });
+    await expect(signIn).toBeVisible();
     const expected = await page.evaluate(() => {
       const selector = 'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])';
       return Array.from(document.querySelectorAll<HTMLElement>(selector))
@@ -94,10 +96,11 @@ test('storefront controls are keyboard reachable and the login dialog traps and 
           return index;
         });
     });
+    expect(expected.length).toBeGreaterThan(0);
     const visited = new Set<number>();
     const focusDiagnostics: string[] = [];
     let hasVisibleFocus = false;
-    for (let index = 0; index < expected.length + 1; index += 1) {
+    for (let index = 0; index < expected.length; index += 1) {
       await page.keyboard.press('Tab');
       const focus = await page.evaluate(() => {
         const element = document.activeElement as HTMLElement | null;
@@ -124,7 +127,6 @@ test('storefront controls are keyboard reachable and the login dialog traps and 
     expect(visited.size).toBe(expected.length);
     expect(hasVisibleFocus, focusDiagnostics.join('\n')).toBe(true);
 
-    const signIn = page.getByRole('button', { name: 'Sign In / Accounts', exact: true });
     await signIn.focus();
     await page.keyboard.press('Enter');
     const dialog = page.getByRole('dialog', { name: 'Marketplace Login' });
