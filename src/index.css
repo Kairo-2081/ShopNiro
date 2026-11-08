@@ -746,10 +746,10 @@ html:not(.dark) ::-webkit-scrollbar-thumb:hover {
 .dark .leaflet-container {
   background: #1a1d21;
 }
-.dark .leaflet-control-attribution {
+.dark .leaflet-container .leaflet-control-attribution {
   background: rgba(23, 23, 19, 0.75);
   color: #b9b6a6;
 }
-.dark .leaflet-control-attribution a {
+.dark .leaflet-container .leaflet-control-attribution a {
   color: #d0c8a5;
 }
