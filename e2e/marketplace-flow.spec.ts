@@ -28,7 +28,7 @@ test('admin approves a seller, who lists a product that a customer buys and a ri
   await test.step('admin approves the new seller', async () => {
     const admin = await asRole(browser, 'admin');
     // Approval needs the review checklist, so it goes through the application panel, not the quick button.
-    await admin.getByRole('button', { name: `View ${E2E.newSeller.name} application details` }).first().click();
+    await admin.getByRole('button', { name: new RegExp(`${E2E.newSeller.name}.*View application`) }).first().click();
     for (const label of ['Identity verified', 'Documents reviewed', 'Payout account verified']) await admin.getByLabel(label).check();
     await admin.getByRole('button', { name: 'Approve seller' }).click();
     await expect.poll(async () => withDb(async (c) => (await c.query('SELECT status FROM sellers WHERE id = $1', [E2E.newSeller.id])).rows[0].status)).toBe('approved');
