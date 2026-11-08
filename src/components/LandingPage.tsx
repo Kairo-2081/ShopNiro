@@ -382,7 +382,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 Already have an account?
               </span>
             </div>
-            <div className="flex items-center gap-1 text-xs font-bold text-brand-400 group-hover:translate-x-0.5 transition-transform">
+            <div className="flex items-center gap-1 text-xs font-bold text-brand-300 group-hover:translate-x-0.5 transition-transform">
               <span>Sign in</span>
               <span>➔</span>
             </div>
