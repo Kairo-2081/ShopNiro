@@ -441,7 +441,7 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
                 <Popup>{activeOrder.Shipping_Address.Street}, {activeOrder.Shipping_Address.City}</Popup>
               </CircleMarker>
             </MapContainer>
-            {routeStatus === 'error' && <div className="absolute bottom-3 left-3 z-10 rounded bg-white/95 px-3 py-2 text-xs text-danger-700 shadow">Road route is unavailable right now.</div>}
+            {routeStatus === 'error' && <div className="absolute bottom-3 left-3 z-10 rounded bg-white/95 px-3 py-2 text-xs text-danger-700 shadow dark:bg-surface-900/95 dark:text-danger-300">Road route is unavailable right now.</div>}
           </div> : <div className="flex flex-1 min-h-[420px] items-center justify-center bg-surface-100 px-6 text-center text-sm text-surface-600 dark:bg-[#161F2C] dark:text-surface-300">
             {!shopLocation ? 'The seller shop location is missing map coordinates.' : 'The customer destination is missing map coordinates.'}
           </div>}
