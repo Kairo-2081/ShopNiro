@@ -345,7 +345,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
             <button
               onClick={onClose}
               aria-label="Close checkout"
-              className="grid h-11 w-11 place-items-center rounded-full text-surface-600 hover:text-surface-900 dark:text-surface-300 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5]"
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-surface-600 hover:text-surface-900 dark:text-surface-300 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5]"
             >
               <X className="w-5 h-5" />
             </button>

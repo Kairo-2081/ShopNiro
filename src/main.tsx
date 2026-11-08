@@ -29,8 +29,9 @@ const policy = typeof window !== 'undefined' ? policyByPath(window.location.path
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
+    {/* Outside the error boundary so the offline notice survives a failed lazy chunk. */}
+    <NetworkStatusBanner />
     <AppErrorBoundary>
-      <NetworkStatusBanner />
       <LocaleProvider>{policy ? <LegalPage policy={policy} /> : <App />}</LocaleProvider>
     </AppErrorBoundary>
   </StrictMode>,
