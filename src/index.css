@@ -738,3 +738,18 @@ html:not(.dark) ::-webkit-scrollbar-thumb {
 html:not(.dark) ::-webkit-scrollbar-thumb:hover {
   background: rgba(137, 113, 79, 0.58);
 }
+
+/* Maps: dim the light OpenStreetMap tiles in dark mode so they do not glare against the dark panels. Markers and controls are separate panes and keep their colours. */
+.dark .leaflet-tile-pane {
+  filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9) saturate(0.7);
+}
+.dark .leaflet-container {
+  background: #1a1d21;
+}
+.dark .leaflet-control-attribution {
+  background: rgba(23, 23, 19, 0.75);
+  color: #b9b6a6;
+}
+.dark .leaflet-control-attribution a {
+  color: #d0c8a5;
+}
