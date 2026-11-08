@@ -148,7 +148,7 @@ function LocationMap({ onAddressSelected, initialLocation }: AccountLocationPick
           <MapViewport center={mapCenter} />
           <LocationMapEvents onSelectLocation={selectLocation} />
           {marker && (
-            <Marker position={marker} icon={selectedLocationIcon}>
+            <Marker position={marker} icon={selectedLocationIcon} alt={t('selectedLocation')} title={t('selectedLocation')}>
               <Tooltip permanent>{t('selectedLocation')}</Tooltip>
             </Marker>
           )}
