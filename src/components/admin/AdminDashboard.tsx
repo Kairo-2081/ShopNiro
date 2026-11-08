@@ -7,6 +7,7 @@ import { Section } from '../Section';
 import { BarChart3, ShieldCheck, Store, FolderTree, Package, CheckCircle2, Clock, Plus, Edit, Trash2, Activity, Search, Lock, RefreshCw, ExternalLink, X, AlertCircle, Truck, RotateCcw, LifeBuoy } from 'lucide-react';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { fallbackToBrandLogo } from '../../lib/branding';
 
 const AdminOverviewAnalytics = React.lazy(() =>
   import('./AdminOverviewAnalytics').then(({ AdminOverviewAnalytics: Component }) => ({ default: Component }))
@@ -570,6 +571,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         >
                           <img
                             src={seller.Logo}
+              onError={fallbackToBrandLogo}
                             alt={seller.Name}
                             className="w-9 h-9 rounded-xl object-cover border border-brand-100 dark:border-surface-700 bg-surface-100 dark:bg-[#181F2A]"
                           />
@@ -748,6 +750,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <div className="flex items-center gap-3">
                           <img
                             src={seller.Logo}
+              onError={fallbackToBrandLogo}
                             alt={seller.Name}
                             className="w-10 h-10 rounded-xl object-cover bg-surface-100 dark:bg-[#181F2A] border border-brand-100 dark:border-surface-700"
                           />
