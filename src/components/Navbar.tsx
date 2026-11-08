@@ -383,7 +383,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 type="button"
                 onClick={onOpenChat}
-                aria-label="Open ShopNiro AI Assistant"
+                aria-label="Ask AI: Open ShopNiro AI Assistant"
                 className="luxury-control min-h-9 items-center gap-1.5 rounded-full border border-[#d0c8a5]/25 bg-[#d0c8a5]/10 px-3 text-xs text-[#d0c8a5] hover:bg-[#d0c8a5]/15 cursor-pointer group"
                 title="Open ShopNiro AI Assistant"
               >
