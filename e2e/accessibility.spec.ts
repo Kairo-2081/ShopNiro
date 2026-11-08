@@ -16,6 +16,16 @@ test('public and role-specific pages have no critical or serious axe violations'
   test.setTimeout(180_000);
   test.skip(testInfo.project.name !== 'desktop', 'The full page sweep runs once per CI workflow.');
 
+  // Contrast is read from computed colours, so let the colour transitions started by a theme switch finish.
+  const settleThemeTransition = async (page: import('@playwright/test').Page) => {
+    await page.evaluate(async () => {
+      // Two frames let the just-triggered transition register before it is awaited.
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      const finite = document.getAnimations().filter((animation) => animation.effect?.getComputedTiming().iterations !== Infinity);
+      await Promise.all(finite.map((animation) => animation.finished.catch(() => undefined)));
+    });
+  };
+
   const scanPage = async (page: import('@playwright/test').Page, label: string) => {
     const scanTheme = async (theme: string) => {
       const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
@@ -41,8 +51,10 @@ test('public and role-specific pages have no critical or serious axe violations'
     const themeToggle = page.getByRole('button', { name: /switch to (light|dark) mode/i });
     if (await themeToggle.count()) {
       await themeToggle.click();
+      await settleThemeTransition(page);
       await scanTheme('alternate theme');
       await themeToggle.click();
+      await settleThemeTransition(page);
     }
   };
 
