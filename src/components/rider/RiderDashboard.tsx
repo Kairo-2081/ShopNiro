@@ -178,7 +178,7 @@ export const RiderDashboard: React.FC<RiderDashboardProps> = ({ rider, profileCo
           <MapContainer center={location || defaultCenter} zoom={location ? 14 : 11} scrollWheelZoom className="h-full w-full">
             <TileLayer attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" maxZoom={19} />
             <ClickMap onSelect={(next) => { setLocation(next); setSavedLocation(false); }} />
-            {location && <Marker position={location} icon={riderMarker} />}
+            {location && <Marker position={location} icon={riderMarker} title="Your delivery location" alt="Your delivery location" />}
           </MapContainer>
         </div>
         <div className="flex items-center gap-2 p-3 text-xs text-surface-600 dark:text-surface-400"><MapPin className="h-4 w-4 text-success-700 dark:text-success-400" />{location ? `${location[0].toFixed(5)}, ${location[1].toFixed(5)}${savedLocation ? ' · saved' : ' · save to load deliveries'}` : 'No location selected'}</div>
@@ -188,7 +188,7 @@ export const RiderDashboard: React.FC<RiderDashboardProps> = ({ rider, profileCo
         <div role={savingLocation ? 'status' : undefined} className="rounded-xl border border-warning-300 bg-warning-50 p-5 text-sm text-warning-900 dark:border-warning-900 dark:bg-warning-950/30 dark:text-warning-200">{savingLocation ? <span className="inline-flex items-center gap-2"><RefreshCw className="h-4 w-4 animate-spin" />Saving your location and finding nearby shipments...</span> : 'Save your current location to load available shipments and confirm your starting point.'}</div>
       ) : (
         <section className="space-y-3">
-          <div className="flex items-end justify-between"><div><h2 className="text-lg font-bold text-surface-900 dark:text-white">Nearby shipments</h2><p className="text-xs text-surface-500 dark:text-surface-400">Pending pickups within 20 km, nearest first.</p></div><span className="text-xs font-semibold text-surface-500">{deliveries.length} available</span></div>
+          <div className="flex items-end justify-between"><div><h2 className="text-lg font-bold text-surface-900 dark:text-white">Nearby shipments</h2><p className="text-xs text-surface-500 dark:text-surface-400">Pending pickups within 20 km, nearest first.</p></div><span className="text-xs font-semibold text-surface-600">{deliveries.length} available</span></div>
           {loading && deliveries.length === 0 && <div role="status" className="flex items-center gap-2 rounded-lg border border-surface-200 bg-white p-4 text-sm text-surface-600 dark:border-surface-800 dark:bg-[#12161D] dark:text-surface-300"><RefreshCw className="h-4 w-4 animate-spin text-success-600" />Loading nearby shipments...</div>}
           {deliveries.map((delivery) => (
             <article key={delivery.Delivery_ID} className="grid gap-4 rounded-xl border border-surface-200 bg-white p-4 dark:border-surface-800 dark:bg-[#12161D] lg:grid-cols-[1fr_auto]">
@@ -226,7 +226,7 @@ export const RiderDashboard: React.FC<RiderDashboardProps> = ({ rider, profileCo
           <p className="mt-1 text-xs text-surface-700 dark:text-surface-300">Wallet total: {money(wallet?.balance || 0)} · available now: {money(wallet?.availableBalance || 0)} · locked COD: {money(wallet?.lockedCod || 0)} · locked salary below 60 points: {money(wallet?.lockedSalary || 0)} · pending net salary: {money(wallet?.pendingSalary || 0)}.</p>
           <form onSubmit={withdraw} className="mt-4 grid gap-3 sm:grid-cols-3">
             <input type="number" min="1" step="0.01" max={wallet?.availableBalance || 0} required value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} placeholder="Amount" className="rounded-lg border border-surface-300 bg-white px-3 py-2 text-sm dark:border-surface-700 dark:bg-[#181F2A]" />
-            <select value={payoutMethod} onChange={(e) => setPayoutMethod(e.target.value)} className="rounded-lg border border-surface-300 bg-white px-3 py-2 text-sm dark:border-surface-700 dark:bg-[#181F2A]"><option value="bkash">bKash</option><option value="bank">Bank transfer</option><option value="nagad">Nagad</option></select>
+            <select aria-label="Payout method" value={payoutMethod} onChange={(e) => setPayoutMethod(e.target.value)} className="rounded-lg border border-surface-300 bg-white px-3 py-2 text-sm dark:border-surface-700 dark:bg-[#181F2A]"><option value="bkash">bKash</option><option value="bank">Bank transfer</option><option value="nagad">Nagad</option></select>
             <input required value={payoutAccount} onChange={(e) => setPayoutAccount(e.target.value)} placeholder="Payout account" className="rounded-lg border border-surface-300 bg-white px-3 py-2 text-sm dark:border-surface-700 dark:bg-[#181F2A]" />
             <button type="submit" disabled={withdrawing || (wallet?.availableBalance || 0) <= 0} className="rounded-lg bg-success-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50 sm:col-span-3">{withdrawing ? 'Requesting...' : 'Request withdrawal'}</button>
           </form>
