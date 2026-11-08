@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { fallbackToBrandLogo } from '../../lib/branding';
 
 const compactSellerValue = (value: number) => value >= 1000 ? `${(value / 1000).toFixed(1)}k` : String(Math.round(value));
 interface SellerDashboardProps {
@@ -302,6 +303,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
           <div className="flex min-w-0 flex-[1_1_16rem] items-start gap-3 sm:items-center sm:gap-4">
             <img
               src={currentSeller.Logo}
+              onError={fallbackToBrandLogo}
               alt={currentSeller.Name}
               className="h-16 w-16 shrink-0 rounded-2xl border border-brand-100 bg-surface-50 object-cover shadow-sm dark:border-surface-700 dark:bg-[#181F2A]"
             />
