@@ -90,7 +90,7 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'trends'
                 ? 'bg-brand-600 text-white shadow-xs'
-                : 'text-surface-800 dark:text-surface-200 hover:text-surface-950 dark:hover:text-white'
+                : 'bg-white text-surface-900 hover:bg-surface-50 hover:text-surface-950 dark:bg-[#12161D] dark:text-surface-100 dark:hover:bg-[#18202D] dark:hover:text-white'
             }`}
           >
             <Flame className="w-3.5 h-3.5 text-warning-300" />
@@ -104,7 +104,7 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'top-rated'
                 ? 'bg-brand-600 text-white shadow-xs'
-                : 'text-surface-800 dark:text-surface-200 hover:text-surface-950 dark:hover:text-white'
+                : 'bg-white text-surface-900 hover:bg-surface-50 hover:text-surface-950 dark:bg-[#12161D] dark:text-surface-100 dark:hover:bg-[#18202D] dark:hover:text-white'
             }`}
           >
             <Star className="w-3.5 h-3.5 text-warning-300 fill-warning-300" />
@@ -118,7 +118,7 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl transition-all cursor-pointer whitespace-nowrap ${
               activeTab === 'new-arrivals'
                 ? 'bg-brand-600 text-white shadow-xs'
-                : 'text-surface-800 dark:text-surface-200 hover:text-surface-950 dark:hover:text-white'
+                : 'bg-white text-surface-900 hover:bg-surface-50 hover:text-surface-950 dark:bg-[#12161D] dark:text-surface-100 dark:hover:bg-[#18202D] dark:hover:text-white'
             }`}
           >
             <Sparkles className="w-3.5 h-3.5 text-brand-300" />
