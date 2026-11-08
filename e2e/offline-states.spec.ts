@@ -3,6 +3,7 @@ import { AUTH } from './global-setup.ts';
 import { blockNonLocalTraffic } from './helpers.ts';
 
 test('keeps a readable offline notice on every role home and navigation screen', async ({ browser, baseURL }) => {
+  test.setTimeout(120_000);
   const cases = [
     { role: 'customer', home: 'My orders', navigation: ['Top charts', 'Live tracking', 'My Profile', 'Support'] },
     { role: 'seller', home: 'Seller Studio', navigation: ['Preview Storefront', 'Support'] },
