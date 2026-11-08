@@ -19,10 +19,11 @@ const assertKeyboardReachability = async (page: import('@playwright/test').Page,
       .filter((element) => element.tabIndex >= 0 && element.getClientRects().length > 0 && !element.closest('[inert]'))
       .map((element, index) => {
         element.dataset.a11yTabIndex = String(index);
+        element.dataset.a11yLabel = element.getAttribute('aria-label') || element.innerText.trim().replace(/\s+/g, ' ') || element.title || `${element.tagName.toLowerCase()} control`;
         const style = getComputedStyle(element);
         element.dataset.a11yOutline = `${style.outlineStyle} ${style.outlineWidth}`;
         element.dataset.a11yShadow = style.boxShadow;
-        return index;
+        return { index, label: element.dataset.a11yLabel };
       });
   });
   expect(expected.length, `${label} has keyboard-accessible controls`).toBeGreaterThan(0);
@@ -49,7 +50,8 @@ const assertKeyboardReachability = async (page: import('@playwright/test').Page,
     );
     expect(hasIndicator, `${label} control ${focus.index ?? 'unknown'} has a visible focus indicator`).toBe(true);
   }
-  expect(visited.size, `${label} exposes every visible control in tab order`).toBe(expected.length);
+  const missing = expected.filter(({ index }) => !visited.has(index));
+  expect(visited.size, `${label} controls missing from tab order: ${missing.map(({ index, label: control }) => `${index}: ${control}`).join('; ')}`).toBe(expected.length);
 };
 
 test('public and role-specific pages have no critical or serious axe violations', async ({ browser, baseURL }, testInfo) => {
@@ -138,7 +140,7 @@ test('storefront controls are keyboard reachable and the login dialog traps and 
   try {
     await blockNonLocalTraffic(page);
     await page.goto('/');
-    const signIn = page.getByRole('button', { name: 'Sign In / Accounts', exact: true });
+    const signIn = page.getByRole('button', { name: /sign in or manage accounts/i });
     await expect(signIn).toBeVisible();
     await assertKeyboardReachability(page, 'Public storefront');
 
