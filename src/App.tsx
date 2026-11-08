@@ -1388,7 +1388,7 @@ export default function App() {
               <div className="font-extrabold text-surface-900 dark:text-white tracking-tight text-sm">
                 ShopNiro
               </div>
-              <p className="text-micro text-surface-400 dark:text-surface-400">shop smart, ship fast</p>
+              <p className="text-micro text-surface-600 dark:text-surface-400">shop smart, ship fast</p>
             </div>
           </div>
 
@@ -1432,7 +1432,7 @@ export default function App() {
             </button>
           </div>
 
-          <div className="text-micro text-surface-400 dark:text-surface-400 font-mono text-center md:text-right">
+          <div className="text-micro text-surface-600 dark:text-surface-400 font-mono text-center md:text-right">
             <span>© {new Date().getFullYear()} ShopNiro • Smart commerce network</span>
             <nav aria-label="Policies" className="mt-1 flex flex-wrap justify-center gap-x-3 md:justify-end">
               {POLICIES.map((policy) => (
