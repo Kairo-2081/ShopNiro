@@ -57,6 +57,10 @@ export const MarketplaceClosing: React.FC<MarketplaceClosingProps> = ({ stats })
       <img
         src={shopNiroAnimation}
         alt="Animated ShopNiro logo"
+        width={144}
+        height={144}
+        loading="lazy"
+        decoding="async"
         className="closing-orb h-full w-full object-contain"
       />
     </div>
