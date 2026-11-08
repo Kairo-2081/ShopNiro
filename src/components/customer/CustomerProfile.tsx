@@ -110,7 +110,7 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ currentCustome
             <div>
               <label htmlFor="customer-profile-name" className="block text-surface-600 dark:text-surface-400 mb-1 font-medium">{t('fullName')}</label>
               <div className="relative">
-                <User className="w-4 h-4 text-surface-400 dark:text-surface-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                <User className="w-4 h-4 text-surface-500 dark:text-surface-500 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   id="customer-profile-name"
@@ -125,7 +125,7 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ currentCustome
             <div>
               <label htmlFor="customer-profile-email" className="block text-surface-600 dark:text-surface-400 mb-1 font-medium">{t('emailAddress')}</label>
               <div className="relative">
-                <Mail className="w-4 h-4 text-surface-400 dark:text-surface-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Mail className="w-4 h-4 text-surface-500 dark:text-surface-500 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="email"
                   id="customer-profile-email"
@@ -140,7 +140,7 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ currentCustome
             <div className="md:col-span-2">
               <label htmlFor="customer-profile-phone" className="block text-surface-600 dark:text-surface-400 mb-1 font-medium">{t('phoneNumber')}</label>
               <div className="relative">
-                <Phone className="w-4 h-4 text-surface-400 dark:text-surface-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Phone className="w-4 h-4 text-surface-500 dark:text-surface-500 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="tel"
                   id="customer-profile-phone"

@@ -545,7 +545,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </section>
 
         {/* Browse the current catalog */}
-        <section className="rounded-3xl p-6 sm:p-7 bg-brand-600 text-white text-center space-y-3.5 shadow-2xl relative overflow-hidden animate-fade-up">
+        <section className="rounded-3xl p-6 sm:p-7 bg-brand-700 text-white text-center space-y-3.5 shadow-2xl relative overflow-hidden animate-fade-up">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 border border-white/25 text-white text-micro font-semibold tracking-wide">
             <Tag className="w-3 h-3 text-brand-200" />
             <span>ShopNiro marketplace</span>
@@ -570,7 +570,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </button>
           </div>
 
-          <p className="text-micro text-brand-200/90">
+          <p className="text-micro text-brand-100">
             See what’s available today.
           </p>
         </section>

@@ -399,7 +399,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                 {/* Customer Info */}
                                   <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-surface-200 bg-surface-50 p-4 text-xs dark:border-surface-800 dark:bg-[#161C24]">
                   <div>
-                    <span className="text-surface-400 dark:text-surface-500 block font-bold text-micro uppercase tracking-wider">
+                    <span className="text-surface-500 dark:text-surface-500 block font-bold text-micro uppercase tracking-wider">
                       Purchasing Customer
                     </span>
                     <span className="font-bold text-surface-900 dark:text-white text-sm">{currentCustomer.Name}</span>

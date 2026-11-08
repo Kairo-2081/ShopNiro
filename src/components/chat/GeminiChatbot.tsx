@@ -513,7 +513,7 @@ export const GeminiChatbot: React.FC<GeminiChatbotProps> = ({ isOpen, onClose, i
                 )}
 
                 {/* Timestamp & Copy button */}
-                <div className={`mt-2 flex items-center gap-2 ${isUser ? 'justify-end text-brand-200' : 'justify-between text-surface-400 dark:text-surface-500'} text-micro`}>
+                <div className={`mt-2 flex items-center gap-2 ${isUser ? 'justify-end text-brand-200' : 'justify-between text-surface-500 dark:text-surface-500'} text-micro`}>
                   {isUser ? (
                     <span>{m.timestamp}</span>
                   ) : (

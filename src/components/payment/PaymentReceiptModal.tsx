@@ -253,7 +253,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
           {/* Metadata Grid */}
           <div className="grid grid-cols-2 gap-3 p-4 rounded-2xl bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-800">
             <div>
-              <span className="text-micro text-surface-400 dark:text-surface-500 uppercase font-bold block">
+              <span className="text-micro text-surface-500 dark:text-surface-500 uppercase font-bold block">
                 Transaction ID
               </span>
               <span className="font-mono font-bold text-surface-900 dark:text-white break-all text-micro">
@@ -262,7 +262,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
             </div>
 
             <div>
-              <span className="text-micro text-surface-400 dark:text-surface-500 uppercase font-bold block">
+              <span className="text-micro text-surface-500 dark:text-surface-500 uppercase font-bold block">
                 Waybill Radar ID
               </span>
               <span className="font-mono font-bold text-brand-600 dark:text-brand-400 text-micro">
@@ -271,7 +271,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
             </div>
 
             <div>
-              <span className="text-micro text-surface-400 dark:text-surface-500 uppercase font-bold block">
+              <span className="text-micro text-surface-500 dark:text-surface-500 uppercase font-bold block">
                 Timestamp
               </span>
               <span className="text-surface-700 dark:text-surface-300 font-medium">
@@ -280,7 +280,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
             </div>
 
             <div>
-              <span className="text-micro text-surface-400 dark:text-surface-500 uppercase font-bold block">
+              <span className="text-micro text-surface-500 dark:text-surface-500 uppercase font-bold block">
                 Payment Channel
               </span>
               <span className="font-bold text-surface-900 dark:text-white">
@@ -291,7 +291,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
 
           {/* Customer & Destination */}
           <div className="p-4 rounded-2xl bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-800 space-y-1">
-            <span className="text-micro text-surface-400 dark:text-surface-500 uppercase font-bold block">
+            <span className="text-micro text-surface-500 dark:text-surface-500 uppercase font-bold block">
               Recipient &amp; Delivery Destination
             </span>
             <p className="font-bold text-surface-900 dark:text-white">{customer?.Name || 'Marketplace Customer'}</p>
@@ -308,7 +308,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
 
           {/* Purchased Items */}
           <div className="space-y-2">
-            <span className="text-micro text-surface-400 dark:text-surface-500 uppercase font-bold block">
+            <span className="text-micro text-surface-500 dark:text-surface-500 uppercase font-bold block">
               Purchased Items ({order.Items.length})
             </span>
             <div className="payment-receipt-items divide-y divide-surface-100 dark:divide-surface-800 max-h-36 overflow-y-auto pr-1">

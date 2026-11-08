@@ -441,7 +441,7 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
                 <Popup>{activeOrder.Shipping_Address.Street}, {activeOrder.Shipping_Address.City}</Popup>
               </CircleMarker>
             </MapContainer>
-            {routeStatus === 'error' && <div className="absolute bottom-3 left-3 z-10 rounded bg-white/95 px-3 py-2 text-xs text-danger-700 shadow">Road route is unavailable right now.</div>}
+            {routeStatus === 'error' && <div className="absolute bottom-3 left-3 z-10 rounded bg-white/95 px-3 py-2 text-xs text-danger-700 shadow dark:bg-surface-900/95 dark:text-danger-300">Road route is unavailable right now.</div>}
           </div> : <div className="flex flex-1 min-h-[420px] items-center justify-center bg-surface-100 px-6 text-center text-sm text-surface-600 dark:bg-[#161F2C] dark:text-surface-300">
             {!shopLocation ? 'The seller shop location is missing map coordinates.' : 'The customer destination is missing map coordinates.'}
           </div>}
@@ -554,7 +554,7 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
                 </div>
                 <div>
                   <span className="font-bold text-surface-800 dark:text-surface-200 block">Dispatched from Shop</span>
-                  <span className="text-micro text-surface-400 dark:text-surface-500">{activeSeller?.Name || activeFulfillment?.Seller_Name || 'Seller shop'}</span>
+                  <span className="text-micro text-surface-500 dark:text-surface-500">{activeSeller?.Name || activeFulfillment?.Seller_Name || 'Seller shop'}</span>
                 </div>
               </div>
 
@@ -575,12 +575,12 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
               </div>
 
               <div className="flex items-start gap-2.5 opacity-60">
-                <div className="w-5 h-5 rounded-full bg-surface-200 dark:bg-surface-700 text-surface-400 dark:text-surface-400 flex items-center justify-center shrink-0 mt-0.5">
+                <div className="w-5 h-5 rounded-full bg-surface-200 dark:bg-surface-700 text-surface-500 dark:text-surface-400 flex items-center justify-center shrink-0 mt-0.5">
                   <MapPin className="w-3 h-3" />
                 </div>
                 <div>
                   <span className="font-bold text-surface-700 dark:text-surface-400 block">Customer Destination</span>
-                  <span className="text-micro text-surface-400 dark:text-surface-500">
+                  <span className="text-micro text-surface-500 dark:text-surface-500">
                     {activeOrder.Shipping_Address.Street}, {activeOrder.Shipping_Address.City}
                   </span>
                 </div>
