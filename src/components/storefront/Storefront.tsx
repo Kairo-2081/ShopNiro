@@ -283,7 +283,7 @@ export const Storefront: React.FC<StorefrontProps> = ({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl border border-success-200 bg-success-50/80 px-4 py-3 text-xs text-success-900 dark:border-success-900/60 dark:bg-success-950/25 dark:text-success-200">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl border border-success-200 bg-success-50/80 px-4 py-3 text-xs text-success-900 dark:border-success-900/60 dark:bg-success-950 dark:text-success-200">
         <span className="inline-flex items-center gap-2 font-semibold"><Truck className="h-4 w-4" />{t('freeShipping')} {money(400)}+</span>
         <span className="inline-flex items-center gap-2"><Tag className="h-3.5 w-3.5" />{t('automaticSavings')} {money(500)}+</span>
       </div>
