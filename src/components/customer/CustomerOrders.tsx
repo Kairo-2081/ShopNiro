@@ -476,7 +476,7 @@ export const CustomerOrders: React.FC<CustomerOrdersProps> = ({
                       Waybill #: {order.Tracking_ID}
                     </span>
                   </div>
-                  <span className="text-micro text-surface-400 dark:text-surface-500 block">
+                  <span className="text-micro text-surface-500 dark:text-surface-500 block">
                     Placed on {formatDate(order.Order_Placed_At)}
                   </span>
                 </div>
@@ -501,7 +501,7 @@ export const CustomerOrders: React.FC<CustomerOrdersProps> = ({
                     );
                   })()}
                   <div className="text-right">
-                    <span className="text-micro text-surface-400 dark:text-surface-500 uppercase font-bold block">Total Amount</span>
+                    <span className="text-micro text-surface-500 dark:text-surface-500 uppercase font-bold block">Total Amount</span>
                     <span className="text-base font-black text-surface-900 dark:text-white">
                       {formatBDT(order.Subtotal + order.Shipping_Fee)}
                     </span>
@@ -566,7 +566,7 @@ export const CustomerOrders: React.FC<CustomerOrdersProps> = ({
                     <p>{order.Shipping_Address.House_Name}, {order.Shipping_Address.Street}</p>
                     <p>{order.Shipping_Address.City}, {order.Shipping_Address.Postal_Code}</p>
                     {order.Shipping_Address.Additional_Info && (
-                      <p className="text-micro text-surface-400 dark:text-surface-500 italic pt-1">
+                      <p className="text-micro text-surface-500 dark:text-surface-500 italic pt-1">
                         "{order.Shipping_Address.Additional_Info}"
                       </p>
                     )}
