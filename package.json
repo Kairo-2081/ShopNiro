@@ -14,6 +14,7 @@
     "test:ci": "npm test",
     "e2e": "playwright test",
     "test:a11y": "playwright test e2e/accessibility.spec.ts",
+    "test:lighthouse:a11y": "node scripts/check-lighthouse-a11y.mjs",
     "migrate": "tsx scripts/migrate.ts",
     "migrate:status": "tsx scripts/migrate.ts --status",
     "migrate:drift": "tsx scripts/schema-drift.ts",
@@ -79,6 +80,7 @@
     "electron": "^44.10.1",
     "electron-builder": "^26.18.0",
     "esbuild": "^0.28.2",
+    "lighthouse": "^13.6.0",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
     "typescript": "~5.9.3"
