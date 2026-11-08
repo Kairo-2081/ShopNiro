@@ -18,6 +18,7 @@ import {
 import { api } from './lib/api';
 import { getProfileCompletion } from './lib/profileCompletion';
 import { shopNiroLogo } from './lib/branding';
+import { LandingPage } from './components/LandingPage';
 import { MarketplaceClosing, MarketplaceStat } from './components/MarketplaceClosing';
 import { Navbar } from './components/Navbar';
 import { RoleSwitcher } from './components/RoleSwitcher';
@@ -35,7 +36,6 @@ interface AppToast {
   tone: ToastTone;
 }
 
-const LandingPage = React.lazy(() => import('./components/LandingPage').then((module) => ({ default: module.LandingPage })));
 const Storefront = React.lazy(() => import('./components/storefront/Storefront').then((module) => ({ default: module.Storefront })));
 const MarketplaceTrendsTopCharts = React.lazy(() => import('./components/storefront/MarketplaceTrendsTopCharts').then((module) => ({ default: module.MarketplaceTrendsTopCharts })));
 const ProductDetailModal = React.lazy(() => import('./components/storefront/ProductDetailModal').then((module) => ({ default: module.ProductDetailModal })));
