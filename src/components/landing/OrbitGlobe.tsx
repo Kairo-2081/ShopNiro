@@ -22,20 +22,6 @@ export const OrbitGlobe: React.FC<OrbitGlobeProps> = ({ onGreet }) => {
     return () => preference.removeEventListener('change', updatePreference);
   }, []);
 
-  // Rotation animation loop
-  useEffect(() => {
-    if (prefersReducedMotion) return;
-    let animationFrameId: number;
-    const animate = () => {
-      if (!isDragging) {
-        setRotation((prev) => (prev + 0.35) % 360);
-      }
-      animationFrameId = requestAnimationFrame(animate);
-    };
-    animationFrameId = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(animationFrameId);
-  }, [isDragging, prefersReducedMotion]);
-
   // Render planet on canvas
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -250,7 +236,7 @@ export const OrbitGlobe: React.FC<OrbitGlobeProps> = ({ onGreet }) => {
   };
 
   return (
-    <div className="relative flex flex-col items-center justify-center select-none py-2">
+    <div className="relative flex h-[284px] flex-col items-center justify-center select-none py-2">
       {/* Speech Bubble when greeted */}
       {greetingText && (
         <div role="status" className="absolute top-2 z-20 px-3.5 py-1.5 rounded-full bg-white dark:bg-surface-900 border border-brand-200 dark:border-brand-800 text-brand-600 dark:text-brand-300 font-semibold text-xs shadow-lg animate-bounce">
@@ -270,7 +256,8 @@ export const OrbitGlobe: React.FC<OrbitGlobeProps> = ({ onGreet }) => {
         onPointerCancel={handlePointerUp}
         onPointerLeave={handlePointerUp}
         onClick={handleGlobeClick}
-        className="cursor-grab active:cursor-grabbing touch-none transition-transform hover:scale-102"
+        className={`cursor-grab active:cursor-grabbing touch-none transition-transform hover:scale-102 ${prefersReducedMotion ? '' : 'animate-spin'}`}
+        style={prefersReducedMotion ? undefined : { animationDuration: '45s' }}
         title="Drag to rotate the globe"
       />
 
