@@ -12,6 +12,46 @@ const rolePages = [
 
 const guestStorageState = { cookies: [], origins: [] };
 
+const assertKeyboardReachability = async (page: import('@playwright/test').Page, label: string) => {
+  const expected = await page.evaluate(() => {
+    const selector = 'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])';
+    return Array.from(document.querySelectorAll<HTMLElement>(selector))
+      .filter((element) => element.tabIndex >= 0 && element.getClientRects().length > 0 && !element.closest('[inert]'))
+      .map((element, index) => {
+        element.dataset.a11yTabIndex = String(index);
+        const style = getComputedStyle(element);
+        element.dataset.a11yOutline = `${style.outlineStyle} ${style.outlineWidth}`;
+        element.dataset.a11yShadow = style.boxShadow;
+        return index;
+      });
+  });
+  expect(expected.length, `${label} has keyboard-accessible controls`).toBeGreaterThan(0);
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+
+  const visited = new Set<number>();
+  for (let index = 0; index < expected.length; index += 1) {
+    await page.keyboard.press('Tab');
+    const focus = await page.evaluate(() => {
+      const element = document.activeElement as HTMLElement | null;
+      return {
+        index: element?.dataset.a11yTabIndex,
+        outline: element ? getComputedStyle(element).outlineStyle : 'none',
+        outlineWidth: element ? getComputedStyle(element).outlineWidth : '0px',
+        boxShadow: element ? getComputedStyle(element).boxShadow : 'none',
+        initialOutline: element?.dataset.a11yOutline,
+        initialShadow: element?.dataset.a11yShadow,
+      };
+    });
+    if (focus.index !== undefined) visited.add(Number(focus.index));
+    const hasIndicator = (
+      (focus.outline !== 'none' && focus.outlineWidth !== '0px' && `${focus.outline} ${focus.outlineWidth}` !== focus.initialOutline) ||
+      (focus.boxShadow !== 'none' && focus.boxShadow !== focus.initialShadow)
+    );
+    expect(hasIndicator, `${label} control ${focus.index ?? 'unknown'} has a visible focus indicator`).toBe(true);
+  }
+  expect(visited.size, `${label} exposes every visible control in tab order`).toBe(expected.length);
+};
+
 test('public and role-specific pages have no critical or serious axe violations', async ({ browser, baseURL }, testInfo) => {
   test.setTimeout(180_000);
   test.skip(testInfo.project.name !== 'desktop', 'The full page sweep runs once per CI workflow.');
@@ -100,48 +140,7 @@ test('storefront controls are keyboard reachable and the login dialog traps and 
     await page.goto('/');
     const signIn = page.getByRole('button', { name: 'Sign In / Accounts', exact: true });
     await expect(signIn).toBeVisible();
-    const expected = await page.evaluate(() => {
-      const selector = 'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])';
-      return Array.from(document.querySelectorAll<HTMLElement>(selector))
-        .filter((element) => element.tabIndex >= 0 && element.getClientRects().length > 0 && !element.closest('[inert]'))
-        .map((element, index) => {
-          element.dataset.a11yTabIndex = String(index);
-          const style = getComputedStyle(element);
-          element.dataset.a11yOutline = `${style.outlineStyle} ${style.outlineWidth}`;
-          element.dataset.a11yShadow = style.boxShadow;
-          return index;
-        });
-    });
-    expect(expected.length).toBeGreaterThan(0);
-    const visited = new Set<number>();
-    const focusDiagnostics: string[] = [];
-    let hasVisibleFocus = false;
-    for (let index = 0; index < expected.length; index += 1) {
-      await page.keyboard.press('Tab');
-      const focus = await page.evaluate(() => {
-        const element = document.activeElement as HTMLElement | null;
-        return {
-          index: element?.dataset.a11yTabIndex,
-          outline: element ? getComputedStyle(element).outlineStyle : 'none',
-          outlineWidth: element ? getComputedStyle(element).outlineWidth : '0px',
-          boxShadow: element ? getComputedStyle(element).boxShadow : 'none',
-          initialOutline: element?.dataset.a11yOutline,
-          initialShadow: element?.dataset.a11yShadow,
-          isFocusVisible: element?.matches(':focus-visible') || false,
-          tag: element?.tagName,
-          className: element?.className,
-        };
-      });
-      if (focus.index !== undefined) visited.add(Number(focus.index));
-      const hasIndicator = (
-        (focus.outline !== 'none' && focus.outlineWidth !== '0px' && `${focus.outline} ${focus.outlineWidth}` !== focus.initialOutline) ||
-        (focus.boxShadow !== 'none' && focus.boxShadow !== focus.initialShadow)
-      );
-      if (hasIndicator) hasVisibleFocus = true;
-      else if (focusDiagnostics.length < 5) focusDiagnostics.push(JSON.stringify(focus));
-    }
-    expect(visited.size).toBe(expected.length);
-    expect(hasVisibleFocus, focusDiagnostics.join('\n')).toBe(true);
+    await assertKeyboardReachability(page, 'Public storefront');
 
     await signIn.focus();
     await page.keyboard.press('Enter');
@@ -158,6 +157,57 @@ test('storefront controls are keyboard reachable and the login dialog traps and 
     await page.keyboard.press('Escape');
     await expect(dialog).toHaveCount(0);
     await expect(signIn).toBeFocused();
+  } finally {
+    await context.close();
+  }
+});
+
+test('role pages expose every visible control to keyboard navigation', async ({ browser, baseURL }, testInfo) => {
+  test.setTimeout(240_000);
+  test.skip(testInfo.project.name !== 'desktop', 'The complete role-page keyboard sweep runs once per CI workflow.');
+
+  for (const { role, home, pages } of rolePages) {
+    const context = await browser.newContext({ baseURL, storageState: AUTH[role] });
+    const page = await context.newPage();
+    try {
+      await blockNonLocalTraffic(page);
+      await page.goto('/');
+      const navigation = page.getByRole('navigation', { name: 'Primary navigation' });
+      await expect(navigation.getByRole('button', { name: home })).toBeVisible();
+      await assertKeyboardReachability(page, `${role} home`);
+
+      for (const label of pages) {
+        await navigation.getByRole('button', { name: label }).click();
+        await assertKeyboardReachability(page, `${role} ${label}`);
+      }
+    } finally {
+      await context.close();
+    }
+  }
+});
+
+test('cart drawer traps focus, closes with Escape, and restores focus to its trigger', async ({ browser, baseURL }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'The dialog focus-return check runs once per CI workflow.');
+  const context = await browser.newContext({ baseURL, storageState: AUTH.customer });
+  const page = await context.newPage();
+  try {
+    await blockNonLocalTraffic(page);
+    await page.goto('/');
+    const cartTrigger = page.getByRole('button', { name: 'Shopping Cart' });
+    await cartTrigger.click();
+    const dialog = page.getByRole('dialog', { name: 'Your Cart' });
+    await expect(dialog).toBeVisible();
+    const focusable = dialog.locator('button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled])');
+    const first = focusable.first();
+    const last = focusable.last();
+    await expect(first).toBeFocused();
+    await page.keyboard.press('Shift+Tab');
+    await expect(last).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(first).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
+    await expect(cartTrigger).toBeFocused();
   } finally {
     await context.close();
   }
