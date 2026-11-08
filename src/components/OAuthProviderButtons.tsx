@@ -9,7 +9,7 @@ interface OAuthProviderButtonsProps {
 
 export const OAuthProviderButtons: React.FC<OAuthProviderButtonsProps> = ({ role, mode, className = '' }) => (
   <div className={`space-y-3 ${className}`}>
-    <div className="flex items-center gap-3 py-1 text-micro font-semibold uppercase tracking-wider text-surface-400 dark:text-surface-500">
+    <div className="flex items-center gap-3 py-1 text-micro font-semibold uppercase tracking-wider text-surface-500 dark:text-surface-500">
       <span className="h-px flex-1 bg-surface-200 dark:bg-surface-700" />
       <span>Or {mode} with</span>
       <span className="h-px flex-1 bg-surface-200 dark:bg-surface-700" />
