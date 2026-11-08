@@ -25,7 +25,11 @@ test('public and role-specific pages have no critical or serious axe violations'
           id: violation.id,
           impact: violation.impact,
           help: violation.help,
-          targets: violation.nodes.map((node) => node.target),
+          nodes: violation.nodes.map((node) => ({
+            target: node.target,
+            failureSummary: node.failureSummary,
+            checks: node.any.map((check) => ({ message: check.message, data: check.data })),
+          })),
         }));
       if (violations.length) {
         console.error(JSON.stringify({ page: label, theme, violations }, null, 2));
