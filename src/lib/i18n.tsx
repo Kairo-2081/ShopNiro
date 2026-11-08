@@ -147,6 +147,11 @@ const messages = {
     chooseSize: 'Choose size',
     added: 'Added',
     quickView: 'Quick view',
+    chooseRating: 'Choose a rating',
+    rateStarCount: 'Rate {count} stars',
+    ratingSummary: '{rating} out of {total} stars, {count} reviews',
+    ratingScore: '{rating} out of {total} stars',
+    noRatings: 'No reviews yet',
   },
   bn: {
     shop: 'দোকান',
@@ -291,6 +296,11 @@ const messages = {
     chooseSize: 'সাইজ বেছে নিন',
     added: 'যোগ হয়েছে',
     quickView: 'দ্রুত দেখুন',
+    chooseRating: 'রেটিং বেছে নিন',
+    rateStarCount: '{count} স্টার রেট করুন',
+    ratingSummary: '{total} এর মধ্যে {rating} স্টার, রিভিউ {count}টি',
+    ratingScore: '{total} এর মধ্যে {rating} স্টার',
+    noRatings: 'এখনও কোনো রিভিউ নেই',
   },
 } as const;
 

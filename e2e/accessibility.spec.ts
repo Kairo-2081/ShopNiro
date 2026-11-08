@@ -95,6 +95,7 @@ test('storefront controls are keyboard reachable and the login dialog traps and 
         });
     });
     const visited = new Set<number>();
+    const focusDiagnostics: string[] = [];
     let hasVisibleFocus = false;
     for (let index = 0; index < expected.length + 1; index += 1) {
       await page.keyboard.press('Tab');
@@ -107,18 +108,23 @@ test('storefront controls are keyboard reachable and the login dialog traps and 
           boxShadow: element ? getComputedStyle(element).boxShadow : 'none',
           initialOutline: element?.dataset.a11yOutline,
           initialShadow: element?.dataset.a11yShadow,
+          isFocusVisible: element?.matches(':focus-visible') || false,
+          tag: element?.tagName,
+          className: element?.className,
         };
       });
       if (focus.index !== undefined) visited.add(Number(focus.index));
-      if (
+      const hasIndicator = (
         (focus.outline !== 'none' && focus.outlineWidth !== '0px' && `${focus.outline} ${focus.outlineWidth}` !== focus.initialOutline) ||
         (focus.boxShadow !== 'none' && focus.boxShadow !== focus.initialShadow)
-      ) hasVisibleFocus = true;
+      );
+      if (hasIndicator) hasVisibleFocus = true;
+      else if (focusDiagnostics.length < 5) focusDiagnostics.push(JSON.stringify(focus));
     }
     expect(visited.size).toBe(expected.length);
-    expect(hasVisibleFocus).toBe(true);
+    expect(hasVisibleFocus, focusDiagnostics.join('\n')).toBe(true);
 
-    const signIn = page.getByRole('button', { name: 'Sign in' });
+    const signIn = page.getByRole('button', { name: 'Sign In / Accounts', exact: true });
     await signIn.focus();
     await page.keyboard.press('Enter');
     const dialog = page.getByRole('dialog', { name: 'Marketplace Login' });

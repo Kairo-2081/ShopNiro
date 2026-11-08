@@ -1,5 +1,6 @@
 import React from 'react';
 import { Star } from 'lucide-react';
+import { useLocale } from '../lib/i18n';
 
 interface StarRatingProps {
   rating: number; // 0 to 5
@@ -20,6 +21,7 @@ export const StarRating: React.FC<StarRatingProps> = ({
   showText = false,
   totalReviews,
 }) => {
+  const { t } = useLocale();
   const [hoverRating, setHoverRating] = React.useState<number | null>(null);
 
   const starSizeClasses = {
@@ -29,44 +31,66 @@ export const StarRating: React.FC<StarRatingProps> = ({
   };
 
   const current = hoverRating !== null ? hoverRating : rating;
+  const ratingLabel = totalReviews === 0
+    ? t('noRatings')
+    : totalReviews === undefined
+      ? t('ratingScore')
+        .replace('{rating}', rating.toFixed(1))
+        .replace('{total}', String(maxRating))
+      : t('ratingSummary')
+      .replace('{rating}', rating.toFixed(1))
+      .replace('{total}', String(maxRating))
+      .replace('{count}', String(totalReviews));
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div
+      role={interactive ? 'group' : 'img'}
+      aria-label={interactive ? t('chooseRating') : ratingLabel}
+      className="flex items-center gap-1.5"
+    >
       <div className="flex items-center">
         {Array.from({ length: maxRating }).map((_, idx) => {
           const starVal = idx + 1;
           const isFilled = starVal <= Math.floor(current);
           const isHalf = !isFilled && starVal - 0.5 <= current;
 
-          return (
+          const star = (
+            <Star
+              aria-hidden="true"
+              className={`${starSizeClasses[size]} ${
+                isFilled
+                  ? 'fill-warning-400 text-warning-400'
+                  : isHalf
+                  ? 'fill-warning-200 text-warning-400'
+                  : 'text-surface-300 dark:text-surface-600'
+              }`}
+            />
+          );
+
+          return interactive ? (
             <button
               key={idx}
               type="button"
-              disabled={!interactive}
-              onClick={() => interactive && onRatingChange?.(starVal)}
-              onMouseEnter={() => interactive && setHoverRating(starVal)}
-              onMouseLeave={() => interactive && setHoverRating(null)}
-              className={`${
-                interactive ? 'cursor-pointer hover:scale-110 transition-transform' : 'cursor-default'
-              } p-0.5 focus:outline-none`}
+              aria-label={t('rateStarCount').replace('{count}', String(starVal))}
+              aria-pressed={rating === starVal}
+              onClick={() => onRatingChange?.(starVal)}
+              onMouseEnter={() => setHoverRating(starVal)}
+              onMouseLeave={() => setHoverRating(null)}
+              className="cursor-pointer p-0.5 transition-transform hover:scale-110"
             >
-              <Star
-                className={`${starSizeClasses[size]} ${
-                  isFilled
-                    ? 'fill-warning-400 text-warning-400'
-                    : isHalf
-                    ? 'fill-warning-200 text-warning-400'
-                    : 'text-surface-300 dark:text-surface-600'
-                }`}
-              />
+              {star}
             </button>
+          ) : (
+            <span key={idx} aria-hidden="true" className="cursor-default p-0.5">
+              {star}
+            </span>
           );
         })}
       </div>
 
       {showText && (
         <span className="text-xs font-medium text-surface-600 dark:text-surface-400">
-          {rating > 0 ? rating.toFixed(1) : 'No reviews'}
+          {rating > 0 ? rating.toFixed(1) : t('noRatings')}
           {totalReviews !== undefined && totalReviews > 0 && ` (${totalReviews})`}
         </span>
       )}
