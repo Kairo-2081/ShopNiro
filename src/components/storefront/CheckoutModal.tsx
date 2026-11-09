@@ -85,6 +85,9 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [voucherError, setVoucherError] = React.useState('');
   const [bundles, setBundles] = React.useState<ProductBundle[]>([]);
   const [isLoadingBundles, setIsLoadingBundles] = React.useState(false);
+  const [onlinePaymentsEnabled, setOnlinePaymentsEnabled] = React.useState(false);
+  const [isLoadingPaymentConfig, setIsLoadingPaymentConfig] = React.useState(false);
+  const [paymentAvailabilityMessage, setPaymentAvailabilityMessage] = React.useState('');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [createdOrder, setCreatedOrder] = React.useState<Order | null>(null);
   const [pendingOrderId, setPendingOrderId] = React.useState('');
@@ -106,6 +109,30 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
     });
     return () => { isMounted = false; };
   }, [isOpen]);
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+    let isMounted = true;
+    setOnlinePaymentsEnabled(false);
+    setIsLoadingPaymentConfig(true);
+    setPaymentMethod('cash_on_delivery');
+    setPaymentAvailabilityMessage('Checking online payment availability.');
+    api.getPaymentMethods().then((settings: { onlinePaymentsEnabled?: boolean }) => {
+      if (!isMounted) return;
+      const enabled = settings.onlinePaymentsEnabled === true;
+      setOnlinePaymentsEnabled(enabled);
+      setPaymentMethod(enabled ? initialPaymentMethod : 'cash_on_delivery');
+      setPaymentAvailabilityMessage(enabled ? '' : 'Online payments are temporarily unavailable. Choose cash on delivery.');
+    }).catch(() => {
+      if (!isMounted) return;
+      setOnlinePaymentsEnabled(false);
+      setPaymentMethod('cash_on_delivery');
+      setPaymentAvailabilityMessage('Online payment availability could not be verified. Choose cash on delivery.');
+    }).finally(() => {
+      if (isMounted) setIsLoadingPaymentConfig(false);
+    });
+    return () => { isMounted = false; };
+  }, [initialPaymentMethod, isOpen]);
 
   React.useEffect(() => {
     if (!isOpen) {
@@ -505,8 +532,15 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       All prices shown in Bangladeshi Taka
                     </span>
                   </div>
+                  {paymentAvailabilityMessage && (
+                    <p role="status" className="text-xs text-surface-600 dark:text-surface-300">
+                      {paymentAvailabilityMessage}
+                    </p>
+                  )}
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {onlinePaymentsEnabled && (
+                      <>
                     {/* bKash Radio Card */}
                     <button
                       type="button"
@@ -642,6 +676,8 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                         <span className="font-black text-brand-600 dark:text-brand-400">{formatCurrency(grandTotal)}</span>
                       </div>
                     </button>
+                      </>
+                    )}
 
                     {/* Cash on Delivery Card */}
                     <button
@@ -798,7 +834,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                   <button
                     data-testid="checkout-submit"
                     type="submit"
-                    disabled={isSubmitting || isLoadingCart || isLoadingBundles || cartItems.length === 0}
+                    disabled={isSubmitting || isLoadingCart || isLoadingBundles || isLoadingPaymentConfig || cartItems.length === 0}
                     className={`flex min-h-12 min-w-0 max-w-[190px] items-center justify-center gap-2 rounded-full px-4 py-2 text-center text-xs font-bold leading-tight text-white shadow-lg transition-all active:scale-98 disabled:cursor-wait disabled:opacity-70 sm:max-w-none sm:px-6 ${
                       paymentMethod === 'bkash'
                         ? 'bg-[#E2136E] hover:bg-[#c20f5e] shadow-[#E2136E]/30'
@@ -816,7 +852,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                         <LoaderCircle aria-hidden="true" className="h-4 w-4 animate-spin" />
                         <span>Processing…</span>
                       </>
-                    ) : isLoadingCart || isLoadingBundles ? (
+                    ) : isLoadingCart || isLoadingBundles || isLoadingPaymentConfig ? (
                       'Calculating order total...'
                     ) : cartItems.length === 0 ? (
                       'Your cart is empty'
