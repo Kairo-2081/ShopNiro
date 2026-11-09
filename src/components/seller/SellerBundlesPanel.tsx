@@ -143,7 +143,7 @@ export const SellerBundlesPanel: React.FC<SellerBundlesPanelProps> = ({ products
               </div>
             </article>
           );
-        }) : <p className="py-8 text-center text-xs text-surface-500">No bundles yet.</p>}
+        }) : <p className="py-8 text-center text-xs text-surface-500 dark:text-surface-300">No bundles yet.</p>}
       </section>
     </section>
   );

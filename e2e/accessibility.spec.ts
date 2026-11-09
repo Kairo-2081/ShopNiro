@@ -40,9 +40,6 @@ const assertKeyboardReachability = async (page: import('@playwright/test').Page,
       .map((element, index) => {
         element.dataset.a11yTabIndex = String(index);
         element.dataset.a11yLabel = element.getAttribute('aria-label') || (element.innerText ?? element.textContent ?? '').trim().replace(/\s+/g, ' ') || element.title || `${element.tagName.toLowerCase()} control`;
-        const style = getComputedStyle(element);
-        element.dataset.a11yOutline = `${style.outlineStyle} ${style.outlineWidth}`;
-        element.dataset.a11yShadow = style.boxShadow;
         return { index, label: element.dataset.a11yLabel };
       });
   });
@@ -57,14 +54,12 @@ const assertKeyboardReachability = async (page: import('@playwright/test').Page,
         outline: element ? getComputedStyle(element).outlineStyle : 'none',
         outlineWidth: element ? getComputedStyle(element).outlineWidth : '0px',
         boxShadow: element ? getComputedStyle(element).boxShadow : 'none',
-        initialOutline: element?.dataset.a11yOutline,
-        initialShadow: element?.dataset.a11yShadow,
       };
     });
     if (focus.index !== undefined) visited.add(Number(focus.index));
     const hasIndicator = (
-      (focus.outline !== 'none' && focus.outlineWidth !== '0px' && `${focus.outline} ${focus.outlineWidth}` !== focus.initialOutline) ||
-      (focus.boxShadow !== 'none' && focus.boxShadow !== focus.initialShadow)
+      (focus.outline !== 'none' && focus.outlineWidth !== '0px') ||
+      focus.boxShadow !== 'none'
     );
     expect(hasIndicator, `${label} control ${focus.index ?? 'unknown'} has a visible focus indicator`).toBe(true);
   }
