@@ -21,6 +21,23 @@ import {
   Sparkles,
 } from 'lucide-react';
 
+// Sellers type policies as markdown (for example **3-Year Warranty**), so render it instead of showing the asterisks.
+function PolicyText({ text }: { text: string }) {
+  return (
+    <div className="space-y-1.5">
+      <ReactMarkdown components={{
+        p: ({ children }) => <p>{children}</p>,
+        strong: ({ children }) => <strong className="font-bold text-surface-900 dark:text-white">{children}</strong>,
+        ul: ({ children }) => <ul className="list-disc space-y-0.5 pl-4">{children}</ul>,
+        ol: ({ children }) => <ol className="list-decimal space-y-0.5 pl-4">{children}</ol>,
+        li: ({ children }) => <li>{children}</li>,
+      }}>
+        {text}
+      </ReactMarkdown>
+    </div>
+  );
+}
+
 interface ProductDetailModalProps {
   product: Product | null;
   category?: Category;
@@ -376,8 +393,18 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 {(product.Warranty_Information || product.Return_Policy) && (
                   <section className="rounded-xl border border-surface-200 bg-surface-50 p-4 dark:border-surface-800 dark:bg-[#161C24]">
                     <h3 className="mb-2 text-xs font-bold text-surface-800 dark:text-surface-200">Seller-provided policies</h3>
-                    {product.Warranty_Information && <p className="whitespace-pre-line text-xs text-surface-600 dark:text-surface-300"><strong>Coverage:</strong> {product.Warranty_Information}</p>}
-                    {product.Return_Policy && <p className="mt-1 text-xs text-surface-600 dark:text-surface-300"><strong>Returns:</strong> {product.Return_Policy}</p>}
+                    {product.Warranty_Information && (
+                      <div className="text-xs text-surface-600 dark:text-surface-300">
+                        <strong className="text-surface-800 dark:text-surface-100">Coverage:</strong>
+                        <PolicyText text={product.Warranty_Information} />
+                      </div>
+                    )}
+                    {product.Return_Policy && (
+                      <div className="mt-2 text-xs text-surface-600 dark:text-surface-300">
+                        <strong className="text-surface-800 dark:text-surface-100">Returns:</strong>
+                        <PolicyText text={product.Return_Policy} />
+                      </div>
+                    )}
                   </section>
                 )}
 
