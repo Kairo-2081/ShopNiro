@@ -2,14 +2,21 @@ import { expect, test } from '@playwright/test';
 import { AUTH } from './global-setup.ts';
 import { blockNonLocalTraffic } from './helpers.ts';
 
-test('keeps a readable offline notice on every role home and navigation screen', async ({ browser, baseURL }) => {
+test('keeps a readable offline notice on every role home and navigation screen', async ({ browser, baseURL }, testInfo) => {
   test.setTimeout(120_000);
   const cases = [
-    { role: 'customer', home: 'My orders', navigation: ['Top charts', 'Live tracking', 'My Profile', 'Support'] },
-    { role: 'seller', home: 'Seller Studio', navigation: ['Preview Storefront', 'Support'] },
-    { role: 'admin', home: 'Admin Governance', navigation: ['Public Storefront', 'Support'] },
-    { role: 'rider', home: 'Rider deliveries', navigation: ['Support'] },
+    { role: 'customer', home: 'Shop', navigation: ['Top charts', 'Live tracking', 'Profile', 'Support'] },
+    { role: 'seller', home: 'Product Catalog', navigation: ['Fulfillment Orders', 'Sales Analytics', 'Preview storefront', 'Support'] },
+    { role: 'admin', home: 'Governance Overview', navigation: ['Marketplace Metrics', 'Merchant Approvals', 'Storefront', 'Support'] },
+    { role: 'rider', home: 'Deliveries', navigation: ['Support'] },
   ] as const;
+
+  const selectNavigationItem = async (page: import('@playwright/test').Page, label: string) => {
+    if (testInfo.project.name !== 'desktop') {
+      await page.getByRole('button', { name: 'Open navigation' }).click();
+    }
+    await page.getByRole('navigation', { name: 'Workspace navigation' }).getByRole('button', { name: label }).click();
+  };
 
   for (const { role, home, navigation } of cases) {
     const context = await browser.newContext({ baseURL, storageState: AUTH[role] });
@@ -17,14 +24,13 @@ test('keeps a readable offline notice on every role home and navigation screen',
     try {
       await blockNonLocalTraffic(page);
       await page.goto('/');
-      const primaryNavigation = page.getByRole('navigation', { name: 'Primary navigation' });
-      await expect(primaryNavigation.getByRole('button', { name: home })).toBeVisible();
+      await selectNavigationItem(page, home);
       // Visit each screen once while online so its lazy-loaded code is already in the browser.
       for (const label of navigation) {
-        await primaryNavigation.getByRole('button', { name: label }).click();
+        await selectNavigationItem(page, label);
         await page.waitForTimeout(700);
       }
-      await primaryNavigation.getByRole('button', { name: home }).click();
+      await selectNavigationItem(page, home);
       await page.waitForTimeout(700);
       await context.setOffline(true);
       // Chromium does not reliably emit the offline event when the context is switched, so send it explicitly.
@@ -34,7 +40,7 @@ test('keeps a readable offline notice on every role home and navigation screen',
       await expect(notice.getByRole('button', { name: 'Retry' })).toBeVisible();
 
       for (const label of navigation) {
-        await primaryNavigation.getByRole('button', { name: label }).click();
+        await selectNavigationItem(page, label);
         await expect(notice).toBeVisible();
       }
     } finally {
