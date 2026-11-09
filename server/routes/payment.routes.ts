@@ -8,6 +8,7 @@ import { publicMessage } from '../middleware/errorHandler.ts';
 import { validateBody } from '../middleware/validate.ts';
 import { emptyBody, gatewayReturnBody, paymentInitBody, simulatorCompleteBody, sslcommerzIpnBody, sslcommerzValidateBody } from '../validation/schemas.ts';
 import { calculateOrderTotal } from '../../src/lib/checkoutPricing.ts';
+import { areOnlinePaymentsEnabled } from '../services/paymentAvailability.ts';
 
 const router = Router();
 const paymentInitRateLimit = rateLimit({
@@ -331,65 +332,68 @@ export const startRefundProcessor = (intervalMs = 60_000) => {
  */
 router.get('/methods', async (req, res) => {
   const settings = sslcommerz.getSettings();
+  const onlinePaymentsEnabled = areOnlinePaymentsEnabled();
+  const methods = [
+    {
+      id: 'bkash',
+      name: 'bKash Mobile Banking',
+      type: 'mfs',
+      gateway: 'sslcommerz',
+      badge: 'Recommended in Bangladesh',
+      brandColor: '#E2136E',
+      icon: 'Smartphone',
+      description: 'Instant payment via bKash Account (PIN & OTP secured)',
+      ...(settings.isSandbox ? { testAccount: '01700000000', testOtp: '123456', testPin: '12345' } : {}),
+    },
+    {
+      id: 'nagad',
+      name: 'Nagad Digital Payment',
+      type: 'mfs',
+      gateway: 'sslcommerz',
+      badge: 'Post Office Digital Service',
+      brandColor: '#F7941D',
+      icon: 'Smartphone',
+      description: 'Fast checkout via Nagad Account',
+      ...(settings.isSandbox ? { testAccount: '01800000000', testOtp: '123456', testPin: '12345' } : {}),
+    },
+    {
+      id: 'rocket',
+      name: 'Rocket (DBBL MFS)',
+      type: 'mfs',
+      gateway: 'sslcommerz',
+      badge: 'Dutch-Bangla Bank',
+      brandColor: '#8C3494',
+      icon: 'Smartphone',
+      description: 'Direct payment via DBBL Rocket Account',
+      ...(settings.isSandbox ? { testAccount: '01900000000', testOtp: '123456', testPin: '12345' } : {}),
+    },
+    {
+      id: 'visa_mastercard',
+      name: 'Cards & Internet Banking',
+      type: 'card',
+      gateway: 'sslcommerz',
+      badge: 'Visa / Mastercard / Amex',
+      brandColor: '#2563EB',
+      icon: 'CreditCard',
+      description: 'Local & International Credit/Debit Cards via SSLCommerz 3D Secure',
+    },
+    {
+      id: 'cash_on_delivery',
+      name: 'Cash on Delivery (COD)',
+      type: 'offline',
+      gateway: 'direct',
+      badge: 'Pay Upon Receiving',
+      brandColor: '#059669',
+      icon: 'Banknote',
+      description: 'Pay cash to the dispatch courier at your doorstep',
+    },
+  ];
   res.json({
     gateway: 'SSLCommerz (SSL Wireless)',
     isSandbox: settings.isSandbox,
     currency: 'BDT',
-    methods: [
-      {
-        id: 'bkash',
-        name: 'bKash Mobile Banking',
-        type: 'mfs',
-        gateway: 'sslcommerz',
-        badge: 'Recommended in Bangladesh',
-        brandColor: '#E2136E',
-        icon: 'Smartphone',
-        description: 'Instant payment via bKash Account (PIN & OTP secured)',
-        ...(settings.isSandbox ? { testAccount: '01700000000', testOtp: '123456', testPin: '12345' } : {}),
-      },
-      {
-        id: 'nagad',
-        name: 'Nagad Digital Payment',
-        type: 'mfs',
-        gateway: 'sslcommerz',
-        badge: 'Post Office Digital Service',
-        brandColor: '#F7941D',
-        icon: 'Smartphone',
-        description: 'Fast checkout via Nagad Account',
-        ...(settings.isSandbox ? { testAccount: '01800000000', testOtp: '123456', testPin: '12345' } : {}),
-      },
-      {
-        id: 'rocket',
-        name: 'Rocket (DBBL MFS)',
-        type: 'mfs',
-        gateway: 'sslcommerz',
-        badge: 'Dutch-Bangla Bank',
-        brandColor: '#8C3494',
-        icon: 'Smartphone',
-        description: 'Direct payment via DBBL Rocket Account',
-        ...(settings.isSandbox ? { testAccount: '01900000000', testOtp: '123456', testPin: '12345' } : {}),
-      },
-      {
-        id: 'visa_mastercard',
-        name: 'Cards & Internet Banking',
-        type: 'card',
-        gateway: 'sslcommerz',
-        badge: 'Visa / Mastercard / Amex',
-        brandColor: '#2563EB',
-        icon: 'CreditCard',
-        description: 'Local & International Credit/Debit Cards via SSLCommerz 3D Secure',
-      },
-      {
-        id: 'cash_on_delivery',
-        name: 'Cash on Delivery (COD)',
-        type: 'offline',
-        gateway: 'direct',
-        badge: 'Pay Upon Receiving',
-        brandColor: '#059669',
-        icon: 'Banknote',
-        description: 'Pay cash to the dispatch courier at your doorstep',
-      },
-    ],
+    onlinePaymentsEnabled,
+    methods: onlinePaymentsEnabled ? methods : methods.filter(({ id }) => id === 'cash_on_delivery'),
   });
 });
 
@@ -458,6 +462,12 @@ router.post('/simulator/complete', validateBody(simulatorCompleteBody), async (r
 
 router.post('/init', requireAuth, requireRole(['customer']), paymentInitRateLimit, validateBody(paymentInitBody), async (req: AuthRequest, res) => {
   try {
+    if (!areOnlinePaymentsEnabled()) {
+      return res.status(503).json({
+        error: 'Online payments are temporarily unavailable. Choose cash on delivery.',
+        code: 'ONLINE_PAYMENTS_DISABLED',
+      });
+    }
     const {
       orderId,
       customerName,
