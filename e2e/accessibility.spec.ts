@@ -14,13 +14,23 @@ const rolePages = [
 const guestStorageState = { cookies: [], origins: [] };
 
 const assertKeyboardReachability = async (page: import('@playwright/test').Page, label: string) => {
+  // Controls are tagged in the page, so a late re-render (the catalogue is fetched more than once on load) would drop the
+  // tags and make a reachable control look untagged. Let requests finish and the page stop changing first.
+  await page.waitForLoadState('networkidle').catch(() => undefined);
+  await page.evaluate(() => new Promise<void>((resolve) => {
+    let quiet = window.setTimeout(done, 600);
+    const observer = new MutationObserver(() => { window.clearTimeout(quiet); quiet = window.setTimeout(done, 600); });
+    const limit = window.setTimeout(done, 6000);
+    function done() { observer.disconnect(); window.clearTimeout(quiet); window.clearTimeout(limit); resolve(); }
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true });
+  }));
   const expected = await page.evaluate(() => {
     const selector = 'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])';
     return Array.from(document.querySelectorAll<HTMLElement>(selector))
       .filter((element) => element.tabIndex >= 0 && element.getClientRects().length > 0 && !element.closest('[inert]'))
       .map((element, index) => {
         element.dataset.a11yTabIndex = String(index);
-        element.dataset.a11yLabel = element.getAttribute('aria-label') || element.innerText.trim().replace(/\s+/g, ' ') || element.title || `${element.tagName.toLowerCase()} control`;
+        element.dataset.a11yLabel = element.getAttribute('aria-label') || (element.innerText ?? element.textContent ?? '').trim().replace(/\s+/g, ' ') || element.title || `${element.tagName.toLowerCase()} control`;
         const style = getComputedStyle(element);
         element.dataset.a11yOutline = `${style.outlineStyle} ${style.outlineWidth}`;
         element.dataset.a11yShadow = style.boxShadow;
@@ -28,7 +38,16 @@ const assertKeyboardReachability = async (page: import('@playwright/test').Page,
       });
   });
   expect(expected.length, `${label} has keyboard-accessible controls`).toBeGreaterThan(0);
-  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+  // Blurring does not move the browser's sequential focus start point, which stays on the nav button that was just clicked.
+  // Focus a throwaway element at the very top of the page so the first Tab lands on the first control.
+  await page.evaluate(() => {
+    (document.activeElement as HTMLElement | null)?.blur();
+    const anchor = document.createElement('div');
+    anchor.tabIndex = -1;
+    document.body.prepend(anchor);
+    anchor.focus();
+    anchor.remove();
+  });
 
   const visited = new Set<number>();
   for (let index = 0; index < expected.length; index += 1) {
@@ -299,15 +318,26 @@ const scanBothThemes = async (page: import('@playwright/test').Page, label: stri
   // Contrast is read from computed colours. Freeze transitions so a scan never catches a colour half way between themes,
   // including on page content behind the open dialog.
   await page.addStyleTag({ content: '*, *::before, *::after { transition: none !important; animation-duration: 0s !important; animation-delay: 0s !important; }' });
+  const seriousViolations = async () => {
+    const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
+    return results.violations
+      .filter((violation) => violation.impact === 'serious' || violation.impact === 'critical')
+      .map((violation) => ({
+        id: violation.id,
+        help: violation.help,
+        targets: violation.nodes.map((node) => `${node.target.join(' ')} :: ${node.any[0]?.message ?? ''}`).slice(0, 4),
+      }));
+  };
   for (const theme of ['light', 'dark']) {
     await page.evaluate((isDark) => document.documentElement.classList.toggle('dark', isDark), theme === 'dark');
     await page.waitForTimeout(400);
-    const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
-    const serious = results.violations.filter((violation) => violation.impact === 'serious' || violation.impact === 'critical');
-    expect(
-      serious.map((violation) => ({ theme, id: violation.id, help: violation.help, targets: violation.nodes.map((node) => node.target.join(' ')).slice(0, 4) })),
-      `${label} (${theme})`,
-    ).toEqual([]);
+    let found = await seriousViolations();
+    if (found.length) {
+      // A frame caught between two themes can report colours from both. A real problem is still there after the page settles.
+      await page.waitForTimeout(800);
+      found = await seriousViolations();
+    }
+    expect(found.map((violation) => ({ theme, ...violation })), `${label} (${theme})`).toEqual([]);
   }
 };
 
