@@ -589,10 +589,6 @@
     animation: ambientFloat 9s ease-in-out infinite alternate;
   }
 
-  .hero-orbit-wrap {
-    animation: ambientFloat 7s ease-in-out infinite;
-  }
-
   .floating-badge {
     position: absolute;
     top: 25%;
@@ -704,7 +700,6 @@ html body > * {
   .animate-pulse,
   .animate-spin,
   .hero-glow,
-  .hero-orbit-wrap,
   .floating-badge,
   .brand-chip,
   .logo-float,
