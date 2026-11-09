@@ -61,6 +61,7 @@ test('adoption records the real starting schema without claiming the baseline wa
       '0009_payment_reconciliation',
       '0010_lock_public_schema',
       '0011_customer_privacy_controls',
+      '0012_password_recovery_tokens',
     ]);
 
     const baselineHistory = await client.query<{ count: number }>(
@@ -80,6 +81,7 @@ test('adoption records the real starting schema without claiming the baseline wa
       '0009_payment_reconciliation',
       '0010_lock_public_schema',
       '0011_customer_privacy_controls',
+      '0012_password_recovery_tokens',
     ]);
     assert.equal(applied.adopted, '0001_baseline');
     assert.deepEqual(applied.pending, []);
