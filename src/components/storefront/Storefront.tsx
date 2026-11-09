@@ -185,7 +185,7 @@ export const Storefront: React.FC<StorefrontProps> = ({
               onChange={(e) => setSearchQuery(e.target.value)}
               aria-label={t('shopSearch')}
               placeholder={t('shopSearch')}
-              className="luxury-input w-full pl-12 pr-10 py-3 bg-[#181F2A] border rounded-xl text-white placeholder-surface-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] text-sm shadow-inner"
+              className="luxury-input w-full pl-12 pr-10 py-3 bg-surface-950/70 border border-[#d0c8a5]/25 rounded-xl text-white placeholder-surface-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] text-sm shadow-inner"
             />
             {searchQuery && (
               <button
