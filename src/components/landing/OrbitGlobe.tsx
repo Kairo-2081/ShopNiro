@@ -6,9 +6,6 @@ interface OrbitGlobeProps {
 
 export const OrbitGlobe: React.FC<OrbitGlobeProps> = ({ onGreet }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [rotation, setRotation] = useState<number>(0);
-  const [isDragging, setIsDragging] = useState<boolean>(false);
-  const [dragStartX, setDragStartX] = useState<number>(0);
   const [isWaving, setIsWaving] = useState<boolean>(false);
   const [greetingText, setGreetingText] = useState<string | null>(null);
 
@@ -24,6 +21,8 @@ export const OrbitGlobe: React.FC<OrbitGlobeProps> = ({ onGreet }) => {
     const centerX = width / 2;
     const centerY = height / 2 + 10;
     const radius = 86;
+    // The globe no longer turns, so land and the orbiting pod sit at a fixed angle.
+    const rotation = 30;
 
     ctx.clearRect(0, 0, width, height);
 
@@ -197,23 +196,7 @@ export const OrbitGlobe: React.FC<OrbitGlobeProps> = ({ onGreet }) => {
     }
 
     ctx.restore();
-  }, [rotation, isWaving]);
-
-  const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    setIsDragging(true);
-    setDragStartX(e.clientX);
-  };
-
-  const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!isDragging) return;
-    const deltaX = e.clientX - dragStartX;
-    setRotation((prev) => (prev + deltaX * 0.8 + 360) % 360);
-    setDragStartX(e.clientX);
-  };
-
-  const handlePointerUp = () => {
-    setIsDragging(false);
-  };
+  }, [isWaving]);
 
   const handleGlobeClick = () => {
     setIsWaving(true);
@@ -240,14 +223,9 @@ export const OrbitGlobe: React.FC<OrbitGlobeProps> = ({ onGreet }) => {
         aria-hidden="true"
         width={300}
         height={240}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerUp}
-        onPointerLeave={handlePointerUp}
         onClick={handleGlobeClick}
-        className="cursor-grab active:cursor-grabbing touch-none transition-transform hover:scale-102"
-        title="Drag to rotate the globe"
+        className="cursor-pointer transition-transform hover:scale-102"
+        title="Greet the courier"
       />
 
       {/* Pill Badge Instruction */}
@@ -256,7 +234,7 @@ export const OrbitGlobe: React.FC<OrbitGlobeProps> = ({ onGreet }) => {
         onClick={handleGlobeClick}
         className="mt-1 inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-brand-50 dark:bg-brand-950/40 border border-brand-200/80 dark:border-brand-800/80 text-brand-700 dark:text-brand-300 text-micro font-medium tracking-wide shadow-2xs hover:bg-brand-100 dark:hover:bg-brand-900/50 transition-colors cursor-pointer"
       >
-        <span>Drag to rotate. Activate to greet the courier.</span>
+        <span>Activate to greet the courier.</span>
       </button>
     </div>
   );
