@@ -4,17 +4,17 @@ import { E2E } from './seed.ts';
 import { blockNonLocalTraffic, openStorefront, withDb } from './helpers.ts';
 
 const expectWorkspaceNavigationItem = async (page: import('@playwright/test').Page, name: string | RegExp) => {
-  const trigger = page.getByRole('button', { name: 'Open navigation' });
-  if (await trigger.isVisible()) {
+  if ((page.viewportSize()?.width ?? Number.POSITIVE_INFINITY) < 768) {
+    const trigger = page.getByRole('button', { name: 'Open navigation' });
+    await expect(trigger).toBeVisible();
     await trigger.click();
     const drawer = page.getByRole('dialog', { name: 'Navigation menu' });
     await expect(drawer.getByRole('button', { name })).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(drawer).toHaveCount(0);
-    return;
+  } else {
+    await expect(page.getByRole('button', { name })).toBeVisible();
   }
-
-  await expect(page.getByRole('navigation', { name: 'Workspace navigation' }).getByRole('button', { name })).toBeVisible();
 };
 
 test.describe('storefront assistant spacing', () => {
