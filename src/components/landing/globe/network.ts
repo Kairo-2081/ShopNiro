@@ -10,12 +10,15 @@ export const GLOBE_VIEW: GlobeView = { lon0: 82, lat0: 20 };
 /** Where every route starts: the marketplace's home city. */
 export const HOME_HUB: Hub = { name: 'Dhaka', lon: 90.41, lat: 23.81 };
 
-/** Cities the routes run to. All are on the near side of the globe from GLOBE_VIEW. */
+/**
+ * Cities the routes run to. They are illustrative, to show a delivery network, and not a list of where ShopNiro ships.
+ * All are on the near side of the globe from GLOBE_VIEW, and far enough apart that their names do not collide.
+ */
 export const DESTINATION_HUBS: Hub[] = [
   { name: 'Dubai', lon: 55.27, lat: 25.2 },
   { name: 'Singapore', lon: 103.82, lat: 1.35 },
   { name: 'Tokyo', lon: 139.69, lat: 35.68 },
-  { name: 'Mumbai', lon: 72.88, lat: 19.08 },
+  { name: 'Nairobi', lon: 36.82, lat: -1.29 },
 ];
 
 /**
