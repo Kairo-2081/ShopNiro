@@ -566,7 +566,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <button
               type="button"
               onClick={onEnterAsGuest}
-              className="w-full py-3.5 px-6 rounded-full bg-white hover:bg-brand-50 text-brand-700 font-bold text-sm shadow-lg transition-all cursor-pointer transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
+              className="w-full py-3.5 px-6 rounded-full bg-white hover:bg-brand-50 text-brand-900 font-bold text-sm shadow-lg transition-all cursor-pointer transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
             >
               <span>Browse products</span>
               <span>➔</span>
