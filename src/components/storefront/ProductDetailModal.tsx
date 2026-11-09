@@ -384,11 +384,11 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 {/* Specs pills */}
                 <div className="grid grid-cols-2 gap-3 text-xs">
                   <div className="p-3 rounded-2xl bg-surface-50 dark:bg-[#161C24] border border-surface-200 dark:border-surface-800">
-                    <span className="text-surface-400 dark:text-surface-500 block text-micro uppercase font-bold">Category</span>
+                    <span className="text-surface-500 dark:text-surface-500 block text-micro uppercase font-bold">Category</span>
                     <span className="font-semibold text-surface-800 dark:text-surface-200">{category?.Name || 'General'}</span>
                   </div>
                   <div className="p-3 rounded-2xl bg-surface-50 dark:bg-[#161C24] border border-surface-200 dark:border-surface-800">
-                    <span className="text-surface-400 dark:text-surface-500 block text-micro uppercase font-bold">Available Inventory</span>
+                    <span className="text-surface-500 dark:text-surface-500 block text-micro uppercase font-bold">Available Inventory</span>
                     <span className="font-semibold text-surface-800 dark:text-surface-200">{product.Stock} units</span>
                   </div>
                 </div>
@@ -445,7 +445,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                     onClick={handleAddToCartClick}
                     className={`w-full py-3.5 px-4 rounded-full font-bold text-sm shadow-lg flex items-center justify-center gap-2 transition-all cursor-pointer ${
                       isOutOfStock || isDeactivated || Boolean(product.Sizes?.length && !selectedSize)
-                        ? 'bg-surface-200 dark:bg-surface-800 text-surface-400 dark:text-surface-600 cursor-not-allowed'
+                        ? 'bg-surface-200 dark:bg-surface-800 text-surface-500 dark:text-surface-600 cursor-not-allowed'
                         : justAdded
                         ? 'bg-success-600 text-white shadow-success-500/25'
                         : 'bg-surface-100 text-surface-900 hover:bg-surface-200 dark:bg-[#202938] dark:text-white dark:hover:bg-[#2b3749]'
@@ -653,7 +653,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                           <span className="text-xs font-semibold text-surface-900 dark:text-white block leading-tight">
                             Verified Customer #{rev.Customer_ID}
                           </span>
-                          <span className="text-micro text-surface-400 dark:text-surface-500">
+                          <span className="text-micro text-surface-500 dark:text-surface-500">
                             {formatDate(rev.Created_At)}
                           </span>
                         </div>

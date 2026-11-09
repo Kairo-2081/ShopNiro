@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { fallbackToBrandLogo } from '../../lib/branding';
 
 const compactSellerValue = (value: number) => value >= 1000 ? `${(value / 1000).toFixed(1)}k` : String(Math.round(value));
 interface SellerDashboardProps {
@@ -299,9 +300,10 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
       {/* Seller Store Header */}
       <div className="bg-white dark:bg-[#12161D] p-6 rounded-3xl border border-brand-100 dark:border-brand-500/20 shadow-xs space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center sm:gap-4">
+          <div className="flex min-w-0 flex-[1_1_16rem] items-start gap-3 sm:items-center sm:gap-4">
             <img
               src={currentSeller.Logo}
+              onError={fallbackToBrandLogo}
               alt={currentSeller.Name}
               className="h-16 w-16 shrink-0 rounded-2xl border border-brand-100 bg-surface-50 object-cover shadow-sm dark:border-surface-700 dark:bg-[#181F2A]"
             />
@@ -340,7 +342,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                 }}
                 className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-xs shadow-lg transition-all cursor-pointer ${
                   currentSeller.Status !== 'approved'
-                    ? 'bg-surface-200 dark:bg-surface-800 text-surface-400 dark:text-surface-600 cursor-not-allowed'
+                    ? 'bg-surface-200 dark:bg-surface-800 text-surface-500 dark:text-surface-600 cursor-not-allowed'
                     : 'premium-button text-white shadow-md hover:-translate-y-0.5'
                 }`}
               >
@@ -594,7 +596,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                                 {p.Voucher}
                               </span>
                             ) : (
-                              <span className="text-surface-400 dark:text-surface-500">No voucher</span>
+                              <span className="text-surface-500 dark:text-surface-500">No voucher</span>
                             )}
                           </td>
                           <td className="p-4">
@@ -926,7 +928,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                     <div className="flex justify-between items-start">
                       <div>
                         <span className="font-bold text-surface-900 dark:text-white block">{rev.Customer_Name}</span>
-                        <span className="text-micro text-surface-400 dark:text-surface-500">{formatDate(rev.Created_At)}</span>
+                        <span className="text-micro text-surface-500 dark:text-surface-500">{formatDate(rev.Created_At)}</span>
                       </div>
                       <StarRating rating={rev.Rating} size="sm" />
                     </div>

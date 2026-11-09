@@ -390,7 +390,7 @@ export const Storefront: React.FC<StorefrontProps> = ({
         </div>
       ) : filteredProducts.length === 0 ? (
         <div className="text-center py-20 bg-white dark:bg-[#12161D] rounded-3xl border border-brand-100 dark:border-surface-800 p-8 space-y-4 shadow-xl">
-          <div className="w-16 h-16 bg-surface-100 dark:bg-[#181F2A] rounded-2xl flex items-center justify-center mx-auto text-surface-400 dark:text-surface-500">
+          <div className="w-16 h-16 bg-surface-100 dark:bg-[#181F2A] rounded-2xl flex items-center justify-center mx-auto text-surface-500 dark:text-surface-500">
             <ShoppingBag className="w-8 h-8" />
           </div>
           <h3 className="text-lg font-bold text-surface-900 dark:text-white">{t('noProducts')}</h3>

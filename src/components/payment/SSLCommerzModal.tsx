@@ -187,7 +187,7 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
         {/* Order Price & Merchant Summary */}
         <div className="bg-surface-50 dark:bg-[#181F2A] px-6 py-4 border-b border-surface-200 dark:border-surface-800 flex items-center justify-between">
           <div>
-            <span className="text-micro uppercase tracking-wider font-bold text-surface-400 dark:text-surface-500 block">
+            <span className="text-micro uppercase tracking-wider font-bold text-surface-500 dark:text-surface-500 block">
               Payable Amount
             </span>
             <div className="flex items-baseline gap-2">
@@ -198,7 +198,7 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
           </div>
 
           <div className="text-right">
-            <span className="text-micro uppercase tracking-wider font-bold text-surface-400 dark:text-surface-500 block">
+            <span className="text-micro uppercase tracking-wider font-bold text-surface-500 dark:text-surface-500 block">
               Merchant
             </span>
             <span className="text-xs font-bold text-surface-800 dark:text-surface-200">
