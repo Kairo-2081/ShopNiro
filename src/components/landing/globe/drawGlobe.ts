@@ -1,4 +1,6 @@
+import { GLOBE_VIEW } from './network';
 import { GLOBE_PALETTE, rgba } from './palette';
+import { project } from './projection';
 
 /** Where the globe sits on the canvas, in CSS pixels. */
 export interface GlobeFrame {
@@ -33,6 +35,34 @@ function drawSphereBody(ctx: CanvasRenderingContext2D, { cx, cy, radius }: Globe
   ctx.fill();
 }
 
+/** Faint latitude and longitude lines every 15 degrees. Each line is broken where it passes behind the globe. */
+function drawGraticule(ctx: CanvasRenderingContext2D, { cx, cy, radius }: GlobeFrame) {
+  ctx.save();
+  ctx.strokeStyle = rgba(GLOBE_PALETTE.tan, 0.09);
+  ctx.lineWidth = 0.6;
+  const trace = (place: (t: number) => { lon: number; lat: number }, steps: number) => {
+    ctx.beginPath();
+    let drawing = false;
+    for (let i = 0; i <= steps; i += 1) {
+      const { lon, lat } = place(i / steps);
+      const p = project(lon, lat, GLOBE_VIEW);
+      if (p.z < 0) {
+        drawing = false;
+        continue;
+      }
+      const x = cx + p.x * radius;
+      const y = cy - p.y * radius;
+      if (drawing) ctx.lineTo(x, y);
+      else ctx.moveTo(x, y);
+      drawing = true;
+    }
+    ctx.stroke();
+  };
+  for (let lat = -60; lat <= 60; lat += 15) trace((t) => ({ lon: -180 + 360 * t, lat }), 120);
+  for (let lon = -180; lon < 180; lon += 15) trace((t) => ({ lon, lat: -80 + 160 * t }), 60);
+  ctx.restore();
+}
+
 /** A thin lit edge on the upper left, and a faint glow just inside the whole limb. */
 function drawRim(ctx: CanvasRenderingContext2D, { cx, cy, radius }: GlobeFrame) {
   const inner = ctx.createRadialGradient(cx, cy, radius * 0.84, cx, cy, radius);
@@ -58,5 +88,6 @@ export function drawGlobe(ctx: CanvasRenderingContext2D, frame: GlobeFrame) {
   ctx.clearRect(0, 0, frame.width, frame.height);
   drawAtmosphere(ctx, frame);
   drawSphereBody(ctx, frame);
+  drawGraticule(ctx, frame);
   drawRim(ctx, frame);
 }
