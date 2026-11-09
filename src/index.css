@@ -607,11 +607,11 @@
   }
 
   .floating-badge-left {
-    left: 6%;
+    left: max(0.5rem, calc(50% - 390px));
   }
 
   .floating-badge-right {
-    right: 7%;
+    right: max(0.5rem, calc(50% - 390px));
     top: 28%;
     animation-delay: 0.8s;
   }
