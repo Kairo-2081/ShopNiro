@@ -399,7 +399,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowRegPassword(!showRegPassword)}
-                    className="absolute right-2.5 top-3 text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 cursor-pointer"
+                    aria-label={showRegPassword ? "Hide password" : "Show password"}
+                    aria-pressed={showRegPassword}
+                    className="absolute right-2.5 top-3 text-surface-500 hover:text-surface-600 dark:text-surface-400 dark:hover:text-surface-300 cursor-pointer"
                   >
                     {showRegPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                   </button>
