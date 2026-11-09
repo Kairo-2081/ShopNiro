@@ -11,16 +11,6 @@ export const OrbitGlobe: React.FC<OrbitGlobeProps> = ({ onGreet }) => {
   const [dragStartX, setDragStartX] = useState<number>(0);
   const [isWaving, setIsWaving] = useState<boolean>(false);
   const [greetingText, setGreetingText] = useState<string | null>(null);
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(() =>
-    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  );
-
-  useEffect(() => {
-    const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const updatePreference = () => setPrefersReducedMotion(preference.matches);
-    preference.addEventListener('change', updatePreference);
-    return () => preference.removeEventListener('change', updatePreference);
-  }, []);
 
   // Render planet on canvas
   useEffect(() => {
@@ -256,8 +246,7 @@ export const OrbitGlobe: React.FC<OrbitGlobeProps> = ({ onGreet }) => {
         onPointerCancel={handlePointerUp}
         onPointerLeave={handlePointerUp}
         onClick={handleGlobeClick}
-        className={`cursor-grab active:cursor-grabbing touch-none transition-transform hover:scale-102 ${prefersReducedMotion ? '' : 'animate-spin'}`}
-        style={prefersReducedMotion ? undefined : { animationDuration: '45s' }}
+        className="cursor-grab active:cursor-grabbing touch-none transition-transform hover:scale-102"
         title="Drag to rotate the globe"
       />
 
