@@ -624,6 +624,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <select
                   value={sellerStatusFilter}
                   onChange={(e) => setSellerStatusFilter(e.target.value)}
+                  aria-label="Filter merchant accounts by status"
                   className="bg-surface-50 dark:bg-[#181F2A] text-surface-900 dark:text-white border border-surface-200 dark:border-surface-700 rounded-full px-3.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-500"
                 >
                   <option value="all">All Statuses ({sellers.length})</option>
