@@ -312,9 +312,9 @@ dbTest('minimal signup allows profile edits but blocks other writes until comple
     const orderId = `ORD-DELETE-GUARD-${Date.now()}`;
     await query(
       `INSERT INTO orders (
-        id, tracking_id, customer_id, items_json, subtotal, shipping_fee, status,
+        id, tracking_id, customer_id, subtotal, shipping_fee, status,
         shipping_address_json, billing_address_json
-       ) VALUES ($1, $2, $3, '[]', 0, 0, 'placed', '{}', '{}')`,
+       ) VALUES ($1, $2, $3, 0, 0, 'placed', '{}', '{}')`,
       [orderId, `TRK-DELETE-GUARD-${Date.now()}`, customerId],
     );
     const blockedDeletion = await request('POST', '/api/customers/me/deletion', {
