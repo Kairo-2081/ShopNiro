@@ -616,6 +616,14 @@
     animation-delay: 0.8s;
   }
 
+  /* Beside the globe there is room for these on a wide tablet or larger. On a phone they would sit on top of the globe and
+     hide its delivery hubs, so they are left out. */
+  @media (max-width: 899px) {
+    .floating-badge {
+      display: none;
+    }
+  }
+
   .product-tilt {
     transform-style: preserve-3d;
     transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
