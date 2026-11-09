@@ -29,7 +29,7 @@ export const POLICIES: Policy[] = [
       {
         heading: '1. Who we are and what these terms cover',
         paragraphs: [
-          `${B.name} ("ShopNiro", "we", "us") runs an online marketplace at ${B.siteUrl} where independent sellers list products, customers buy them, and riders deliver them. By creating an account or placing an order you agree to these terms, our Privacy Policy, our Refund and Return Policy and our Delivery Policy.`,
+          `${B.name} ("ShopNiro", "we", "us") runs an online marketplace at ${B.siteUrl} where independent sellers list products, customers buy them, and riders deliver them. Our legal business identity and registered address are pending registration. By creating an account or placing an order you agree to these terms, our Privacy Policy, our Refund and Return Policy and our Delivery Policy.`,
           'You must be at least 18 years old, or use ShopNiro under the supervision of a parent or guardian who accepts these terms for you.',
         ],
       },
@@ -108,7 +108,7 @@ export const POLICIES: Policy[] = [
     sections: [
       {
         heading: '1. Who is responsible',
-        paragraphs: [`${B.name} (${B.address}) is the controller of the personal data described here. Contact: ${B.supportEmail}.`],
+        paragraphs: [`ShopNiro is the marketplace brand. Its legal operator and registered address are pending registration; do not treat "${B.name}" as a registered legal entity. Contact: ${B.supportEmail}.`],
       },
       {
         heading: '2. What we collect',
@@ -150,9 +150,8 @@ export const POLICIES: Policy[] = [
       {
         heading: '6. How long we keep data',
         bullets: [
-          'Account data is kept while your account is open.',
-          'Order and payment records are kept for as long as needed for accounting, tax, refunds and dispute handling.',
-          'Seller verification documents are kept while the seller account is active and for a reasonable period afterwards.',
+          'Account data is kept while your account is open. If you request account deletion, we disable the account and remove or pseudonymize profile data; order and payment records may be retained where needed for fulfilment, accounting, refunds, fraud prevention or disputes.',
+          'Final retention periods for old order/payment records and seller or rider identity documents are pending business and Bangladesh-qualified legal review. We will publish specific periods before enabling automated deletion.',
           'Encrypted backups of our database are kept for about 30 days.',
         ],
       },
@@ -165,7 +164,7 @@ export const POLICIES: Policy[] = [
       {
         heading: '8. Your choices',
         paragraphs: [
-          `You can ask us to access, correct or delete your personal data, or withdraw consent to optional emails, by writing to ${B.supportEmail}. We may keep data we are legally required to keep, such as order and payment records.`,
+          `You can export your account data or request account deletion from your profile. You can also ask us to access or correct your personal data, or withdraw consent to optional emails, by writing to ${B.supportEmail}. Account deletion does not erase order and payment records that must be retained for fulfilment, accounting, refunds or dispute handling; we remove profile and address details from those records where possible.`,
         ],
       },
       {
