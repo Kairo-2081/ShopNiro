@@ -7,6 +7,7 @@ import { AccountLocationPicker } from '../AccountLocationPicker';
 import { Lock, MapPin, ShieldCheck, Sparkles, Truck, UploadCloud, X } from 'lucide-react';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { useLocale } from '../../lib/i18n';
 
 interface RiderSignupModalProps {
   isOpen: boolean;
@@ -34,6 +35,7 @@ const toLines = (values: string[]) => values.join('\n');
 const fromLines = (value: string) => value.split('\n').map((line) => line.trim()).filter(Boolean);
 
 export const RiderSignupModal: React.FC<RiderSignupModalProps> = ({ isOpen, onClose, onOpenLogin, onSubmitted }) => {
+  const { t } = useLocale();
   useEscapeKey(onClose, isOpen);
   const dialogRef = useFocusTrap<HTMLElement>(isOpen);
   const [username, setUsername] = React.useState('');
@@ -279,7 +281,7 @@ export const RiderSignupModal: React.FC<RiderSignupModalProps> = ({ isOpen, onCl
               </div>
               {hasCv === false && (
                 <button type="button" onClick={handleFormat} disabled={isFormatting} className="inline-flex items-center gap-2 rounded-lg border border-success-300 px-3 py-2 text-xs font-bold text-success-800 hover:bg-success-50 disabled:opacity-50 dark:border-success-800 dark:text-success-300 dark:hover:bg-success-950/30">
-                  <Sparkles className="h-4 w-4" />{isFormatting ? 'Formatting...' : 'Format details with AI'}
+                  <Sparkles className="h-4 w-4" />{isFormatting ? t('formatting') : t('formatWithAi')}
                 </button>
               )}
             </div>
@@ -297,7 +299,7 @@ export const RiderSignupModal: React.FC<RiderSignupModalProps> = ({ isOpen, onCl
             {hasCv === true && (
               <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-dashed border-success-400 bg-success-50/60 p-4 text-sm text-surface-700 dark:border-success-800 dark:bg-success-950/20 dark:text-surface-200">
                 <UploadCloud className="h-5 w-5 shrink-0 text-success-700 dark:text-success-400" />
-                <span className="min-w-0 flex-1">{cvFile ? `${cvFile.name} · ${isParsing ? 'Reading CV...' : 'Ready'}` : 'Upload a PDF CV (required, maximum 3 MB)'}</span>
+                <span className="min-w-0 flex-1">{cvFile ? `${cvFile.name} · ${isParsing ? 'Reading CV...' : 'Ready'}` : t('uploadPdfCv')}</span>
                 <input type="file" accept="application/pdf,.pdf" className="sr-only" onChange={handleCvChange} />
               </label>
             )}
@@ -314,7 +316,7 @@ export const RiderSignupModal: React.FC<RiderSignupModalProps> = ({ isOpen, onCl
           <div className="flex flex-col-reverse justify-between gap-3 border-t border-surface-200 pt-5 dark:border-surface-800 sm:flex-row sm:items-center">
             <p className="flex items-center gap-2 text-xs text-surface-500 dark:text-surface-400"><ShieldCheck className="h-4 w-4 shrink-0" />ShopNiro generates and saves a formatted CV PDF from your application details.</p>
             <button type="submit" disabled={isSubmitting || isParsing || preparingProfileImage} className="rounded-lg bg-success-700 px-5 py-2.5 text-sm font-bold text-white hover:bg-success-600 disabled:opacity-50">
-              {preparingProfileImage ? 'Preparing photo...' : isSubmitting ? 'Submitting application...' : 'Submit rider application'}
+              {preparingProfileImage ? 'Preparing photo...' : isSubmitting ? t('submittingApplication') : t('submitApplication')}
             </button>
           </div>
         </form>
