@@ -225,7 +225,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
                   type="button"
                   onClick={() => selectItem({ label, icon: Icon, ...item })}
                   aria-current={isActive ? 'page' : undefined}
-                  className={`group flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#80734f] dark:focus-visible:outline-[#d0c8a5] focus-visible:ring-2 focus-visible:ring-[#a99b72] ${
+                  className={`group flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-semibold transition-colors focus:outline-solid focus:outline-2 focus:outline-offset-2 focus:outline-[#80734f] dark:focus:outline-[#d0c8a5] focus-visible:ring-2 focus-visible:ring-[#a99b72] ${
                     isActive
                       ? 'bg-[#d0c8a5]/35 text-[#4f4720] dark:bg-[#d0c8a5]/15 dark:text-[#e8dfbd]'
                       : 'text-surface-700 hover:bg-surface-100 hover:text-surface-950 dark:text-surface-300 dark:hover:bg-[#181F2A] dark:hover:text-white'
