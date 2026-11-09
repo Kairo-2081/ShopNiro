@@ -3,6 +3,20 @@ import { AUTH } from './global-setup.ts';
 import { E2E } from './seed.ts';
 import { blockNonLocalTraffic, openStorefront, withDb } from './helpers.ts';
 
+const expectWorkspaceNavigationItem = async (page: import('@playwright/test').Page, name: string | RegExp) => {
+  const trigger = page.getByRole('button', { name: 'Open navigation' });
+  if (await trigger.isVisible()) {
+    await trigger.click();
+    const drawer = page.getByRole('dialog', { name: 'Navigation menu' });
+    await expect(drawer.getByRole('button', { name })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(drawer).toHaveCount(0);
+    return;
+  }
+
+  await expect(page.getByRole('navigation', { name: 'Workspace navigation' }).getByRole('button', { name })).toBeVisible();
+};
+
 test.describe('storefront assistant spacing', () => {
   test.use({ storageState: AUTH.customer });
 
@@ -29,7 +43,7 @@ test.describe('seller dashboard row actions', () => {
     try {
       await blockNonLocalTraffic(page);
       await page.goto('/');
-      await expect(page.getByRole('button', { name: /Product Catalog/ })).toBeVisible();
+      await expectWorkspaceNavigationItem(page, /Product Catalog/);
       await expect(page.getByRole('button', { name: 'Open ShopNiro AI Assistant' })).toHaveCount(1);
 
       const restock = page.getByRole('button', { name: 'Restock' });
@@ -77,7 +91,7 @@ test.describe('admin dashboard row actions', () => {
     await blockNonLocalTraffic(page);
     await page.goto('/');
 
-    await expect(page.getByRole('button', { name: /Governance Overview/ })).toBeVisible();
+    await expectWorkspaceNavigationItem(page, /Governance Overview/);
     await expect(page.getByRole('button', { name: 'Open ShopNiro AI Assistant' })).toHaveCount(1);
     await page.getByRole('button', { name: /Category Registry/ }).click();
 
