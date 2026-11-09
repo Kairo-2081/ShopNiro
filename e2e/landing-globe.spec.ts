@@ -53,3 +53,27 @@ test('the landing globe stays still, ignores dragging, and only brightens its ro
     await context.close();
   }
 });
+
+test('the floating badges never sit on top of the globe at any width', async ({ browser, baseURL }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'Widths are set here, so this runs once per CI workflow.');
+  test.setTimeout(90_000);
+  for (const width of [360, 768, 899, 900, 1280]) {
+    const context = await browser.newContext({ baseURL, storageState: guestStorageState, viewport: { width, height: 800 } });
+    const page = await context.newPage();
+    try {
+      await blockNonLocalTraffic(page);
+      await page.goto('/');
+      const canvas = await page.locator('canvas').boundingBox();
+      expect(canvas, `globe is on the page at ${width}px`).not.toBeNull();
+      for (const badge of await page.locator('.floating-badge:visible').all()) {
+        const box = await badge.boundingBox();
+        const overlaps = box !== null
+          && box.x < canvas!.x + canvas!.width && box.x + box.width > canvas!.x
+          && box.y < canvas!.y + canvas!.height && box.y + box.height > canvas!.y;
+        expect(overlaps, `a floating badge covers the globe at ${width}px`).toBe(false);
+      }
+    } finally {
+      await context.close();
+    }
+  }
+});
