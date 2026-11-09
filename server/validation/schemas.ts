@@ -9,6 +9,7 @@ const ORDER_STATUSES = ['placed', 'processing', 'shipped', 'delivered', 'cancell
 export const createOrderBody = z
   .object({
     Customer_ID: idString('Customer_ID is required.'),
+    acceptedTerms: z.literal(true, { error: 'Accept the Terms of Service, Refund Policy and Delivery Policy to place your order.' }),
     Items: z.array(z.object({}).loose()).min(1, 'Your order has no items.').max(100, 'An order can hold at most 100 items.'),
     Shipping_Address: address,
     Billing_Address: address.optional(),
@@ -91,12 +92,21 @@ export const resourceIdParam = z.object({ id: idString('Invalid ID.') });
 /** Types and size caps only. Username/email rules and normalisation stay in the signup handler. */
 export const signupBody = z.object({
   role: z.enum(['customer', 'seller', 'rider'], { error: 'Choose a customer, seller, or rider account.' }),
+  acceptedTerms: z.boolean().optional(),
   username: z.string({ error: 'Enter a valid username.' }).max(120, 'Username must be 3 to 50 letters, numbers, or underscores.').optional(),
   email: z.string({ error: 'Enter a valid email address.' }).max(255, 'Enter a valid email address.').optional(),
   password: z
     .string({ error: 'Password must be at least 8 characters.' })
     .min(8, 'Password must be at least 8 characters.')
     .max(128, 'Password must be 128 characters or fewer.'),
+}).superRefine((body, context) => {
+  if (body.role === 'customer' && body.acceptedTerms !== true) {
+    context.addIssue({
+      code: 'custom',
+      path: ['acceptedTerms'],
+      message: 'Accept the Terms of Service and Privacy Policy to create a customer account.',
+    });
+  }
 });
 
 /** The login field is named `email` but accepts a username too. */
@@ -335,6 +345,7 @@ export const customerRegisterBody = z.object({
   Number: requiredText(40, 'A phone number is required'),
   Address: registrationAddress,
   Marketing_Consent: z.boolean().optional(),
+  acceptedTerms: z.literal(true, { error: 'Accept the Terms of Service and Privacy Policy to create a customer account.' }),
 });
 
 export const customerUpdateBody = z.object({
@@ -342,6 +353,10 @@ export const customerUpdateBody = z.object({
   Email: text(255).optional(),
   Number: text(40).optional(),
   Address: formAddress.optional(),
+});
+
+export const customerDeletionBody = z.object({
+  confirmationEmail: email,
 });
 
 export const sellerRegisterBody = z.object({

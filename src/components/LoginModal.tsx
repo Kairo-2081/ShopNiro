@@ -111,7 +111,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     setIsSubmitting(true);
 
     try {
-      const result = await api.signup(registerRole, regIdentifier, regPassword);
+      const result = await api.signup(registerRole, regIdentifier, regPassword, acceptedTerms);
       await onLoginSuccess(result.role, result.entity);
       setRegIdentifier('');
       setLoginPassword('');
@@ -359,10 +359,6 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                 </div>
               </div>
 
-              <OAuthProviderButtons role={registerRole} mode="sign up" />
-              <p className="text-micro text-surface-400 text-center">
-                By signing up with a provider you agree to the <PolicyLinks ids={['terms', 'privacy']} />.
-              </p>
               <div>
                 <label className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">
                   Username or email address
@@ -422,6 +418,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   I am 18 or older and I agree to the <PolicyLinks ids={['terms', 'privacy']} />.
                 </span>
               </label>
+
+              <OAuthProviderButtons role={registerRole} mode="sign up" acceptedTerms={acceptedTerms} />
 
               {/* Submit Register */}
               <div className="pt-2 flex items-center justify-between">

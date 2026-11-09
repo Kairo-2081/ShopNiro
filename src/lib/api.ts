@@ -310,7 +310,7 @@ export const api = {
 
   // Customers
   getCustomers: async (): Promise<Customer[]> => fetchAllPages<Customer>('/api/customers'),
-  createCustomer: async (customerData: Partial<Customer> & { Password?: string }): Promise<Customer> =>
+  createCustomer: async (customerData: Partial<Customer> & { Password?: string; acceptedTerms: boolean }): Promise<Customer> =>
     fetchJson<Customer>('/api/customers', {
       method: 'POST',
       body: JSON.stringify(customerData),
@@ -319,6 +319,13 @@ export const api = {
     fetchJson<Customer>(`/api/customers/${encodeURIComponent(id)}`, {
       method: 'PUT',
       body: JSON.stringify(updates),
+    }),
+  exportCustomerData: async (): Promise<Record<string, unknown>> =>
+    fetchJson<Record<string, unknown>>('/api/customers/me/export'),
+  deleteCustomerAccount: async (confirmationEmail: string): Promise<{ success: boolean; message: string }> =>
+    fetchJson<{ success: boolean; message: string }>('/api/customers/me/deletion', {
+      method: 'POST',
+      body: JSON.stringify({ confirmationEmail }),
     }),
 
   // Sellers
@@ -484,12 +491,12 @@ export const api = {
     }),
 
   // Auth Login: establishes an HttpOnly cookie-backed JWT session
-  signup: async (role: 'customer' | 'seller' | 'rider', identifier: string, password: string): Promise<{ success: boolean; role: UserRole; entity: any; profileComplete: boolean }> => {
+  signup: async (role: 'customer' | 'seller' | 'rider', identifier: string, password: string, acceptedTerms = false): Promise<{ success: boolean; role: UserRole; entity: any; profileComplete: boolean }> => {
     const value = identifier.trim();
     const identity = value.includes('@') ? { email: value } : { username: value };
     const response = await fetchJson<{ success: boolean; role: UserRole; entity: any; profileComplete: boolean }>('/api/auth/signup', {
       method: 'POST',
-      body: JSON.stringify({ ...identity, role, password }),
+      body: JSON.stringify({ ...identity, role, password, acceptedTerms }),
     }, false);
     hasValidatedSession = response.success;
     return response;
@@ -508,8 +515,9 @@ export const api = {
     return res;
   },
 
-  beginOAuth: (provider: 'google' | 'facebook', role: 'customer' | 'seller' | 'rider' = 'customer'): void => {
-    window.location.assign(apiUrl(`/api/auth/oauth/${provider}?role=${role}`));
+  beginOAuth: (provider: 'google' | 'facebook', role: 'customer' | 'seller' | 'rider' = 'customer', acceptedTerms = false): void => {
+    const params = new URLSearchParams({ role, intent: acceptedTerms ? 'sign-up' : 'sign-in', acceptedTerms: String(acceptedTerms) });
+    window.location.assign(apiUrl(`/api/auth/oauth/${provider}?${params.toString()}`));
   },
 
   getOAuthRegistration: async (): Promise<null | {
@@ -621,6 +629,7 @@ export const api = {
   },
   createOrder: async (orderData: {
     Customer_ID: string;
+    acceptedTerms: boolean;
     Items: any[];
     Shipping_Address: Address;
     Billing_Address: Address;

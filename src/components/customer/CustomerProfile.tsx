@@ -3,13 +3,16 @@ import { Customer, Address } from '../../types';
 import { User, Mail, Phone, MapPin, Save, CheckCircle2 } from 'lucide-react';
 import { AccountLocationPicker } from '../AccountLocationPicker';
 import { useLocale } from '../../lib/i18n';
+import { api } from '../../lib/api';
+import { downloadFile } from '../../lib/downloadFile';
 
 interface CustomerProfileProps {
   currentCustomer: Customer;
   onUpdateCustomer: (updated: Customer) => void;
+  onAccountDeleted: () => void;
 }
 
-export const CustomerProfile: React.FC<CustomerProfileProps> = ({ currentCustomer, onUpdateCustomer }) => {
+export const CustomerProfile: React.FC<CustomerProfileProps> = ({ currentCustomer, onUpdateCustomer, onAccountDeleted }) => {
   const { t } = useLocale();
   const [name, setName] = React.useState(currentCustomer.Name);
   const [email, setEmail] = React.useState(currentCustomer.Email);
@@ -27,6 +30,49 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ currentCustome
   const [savedSuccess, setSavedSuccess] = React.useState(false);
   const [isResolvingLocation, setIsResolvingLocation] = React.useState(false);
   const [profileError, setProfileError] = React.useState<string | null>(null);
+  const [dataRightsMessage, setDataRightsMessage] = React.useState<string | null>(null);
+  const [dataRightsError, setDataRightsError] = React.useState<string | null>(null);
+  const [isExporting, setIsExporting] = React.useState(false);
+  const [isDeleting, setIsDeleting] = React.useState(false);
+  const [confirmationEmail, setConfirmationEmail] = React.useState('');
+
+  const handleExport = async () => {
+    setDataRightsError(null);
+    setDataRightsMessage(null);
+    setIsExporting(true);
+    try {
+      const data = await api.exportCustomerData();
+      await downloadFile(
+        new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }),
+        'shopniro-data-export.json',
+      );
+      setDataRightsMessage('Your data export is ready.');
+    } catch (error) {
+      setDataRightsError(error instanceof Error ? error.message : 'Could not export your data.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleDeleteAccount = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setDataRightsError(null);
+    setDataRightsMessage(null);
+    if (confirmationEmail.trim().toLowerCase() !== currentCustomer.Email.trim().toLowerCase()) {
+      setDataRightsError('Enter your account email exactly to confirm deletion.');
+      return;
+    }
+    setIsDeleting(true);
+    try {
+      const result = await api.deleteCustomerAccount(confirmationEmail);
+      setDataRightsMessage(result.message);
+      onAccountDeleted();
+    } catch (error) {
+      setDataRightsError(error instanceof Error ? error.message : 'Could not delete your account.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   React.useEffect(() => {
     setName(currentCustomer.Name);
@@ -262,6 +308,46 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ currentCustome
           </button>
         </div>
       </form>
+
+      <section aria-labelledby="customer-data-rights-title" className="bg-white dark:bg-[#12161D] p-6 md:p-8 rounded-3xl border border-brand-100 dark:border-surface-800 shadow-xl space-y-5">
+        <div>
+          <h2 id="customer-data-rights-title" className="text-sm font-bold text-surface-900 dark:text-white">Your data and account</h2>
+          <p className="mt-2 text-xs leading-relaxed text-surface-600 dark:text-surface-400">
+            Export a copy of your account data or delete your account. Active orders must be completed or cancelled first. Order and payment records needed for fulfilment, accounting, refunds or disputes may be retained with profile and address details removed.
+          </p>
+        </div>
+        {dataRightsError && <p role="alert" className="rounded-xl border border-danger-200 bg-danger-50 p-3 text-sm text-danger-700 dark:border-danger-900 dark:bg-danger-950/40 dark:text-danger-300">{dataRightsError}</p>}
+        {dataRightsMessage && <p role="status" className="rounded-xl border border-success-200 bg-success-50 p-3 text-sm text-success-700 dark:border-success-900 dark:bg-success-950/40 dark:text-success-300">{dataRightsMessage}</p>}
+        <button
+          type="button"
+          onClick={() => void handleExport()}
+          disabled={isExporting}
+          className="min-h-11 rounded-full border border-brand-300 px-5 py-2 text-xs font-bold text-brand-700 transition-colors hover:bg-brand-50 disabled:opacity-60 dark:border-brand-700 dark:text-brand-300 dark:hover:bg-brand-950/40"
+        >
+          {isExporting ? 'Preparing export…' : 'Download my data'}
+        </button>
+        <form onSubmit={handleDeleteAccount} className="space-y-3 border-t border-surface-100 pt-4 dark:border-surface-800">
+          <label htmlFor="delete-account-email" className="block text-xs font-semibold text-surface-700 dark:text-surface-300">
+            To delete your account, enter {currentCustomer.Email}
+          </label>
+          <input
+            id="delete-account-email"
+            type="email"
+            autoComplete="email"
+            required
+            value={confirmationEmail}
+            onChange={(event) => setConfirmationEmail(event.target.value)}
+            className="w-full rounded-xl border border-surface-200 bg-surface-50 px-3 py-2.5 text-xs text-surface-900 focus:outline-none focus:ring-2 focus:ring-danger-500 dark:border-surface-700 dark:bg-[#181F2A] dark:text-white"
+          />
+          <button
+            type="submit"
+            disabled={isDeleting || isExporting}
+            className="min-h-11 rounded-full bg-danger-700 px-5 py-2 text-xs font-bold text-white transition-colors hover:bg-danger-600 disabled:opacity-60"
+          >
+            {isDeleting ? 'Deleting account…' : 'Delete my account'}
+          </button>
+        </form>
+      </section>
     </div>
   );
 };

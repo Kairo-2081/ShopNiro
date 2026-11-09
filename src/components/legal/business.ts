@@ -1,13 +1,13 @@
 // Facts the policies quote. Edit here, not in the policy text.
 // Anything marked REVIEW must be confirmed by the business owner and a lawyer.
 export const BUSINESS = {
-  /** REVIEW: the registered legal name / trade licence holder, once you have one. */
+  /** ShopNiro is a brand; it is not registered as ShopNiro Ltd. */
   name: 'ShopNiro',
   supportEmail: 'shopnirosupport@gmail.com',
-  /** REVIEW: registered or operating address required by most merchant-account reviews. */
-  address: 'Dhaka, Bangladesh',
+  /** Do not publish an unverified personal or campus address as a business address. */
+  address: 'Operator details and authorized service address pending',
   siteUrl: 'https://shopniro.onrender.com',
-  lastUpdated: '23 October 2026',
+  lastUpdated: '9 November 2026',
   freeShippingThresholdBDT: 400,
   unpaidOnlineOrderMinutes: 30,
   /** REVIEW: only quote a refund window you can actually meet. */

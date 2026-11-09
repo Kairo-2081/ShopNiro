@@ -66,7 +66,7 @@ after(async () => {
   await pool.end();
 });
 
-const customer = { Name: 'Route Test', Email: email, Password: 'longenough1', Number: '01700000000', Address: { Street: 'Road 5', City: 'Dhaka' } };
+const customer = { Name: 'Route Test', Email: email, Password: 'longenough1', Number: '01700000000', Address: { Street: 'Road 5', City: 'Dhaka' }, acceptedTerms: true };
 
 dbTest('customer registration: bad input is rejected with the old messages, then a good one succeeds', async () => {
   const noPhone = await send('/api/customers', { ...customer, Number: '' });

@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { Customer, Address } from '../../types';
 import { AccountLocationPicker } from '../AccountLocationPicker';
+import { PolicyLinks } from '../legal/PolicyLinks';
 import { X, UserPlus, Send, Lock, Eye, EyeOff, User, Mail, Phone, MapPin } from 'lucide-react';
 
 interface CustomerSignupModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onRegisterCustomer: (customerData: Partial<Customer> & { Username?: string }) => Promise<Customer>;
+  onRegisterCustomer: (customerData: Partial<Customer> & { Username?: string; acceptedTerms: boolean }) => Promise<Customer>;
   onSuccessRegistered: (newCustomer: Customer) => void;
 }
 
@@ -22,6 +23,7 @@ export const CustomerSignupModal: React.FC<CustomerSignupModalProps> = ({
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [marketingConsent, setMarketingConsent] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [number, setNumber] = useState('');
   const [hasSelectedLocation, setHasSelectedLocation] = useState(false);
   const [address, setAddress] = useState<Address>({
@@ -46,6 +48,10 @@ export const CustomerSignupModal: React.FC<CustomerSignupModalProps> = ({
       setError('Enter a phone number and use current location or select a point on the map.');
       return;
     }
+    if (!acceptedTerms) {
+      setError('Accept the Terms of Service and Privacy Policy to create an account.');
+      return;
+    }
     setError(null);
     setIsSubmitting(true);
 
@@ -59,6 +65,7 @@ export const CustomerSignupModal: React.FC<CustomerSignupModalProps> = ({
         Number: number.trim(),
         Address: address,
         Marketing_Consent: marketingConsent,
+        acceptedTerms,
       });
 
       onSuccessRegistered(newCustomer);
@@ -248,6 +255,17 @@ export const CustomerSignupModal: React.FC<CustomerSignupModalProps> = ({
           <label className="flex items-start gap-2 border-t border-surface-100 pt-3 text-micro text-surface-600 dark:border-surface-800 dark:text-surface-300">
             <input type="checkbox" checked={marketingConsent} onChange={(event) => setMarketingConsent(event.target.checked)} className="mt-0.5" />
             <span>Email me the one-time NEW20 welcome offer for eligible apparel. This is optional.</span>
+          </label>
+
+          <label className="flex items-start gap-2 text-micro text-surface-600 dark:text-surface-300">
+            <input
+              type="checkbox"
+              checked={acceptedTerms}
+              onChange={(event) => setAcceptedTerms(event.target.checked)}
+              className="mt-0.5"
+              required
+            />
+            <span>I am 18 or older and agree to the <PolicyLinks ids={['terms', 'privacy']} />.</span>
           </label>
 
           <div className="pt-3 flex items-center justify-end gap-3">

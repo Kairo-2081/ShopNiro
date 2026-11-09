@@ -4,6 +4,7 @@ import { randomBytes, randomUUID } from 'node:crypto';
 import { pool, query, mapAddress } from '../db/index.ts';
 import { hashPassword, comparePassword, needsPasswordRehash } from '../db/password.ts';
 import { getUserProfileCompletion } from '../services/profileCompletion.service.ts';
+import { recordCustomerPolicyConsent } from '../lib/policyConsent.ts';
 import { issueAuthCookie, issueOAuthRegistrationCookie, readOAuthRegistrationCookie, clearAuthCookie, optionalAuth, AUTH_COOKIE_NAME, AuthRequest } from '../middleware/auth.ts';
 
 import { validateBody } from '../middleware/validate.ts';
@@ -149,7 +150,12 @@ async function fetchOAuthProfile(provider: OAuthProvider, code: string, req: { p
   return { providerUserId: profile.id, email: profile.email, name: profile.name || profile.email.split('@')[0] };
 }
 
-async function findOrCreateOAuthAccount(provider: OAuthProvider, profile: OAuthProfile, requestedRole: 'customer' | 'seller' | 'rider') {
+async function findOrCreateOAuthAccount(
+  provider: OAuthProvider,
+  profile: OAuthProfile,
+  requestedRole: 'customer' | 'seller' | 'rider',
+  acceptedTerms: boolean,
+) {
   const client = await pool.connect();
   const email = profile.email.trim().toLowerCase();
   try {
@@ -175,6 +181,7 @@ async function findOrCreateOAuthAccount(provider: OAuthProvider, profile: OAuthP
       if (user && (user.role === 'admin' || (requestedRole !== 'customer' && user.role !== requestedRole))) throw new Error('account_conflict');
 
       if (!user) {
+        if (requestedRole === 'customer' && !acceptedTerms) throw new Error('terms_required');
         const userId = randomUUID();
         const usernameBase = email.split('@')[0].toLowerCase().replace(/[^a-z0-9_]/g, '').slice(0, 70) || 'customer';
         const username = `${usernameBase}_${randomBytes(4).toString('hex')}`;
@@ -222,6 +229,9 @@ async function findOrCreateOAuthAccount(provider: OAuthProvider, profile: OAuthP
 
     if (!['customer', 'seller', 'rider'].includes(user.role)) throw new Error('account_conflict');
     if (requestedRole !== 'customer' && user.role !== requestedRole) throw new Error('account_conflict');
+    if (user.role === 'customer' && acceptedTerms) {
+      await recordCustomerPolicyConsent(client, user.id, 'oauth_signup');
+    }
     await client.query('COMMIT');
     return user;
   } catch (error) {
@@ -264,11 +274,15 @@ router.get('/oauth/registration', (req, res) => {
 router.post('/signup', signupRateLimit, validateBody(signupBody), async (req, res) => {
   try {
   const role = req.body?.role;
+  const acceptedTerms = req.body?.acceptedTerms === true;
   const inputUsername = typeof req.body?.username === 'string' ? req.body.username.trim().toLowerCase() : '';
   const inputEmail = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';
   const password = req.body?.password;
   if (!['customer', 'seller', 'rider'].includes(role)) {
     return res.status(400).json({ error: 'Choose a customer, seller, or rider account.' });
+  }
+  if (role === 'customer' && !acceptedTerms) {
+    return res.status(400).json({ error: 'Accept the Terms of Service and Privacy Policy to create a customer account.' });
   }
   if (!inputUsername && !inputEmail) {
     return res.status(400).json({ error: 'Enter a username or email address.' });
@@ -307,6 +321,7 @@ router.post('/signup', signupRateLimit, validateBody(signupBody), async (req, re
         'SELECT * FROM shopniro_customer_create($1, $2, $3, $4, $5, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)',
         [userId, username, '', email, passwordHash],
       );
+      await recordCustomerPolicyConsent(client, userId, 'signup');
     } else if (accountRole === 'seller') {
       await client.query(
         'SELECT * FROM shopniro_seller_create($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)',
@@ -365,10 +380,15 @@ router.get('/oauth/:provider', oauthRateLimit, (req, res) => {
   const requestedRole = ['customer', 'seller', 'rider'].includes(String(req.query.role))
     ? String(req.query.role)
     : 'customer';
+  const acceptedTerms = req.query.acceptedTerms === 'true';
+  if (requestedRole === 'customer' && acceptedTerms !== (req.query.intent === 'sign-up')) {
+    return res.redirect(302, oauthReturnUrl(req, 'terms_required'));
+  }
 
   const state = randomBytes(32).toString('base64url');
   const secureAttribute = process.env.NODE_ENV === 'production' ? '; Secure' : '';
-  res.append('Set-Cookie', `${oauthStateCookieName(provider)}=${encodeURIComponent(`${state}.${requestedRole}`)}; Max-Age=600; Path=/api/auth/oauth/${provider}; HttpOnly; SameSite=Lax${secureAttribute}`);
+  const oauthState = `${state}.${requestedRole}.${acceptedTerms ? 'true' : 'false'}`;
+  res.append('Set-Cookie', `${oauthStateCookieName(provider)}=${encodeURIComponent(oauthState)}; Max-Age=600; Path=/api/auth/oauth/${provider}; HttpOnly; SameSite=Lax${secureAttribute}`);
 
   const authorizationUrl = provider === 'google'
     ? new URL('https://accounts.google.com/o/oauth2/v2/auth')
@@ -389,10 +409,12 @@ router.get('/oauth/:provider/callback', oauthRateLimit, async (req, res) => {
 
   const receivedState = typeof req.query.state === 'string' ? req.query.state : '';
   const savedState = getCookie(req, oauthStateCookieName(provider));
-  const [expectedState, requestedRole] = savedState?.split('.') || [];
+  const [expectedState, requestedRole, acceptedTermsValue = 'false'] = savedState?.split('.') || [];
+  const acceptedTerms = acceptedTermsValue === 'true';
   if (
     !receivedState || !expectedState || receivedState !== expectedState ||
-    !['customer', 'seller', 'rider'].includes(requestedRole)
+    !['customer', 'seller', 'rider'].includes(requestedRole) ||
+    !['true', 'false'].includes(acceptedTermsValue)
   ) {
     return res.redirect(302, oauthReturnUrl(req, 'oauth_failed'));
   }
@@ -402,7 +424,7 @@ router.get('/oauth/:provider/callback', oauthRateLimit, async (req, res) => {
 
   try {
     const profile = await fetchOAuthProfile(provider, req.query.code, req);
-    const user = await findOrCreateOAuthAccount(provider, profile, requestedRole as 'customer' | 'seller' | 'rider');
+    const user = await findOrCreateOAuthAccount(provider, profile, requestedRole as 'customer' | 'seller' | 'rider', acceptedTerms);
     if (!user) {
       issueOAuthRegistrationCookie(res, {
         role: requestedRole as 'seller' | 'rider',
@@ -423,7 +445,7 @@ router.get('/oauth/:provider/callback', oauthRateLimit, async (req, res) => {
     return res.redirect(302, oauthReturnUrl(req));
   } catch (error) {
     const errorCode = error instanceof Error && [
-      'provider_unconfigured', 'provider_rejected', 'email_unverified', 'email_missing', 'account_conflict',
+      'provider_unconfigured', 'provider_rejected', 'email_unverified', 'email_missing', 'account_conflict', 'terms_required',
     ].includes(error.message) ? error.message : 'oauth_failed';
     if (errorCode === 'oauth_failed') console.error('OAuth sign-in failed:', error);
     return res.redirect(302, oauthReturnUrl(req, errorCode));

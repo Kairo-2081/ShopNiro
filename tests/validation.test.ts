@@ -48,7 +48,7 @@ const ok = (schema: { safeParse: (v: unknown) => { success: boolean } }, value: 
 const bad = (schema: { safeParse: (v: unknown) => { success: boolean } }, value: unknown) => assert.equal(schema.safeParse(value).success, false, JSON.stringify(value));
 
 test('signup: role, password length and types are enforced', () => {
-  ok(signupBody, { role: 'customer', username: 'abc_12', password: 'longenough' });
+  ok(signupBody, { role: 'customer', username: 'abc_12', password: 'longenough', acceptedTerms: true });
   ok(signupBody, { role: 'seller', email: 'a@b.co', password: 'longenough' });
   bad(signupBody, { role: 'admin', username: 'abc', password: 'longenough' });
   bad(signupBody, { role: 'customer', username: 'abc', password: 'short' });
@@ -216,7 +216,7 @@ const goodAddress = { House_Name: '12', Street: 'Road 5', City: 'Dhaka', Postal_
 const pdfDataUrl = 'data:application/pdf;base64,JVBERi0x';
 
 test('customer registration: required fields keep their messages, types and sizes are capped', () => {
-  const good = { Name: 'Ayesha', Email: 'a@example.com', Password: 'longenough1', Number: '01700000000', Address: goodAddress, Marketing_Consent: true };
+  const good = { Name: 'Ayesha', Email: 'a@example.com', Password: 'longenough1', Number: '01700000000', Address: goodAddress, Marketing_Consent: true, acceptedTerms: true };
   ok(customerRegisterBody, good);
   bad(customerRegisterBody, { ...good, Password: 'short' });
   assert.equal((customerRegisterBody.safeParse({ ...good, Number: '  ' }) as any).error.issues[0].message, 'A phone number is required');

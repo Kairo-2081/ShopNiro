@@ -47,6 +47,7 @@ Routes are listed from `server/routes/*.ts`; prefixes come from the mounts in `s
 | GET | `/api/auth/oauth/:provider/callback` | OAuth provider callback |
 | GET | `/api/auth/me` | Public; returns current session when present |
 | POST | `/api/auth/login` | Public |
+| POST | `/api/auth/signup` | Public; customer signup requires `acceptedTerms: true` |
 | POST | `/api/auth/logout` | Public; revokes current session when present |
 
 ## Bundles, cart, and categories
@@ -75,6 +76,8 @@ Routes are listed from `server/routes/*.ts`; prefixes come from the mounts in `s
 | POST | `/api/cron/refunds` | Scheduler with `CRON_SECRET` |
 | GET | `/api/customers` | Authenticated |
 | POST | `/api/customers` | Public registration |
+| GET | `/api/customers/me/export` | Authenticated customer; downloads account data as JSON |
+| POST | `/api/customers/me/deletion` | Authenticated customer; requires `confirmationEmail` |
 | PUT | `/api/customers/:id` | Authenticated; ownership checked |
 | GET | `/api/maps/reverse` | Public |
 | GET | `/api/orders` | Customer, seller, or admin; role and ownership checked |
@@ -85,6 +88,8 @@ Routes are listed from `server/routes/*.ts`; prefixes come from the mounts in `s
 | PATCH | `/api/orders/cancellation-requests/:requestId/review` | Admin |
 | PATCH | `/api/orders/:id/revert-failed-payment` | Customer; own order only |
 | PATCH | `/api/orders/:id/status` | Seller or admin; seller ownership checked |
+
+Customer signup and checkout must carry `acceptedTerms: true`; consent is stored with a policy version, source, and timestamp. Checkout acceptance is checked and recorded in the same transaction that creates the order. The account export includes the customer's profile, orders, payments, refunds, cancellation requests, reviews, cart, wishlist, support requests, and policy-consent history. Account deletion is blocked while any order is active; order and payment evidence may be retained with profile and address details removed.
 
 ## Payments and payouts
 

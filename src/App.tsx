@@ -245,6 +245,7 @@ export default function App() {
 
     const messages: Record<string, string> = {
       oauth_cancelled: 'Sign-in was cancelled. You can try again or use your email and password.',
+      terms_required: 'Accept the Terms of Service and Privacy Policy before creating a customer account.',
       provider_unconfigured: 'This sign-in provider is not configured yet.',
       provider_rejected: 'The provider could not verify your sign-in. Please try again.',
       email_unverified: 'Verify your Google email address before using it to sign in.',
@@ -930,7 +931,7 @@ export default function App() {
   };
 
   // New Customer Registration
-  const handleRegisterCustomer = async (customerData: Partial<Customer> & { Username?: string }): Promise<Customer> => {
+  const handleRegisterCustomer = async (customerData: Partial<Customer> & { Username?: string; acceptedTerms: boolean }): Promise<Customer> => {
     return api.createCustomer(customerData);
   };
 
@@ -1277,6 +1278,7 @@ export default function App() {
             <CustomerProfile
               currentCustomer={selectedCustomer}
               onUpdateCustomer={handleUpdateCustomer}
+              onAccountDeleted={handleLogout}
             />
           ) : (
             <AuthenticationGuard

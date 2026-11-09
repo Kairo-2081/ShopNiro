@@ -11,6 +11,7 @@ import { getVoucherRule, isVoucherExpired, normalizeVoucherCode } from '../../sr
 import { newId, newTrackingId } from '../lib/ids.ts';
 import { orderItemsForFulfillmentSql, orderItemsForOrderSql } from '../lib/orderItems.ts';
 import { calculateCheckoutPricing, calculateLineItemsSubtotal, calculateOrderTotal } from '../../src/lib/checkoutPricing.ts';
+import { recordCustomerPolicyConsent } from '../lib/policyConsent.ts';
 
 const router = Router();
 
@@ -120,6 +121,7 @@ router.post('/', requireAuth, validateBody(schemas.createOrderBody), async (req:
   try {
     const {
       Customer_ID,
+      acceptedTerms,
       Items,
       Applied_Voucher,
       Shipping_Address,
@@ -139,6 +141,9 @@ router.post('/', requireAuth, validateBody(schemas.createOrderBody), async (req:
     if (Customer_ID !== req.user!.entityId) {
       return res.status(403).json({ error: 'You can only place orders for your own account.' });
     }
+    if (acceptedTerms !== true) {
+      return res.status(400).json({ error: 'Accept the Terms of Service, Refund Policy and Delivery Policy to place your order.' });
+    }
     if (idempotencyKey && (idempotencyKey.length > 128 || !/^[A-Za-z0-9._:-]+$/.test(idempotencyKey))) {
       return res.status(400).json({ error: 'Idempotency-Key must be 1–128 letters, numbers, dots, underscores, colons, or hyphens.' });
     }
@@ -146,6 +151,7 @@ router.post('/', requireAuth, validateBody(schemas.createOrderBody), async (req:
     const requestHash = idempotencyKey
       ? createHash('sha256').update(JSON.stringify({
         Customer_ID,
+        acceptedTerms,
         Items,
         Applied_Voucher,
         Shipping_Address,
@@ -249,6 +255,14 @@ router.post('/', requireAuth, validateBody(schemas.createOrderBody), async (req:
     let newOrder: Order;
     try {
       await client.query('BEGIN');
+      const customer = await client.query(
+        'SELECT account_deleted_at FROM customers WHERE id = $1 FOR UPDATE',
+        [Customer_ID],
+      );
+      if (!customer.rows[0] || customer.rows[0].account_deleted_at) {
+        await client.query('ROLLBACK');
+        return res.status(403).json({ error: 'This customer account is not available for checkout.' });
+      }
       if (idempotencyKey && requestHash) {
         const claim = await client.query(
           `INSERT INTO checkout_idempotency (customer_id, idempotency_key, request_hash)
@@ -272,6 +286,7 @@ router.post('/', requireAuth, validateBody(schemas.createOrderBody), async (req:
           return res.status(409).json({ error: 'This checkout request is already being processed. Retry with the same key.' });
         }
       }
+      await recordCustomerPolicyConsent(client, Customer_ID, 'checkout', ['terms']);
       await client.query(`CALL process_checkout($1, $2, $3, $4, $5, $6, $7)`, [
         id,
         Tracking_ID,
