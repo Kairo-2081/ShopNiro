@@ -1,0 +1,11 @@
+# Leaked Secret or Key
+
+**Assume a secret is compromised** if it appears in a public commit, log, screenshot, ticket, terminal transcript, or an untrusted person's device. Removing the text is not revocation. The incident lead assigns one production operator and a second person to verify the rotation.
+
+1. Preserve the exposure location and time without copying the secret again. Restrict access to the affected repository, host account, or device. Revoke exposed personal access tokens and compromised host/GitHub sessions first; enable MFA and remove unknown users.
+2. Identify the issuer and exact scope. Rotate at the issuer, put the replacement only in the host's secret store (and in GitHub Actions secrets only where a workflow needs it), restart/redeploy affected services, verify health, then revoke the old credential. If active abuse is likely, revoke immediately and accept a controlled outage rather than leave the credential live.
+3. Rotate affected credentials in this order, skipping only those confirmed out of scope: host/GitHub control-plane credentials; database credential (`DATABASE_URL`); Supabase `SUPABASE_SERVICE_ROLE_KEY`; payment gateway store password and `SSLCOMMERZ_IPN_TOKEN` (coordinate the IPN token at SSLCommerz and the host); `JWT_SECRET` (invalidates existing sessions); `CRON_SECRET` (update both the API host and GitHub Actions secret); OAuth client secrets at Google/Facebook; then optional Resend, Groq, Maps, and Sentry keys. If the leaked credential is a payment credential, keep online checkout disabled until gateway access and callbacks are verified.
+4. Never paste replacement values into this incident, commit them, or put them in a developer `.env` shared with production. See [Production access and secret custody](production-access.md) for storage ownership.
+5. Review host, GitHub, database, storage, gateway, and application audit logs from the exposure time. Check for unauthorized deploys, users, database access, payment sessions/refunds, and secret reads. Reconcile affected orders and invalidate sessions where appropriate.
+
+**Close when:** Old credentials are revoked, the replacement is verified, access is limited to the named operators, logs have an owner, and affected transactions/accounts are reviewed. Record secret names and rotation times, never their values.
