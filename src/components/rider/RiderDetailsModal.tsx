@@ -8,6 +8,7 @@ import { ChevronLeft, ChevronRight, FileText, Image as ImageIcon, Lock, Save, X 
 import type * as PdfJs from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { useLocale } from '../../lib/i18n';
 
 
 // pdf.js is large, so it is loaded the first time a CV is previewed, not with the rider dashboard.
@@ -140,6 +141,7 @@ const addressKey = (address: Address) => JSON.stringify([
 ]);
 
 export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, rider, onClose, onSaved, required = false }) => {
+  const { t } = useLocale();
   const [username, setUsername] = React.useState(rider.Username);
   const [name, setName] = React.useState(rider.Name);
   const [email, setEmail] = React.useState(rider.Email);
@@ -306,8 +308,8 @@ export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, ri
             {required && <p role="status" className="mt-2 text-xs font-semibold text-warning-800 dark:text-warning-200">Complete and save your profile before making other changes.</p>}
           </div>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={() => void viewCv()} disabled={openingCv} className="inline-flex items-center gap-2 rounded-lg border border-surface-300 px-3 py-2 text-xs font-semibold text-surface-700 disabled:opacity-50 dark:border-surface-700 dark:text-surface-200"><FileText className="h-4 w-4" />{openingCv ? 'Opening...' : 'View my CV'}</button>
-            <button type="button" onClick={onClose} aria-label="Close rider details" className="rounded-md p-2 text-surface-500 hover:bg-surface-100 dark:text-surface-400 dark:hover:bg-surface-800"><X className="h-5 w-5" /></button>
+            <button type="button" onClick={() => void viewCv()} disabled={openingCv} className="inline-flex items-center gap-2 rounded-lg border border-surface-300 px-3 py-2 text-xs font-semibold text-surface-700 disabled:opacity-50 dark:border-surface-700 dark:text-surface-200"><FileText className="h-4 w-4" />{openingCv ? 'Opening...' : t('viewCv')}</button>
+            <button type="button" onClick={onClose} aria-label={t('close')} className="rounded-md p-2 text-surface-500 hover:bg-surface-100 dark:text-surface-400 dark:hover:bg-surface-800"><X className="h-5 w-5" /></button>
           </div>
         </header>
 
@@ -374,8 +376,8 @@ export const RiderDetailsModal: React.FC<RiderDetailsModalProps> = ({ isOpen, ri
           </section>
 
           <footer className="flex flex-col-reverse justify-end gap-2 border-t border-surface-200 pt-4 dark:border-surface-800 sm:flex-row">
-            <button type="button" onClick={onClose} className="rounded-lg border border-surface-300 px-4 py-2.5 text-sm font-semibold text-surface-700 dark:border-surface-700 dark:text-surface-200">Cancel</button>
-            <button type="submit" disabled={saving || preparingProfileImage} className="inline-flex items-center justify-center gap-2 rounded-lg bg-success-700 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"><Save className="h-4 w-4" />{preparingProfileImage ? 'Preparing photo...' : saving ? 'Saving details...' : 'Save details'}</button>
+            <button type="button" onClick={onClose} className="rounded-lg border border-surface-300 px-4 py-2.5 text-sm font-semibold text-surface-700 dark:border-surface-700 dark:text-surface-200">{t('cancel')}</button>
+            <button type="submit" disabled={saving || preparingProfileImage} className="inline-flex items-center justify-center gap-2 rounded-lg bg-success-700 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"><Save className="h-4 w-4" />{preparingProfileImage ? 'Preparing photo...' : saving ? t('saving') : t('saveRiderProfile')}</button>
           </footer>
         </form>
       </section>

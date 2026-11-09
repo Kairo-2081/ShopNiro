@@ -6,6 +6,7 @@ import { api } from '../../lib/api';
 import { money } from '../../lib/format';
 import { RiderDetailsModal } from './RiderDetailsModal';
 import { Banknote, CheckCircle2, Clock3, MapPin, RefreshCw, Star, Truck, Wallet } from 'lucide-react';
+import { useLocale } from '../../lib/i18n';
 import 'leaflet/dist/leaflet.css';
 
 interface RiderDashboardProps {
@@ -25,6 +26,7 @@ function ClickMap({ onSelect }: { onSelect: (location: [number, number]) => void
 const addressLabel = (address: Address) => [address.House_Name, address.Street, address.City, address.Postal_Code].filter(Boolean).join(', ');
 
 export const RiderDashboard: React.FC<RiderDashboardProps> = ({ rider, profileComplete = true, onProfileSaved }) => {
+  const { t } = useLocale();
   const [profile, setProfile] = React.useState(rider);
   const [location, setLocation] = React.useState<[number, number] | null>(
     rider.Current_Latitude !== undefined && rider.Current_Longitude !== undefined
@@ -152,7 +154,7 @@ export const RiderDashboard: React.FC<RiderDashboardProps> = ({ rider, profileCo
 
   if (profile.Status !== 'approved') {
     return <>
-      <div className="mx-auto max-w-xl rounded-xl border border-warning-300 bg-warning-50 p-6 text-center dark:border-warning-900 dark:bg-warning-950/30"><h1 className="text-lg font-bold text-surface-900 dark:text-white">Rider application under review</h1><p className="mt-2 text-sm text-surface-600 dark:text-surface-300">Your account is signed in, but delivery operations will appear after administrator approval.</p><button type="button" onClick={() => setShowDetails(true)} className="mt-4 rounded-lg bg-success-700 px-4 py-2 text-sm font-bold text-white">My details</button></div>
+      <div className="mx-auto max-w-xl rounded-xl border border-warning-300 bg-warning-50 p-6 text-center dark:border-warning-900 dark:bg-warning-950/30"><h1 className="text-lg font-bold text-surface-900 dark:text-white">Rider application under review</h1><p className="mt-2 text-sm text-surface-600 dark:text-surface-300">Your account is signed in, but delivery operations will appear after administrator approval.</p><button type="button" onClick={() => setShowDetails(true)} className="mt-4 rounded-lg bg-success-700 px-4 py-2 text-sm font-bold text-white">{t('profile')}</button></div>
       <RiderDetailsModal isOpen={showDetails} rider={profile} required={!profileComplete} onClose={() => setShowDetails(false)} onSaved={saveProfile} />
     </>;
   }
@@ -162,8 +164,8 @@ export const RiderDashboard: React.FC<RiderDashboardProps> = ({ rider, profileCo
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div><p className="text-xs font-bold uppercase tracking-wider text-success-700 dark:text-success-400">Rider operations</p><h1 className="mt-1 text-2xl font-bold text-surface-900 dark:text-white">Good day, {profile.Name}</h1><p className="mt-1 text-sm text-surface-600 dark:text-surface-400">Your location is used to sort nearby ShopNiro deliveries.</p></div>
         <div className="flex gap-2">
-          <button type="button" onClick={() => setShowDetails(true)} className="rounded-lg border border-surface-300 bg-white px-3 py-2 text-sm font-semibold text-surface-700 hover:bg-surface-50 dark:border-surface-700 dark:bg-[#12161D] dark:text-surface-200">My details</button>
-          <button type="button" onClick={() => void refresh()} disabled={loading || !location} className="inline-flex items-center gap-2 rounded-lg border border-surface-300 bg-white px-3 py-2 text-sm font-semibold text-surface-700 hover:bg-surface-50 disabled:opacity-50 dark:border-surface-700 dark:bg-[#12161D] dark:text-surface-200"><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />Refresh jobs</button>
+          <button type="button" onClick={() => setShowDetails(true)} className="rounded-lg border border-surface-300 bg-white px-3 py-2 text-sm font-semibold text-surface-700 hover:bg-surface-50 dark:border-surface-700 dark:bg-[#12161D] dark:text-surface-200">{t('profile')}</button>
+          <button type="button" onClick={() => void refresh()} disabled={loading || !location} className="inline-flex items-center gap-2 rounded-lg border border-surface-300 bg-white px-3 py-2 text-sm font-semibold text-surface-700 hover:bg-surface-50 disabled:opacity-50 dark:border-surface-700 dark:bg-[#12161D] dark:text-surface-200"><RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />{t('refresh')}</button>
         </div>
       </header>
 
@@ -172,7 +174,7 @@ export const RiderDashboard: React.FC<RiderDashboardProps> = ({ rider, profileCo
       <section className="overflow-hidden rounded-2xl border border-success-900/15 bg-white dark:border-success-900/40 dark:bg-[#12161D]">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-surface-200 p-4 dark:border-surface-800">
           <div><h2 className="font-bold text-surface-900 dark:text-white">Your current location</h2><p className="text-xs text-surface-500 dark:text-surface-400">Select on the map or use device location to see nearby shipments.</p></div>
-          <div className="flex gap-2"><button type="button" onClick={useDeviceLocation} disabled={savingLocation} className="rounded-lg border border-surface-300 px-3 py-2 text-xs font-semibold disabled:opacity-50 dark:border-surface-700">Use device location</button><button type="button" onClick={() => void saveLocation()} disabled={!location || savedLocation || savingLocation} className={`rounded-lg px-3 py-2 text-xs font-bold ${savedLocation ? 'border border-success-700/40 bg-success-100 text-success-800 dark:border-success-500/40 dark:bg-success-900/40 dark:text-success-200' : 'bg-success-700 text-white disabled:opacity-50'}`}>{savingLocation ? 'Saving and loading...' : savedLocation ? 'Location saved' : 'Save location'}</button></div>
+          <div className="flex gap-2"><button type="button" onClick={useDeviceLocation} disabled={savingLocation} className="rounded-lg border border-surface-300 px-3 py-2 text-xs font-semibold disabled:opacity-50 dark:border-surface-700">{t('useCurrentLocation')}</button><button type="button" onClick={() => void saveLocation()} disabled={!location || savedLocation || savingLocation} className={`rounded-lg px-3 py-2 text-xs font-bold ${savedLocation ? 'border border-success-700/40 bg-success-100 text-success-800 dark:border-success-500/40 dark:bg-success-900/40 dark:text-success-200' : 'bg-success-700 text-white disabled:opacity-50'}`}>{savingLocation ? t('savingLocation') : savedLocation ? t('profileSaved') : t('saveLocation')}</button></div>
         </div>
         <div className="relative h-64 sm:h-80">
           <MapContainer center={location || defaultCenter} zoom={location ? 14 : 11} scrollWheelZoom className="h-full w-full">
@@ -200,9 +202,9 @@ export const RiderDashboard: React.FC<RiderDashboardProps> = ({ rider, profileCo
                 {delivery.COD_Amount > 0 && <p className="inline-flex items-center gap-1.5 rounded-md bg-warning-50 px-2 py-1 text-xs font-bold text-warning-900 dark:bg-warning-950/40 dark:text-warning-200"><Banknote className="h-3.5 w-3.5" />Collect {money(delivery.COD_Amount)}</p>}
               </div>
               <div className="flex min-w-52 flex-col justify-center gap-2">
-                {delivery.Status === 'pending' && <button type="button" disabled={busyId === delivery.Delivery_ID} onClick={() => void deliveryAction(delivery, () => api.acceptRiderDelivery(delivery.Delivery_ID))} className="rounded-lg bg-success-700 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">{busyId === delivery.Delivery_ID ? 'Accepting...' : 'Accept shipment'}</button>}
-                {delivery.Status === 'accepted' && <button type="button" disabled={busyId === delivery.Delivery_ID} onClick={() => void deliveryAction(delivery, () => api.setRiderDeliveryOnWay(delivery.Delivery_ID))} className="rounded-lg bg-brand-700 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">Start delivery</button>}
-                {delivery.Status === 'on_the_way' && <div className="space-y-2 rounded-lg border border-success-200 bg-success-50 p-3 dark:border-success-900 dark:bg-success-950/25"><p className="text-micro font-bold uppercase text-success-800 dark:text-success-300">Tell the customer this delivery code</p><p className="font-mono text-2xl font-black tracking-[0.3em] text-success-950 dark:text-success-100">{delivery.Confirmation_Code}</p>{delivery.COD_Amount > 0 && !delivery.COD_Collected && <button type="button" disabled={busyId === delivery.Delivery_ID} onClick={() => void deliveryAction(delivery, () => api.markRiderCodCollected(delivery.Delivery_ID))} className="min-h-11 w-full rounded-lg bg-warning-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">{busyId === delivery.Delivery_ID ? 'Recording...' : `Confirm ${money(delivery.COD_Amount)} collected`}</button>}{delivery.COD_Amount > 0 && delivery.COD_Collected && <p className="text-xs font-semibold text-success-800 dark:text-success-300">COD collection recorded. Waiting for the customer to confirm receipt.</p>}{delivery.COD_Amount === 0 && <p className="text-xs text-success-800 dark:text-success-300">Waiting for the customer to confirm receipt in their portal.</p>}</div>}
+                {delivery.Status === 'pending' && <button type="button" disabled={busyId === delivery.Delivery_ID} onClick={() => void deliveryAction(delivery, () => api.acceptRiderDelivery(delivery.Delivery_ID))} className="rounded-lg bg-success-700 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">{busyId === delivery.Delivery_ID ? t('processing') : t('claimDelivery')}</button>}
+                {delivery.Status === 'accepted' && <button type="button" disabled={busyId === delivery.Delivery_ID} onClick={() => void deliveryAction(delivery, () => api.setRiderDeliveryOnWay(delivery.Delivery_ID))} className="rounded-lg bg-brand-700 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">{t('onTheWay')}</button>}
+                {delivery.Status === 'on_the_way' && <div className="space-y-2 rounded-lg border border-success-200 bg-success-50 p-3 dark:border-success-900 dark:bg-success-950/25"><p className="text-micro font-bold uppercase text-success-800 dark:text-success-300">Tell the customer this delivery code</p><p className="font-mono text-2xl font-black tracking-[0.3em] text-success-950 dark:text-success-100">{delivery.Confirmation_Code}</p>{delivery.COD_Amount > 0 && !delivery.COD_Collected && <button type="button" disabled={busyId === delivery.Delivery_ID} onClick={() => void deliveryAction(delivery, () => api.markRiderCodCollected(delivery.Delivery_ID))} className="min-h-11 w-full rounded-lg bg-warning-600 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">{busyId === delivery.Delivery_ID ? t('processing') : `${t('confirmReceived')} (${money(delivery.COD_Amount)})`}</button>}{delivery.COD_Amount > 0 && delivery.COD_Collected && <p className="text-xs font-semibold text-success-800 dark:text-success-300">COD collection recorded. Waiting for the customer to confirm receipt.</p>}{delivery.COD_Amount === 0 && <p className="text-xs text-success-800 dark:text-success-300">Waiting for the customer to confirm receipt in their portal.</p>}</div>}
               </div>
             </article>
           ))}
@@ -228,7 +230,7 @@ export const RiderDashboard: React.FC<RiderDashboardProps> = ({ rider, profileCo
             <input type="number" min="1" step="0.01" max={wallet?.availableBalance || 0} required value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} placeholder="Amount" className="rounded-lg border border-surface-300 bg-white px-3 py-2 text-sm dark:border-surface-700 dark:bg-[#181F2A]" />
             <select aria-label="Payout method" value={payoutMethod} onChange={(e) => setPayoutMethod(e.target.value)} className="rounded-lg border border-surface-300 bg-white px-3 py-2 text-sm dark:border-surface-700 dark:bg-[#181F2A]"><option value="bkash">bKash</option><option value="bank">Bank transfer</option><option value="nagad">Nagad</option></select>
             <input required value={payoutAccount} onChange={(e) => setPayoutAccount(e.target.value)} placeholder="Payout account" className="rounded-lg border border-surface-300 bg-white px-3 py-2 text-sm dark:border-surface-700 dark:bg-[#181F2A]" />
-            <button type="submit" disabled={withdrawing || (wallet?.availableBalance || 0) <= 0} className="rounded-lg bg-success-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50 sm:col-span-3">{withdrawing ? 'Requesting...' : 'Request withdrawal'}</button>
+            <button type="submit" disabled={withdrawing || (wallet?.availableBalance || 0) <= 0} className="rounded-lg bg-success-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50 sm:col-span-3">{withdrawing ? t('withdrawing') : t('withdrawBalance')}</button>
           </form>
         </div>
         <div className="rounded-xl border border-surface-200 bg-white p-5 dark:border-surface-800 dark:bg-[#12161D]">
