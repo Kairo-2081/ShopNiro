@@ -1,5 +1,6 @@
 import { GLOBE_VIEW } from './network';
 import { GLOBE_PALETTE, rgba } from './palette';
+import { landCells } from './landMask';
 import { project } from './projection';
 
 /** Where the globe sits on the canvas, in CSS pixels. */
@@ -63,6 +64,34 @@ function drawGraticule(ctx: CanvasRenderingContext2D, { cx, cy, radius }: GlobeF
   ctx.restore();
 }
 
+// Direction the light comes from (upper left, towards the viewer), as a unit vector.
+const LIGHT = (() => {
+  const x = -0.45;
+  const y = 0.5;
+  const z = 0.74;
+  const length = Math.hypot(x, y, z);
+  return { x: x / length, y: y / length, z: z / length };
+})();
+
+/**
+ * Land as a field of tan dots. Dots shrink and fade towards the rim, where the surface turns away, and catch the light on
+ * the upper left, so the map curves with the sphere.
+ */
+function drawLand(ctx: CanvasRenderingContext2D, { cx, cy, radius }: GlobeFrame) {
+  for (const cell of landCells()) {
+    const p = project(cell.lon, cell.lat, GLOBE_VIEW);
+    if (p.z <= 0.04) continue;
+    const lit = Math.max(0, p.x * LIGHT.x + p.y * LIGHT.y + p.z * LIGHT.z);
+    // Dots fade to nothing at the rim and brighten smoothly towards the light. No hard switch, so no visible band.
+    const alpha = 0.14 + 0.62 * Math.pow(p.z, 0.8) * (0.45 + 0.55 * lit);
+    const size = 0.3 + 0.32 * p.z;
+    ctx.fillStyle = rgba(GLOBE_PALETTE.tan, Math.min(0.8, alpha));
+    ctx.beginPath();
+    ctx.arc(cx + p.x * radius, cy - p.y * radius, size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
 /** A thin lit edge on the upper left, and a faint glow just inside the whole limb. */
 function drawRim(ctx: CanvasRenderingContext2D, { cx, cy, radius }: GlobeFrame) {
   const inner = ctx.createRadialGradient(cx, cy, radius * 0.84, cx, cy, radius);
@@ -89,5 +118,6 @@ export function drawGlobe(ctx: CanvasRenderingContext2D, frame: GlobeFrame) {
   drawAtmosphere(ctx, frame);
   drawSphereBody(ctx, frame);
   drawGraticule(ctx, frame);
+  drawLand(ctx, frame);
   drawRim(ctx, frame);
 }
