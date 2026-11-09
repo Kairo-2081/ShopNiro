@@ -120,7 +120,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
             </div>
           ) : cartItems.length === 0 ? (
             <div className="text-center py-16 space-y-3">
-              <div className="w-16 h-16 bg-surface-100 dark:bg-[#181F2A] rounded-2xl flex items-center justify-center mx-auto text-surface-400 dark:text-surface-500">
+              <div className="w-16 h-16 bg-surface-100 dark:bg-[#181F2A] rounded-2xl flex items-center justify-center mx-auto text-surface-500 dark:text-surface-500">
                 <ShoppingCart className="w-8 h-8" />
               </div>
               <p className="font-bold text-surface-700 dark:text-surface-300">{t('emptyCart')}</p>
@@ -261,7 +261,7 @@ export const CartDrawer: React.FC<CartDrawerProps> = ({
               <ArrowRight className="w-4 h-4" />
             </button>
 
-            <div className="flex items-center justify-center gap-1.5 text-micro text-surface-400 dark:text-surface-500">
+            <div className="flex items-center justify-center gap-1.5 text-micro text-surface-500 dark:text-surface-500">
               <ShieldCheck className="w-3.5 h-3.5 text-success-500" />
               <span>{t('secureCheckout')}</span>
             </div>
