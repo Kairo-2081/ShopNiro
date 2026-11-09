@@ -184,6 +184,31 @@ test('signup requests reach public validation without a session', async () => {
   assert.equal(response.status, 400, JSON.stringify(response.body));
 });
 
+test('customer password signup requires explicit policy acceptance before database work', async () => {
+  const response = await request('POST', '/api/auth/signup', {
+    role: 'customer',
+    username: `consent${Date.now()}`,
+    password: 'consent-test-password',
+    acceptedTerms: false,
+  });
+  assert.equal(response.status, 400, JSON.stringify(response.body));
+  assert.match(String(response.body.error), /Accept the Terms of Service/);
+});
+
+test('direct customer registration requires explicit policy acceptance', async () => {
+  const response = await request('POST', '/api/customers', {
+    Name: 'Consent Test',
+    Username: `consent${Date.now()}`,
+    Email: `consent-${Date.now()}@example.test`,
+    Password: 'consent-test-password',
+    Number: '0123456789',
+    Address: { Street: 'Test Street', City: 'Dhaka' },
+    acceptedTerms: false,
+  });
+  assert.equal(response.status, 400, JSON.stringify(response.body));
+  assert.match(String(response.body.error), /Accept the Terms of Service/);
+});
+
 test('OAuth signup handoff is readable without a session and does not cache', async () => {
   const response = await request('GET', '/api/auth/oauth/registration');
   assert.equal(response.status, 200, JSON.stringify(response.body));
@@ -221,9 +246,18 @@ dbTest('minimal signup allows profile edits but blocks other writes until comple
     role: 'customer',
     username,
     password: 'profile-test-password',
+    acceptedTerms: true,
   });
   assert.equal(registration.status, 201, JSON.stringify(registration.body));
   const customerId = registration.body.entity.Customer_ID;
+  const profileEmail = `profile-${Date.now()}@example.test`;
+  assert.deepEqual(
+    (await query(
+      'SELECT policy_id FROM customer_policy_consents WHERE customer_id = $1 ORDER BY policy_id',
+      [customerId],
+    )).rows.map((row: { policy_id: string }) => row.policy_id),
+    ['privacy', 'terms'],
+  );
   const cookie = registration.cookies.find((value) => value.startsWith('shopniro_session='))?.split(';')[0];
   assert.ok(cookie, 'signup should create a session');
 
@@ -249,7 +283,7 @@ dbTest('minimal signup allows profile edits but blocks other writes until comple
 
     const completed = await request('PUT', `/api/customers/${customerId}`, {
       Name: 'Profile Test Customer',
-      Email: `profile-${Date.now()}@example.test`,
+      Email: profileEmail,
       Number: '01700000000',
       Address: {
         House_Name: 'Unit 3',
@@ -263,12 +297,50 @@ dbTest('minimal signup allows profile edits but blocks other writes until comple
     assert.equal(completed.status, 200, JSON.stringify(completed.body));
     assert.equal((await request('GET', '/api/auth/me', undefined, { cookie: cookie! })).body.profileComplete, true);
 
+    const exported = await request('GET', '/api/customers/me/export', undefined, { cookie: cookie! });
+    assert.equal(exported.status, 200, JSON.stringify(exported.body));
+    assert.equal(exported.body.account.email, profileEmail);
+    assert.equal(Object.hasOwn(exported.body.account, 'password'), false);
+
     const allowed = await request('POST', '/api/analytics/events', {
       Product_ID: 'PROFILE-TEST-NO-PRODUCT',
       Event_Type: 'click',
       Session_ID: 'profiletestsession1234',
     }, { cookie: cookie! });
     assert.equal(allowed.status, 200, JSON.stringify(allowed.body));
+
+    const orderId = `ORD-DELETE-GUARD-${Date.now()}`;
+    await query(
+      `INSERT INTO orders (
+        id, tracking_id, customer_id, items_json, subtotal, shipping_fee, status,
+        shipping_address_json, billing_address_json
+       ) VALUES ($1, $2, $3, '[]', 0, 0, 'placed', '{}', '{}')`,
+      [orderId, `TRK-DELETE-GUARD-${Date.now()}`, customerId],
+    );
+    const blockedDeletion = await request('POST', '/api/customers/me/deletion', {
+      confirmationEmail: profileEmail,
+    }, { cookie: cookie! });
+    assert.equal(blockedDeletion.status, 409, JSON.stringify(blockedDeletion.body));
+    await query('DELETE FROM orders WHERE id = $1', [orderId]);
+
+    const deletion = await request('POST', '/api/customers/me/deletion', {
+      confirmationEmail: profileEmail,
+    }, { cookie: cookie! });
+    assert.equal(deletion.status, 200, JSON.stringify(deletion.body));
+    assert.equal(deletion.body.success, true);
+    assert.equal((await request('GET', '/api/auth/me', undefined, { cookie: cookie! })).status, 401);
+    const anonymized = await query(
+      `SELECT c.name, c.account_deleted_at, u.email
+       FROM customers c JOIN users u ON u.id = c.id WHERE c.id = $1`,
+      [customerId],
+    );
+    assert.equal(anonymized.rows[0].name, 'Deleted customer');
+    assert.ok(anonymized.rows[0].account_deleted_at);
+    assert.match(anonymized.rows[0].email, /@deleted\.shopniro\.invalid$/);
+    assert.equal(
+      (await query('SELECT COUNT(*)::integer AS count FROM customer_policy_consents WHERE customer_id = $1', [customerId])).rows[0].count,
+      2,
+    );
   } finally {
     await query('DELETE FROM auth_sessions WHERE user_id = $1', [customerId]);
     await query('DELETE FROM customers WHERE id = $1', [customerId]);
