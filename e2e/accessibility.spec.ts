@@ -1,7 +1,8 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import { AUTH } from './global-setup.ts';
-import { blockNonLocalTraffic } from './helpers.ts';
+import { E2E } from './seed.ts';
+import { blockNonLocalTraffic, clearCartAndOrders, openCheckout, openStorefront, seedCart } from './helpers.ts';
 
 const rolePages = [
   { role: 'customer', home: 'My orders', pages: ['Storefront catalog', 'Top charts', 'My orders', 'Live tracking', 'My Profile', 'Support'] },
@@ -291,5 +292,81 @@ test('sign-in and sign-up dialogs have no critical or serious axe violations in 
     }
   } finally {
     await context.close();
+  }
+});
+
+const scanBothThemes = async (page: import('@playwright/test').Page, label: string) => {
+  // Contrast is read from computed colours. Freeze transitions so a scan never catches a colour half way between themes,
+  // including on page content behind the open dialog.
+  await page.addStyleTag({ content: '*, *::before, *::after { transition: none !important; animation-duration: 0s !important; animation-delay: 0s !important; }' });
+  for (const theme of ['light', 'dark']) {
+    await page.evaluate((isDark) => document.documentElement.classList.toggle('dark', isDark), theme === 'dark');
+    await page.waitForTimeout(400);
+    const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
+    const serious = results.violations.filter((violation) => violation.impact === 'serious' || violation.impact === 'critical');
+    expect(
+      serious.map((violation) => ({ theme, id: violation.id, help: violation.help, targets: violation.nodes.map((node) => node.target.join(' ')).slice(0, 4) })),
+      `${label} (${theme})`,
+    ).toEqual([]);
+  }
+};
+
+test('create-account dialog has no critical or serious axe violations in either theme', async ({ browser, baseURL }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'The dialog sweep runs once per CI workflow.');
+  test.setTimeout(120_000);
+  const context = await browser.newContext({ baseURL, storageState: guestStorageState });
+  const page = await context.newPage();
+  try {
+    await blockNonLocalTraffic(page);
+    await page.goto('/');
+    await page.getByRole('button', { name: /Sign in|Log in|Login/i }).first().click();
+    await page.getByRole('button', { name: 'Create Account', exact: true }).click();
+    await expect(page.getByRole('dialog', { name: 'Create an Account' })).toBeVisible();
+    await scanBothThemes(page, 'Create-account dialog');
+  } finally {
+    await context.close();
+  }
+});
+
+test('product detail dialog has no critical or serious axe violations in either theme', async ({ browser, baseURL }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'The dialog sweep runs once per CI workflow.');
+  test.setTimeout(120_000);
+  const context = await browser.newContext({ baseURL, storageState: AUTH.customer });
+  const page = await context.newPage();
+  try {
+    await blockNonLocalTraffic(page);
+    await page.goto('/');
+    await page.getByRole('navigation', { name: 'Primary navigation' }).getByRole('button', { name: 'My orders' }).waitFor();
+    await page.locator('[data-testid="product-card"]').first().getByRole('button', { name: /view details|details/i }).click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await scanBothThemes(page, 'Product detail dialog');
+  } finally {
+    await context.close();
+  }
+});
+
+test('payment receipt dialog has no critical or serious axe violations in either theme', async ({ browser, baseURL }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'The dialog sweep runs once per CI workflow.');
+  test.setTimeout(120_000);
+  await clearCartAndOrders();
+  await seedCart({ [E2E.products.blanket.id]: 1 });
+  const context = await browser.newContext({ baseURL, storageState: AUTH.customer });
+  const page = await context.newPage();
+  try {
+    await blockNonLocalTraffic(page);
+    await openStorefront(page);
+    await openCheckout(page);
+    await page.getByText('Cash on Delivery (COD)').click();
+    await page.getByRole('checkbox').check();
+    await page.getByTestId('checkout-submit').click();
+    await expect(page.getByRole('heading', { name: 'Order placed' })).toBeVisible();
+    // The confirmation's own button leads to My orders, where each order has its receipt button.
+    await page.getByRole('button', { name: 'View order' }).click();
+    await page.getByRole('button', { name: /View SSLCommerz Receipt/i }).first().click();
+    await expect(page.getByRole('dialog')).toBeVisible();
+    await scanBothThemes(page, 'Payment receipt dialog');
+  } finally {
+    await context.close();
+    await clearCartAndOrders();
   }
 });
