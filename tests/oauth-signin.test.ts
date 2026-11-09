@@ -84,13 +84,13 @@ const rawRequest = (method: string, path: string, headers: Record<string, string
   });
 };
 
-const callback = (role: 'customer' | 'seller' | 'rider', profile: Record<string, unknown>) => {
+const callback = (role: 'customer' | 'seller' | 'rider', profile: Record<string, unknown>, acceptedTerms = role === 'customer') => {
   googleProfile = { email_verified: true, name: 'Test Person', ...profile };
   const state = `state-${Math.random().toString(36).slice(2)}`;
   return rawRequest(
     'GET',
     `/api/auth/oauth/google/callback?state=${state}&code=auth-code`,
-    { cookie: `shopniro_oauth_state_google=${encodeURIComponent(`${state}.${role}`)}` },
+    { cookie: `shopniro_oauth_state_google=${encodeURIComponent(`${state}.${role}.${acceptedTerms ? 'true' : 'false'}`)}` },
   );
 };
 
@@ -110,14 +110,24 @@ test('OAuth start redirects to Google with a state cookie and requested role', a
   const state = target.searchParams.get('state');
   assert.ok(state && state.length >= 32);
   const stateCookie = decodeURIComponent(cookieValue(response, 'shopniro_oauth_state_google'));
-  assert.equal(stateCookie, `${state}.seller`);
+  assert.equal(stateCookie, `${state}.seller.false`);
   assert.ok(response.cookies.find((cookie) => cookie.startsWith('shopniro_oauth_state_google='))?.includes('HttpOnly'));
 });
 
 test('OAuth start with an unknown role falls back to customer', async () => {
   const response = await rawRequest('GET', '/api/auth/oauth/google?role=admin');
   const stateCookie = decodeURIComponent(cookieValue(response, 'shopniro_oauth_state_google'));
-  assert.ok(stateCookie.endsWith('.customer'));
+  assert.ok(stateCookie.endsWith('.customer.false'));
+});
+
+test('OAuth customer signup requires explicit policy acceptance before redirecting', async () => {
+  const missingConsent = await rawRequest('GET', '/api/auth/oauth/google?role=customer&intent=sign-up&acceptedTerms=false');
+  assert.equal(redirectParams(missingConsent).get('oauth_error'), 'terms_required');
+
+  const accepted = await rawRequest('GET', '/api/auth/oauth/google?role=customer&intent=sign-up&acceptedTerms=true');
+  assert.equal(accepted.status, 302);
+  const stateCookie = decodeURIComponent(cookieValue(accepted, 'shopniro_oauth_state_google'));
+  assert.ok(stateCookie.endsWith('.customer.true'));
 });
 
 test('OAuth routes for unknown providers are not public', async () => {
@@ -162,6 +172,14 @@ dbTest('unverified provider emails never create a session or account', async () 
   assert.equal(users.rowCount, 0);
 });
 
+dbTest('OAuth cannot create a customer account without recorded terms acceptance', async () => {
+  const address = email('no-consent');
+  const response = await callback('customer', { sub: `g-${run}-no-consent`, email: address }, false);
+  assert.equal(redirectParams(response).get('oauth_error'), 'terms_required');
+  assert.equal(hasSession(response), false);
+  assert.equal((await pool.query('SELECT 1 FROM users WHERE lower(email) = $1', [address])).rowCount, 0);
+});
+
 dbTest('a new customer is created once and the same identity signs in again', async () => {
   const address = email('customer');
   const sub = `g-${run}-customer`;
@@ -174,6 +192,13 @@ dbTest('a new customer is created once and the same identity signs in again', as
   assert.equal(created.rowCount, 1);
   assert.equal(created.rows[0].role, 'customer');
   assert.equal((await pool.query('SELECT 1 FROM customers WHERE id = $1', [created.rows[0].id])).rowCount, 1);
+  assert.deepEqual(
+    (await pool.query(
+      'SELECT policy_id FROM customer_policy_consents WHERE customer_id = $1 ORDER BY policy_id',
+      [created.rows[0].id],
+    )).rows.map((row) => row.policy_id),
+    ['privacy', 'terms'],
+  );
 
   const second = await callback('customer', { sub, email: address });
   assert.equal(hasSession(second), true);

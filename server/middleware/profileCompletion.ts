@@ -8,6 +8,7 @@ const systemMutationPaths = new Set([
   '/api/auth/login',
   '/api/auth/logout',
   '/api/auth/signup',
+  '/api/customers/me/deletion',
   '/api/payment/simulator/complete',
 ]);
 

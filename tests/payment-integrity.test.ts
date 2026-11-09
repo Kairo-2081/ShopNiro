@@ -118,11 +118,13 @@ const createCheckoutFixture = async (quantity = 2, stock = 10, price = 100) => {
 
 const placeCartOrder = async (
   fixture: Awaited<ReturnType<typeof createCheckoutFixture>>,
-  paymentMethod: 'cash_on_delivery' | 'online'
+  paymentMethod: 'cash_on_delivery' | 'online',
+  acceptedTerms = true,
 ) => {
   const address = { Street: 'Test street', City: 'Dhaka', Postal_Code: '1200' };
   const response = await request(server, '/api/orders', 'POST', {
     Customer_ID: fixture.customerId,
+    acceptedTerms,
     Items: [{ Product_ID: fixture.productId, Quantity: fixture.quantity }],
     Shipping_Address: address,
     Billing_Address: address,
@@ -1024,6 +1026,34 @@ dbTest('plaintext stored passwords are rejected with the same message as unknown
     assert.equal(remainingOrder.rows[0].remaining, 0);
   });
 
+dbTest('checkout requires terms acceptance and records the accepted policy version', async () => {
+  const fixture = await createCheckoutFixture(1, 1, 100);
+  const address = { Street: 'Test street', City: 'Dhaka', Postal_Code: '1200' };
+  const rejected = await request(server, '/api/orders', 'POST', {
+    Customer_ID: fixture.customerId,
+    acceptedTerms: false,
+    Items: [{ Product_ID: fixture.productId, Quantity: fixture.quantity }],
+    Shipping_Address: address,
+    Billing_Address: address,
+    paymentMethod: 'cash_on_delivery',
+  }, fixture.customerCookie);
+  assert.equal(rejected.status, 400, JSON.stringify(rejected.body));
+  assert.equal(
+    Number((await query('SELECT COUNT(*)::integer AS count FROM orders WHERE customer_id = $1', [fixture.customerId])).rows[0].count),
+    0,
+  );
+
+  const order = await placeCartOrder(fixture, 'cash_on_delivery');
+  const consent = await query(
+    `SELECT policy_version, consent_source FROM customer_policy_consents
+     WHERE customer_id = $1 AND policy_id = 'terms' ORDER BY consented_at DESC LIMIT 1`,
+    [fixture.customerId],
+  );
+  assert.equal(consent.rows[0].policy_version, '2026-11-09');
+  assert.equal(consent.rows[0].consent_source, 'checkout');
+  assert.equal(order.Customer_ID, fixture.customerId);
+});
+
 dbTest('checkout rolls back order, stock, and cart when a follow-up write fails', async (t) => {
   const fixture = await createCheckoutFixture(1, 1, 100);
   const realConnect = pool.connect.bind(pool);
@@ -1048,6 +1078,7 @@ dbTest('checkout rolls back order, stock, and cart when a follow-up write fails'
 
   const response = await request(server, '/api/orders', 'POST', {
     Customer_ID: fixture.customerId,
+    acceptedTerms: true,
     Items: [{ Product_ID: fixture.productId, Quantity: fixture.quantity }],
     Shipping_Address: { Street: 'Test street', City: 'Dhaka', Postal_Code: '1200' },
     Billing_Address: { Street: 'Test street', City: 'Dhaka', Postal_Code: '1200' },
@@ -1215,6 +1246,7 @@ dbTest('checkout rolls back order, stock, and cart when a follow-up write fails'
       ]);
       const placeOrder = (customerId: string, cookie: string) => request(server, '/api/orders', 'POST', {
         Customer_ID: customerId,
+        acceptedTerms: true,
         Items: [{ Product_ID: productId, Quantity: 1 }],
         Shipping_Address: { Street: 'Test street', City: 'Dhaka', Postal_Code: '1200' },
         Billing_Address: { Street: 'Test street', City: 'Dhaka', Postal_Code: '1200' },
