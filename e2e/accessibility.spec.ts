@@ -24,6 +24,15 @@ const assertKeyboardReachability = async (page: import('@playwright/test').Page,
     function done() { observer.disconnect(); window.clearTimeout(quiet); window.clearTimeout(limit); resolve(); }
     observer.observe(document.body, { childList: true, subtree: true, attributes: true });
   }));
+  // Start without a pointer-focused navigation item so its existing focus style is not mistaken for the baseline.
+  await page.evaluate(() => {
+    (document.activeElement as HTMLElement | null)?.blur();
+    const anchor = document.createElement('div');
+    anchor.tabIndex = -1;
+    document.body.prepend(anchor);
+    anchor.focus();
+    anchor.remove();
+  });
   const expected = await page.evaluate(() => {
     const selector = 'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])';
     return Array.from(document.querySelectorAll<HTMLElement>(selector))
@@ -38,17 +47,6 @@ const assertKeyboardReachability = async (page: import('@playwright/test').Page,
       });
   });
   expect(expected.length, `${label} has keyboard-accessible controls`).toBeGreaterThan(0);
-  // Blurring does not move the browser's sequential focus start point, which stays on the nav button that was just clicked.
-  // Focus a throwaway element at the very top of the page so the first Tab lands on the first control.
-  await page.evaluate(() => {
-    (document.activeElement as HTMLElement | null)?.blur();
-    const anchor = document.createElement('div');
-    anchor.tabIndex = -1;
-    document.body.prepend(anchor);
-    anchor.focus();
-    anchor.remove();
-  });
-
   const visited = new Set<number>();
   for (let index = 0; index < expected.length; index += 1) {
     await page.keyboard.press('Tab');
