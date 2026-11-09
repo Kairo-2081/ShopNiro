@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
+import { drawGlobe } from './globe/drawGlobe';
 
 interface OrbitGlobeProps {
   onGreet?: () => void;
@@ -21,123 +22,8 @@ export const OrbitGlobe: React.FC<OrbitGlobeProps> = ({ onGreet }) => {
     const centerX = width / 2;
     const centerY = height / 2 + 10;
     const radius = 86;
-    // The globe no longer turns, so land and the orbiting pod sit at a fixed angle.
-    const rotation = 30;
 
-    ctx.clearRect(0, 0, width, height);
-
-    // 1. Outer Atmospheric Glow
-    const glowGradient = ctx.createRadialGradient(
-      centerX,
-      centerY,
-      radius * 0.8,
-      centerX,
-      centerY,
-      radius * 1.55
-    );
-    glowGradient.addColorStop(0, 'rgba(56, 189, 248, 0.45)');
-    glowGradient.addColorStop(0.5, 'rgba(37, 99, 235, 0.18)');
-    glowGradient.addColorStop(1, 'rgba(37, 99, 235, 0)');
-    ctx.fillStyle = glowGradient;
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, radius * 1.55, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 2. Orbital Ring with Nodes
-    ctx.save();
-    ctx.translate(centerX, centerY);
-    ctx.rotate((-22 * Math.PI) / 180);
-    ctx.beginPath();
-    ctx.ellipse(0, 0, radius * 1.45, radius * 0.48, 0, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(147, 197, 253, 0.4)';
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([4, 6]);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    // Orbiting Satellite / Package Pod
-    const orbitAngle = (rotation * Math.PI) / 90;
-    const satX = Math.cos(orbitAngle) * radius * 1.45;
-    const satY = Math.sin(orbitAngle) * radius * 0.48;
-    ctx.fillStyle = '#38BDF8';
-    ctx.beginPath();
-    ctx.arc(satX, satY, 4, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#FFFFFF';
-    ctx.beginPath();
-    ctx.arc(satX, satY, 2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-
-    // 3. Globe Base Circle with Radial Sphere Shading
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-    ctx.clip();
-
-    // Sphere Gradient: deep navy blue to brilliant cyan/azure
-    const sphereGrad = ctx.createRadialGradient(
-      centerX - radius * 0.35,
-      centerY - radius * 0.35,
-      radius * 0.1,
-      centerX,
-      centerY,
-      radius
-    );
-    sphereGrad.addColorStop(0, '#60A5FA');
-    sphereGrad.addColorStop(0.35, '#2563EB');
-    sphereGrad.addColorStop(0.8, '#1D4ED8');
-    sphereGrad.addColorStop(1, '#0F172A');
-    ctx.fillStyle = sphereGrad;
-    ctx.fillRect(centerX - radius, centerY - radius, radius * 2, radius * 2);
-
-    // 4. Continents / Landmasses with rotation offset
-    ctx.fillStyle = 'rgba(14, 165, 233, 0.85)';
-    const radRot = (rotation * Math.PI) / 180;
-
-    // Stylized procedural islands / continents that scroll with rotation
-    const continents = [
-      { baseAngle: 0, lat: -15, r: 24 },
-      { baseAngle: 50, lat: 25, r: 20 },
-      { baseAngle: 110, lat: -10, r: 28 },
-      { baseAngle: 170, lat: 30, r: 18 },
-      { baseAngle: 230, lat: -25, r: 22 },
-      { baseAngle: 290, lat: 15, r: 26 },
-      { baseAngle: 340, lat: -5, r: 16 },
-    ];
-
-    continents.forEach((cont) => {
-      const angle = (cont.baseAngle * Math.PI) / 180 + radRot;
-      const xOffset = Math.sin(angle) * (radius * 0.85);
-      const isVisible = Math.cos(angle) > -0.2; // hemisphere check
-
-      if (isVisible) {
-        const landX = centerX + xOffset;
-        const landY = centerY + cont.lat;
-        const landR = cont.r * (Math.cos(angle) * 0.5 + 0.5);
-
-        ctx.beginPath();
-        ctx.ellipse(landX, landY, Math.max(3, landR), Math.max(2, landR * 0.65), 0.2, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(125, 211, 252, 0.4)';
-        ctx.fill();
-
-        // Inner land highlight
-        ctx.beginPath();
-        ctx.arc(landX, landY, Math.max(2, landR * 0.45), 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(224, 242, 254, 0.6)';
-        ctx.fill();
-      }
-    });
-
-    // 5. Atmosphere Crescent / Rim Lighting
-    const rimGrad = ctx.createLinearGradient(centerX - radius, centerY, centerX + radius, centerY);
-    rimGrad.addColorStop(0, 'rgba(255, 255, 255, 0.45)');
-    rimGrad.addColorStop(0.2, 'rgba(56, 189, 248, 0.2)');
-    rimGrad.addColorStop(0.85, 'transparent');
-    ctx.fillStyle = rimGrad;
-    ctx.fillRect(centerX - radius, centerY - radius, radius * 2, radius * 2);
-
-    ctx.restore();
+    drawGlobe(ctx, { width, height, cx: centerX, cy: centerY, radius });
 
     // 6. Cute Courier Character Standing on Top of the Planet!
     const charBaseX = centerX;
