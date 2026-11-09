@@ -1,135 +1,83 @@
-import React, { useRef, useEffect, useState } from 'react';
-import { drawGlobe } from './globe/drawGlobe';
-
-const GLOBE_WIDTH = 300;
-const GLOBE_HEIGHT = 240;
+import React, { useEffect, useRef, useState } from 'react';
+import { drawGlobe, GLOBE_FRAME } from './globe/drawGlobe';
+import { DESTINATION_HUBS, GLOBE_VIEW, HOME_HUB } from './globe/network';
+import { project } from './globe/projection';
 
 interface OrbitGlobeProps {
+  /** Called when someone asks to trace the delivery routes. */
   onGreet?: () => void;
 }
 
+const TRACE_MS = 3200;
+
+// Dhaka's position on the canvas as a share of its width and height, for the pulse ring laid over it.
+const HOME_POINT = (() => {
+  const p = project(HOME_HUB.lon, HOME_HUB.lat, GLOBE_VIEW);
+  return {
+    left: `${((GLOBE_FRAME.cx + p.x * GLOBE_FRAME.radius) / GLOBE_FRAME.width) * 100}%`,
+    top: `${((GLOBE_FRAME.cy - p.y * GLOBE_FRAME.radius) / GLOBE_FRAME.height) * 100}%`,
+  };
+})();
+
+const DESCRIPTION = `A still globe centred on South Asia with delivery routes running from ${HOME_HUB.name} to ${DESTINATION_HUBS.map((hub) => hub.name).join(', ')}.`;
+
 export const OrbitGlobe: React.FC<OrbitGlobeProps> = ({ onGreet }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [isWaving, setIsWaving] = useState<boolean>(false);
-  const [greetingText, setGreetingText] = useState<string | null>(null);
+  const [isTracing, setIsTracing] = useState(false);
 
-  // Render planet on canvas
+  // Draw the globe. It is a still picture: it is drawn again only to call out the routes, never on a timer.
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Draw in CSS pixels but back the canvas with real device pixels, so the dots and lines stay sharp on dense screens.
-    const width = GLOBE_WIDTH;
-    const height = GLOBE_HEIGHT;
+    const ctx = canvas?.getContext('2d');
+    if (!canvas || !ctx) return;
+    // Draw in CSS pixels but back the canvas with real device pixels, so dots and lines stay sharp on dense screens.
     const pixelRatio = Math.min(window.devicePixelRatio || 1, 3);
-    canvas.width = Math.round(width * pixelRatio);
-    canvas.height = Math.round(height * pixelRatio);
+    canvas.width = Math.round(GLOBE_FRAME.width * pixelRatio);
+    canvas.height = Math.round(GLOBE_FRAME.height * pixelRatio);
     ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-    const centerX = width / 2;
-    const centerY = height / 2 + 10;
-    const radius = 86;
+    drawGlobe(ctx, GLOBE_FRAME, { emphasis: isTracing ? 1 : 0 });
+  }, [isTracing]);
 
-    drawGlobe(ctx, { width, height, cx: centerX, cy: centerY, radius });
+  useEffect(() => {
+    if (!isTracing) return undefined;
+    const timer = window.setTimeout(() => setIsTracing(false), TRACE_MS);
+    return () => window.clearTimeout(timer);
+  }, [isTracing]);
 
-    // 6. Cute Courier Character Standing on Top of the Planet!
-    const charBaseX = centerX;
-    const charBaseY = centerY - radius + 3;
-
-    ctx.save();
-    // Body & Legs
-    ctx.fillStyle = '#1E3A8A'; // Dark navy pants
-    ctx.fillRect(charBaseX - 3.5, charBaseY - 14, 7, 14);
-
-    // Orange/Coral Delivery Jacket
-    ctx.fillStyle = '#FB923C'; // bright courier jacket
-    ctx.beginPath();
-    ctx.roundRect(charBaseX - 6, charBaseY - 26, 12, 13, 3);
-    ctx.fill();
-
-    // Delivery Backpack
-    ctx.fillStyle = '#0284C7';
-    ctx.beginPath();
-    ctx.roundRect(charBaseX + 4, charBaseY - 25, 5, 10, 2);
-    ctx.fill();
-
-    // Courier Cap / Head
-    ctx.fillStyle = '#FBBF24'; // skin tone
-    ctx.beginPath();
-    ctx.arc(charBaseX, charBaseY - 29, 4.5, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Blue Cap
-    ctx.fillStyle = '#0284C7';
-    ctx.beginPath();
-    ctx.arc(charBaseX, charBaseY - 31, 4.5, Math.PI, 0);
-    ctx.fill();
-    ctx.fillRect(charBaseX - 6, charBaseY - 31.5, 9, 2); // Cap visor
-
-    // Waving Hand
-    if (isWaving) {
-      ctx.strokeStyle = '#FBBF24';
-      ctx.lineWidth = 2.5;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(charBaseX - 5, charBaseY - 22);
-      ctx.lineTo(charBaseX - 11, charBaseY - 32);
-      ctx.stroke();
-
-      // Parcel in other hand
-      ctx.fillStyle = '#F59E0B';
-      ctx.fillRect(charBaseX + 2, charBaseY - 18, 6, 6);
-    } else {
-      ctx.strokeStyle = '#FBBF24';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(charBaseX - 5, charBaseY - 22);
-      ctx.lineTo(charBaseX - 8, charBaseY - 17);
-      ctx.stroke();
-    }
-
-    ctx.restore();
-  }, [isWaving]);
-
-  const handleGlobeClick = () => {
-    setIsWaving(true);
-    setGreetingText('Hello there! 👋 Parcel en route!');
-    if (onGreet) onGreet();
-    setTimeout(() => {
-      setIsWaving(false);
-      setGreetingText(null);
-    }, 2800);
+  const traceRoutes = () => {
+    setIsTracing(true);
+    onGreet?.();
   };
 
   return (
-    <div className="relative flex h-[284px] flex-col items-center justify-center select-none py-2">
-      {/* Speech Bubble when greeted */}
-      {greetingText && (
-        <div role="status" className="absolute top-2 z-20 px-3.5 py-1.5 rounded-full bg-white dark:bg-surface-900 border border-brand-200 dark:border-brand-800 text-brand-600 dark:text-brand-300 font-semibold text-xs shadow-lg animate-bounce">
-          {greetingText}
-        </div>
-      )}
+    <div className="relative flex h-[284px] select-none flex-col items-center justify-center py-2">
+      <div className="relative w-[320px] max-w-full" style={{ aspectRatio: `${GLOBE_FRAME.width} / ${GLOBE_FRAME.height}` }}>
+        <canvas
+          ref={canvasRef}
+          aria-hidden="true"
+          width={GLOBE_FRAME.width}
+          height={GLOBE_FRAME.height}
+          className="block h-full w-full"
+        />
+        {/* A slow ping on the home hub says the network is live. It is a plain fade, and stops under reduced motion. */}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#f6efd2]/70 motion-safe:animate-ping"
+          style={{ ...HOME_POINT, animationDuration: '2.8s' }}
+        />
+      </div>
+      <p className="sr-only">{DESCRIPTION}</p>
 
-      {/* Interactive 3D Canvas */}
-      <canvas
-        ref={canvasRef}
-        aria-hidden="true"
-        width={GLOBE_WIDTH}
-        height={GLOBE_HEIGHT}
-        style={{ width: GLOBE_WIDTH, height: GLOBE_HEIGHT }}
-        onClick={handleGlobeClick}
-        className="cursor-pointer transition-transform hover:scale-102"
-        title="Greet the courier"
-      />
+      <div role="status" className="h-0">
+        {isTracing && <span className="sr-only">Delivery routes highlighted.</span>}
+      </div>
 
-      {/* Pill Badge Instruction */}
       <button
         type="button"
-        onClick={handleGlobeClick}
-        className="mt-1 inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-brand-50 dark:bg-brand-950/40 border border-brand-200/80 dark:border-brand-800/80 text-brand-700 dark:text-brand-300 text-micro font-medium tracking-wide shadow-2xs hover:bg-brand-100 dark:hover:bg-brand-900/50 transition-colors cursor-pointer"
+        onClick={traceRoutes}
+        className="mt-1 inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-brand-200/80 bg-brand-50 px-3.5 py-1 text-micro font-medium tracking-wide text-brand-700 shadow-2xs transition-colors hover:bg-brand-100 dark:border-brand-800/80 dark:bg-brand-950/40 dark:text-brand-300 dark:hover:bg-brand-900/50"
       >
-        <span>Activate to greet the courier.</span>
+        <span>Trace the delivery routes</span>
       </button>
     </div>
   );
