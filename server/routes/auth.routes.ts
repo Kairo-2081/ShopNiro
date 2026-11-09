@@ -305,7 +305,18 @@ router.post('/password/forgot', passwordRecoveryRateLimit, validateBody(forgotPa
       [email],
     );
 
-    if (accounts.rowCount === 1) {
+    // A recent live link is left alone. Without this, anyone who knows an address could keep requesting links to
+    // invalidate the one the owner just received, or to fill their inbox.
+    const recentLink = accounts.rowCount === 1
+      ? await client.query(
+        `SELECT 1 FROM password_reset_tokens
+         WHERE user_id = $1 AND used_at IS NULL AND expires_at > CURRENT_TIMESTAMP
+           AND created_at > CURRENT_TIMESTAMP - INTERVAL '60 seconds'`,
+        [accounts.rows[0].id],
+      )
+      : null;
+
+    if (accounts.rowCount === 1 && !recentLink?.rowCount) {
       const token = randomBytes(32).toString('base64url');
       const tokenHash = createHash('sha256').update(token).digest('hex');
       await client.query('DELETE FROM password_reset_tokens WHERE expires_at < CURRENT_TIMESTAMP - INTERVAL \'1 day\'');
@@ -332,12 +343,15 @@ router.post('/password/forgot', passwordRecoveryRateLimit, validateBody(forgotPa
   }
 
   if (recipient) {
-    try {
-      const sent = await sendPasswordResetEmail(recipient);
-      if (!sent) req.log.error('Password recovery email was not sent because email delivery is not configured.');
-    } catch (error) {
-      req.log.error({ err: error }, 'Password recovery email delivery failed:');
-    }
+    // Not awaited: the provider call takes noticeable time, and waiting for it only when the account exists would let a
+    // caller tell registered addresses from unknown ones by how long the response takes.
+    sendPasswordResetEmail(recipient)
+      .then((sent) => {
+        if (!sent) req.log.error('Password recovery email was not sent because email delivery is not configured.');
+      })
+      .catch((error) => {
+        req.log.error({ err: error }, 'Password recovery email delivery failed:');
+      });
   }
 
   return res.status(202).json({

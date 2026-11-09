@@ -150,3 +150,35 @@ dbTest('password recovery emails a generic single-use link and revokes sessions 
   const replay = await rawRequest('POST', '/api/auth/password/reset', { token, password: 'AnotherPassword789!' });
   assert.equal(replay.status, 400);
 });
+
+dbTest('a second recovery request within a minute does not replace the live link or send another email', async () => {
+  const cooldownUserId = `PWD-${randomUUID()}`;
+  const cooldownEmail = `password-cooldown-${run}@example.test`;
+  try {
+    await pool.query(
+      'INSERT INTO users (id, username, password, email, role) VALUES ($1, $2, $3, $4, $5)',
+      [cooldownUserId, `cooldown_${run.slice(0, 20)}`, await hashPassword('OldPassword123!'), cooldownEmail, 'customer'],
+    );
+    sentEmails.length = 0;
+
+    const first = await rawRequest('POST', '/api/auth/password/forgot', { email: cooldownEmail });
+    const second = await rawRequest('POST', '/api/auth/password/forgot', { email: cooldownEmail });
+    assert.equal(first.status, 202);
+    assert.deepEqual(second.body, first.body, 'the answer does not reveal that a request was skipped');
+    assert.equal(sentEmails.length, 1, 'only the first request sends an email');
+
+    const token = String(sentEmails[0].text).match(/#\/reset-password\?token=([A-Za-z0-9_-]+)/)?.[1];
+    assert.ok(token);
+    const reset = await rawRequest('POST', '/api/auth/password/reset', { token, password: 'NewPassword456!' });
+    assert.equal(reset.status, 200, 'the emailed link still works after the repeat request');
+
+    // Once a link has been used, a fresh request is allowed straight away.
+    const third = await rawRequest('POST', '/api/auth/password/forgot', { email: cooldownEmail });
+    assert.equal(third.status, 202);
+    assert.equal(sentEmails.length, 2);
+  } finally {
+    await pool.query('DELETE FROM password_reset_tokens WHERE user_id = $1', [cooldownUserId]);
+    await pool.query('DELETE FROM auth_sessions WHERE user_id = $1', [cooldownUserId]);
+    await pool.query('DELETE FROM users WHERE id = $1', [cooldownUserId]);
+  }
+});
