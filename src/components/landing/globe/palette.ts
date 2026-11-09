@@ -3,9 +3,9 @@
 
 export const GLOBE_PALETTE = {
   /** Sphere shading from the lit upper left to the shadowed rim. */
-  sphereLit: '#4b4733',
-  sphereMid: '#262419',
-  sphereShadow: '#0c0c08',
+  sphereLit: '#5f5b41',
+  sphereMid: '#302e20',
+  sphereShadow: '#0e0e09',
   /** Tan, as an rgb triplet so each use can set its own opacity. */
   tan: '208, 200, 165',
   /** Warm gold for routes and parcels. */
