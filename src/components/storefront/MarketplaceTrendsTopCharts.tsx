@@ -151,7 +151,7 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
                     <span className="px-2 py-0.5 rounded-lg bg-warning-500/10 text-warning-600 dark:text-warning-400 text-micro font-black font-mono">
                       #{idx + 1} {t('bestSellers').toUpperCase()}
                     </span>
-                    <span className="text-micro font-bold text-brand-600 dark:text-brand-400 bg-brand-100 dark:bg-brand-950/70 px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <span className="text-micro font-bold text-brand-700 dark:text-brand-400 bg-brand-100 dark:bg-brand-950/70 px-2 py-0.5 rounded-full flex items-center gap-1">
                       <ShoppingBag className="w-2.5 h-2.5" />
                       {item.total_units_sold} {t('sold')}
                     </span>
@@ -162,9 +162,9 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
                     type="button"
                     disabled={!fullProd || !onSelectProduct}
                     onClick={() => fullProd && onSelectProduct?.(fullProd)}
-                    aria-label={`${t('viewProduct')}: ${item.product_name}`}
                     className="block w-full overflow-hidden rounded-xl text-left disabled:cursor-default"
                   >
+                    <span className="sr-only">{t('viewProduct')}: </span>
                     <img
                       src={item.image || fullProd?.Image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400'}
                       alt=""
@@ -241,9 +241,9 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
                     type="button"
                     disabled={!fullProd || !onSelectProduct}
                     onClick={() => fullProd && onSelectProduct?.(fullProd)}
-                    aria-label={`${t('viewProduct')}: ${item.product_name}`}
                     className="block w-full overflow-hidden rounded-xl text-left disabled:cursor-default"
                   >
+                    <span className="sr-only">{t('viewProduct')}: </span>
                     <img
                       src={item.image || fullProd?.Image || 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400'}
                       alt=""
