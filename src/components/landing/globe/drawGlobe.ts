@@ -12,15 +12,20 @@ export interface GlobeFrame {
   radius: number;
 }
 
+/** The size of the canvas and the globe on it. The globe is centred with room around it for the haze and the route arcs. */
+export const GLOBE_FRAME: GlobeFrame = { width: 320, height: 240, cx: 160, cy: 120, radius: 94 };
+
 /** A soft tan haze around the globe. It fades out well inside the canvas so it never meets an edge. */
 function drawAtmosphere(ctx: CanvasRenderingContext2D, { cx, cy, radius }: GlobeFrame) {
-  const haze = ctx.createRadialGradient(cx, cy, radius * 0.9, cx, cy, radius * 1.3);
+  // Stop the haze a pixel short of the nearest canvas edge, so it can never be cut off in a straight line.
+  const reach = Math.min(radius * 1.3, Math.min(cx, cy) - 1);
+  const haze = ctx.createRadialGradient(cx, cy, radius * 0.9, cx, cy, reach);
   haze.addColorStop(0, rgba(GLOBE_PALETTE.tan, 0.3));
   haze.addColorStop(0.35, rgba(GLOBE_PALETTE.tan, 0.1));
   haze.addColorStop(1, rgba(GLOBE_PALETTE.tan, 0));
   ctx.fillStyle = haze;
   ctx.beginPath();
-  ctx.arc(cx, cy, radius * 1.3, 0, Math.PI * 2);
+  ctx.arc(cx, cy, reach, 0, Math.PI * 2);
   ctx.fill();
 }
 
