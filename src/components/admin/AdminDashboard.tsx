@@ -1,10 +1,10 @@
 import React from 'react';
-import { Seller, Product, Order, Category, Review, SellerStatus, ProductStatus, OrderCancellationRequest, SupportRequest } from '../../types';
+import { Seller, Product, Order, Category, Review, SellerStatus, ProductStatus, OrderCancellationRequest, SupportRequest, AdminDashboardTab } from '../../types';
 import { api, formatCurrency, formatBDT, formatDate } from '../../lib/api';
 import { RiderApplicationsPanel } from './RiderApplicationsPanel';
 import { AdminMarketplaceMetrics } from './AdminMarketplaceMetrics';
 import { Section } from '../Section';
-import { BarChart3, ShieldCheck, Store, FolderTree, Package, CheckCircle2, Clock, Plus, Edit, Trash2, Activity, Search, Lock, RefreshCw, ExternalLink, X, AlertCircle, Truck, RotateCcw, LifeBuoy } from 'lucide-react';
+import { ShieldCheck, Store, FolderTree, CheckCircle2, Clock, Plus, Edit, Trash2, Search, Lock, RefreshCw, ExternalLink, X, AlertCircle } from 'lucide-react';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { fallbackToBrandLogo } from '../../lib/branding';
@@ -14,6 +14,8 @@ const AdminOverviewAnalytics = React.lazy(() =>
 );
 
 interface AdminDashboardProps {
+  activeTab: AdminDashboardTab;
+  setActiveTab: React.Dispatch<React.SetStateAction<AdminDashboardTab>>;
   sellers: Seller[];
   products: Product[];
   orders: Order[];
@@ -33,14 +35,9 @@ interface AdminDashboardProps {
   onOpenSellerSignup?: () => void;
 }
 
-const adminTabButtonClass = (isActive: boolean) =>
-  `inline-flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-5 py-2.5 text-xs font-bold transition-all duration-200 hover:-translate-y-px active:translate-y-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a99b72] focus-visible:ring-offset-2 dark:focus-visible:ring-offset-[#12161D] ${
-    isActive
-      ? 'premium-button text-white ring-1 ring-inset ring-white/20'
-      : 'text-surface-500 hover:bg-surface-100 hover:text-surface-900 hover:shadow-sm hover:-translate-y-0.5 dark:text-surface-400 dark:hover:bg-[#181F2A] dark:hover:text-white'
-  }`;
-
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
+  activeTab,
+  setActiveTab,
   sellers,
   products,
   orders,
@@ -54,7 +51,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onDeleteCategory,
   onOpenSellerSignup,
 }) => {
-  const [adminTab, setAdminTab] = React.useState<'overview' | 'metrics' | 'sellers' | 'riders' | 'categories' | 'products' | 'payments' | 'cancellations' | 'support'>('overview');
+  const adminTab = activeTab;
+  const setAdminTab = setActiveTab;
   const [newCategoryName, setNewCategoryName] = React.useState('');
   const [editingCategoryId, setEditingCategoryId] = React.useState<string | null>(null);
   const [editingCategoryName, setEditingCategoryName] = React.useState('');
@@ -357,90 +355,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             <p className="text-micro text-surface-500 dark:text-surface-400 font-medium mt-2">{isLoading ? <span className="premium-skeleton block h-3 w-5/6 rounded-full" /> : kpi.sub}</p>
           </div>
         ))}
-      </div>
-
-      {/* Navigation Tabs */}
-      <div className="flex max-w-full flex-wrap gap-2 border-b border-[#a99b72]/25 pb-2 shadow-sm dark:border-[#a99b72]/20 dark:shadow-brand-950/10">
-        <button
-          onClick={() => setAdminTab('overview')}
-          aria-current={adminTab === 'overview' ? 'page' : undefined}
-          className={adminTabButtonClass(adminTab === 'overview')}
-        >
-          <Activity className="w-4 h-4" />
-          <span>Governance Overview</span>
-        </button>
-
-        <button
-          onClick={() => setAdminTab('metrics')}
-          aria-current={adminTab === 'metrics' ? 'page' : undefined}
-          className={adminTabButtonClass(adminTab === 'metrics')}
-        >
-          <BarChart3 className="w-4 h-4" />
-          <span>Marketplace Metrics</span>
-        </button>
-
-        <button
-          onClick={() => setAdminTab('sellers')}
-          aria-current={adminTab === 'sellers' ? 'page' : undefined}
-          className={adminTabButtonClass(adminTab === 'sellers')}
-        >
-          <Store className="w-4 h-4" />
-          <span>Merchant Approvals ({sellers.length})</span>
-        </button>
-
-        <button
-          onClick={() => setAdminTab('categories')}
-          aria-current={adminTab === 'categories' ? 'page' : undefined}
-          className={adminTabButtonClass(adminTab === 'categories')}
-        >
-          <FolderTree className="w-4 h-4" />
-          <span>Category Registry ({categories.length})</span>
-        </button>
-
-        <button
-          onClick={() => setAdminTab('riders')}
-          aria-current={adminTab === 'riders' ? 'page' : undefined}
-          className={adminTabButtonClass(adminTab === 'riders')}
-        >
-          <Truck className="w-4 h-4" />
-          <span>Rider Hiring</span>
-        </button>
-
-        <button
-          onClick={() => setAdminTab('products')}
-          aria-current={adminTab === 'products' ? 'page' : undefined}
-          className={adminTabButtonClass(adminTab === 'products')}
-        >
-          <Package className="w-4 h-4" />
-          <span>Product Moderation ({products.length})</span>
-        </button>
-
-        <button
-          onClick={() => setAdminTab('payments')}
-          aria-current={adminTab === 'payments' ? 'page' : undefined}
-          className={adminTabButtonClass(adminTab === 'payments')}
-        >
-          <Lock className="w-4 h-4" />
-          <span>Online Payments</span>
-        </button>
-
-        <button
-          onClick={() => setAdminTab('cancellations')}
-          aria-current={adminTab === 'cancellations' ? 'page' : undefined}
-          className={adminTabButtonClass(adminTab === 'cancellations')}
-        >
-          <RotateCcw className="w-4 h-4" />
-          <span>Order Cancellations</span>
-        </button>
-
-        <button
-          onClick={() => setAdminTab('support')}
-          aria-current={adminTab === 'support' ? 'page' : undefined}
-          className={adminTabButtonClass(adminTab === 'support')}
-        >
-          <LifeBuoy className="w-4 h-4" />
-          <span>Support Inbox</span>
-        </button>
       </div>
 
       {adminTab === 'metrics' && (
