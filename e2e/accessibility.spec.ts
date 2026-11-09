@@ -45,7 +45,8 @@ const assertKeyboardReachability = async (page: import('@playwright/test').Page,
   });
   expect(expected.length, `${label} has keyboard-accessible controls`).toBeGreaterThan(0);
   const visited = new Set<number>();
-  for (let index = 0; index < expected.length; index += 1) {
+  const maxTabPresses = expected.length * 2;
+  for (let tabPress = 0; tabPress < maxTabPresses && visited.size < expected.length; tabPress += 1) {
     await page.keyboard.press('Tab');
     const focus = await page.evaluate(() => {
       const element = document.activeElement as HTMLElement | null;
