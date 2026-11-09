@@ -224,16 +224,8 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
                   key={item.tab || item.sellerTab || item.adminTab}
                   type="button"
                   onClick={() => selectItem({ label, icon: Icon, ...item })}
-                  onFocus={(event) => {
-                    event.currentTarget.style.outline = '2px solid var(--focus-ring)';
-                    event.currentTarget.style.outlineOffset = '3px';
-                  }}
-                  onBlur={(event) => {
-                    event.currentTarget.style.removeProperty('outline');
-                    event.currentTarget.style.removeProperty('outline-offset');
-                  }}
                   aria-current={isActive ? 'page' : undefined}
-                  className={`group flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-semibold transition-colors focus:outline-solid focus:outline-2 focus:outline-offset-2 focus:outline-[#80734f] dark:focus:outline-[#d0c8a5] focus-visible:ring-2 focus-visible:ring-[#a99b72] ${
+                  className={`group flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-semibold transition-colors focus-visible:outline-solid focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#80734f] dark:focus-visible:outline-[#d0c8a5] ${
                     isActive
                       ? 'bg-[#d0c8a5]/35 text-[#4f4720] dark:bg-[#d0c8a5]/15 dark:text-[#e8dfbd]'
                       : 'text-surface-700 hover:bg-surface-100 hover:text-surface-950 dark:text-surface-300 dark:hover:bg-[#181F2A] dark:hover:text-white'
@@ -259,7 +251,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   return (
     <>
       <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-64 shrink-0 flex-col border-r border-[#80734f]/20 bg-[#f6f5ef] px-3 py-5 dark:border-white/10 dark:bg-[#10100f] md:flex">
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1">
+        <div className="-mx-2 min-h-0 flex-1 overflow-y-auto overscroll-contain px-2">
           {renderNavigation()}
         </div>
         <div className="mt-4 border-t border-[#80734f]/15 px-3 pt-4 text-xs text-surface-500 dark:border-white/10 dark:text-surface-400">
@@ -297,7 +289,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
                 <X aria-hidden="true" className="h-5 w-5" />
               </button>
             </div>
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+            <div className="-mx-2 min-h-0 flex-1 overflow-y-auto overscroll-contain px-2">
               {renderNavigation()}
             </div>
           </div>
