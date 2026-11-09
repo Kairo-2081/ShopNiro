@@ -208,6 +208,44 @@ app.use('/api/payment', paymentRoutes);
 app.use('/api/riders', riderDeliveryRoutes);
 const server = await listen(app);
 
+test('payment methods expose COD only when online payments are disabled', async () => {
+  const previousSetting = process.env.ONLINE_PAYMENTS_ENABLED;
+  try {
+    delete process.env.ONLINE_PAYMENTS_ENABLED;
+    const enabled = await request(server, '/api/payment/methods', 'GET');
+    assert.equal(enabled.body.onlinePaymentsEnabled, true);
+    assert.ok(enabled.body.methods.some((method: { id: string }) => method.id === 'bkash'));
+
+    process.env.ONLINE_PAYMENTS_ENABLED = 'false';
+    const disabled = await request(server, '/api/payment/methods', 'GET');
+    assert.equal(disabled.body.onlinePaymentsEnabled, false);
+    assert.deepEqual(disabled.body.methods.map((method: { id: string }) => method.id), ['cash_on_delivery']);
+  } finally {
+    if (previousSetting === undefined) delete process.env.ONLINE_PAYMENTS_ENABLED;
+    else process.env.ONLINE_PAYMENTS_ENABLED = previousSetting;
+  }
+});
+
+dbTest('disabled online payments reject gateway initialization but preserve COD checkout', async () => {
+  const customerId = `CUSTOMER-${randomUUID()}`;
+  const orderId = `ORD-${randomUUID()}`;
+  await createCustomer(customerId);
+  await createOrder(customerId, orderId);
+  const cookie = await createSession('customer', customerId);
+  const previousSetting = process.env.ONLINE_PAYMENTS_ENABLED;
+  process.env.ONLINE_PAYMENTS_ENABLED = 'false';
+  try {
+    const response = await request(server, '/api/payment/init', 'POST', { orderId, paymentMethod: 'bkash' }, cookie);
+    assert.equal(response.status, 503);
+    assert.equal(response.body.code, 'ONLINE_PAYMENTS_DISABLED');
+    const methods = await request(server, '/api/payment/methods', 'GET');
+    assert.deepEqual(methods.body.methods.map((method: { id: string }) => method.id), ['cash_on_delivery']);
+  } finally {
+    if (previousSetting === undefined) delete process.env.ONLINE_PAYMENTS_ENABLED;
+    else process.env.ONLINE_PAYMENTS_ENABLED = previousSetting;
+  }
+});
+
 dbTest('plaintext stored passwords are rejected with the same message as unknown accounts', async () => {
     const userId = `PLAINTEXT-${randomUUID()}`;
     const username = userId.toLowerCase();
