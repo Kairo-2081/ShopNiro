@@ -1,6 +1,9 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { drawGlobe } from './globe/drawGlobe';
 
+const GLOBE_WIDTH = 300;
+const GLOBE_HEIGHT = 240;
+
 interface OrbitGlobeProps {
   onGreet?: () => void;
 }
@@ -17,8 +20,13 @@ export const OrbitGlobe: React.FC<OrbitGlobeProps> = ({ onGreet }) => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const width = canvas.width;
-    const height = canvas.height;
+    // Draw in CSS pixels but back the canvas with real device pixels, so the dots and lines stay sharp on dense screens.
+    const width = GLOBE_WIDTH;
+    const height = GLOBE_HEIGHT;
+    const pixelRatio = Math.min(window.devicePixelRatio || 1, 3);
+    canvas.width = Math.round(width * pixelRatio);
+    canvas.height = Math.round(height * pixelRatio);
+    ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
     const centerX = width / 2;
     const centerY = height / 2 + 10;
     const radius = 86;
@@ -107,8 +115,9 @@ export const OrbitGlobe: React.FC<OrbitGlobeProps> = ({ onGreet }) => {
       <canvas
         ref={canvasRef}
         aria-hidden="true"
-        width={300}
-        height={240}
+        width={GLOBE_WIDTH}
+        height={GLOBE_HEIGHT}
+        style={{ width: GLOBE_WIDTH, height: GLOBE_HEIGHT }}
         onClick={handleGlobeClick}
         className="cursor-pointer transition-transform hover:scale-102"
         title="Greet the courier"
