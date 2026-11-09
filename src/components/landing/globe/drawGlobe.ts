@@ -1,7 +1,7 @@
-import { GLOBE_VIEW } from './network';
+import { DESTINATION_HUBS, GLOBE_VIEW, HOME_HUB } from './network';
 import { GLOBE_PALETTE, rgba } from './palette';
 import { landCells } from './landMask';
-import { project } from './projection';
+import { isVisible, project, routePoints } from './projection';
 
 /** Where the globe sits on the canvas, in CSS pixels. */
 export interface GlobeFrame {
@@ -92,6 +92,53 @@ function drawLand(ctx: CanvasRenderingContext2D, { cx, cy, radius }: GlobeFrame)
   }
 }
 
+export interface GlobeOptions {
+  /** 0 for the resting look, 1 when the routes are called out. */
+  emphasis?: number;
+}
+
+/**
+ * Delivery routes from the home hub: lifted great-circle arcs, faint at Dhaka and bright at the far end, with a soft glow
+ * underneath. They are drawn over the sphere and not clipped to it, since a lifted arc can rise above the rim.
+ */
+function drawRoutes(ctx: CanvasRenderingContext2D, { cx, cy, radius }: GlobeFrame, emphasis: number) {
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  for (const hub of DESTINATION_HUBS) {
+    const points = routePoints(HOME_HUB, hub, GLOBE_VIEW, 0.2, 72).map((p) => ({
+      visible: isVisible(p),
+      x: cx + p.x * radius,
+      y: cy - p.y * radius,
+    }));
+    const first = points[0];
+    const last = points[points.length - 1];
+    const trail = ctx.createLinearGradient(first.x, first.y, last.x, last.y);
+    trail.addColorStop(0, rgba(GLOBE_PALETTE.gold, 0.18 + 0.2 * emphasis));
+    trail.addColorStop(1, rgba(GLOBE_PALETTE.gold, 0.9));
+    const glow = ctx.createLinearGradient(first.x, first.y, last.x, last.y);
+    glow.addColorStop(0, rgba(GLOBE_PALETTE.gold, 0.03 + 0.05 * emphasis));
+    glow.addColorStop(1, rgba(GLOBE_PALETTE.gold, 0.2 + 0.2 * emphasis));
+    for (const [style, width] of [[glow, 3.4], [trail, 1.1 + 0.4 * emphasis]] as const) {
+      ctx.strokeStyle = style;
+      ctx.lineWidth = width;
+      ctx.beginPath();
+      let drawing = false;
+      for (const point of points) {
+        if (!point.visible) {
+          drawing = false;
+          continue;
+        }
+        if (drawing) ctx.lineTo(point.x, point.y);
+        else ctx.moveTo(point.x, point.y);
+        drawing = true;
+      }
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
 /** A thin lit edge on the upper left, and a faint glow just inside the whole limb. */
 function drawRim(ctx: CanvasRenderingContext2D, { cx, cy, radius }: GlobeFrame) {
   const inner = ctx.createRadialGradient(cx, cy, radius * 0.84, cx, cy, radius);
@@ -113,11 +160,12 @@ function drawRim(ctx: CanvasRenderingContext2D, { cx, cy, radius }: GlobeFrame) 
   ctx.stroke();
 }
 
-export function drawGlobe(ctx: CanvasRenderingContext2D, frame: GlobeFrame) {
+export function drawGlobe(ctx: CanvasRenderingContext2D, frame: GlobeFrame, { emphasis = 0 }: GlobeOptions = {}) {
   ctx.clearRect(0, 0, frame.width, frame.height);
   drawAtmosphere(ctx, frame);
   drawSphereBody(ctx, frame);
   drawGraticule(ctx, frame);
   drawLand(ctx, frame);
   drawRim(ctx, frame);
+  drawRoutes(ctx, frame, emphasis);
 }
