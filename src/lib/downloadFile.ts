@@ -27,7 +27,7 @@ export async function downloadFile(blob: Blob, requestedFilename: string): Promi
     if (canShare.value) {
       await Share.share({
         title: filename,
-        text: 'CV saved to Documents. You can also share it with another app.',
+        text: 'File saved to Documents. You can also share it with another app.',
         files: [file.uri],
         dialogTitle: 'Save or share CV',
       });
