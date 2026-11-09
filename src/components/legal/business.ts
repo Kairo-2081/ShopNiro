@@ -4,10 +4,10 @@ export const BUSINESS = {
   /** REVIEW: the registered legal name / trade licence holder, once you have one. */
   name: 'ShopNiro',
   supportEmail: 'shopnirosupport@gmail.com',
-  /** REVIEW: registered or operating address required by most merchant-account reviews. */
-  address: 'Dhaka, Bangladesh',
+  /** REVIEW: replace after registration; do not present this as a registered address. */
+  address: 'Business registration and registered address pending',
   siteUrl: 'https://shopniro.onrender.com',
-  lastUpdated: '23 October 2026',
+  lastUpdated: '9 November 2026',
   freeShippingThresholdBDT: 400,
   unpaidOnlineOrderMinutes: 30,
   /** REVIEW: only quote a refund window you can actually meet. */
