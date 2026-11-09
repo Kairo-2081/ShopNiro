@@ -26,6 +26,7 @@ interface CheckoutModalProps {
 
 interface CheckoutOrderData {
   Customer_ID: string;
+  acceptedTerms: boolean;
   Items: any[];
   Applied_Voucher?: string;
   Shipping_Address: Address;
@@ -283,6 +284,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
       const orderData: CheckoutOrderData = {
         Customer_ID: currentCustomer.Customer_ID,
+        acceptedTerms: acceptedPolicies,
         Items: orderItems,
         Applied_Voucher: [appliedVoucher, ...bundlePricing.appliedBundleIds.map((bundleId) => `BUNDLE:${bundleId}`), cartSavings > 0 ? 'CART5' : ''].filter(Boolean).join('+') || undefined,
         Shipping_Address: shippingAddress,
