@@ -26,6 +26,7 @@ Vercel supplies `VERCEL_URL` and `VERCEL_PROJECT_PRODUCTION_URL`; the API includ
 - `RESEND_API_KEY`, `SHOPNIRO_FROM_EMAIL`, `SHOPNIRO_PUBLIC_URL`: welcome-offer email delivery. The sender must be verified with Resend.
 - `SSLCOMMERZ_STORE_ID`, `SSLCOMMERZ_STORE_PASSWORD`, `SSLCOMMERZ_IS_SANDBOX`: payment gateway credentials and environment. Set sandbox mode to `false` only with production credentials.
 - `SSLCOMMERZ_IPN_TOKEN`: shared secret configured in SSLCommerz and ShopNiro. This token authenticates IPN callbacks and is required for payment status updates.
+- `ONLINE_PAYMENTS_ENABLED`: optional runtime checkout switch. Defaults to enabled; set to `false` on the production API host to hide online methods and reject new gateway sessions while keeping COD and existing payment callbacks available. See [Disable online payments; COD only](docs/runbooks/disable-online-payments.md).
 - `RECONCILE_AUTO_REPAIR`: defaults to `false` (report-only). Set to `true` only after reviewing reconciliation findings and verifying the gateway credentials; a confirmed late gateway payment is then finalized through the existing payment finalizer.
 - `RECONCILE_WINDOW_DAYS`: payment lookback window, default `3` days (accepted range `1`–`30`).
 - `RECONCILE_MIN_AGE_MINUTES`: minimum payment age before gateway lookup, default `45` minutes (accepted range `1`–`1440`).
@@ -67,6 +68,8 @@ The path a change takes:
 6. After the deploy, check `/api/ready` and sign in once. Migrations only roll forward, so on a problem fix forward.
 
 ## Deployment checks
+
+Production incident procedures are in [docs/runbooks](docs/runbooks/README.md). Production host access and secret rotation must be verified for two named operators before treating the access controls as complete.
 
 1. Configure secrets in the host dashboard, not in committed files.
 2. Apply pending database migrations to staging first, then production, through the approved migration workflow (see "Environments and the safe deploy path" above and "Adding a migration" below). The host does not apply them automatically.
