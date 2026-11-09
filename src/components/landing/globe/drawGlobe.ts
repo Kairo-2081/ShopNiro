@@ -1,7 +1,7 @@
-import { DESTINATION_HUBS, GLOBE_VIEW, HOME_HUB } from './network';
+import { DESTINATION_HUBS, GLOBE_VIEW, HOME_HUB, PARCEL_POSITIONS } from './network';
 import { GLOBE_PALETTE, rgba } from './palette';
 import { landCells } from './landMask';
-import { isVisible, project, routePoints } from './projection';
+import { greatCircleAt, isVisible, project, routePoints } from './projection';
 
 /** Where the globe sits on the canvas, in CSS pixels. */
 export interface GlobeFrame {
@@ -139,6 +139,36 @@ function drawRoutes(ctx: CanvasRenderingContext2D, { cx, cy, radius }: GlobeFram
   ctx.restore();
 }
 
+/**
+ * A small parcel on each route, drawn as a tilted square with a warm halo, to say something is on its way. They sit at fixed
+ * points on the arcs, so the globe stays completely still.
+ */
+function drawParcels(ctx: CanvasRenderingContext2D, { cx, cy, radius }: GlobeFrame, emphasis: number) {
+  DESTINATION_HUBS.forEach((hub, index) => {
+    const t = PARCEL_POSITIONS[index % PARCEL_POSITIONS.length];
+    const place = greatCircleAt(HOME_HUB, hub, t);
+    const p = project(place.lon, place.lat, GLOBE_VIEW, 1 + 0.2 * Math.sin(Math.PI * t));
+    if (!isVisible(p)) return;
+    const x = cx + p.x * radius;
+    const y = cy - p.y * radius;
+    const halo = ctx.createRadialGradient(x, y, 0, x, y, 9 + 3 * emphasis);
+    halo.addColorStop(0, rgba(GLOBE_PALETTE.gold, 0.55 + 0.25 * emphasis));
+    halo.addColorStop(1, rgba(GLOBE_PALETTE.gold, 0));
+    ctx.fillStyle = halo;
+    ctx.beginPath();
+    ctx.arc(x, y, 9 + 3 * emphasis, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(Math.PI / 4);
+    ctx.fillStyle = rgba(GLOBE_PALETTE.ivory, 0.98);
+    ctx.beginPath();
+    ctx.roundRect(-2.1, -2.1, 4.2, 4.2, 0.9);
+    ctx.fill();
+    ctx.restore();
+  });
+}
+
 /** A thin lit edge on the upper left, and a faint glow just inside the whole limb. */
 function drawRim(ctx: CanvasRenderingContext2D, { cx, cy, radius }: GlobeFrame) {
   const inner = ctx.createRadialGradient(cx, cy, radius * 0.84, cx, cy, radius);
@@ -168,4 +198,5 @@ export function drawGlobe(ctx: CanvasRenderingContext2D, frame: GlobeFrame, { em
   drawLand(ctx, frame);
   drawRim(ctx, frame);
   drawRoutes(ctx, frame, emphasis);
+  drawParcels(ctx, frame, emphasis);
 }
