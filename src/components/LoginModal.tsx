@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { UserRole } from '../types';
-import { X, LogIn, Lock, User, Eye, EyeOff, ShieldAlert, UserPlus, Store, CheckCircle, Truck } from 'lucide-react';
+import { X, LogIn, Lock, User, Eye, EyeOff, ShieldAlert, UserPlus, Store, CheckCircle, Truck, Mail, ArrowLeft } from 'lucide-react';
 import { api } from '../lib/api';
 import { OAuthProviderButtons } from './OAuthProviderButtons';
 import { useFocusTrap } from '../hooks/useFocusTrap';
@@ -16,6 +16,7 @@ interface LoginModalProps {
   noticeMessage?: string | null;
   initialTab?: 'login' | 'register';
   initialRole?: 'customer' | 'seller' | 'rider';
+  initialPasswordResetToken?: string | null;
 }
 
 export const LoginModal: React.FC<LoginModalProps> = ({
@@ -25,14 +26,20 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   noticeMessage,
   initialTab = 'login',
   initialRole = 'customer',
+  initialPasswordResetToken = null,
 }) => {
   useEscapeKey(onClose, isOpen);
   const [activeTab, setActiveTab] = useState<'login' | 'register'>(initialTab);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [passwordResetToken, setPasswordResetToken] = useState<string | null>(initialPasswordResetToken);
   
   // Login fields
   const [loginUsername, setLoginUsername] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [recoveryEmail, setRecoveryEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
   
   // Register fields
   const [registerRole, setRegisterRole] = useState<'customer' | 'seller' | 'rider'>(initialRole);
@@ -50,11 +57,13 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     if (isOpen) {
       setActiveTab(initialTab);
       setRegisterRole(initialRole);
+      setIsForgotPassword(false);
+      setPasswordResetToken(initialPasswordResetToken);
       setError(null);
       setSuccessMessage(null);
       setAcceptedTerms(false);
     }
-  }, [initialRole, initialTab, isOpen]);
+  }, [initialPasswordResetToken, initialRole, initialTab, isOpen]);
 
   React.useEffect(() => {
     if (isOpen && noticeMessage?.startsWith('Account created successfully.')) {
@@ -126,6 +135,53 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     }
   };
 
+  const handleForgotPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccessMessage(null);
+    setIsSubmitting(true);
+    try {
+      const result = await api.requestPasswordReset(recoveryEmail.trim());
+      setSuccessMessage(result.message);
+    } catch (err: any) {
+      console.error('Password recovery request failed:', err);
+      setError(err.message || 'Could not request a password reset. Please try again later.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handlePasswordResetSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword.length < 8 || newPassword.length > 128) {
+      setError('Password must be between 8 and 128 characters.');
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setError('The passwords do not match.');
+      return;
+    }
+    if (!passwordResetToken) return;
+
+    setError(null);
+    setSuccessMessage(null);
+    setIsSubmitting(true);
+    try {
+      const result = await api.resetPassword(passwordResetToken, newPassword);
+      setPasswordResetToken(null);
+      setNewPassword('');
+      setConfirmNewPassword('');
+      setLoginPassword('');
+      setActiveTab('login');
+      setSuccessMessage(result.message);
+    } catch (err: any) {
+      console.error('Password reset failed:', err);
+      setError(err.message || 'Could not reset your password. Request a new reset link and try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-4 animate-in fade-in duration-150">
       <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="login-modal-title" tabIndex={-1} className="premium-surface rounded-xl w-full max-w-md max-h-[90vh] overflow-hidden shadow-2xl flex flex-col">
@@ -133,16 +189,26 @@ export const LoginModal: React.FC<LoginModalProps> = ({
         <div className="p-5 border-b border-surface-200 dark:border-surface-800 flex items-center justify-between bg-brand-50/50 dark:bg-[#161C24]/80">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-brand-600 text-white flex items-center justify-center shadow-md shadow-brand-600/40">
-              {activeTab === 'login' ? <LogIn className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />}
+              {passwordResetToken || isForgotPassword
+                ? <Mail className="w-5 h-5" />
+                : activeTab === 'login' ? <LogIn className="w-5 h-5" /> : <UserPlus className="w-5 h-5" />}
             </div>
             <div>
               <h3 id="login-modal-title" className="text-base font-black text-surface-900 dark:text-white">
-                {activeTab === 'login' ? 'Marketplace Login' : 'Create an Account'}
+                {passwordResetToken
+                  ? 'Choose a New Password'
+                  : isForgotPassword
+                    ? 'Forgot Your Password?'
+                    : activeTab === 'login' ? 'Marketplace Login' : 'Create an Account'}
               </h3>
               <p className="text-xs text-surface-500 dark:text-surface-400">
-                {activeTab === 'login'
-                  ? 'Sign in with your verified Username & Password'
-                  : 'Register a new Customer or Seller profile'}
+                {passwordResetToken
+                  ? 'Choose a new password for your ShopNiro account'
+                  : isForgotPassword
+                    ? 'We will email a secure link if an account matches'
+                    : activeTab === 'login'
+                      ? 'Sign in with your verified Username & Password'
+                      : 'Register a new Customer or Seller profile'}
               </p>
             </div>
           </div>
@@ -157,7 +223,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
         </div>
 
         {/* Tab Switcher */}
-        <div className="grid grid-cols-2 p-1 m-4 mb-0 bg-surface-100 dark:bg-[#181F2A] rounded-full border border-surface-200 dark:border-surface-700 text-xs font-semibold">
+        {!passwordResetToken && !isForgotPassword && <div className="grid grid-cols-2 p-1 m-4 mb-0 bg-surface-100 dark:bg-[#181F2A] rounded-full border border-surface-200 dark:border-surface-700 text-xs font-semibold">
           <button
             type="button"
             onClick={() => {
@@ -188,7 +254,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             <UserPlus className="w-4 h-4" />
             <span>Create Account</span>
           </button>
-        </div>
+        </div>}
 
         {/* Body content */}
         <div className="p-6 overflow-y-auto space-y-4 text-xs flex-1">
@@ -229,7 +295,80 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           )}
 
           {/* SIGN IN FORM */}
-          {activeTab === 'login' ? (
+          {passwordResetToken ? (
+            <form onSubmit={handlePasswordResetSubmit} className="space-y-4">
+              <div>
+                <label htmlFor="reset-new-password" className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">New password</label>
+                <input
+                  id="reset-new-password"
+                  type="password"
+                  required
+                  minLength={8}
+                  maxLength={128}
+                  autoComplete="new-password"
+                  value={newPassword}
+                  onChange={(event) => setNewPassword(event.target.value)}
+                  className="w-full p-2.5 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl text-surface-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                />
+              </div>
+              <div>
+                <label htmlFor="reset-confirm-password" className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">Confirm new password</label>
+                <input
+                  id="reset-confirm-password"
+                  type="password"
+                  required
+                  minLength={8}
+                  maxLength={128}
+                  autoComplete="new-password"
+                  value={confirmNewPassword}
+                  onChange={(event) => setConfirmNewPassword(event.target.value)}
+                  className="w-full p-2.5 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl text-surface-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                />
+              </div>
+              <p className="text-surface-500 dark:text-surface-400">Use at least 8 characters. This link can only be used once and expires in 30 minutes.</p>
+              <button type="submit" disabled={isSubmitting} className="w-full flex items-center justify-center gap-2 px-6 py-2.5 bg-brand-600 hover:bg-brand-500 text-white font-bold rounded-full disabled:opacity-50">
+                <Lock className="w-4 h-4" />
+                {isSubmitting ? 'Updating password...' : 'Change Password'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPasswordResetToken(null);
+                  setIsForgotPassword(true);
+                  setError(null);
+                  setSuccessMessage(null);
+                }}
+                className="w-full text-xs text-brand-600 dark:text-brand-400 hover:underline font-semibold"
+              >
+                Request a new reset link
+              </button>
+            </form>
+          ) : isForgotPassword ? (
+            <form onSubmit={handleForgotPasswordSubmit} className="space-y-4">
+              <p className="text-surface-600 dark:text-surface-300">Enter the email address on your account. For privacy, we show the same confirmation whether or not an account matches.</p>
+              <div>
+                <label htmlFor="recovery-email" className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">Account email</label>
+                <input
+                  id="recovery-email"
+                  type="email"
+                  required
+                  maxLength={255}
+                  autoComplete="email"
+                  value={recoveryEmail}
+                  onChange={(event) => setRecoveryEmail(event.target.value)}
+                  className="w-full p-2.5 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl text-surface-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none"
+                />
+              </div>
+              <button type="submit" disabled={isSubmitting} className="w-full flex items-center justify-center gap-2 px-6 py-2.5 bg-brand-600 hover:bg-brand-500 text-white font-bold rounded-full disabled:opacity-50">
+                <Mail className="w-4 h-4" />
+                {isSubmitting ? 'Sending...' : 'Send Recovery Email'}
+              </button>
+              <button type="button" onClick={() => { setIsForgotPassword(false); setError(null); setSuccessMessage(null); }} className="w-full flex items-center justify-center gap-2 text-xs text-brand-600 dark:text-brand-400 hover:underline font-semibold">
+                <ArrowLeft className="w-4 h-4" />
+                Back to sign in
+              </button>
+            </form>
+          ) : activeTab === 'login' ? (
             <form onSubmit={handleLoginSubmit} className="space-y-4">
               {/* Username or Email */}
               <div>
@@ -289,14 +428,28 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   Need an account? Sign up
                 </button>
 
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="flex items-center gap-1.5 px-6 py-2.5 bg-brand-600 hover:bg-brand-500 text-white font-bold rounded-full shadow-md shadow-brand-600/30 disabled:opacity-50 transition-colors cursor-pointer"
-                >
-                  <LogIn className="w-4 h-4" />
-                  {isSubmitting ? 'Authenticating...' : 'Sign In'}
-                </button>
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRecoveryEmail(loginUsername.includes('@') ? loginUsername : '');
+                      setIsForgotPassword(true);
+                      setError(null);
+                      setSuccessMessage(null);
+                    }}
+                    className="text-xs text-brand-600 dark:text-brand-400 hover:underline font-semibold cursor-pointer"
+                  >
+                    Forgot password?
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="flex items-center gap-1.5 px-6 py-2.5 bg-brand-600 hover:bg-brand-500 text-white font-bold rounded-full shadow-md shadow-brand-600/30 disabled:opacity-50 transition-colors cursor-pointer"
+                  >
+                    <LogIn className="w-4 h-4" />
+                    {isSubmitting ? 'Authenticating...' : 'Sign In'}
+                  </button>
+                </div>
               </div>
 
               <OAuthProviderButtons role="login" mode="sign in" />

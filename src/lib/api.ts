@@ -515,6 +515,18 @@ export const api = {
     return res;
   },
 
+  requestPasswordReset: async (email: string): Promise<{ message: string }> =>
+    fetchJson<{ message: string }>('/api/auth/password/forgot', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }, false),
+
+  resetPassword: async (token: string, password: string): Promise<{ success: boolean; message: string }> =>
+    fetchJson<{ success: boolean; message: string }>('/api/auth/password/reset', {
+      method: 'POST',
+      body: JSON.stringify({ token, password }),
+    }, false),
+
   beginOAuth: (provider: 'google' | 'facebook', role: 'customer' | 'seller' | 'rider' = 'customer', acceptedTerms = false): void => {
     const params = new URLSearchParams({ role, intent: acceptedTerms ? 'sign-up' : 'sign-in', acceptedTerms: String(acceptedTerms) });
     window.location.assign(apiUrl(`/api/auth/oauth/${provider}?${params.toString()}`));
