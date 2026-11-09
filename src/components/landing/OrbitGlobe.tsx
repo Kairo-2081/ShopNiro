@@ -31,7 +31,8 @@ export const OrbitGlobe: React.FC<OrbitGlobeProps> = ({ onGreet }) => {
     const ctx = canvas?.getContext('2d');
     if (!canvas || !ctx) return;
     // Draw in CSS pixels but back the canvas with real device pixels, so dots and lines stay sharp on dense screens.
-    const pixelRatio = Math.min(window.devicePixelRatio || 1, 3);
+    // The picture can be shown up to 1.4 times its drawn size on wide screens, so back it with extra pixels to keep it sharp.
+    const pixelRatio = Math.min((window.devicePixelRatio || 1) * 1.5, 4);
     canvas.width = Math.round(GLOBE_FRAME.width * pixelRatio);
     canvas.height = Math.round(GLOBE_FRAME.height * pixelRatio);
     ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
@@ -50,8 +51,8 @@ export const OrbitGlobe: React.FC<OrbitGlobeProps> = ({ onGreet }) => {
   };
 
   return (
-    <div className="relative flex h-[284px] select-none flex-col items-center justify-center py-2">
-      <div className="relative w-[320px] max-w-full" style={{ aspectRatio: `${GLOBE_FRAME.width} / ${GLOBE_FRAME.height}` }}>
+    <div className="relative flex h-[284px] select-none md:h-[374px] flex-col items-center justify-center py-2">
+      <div className="relative w-[320px] max-w-full md:w-[440px]" style={{ aspectRatio: `${GLOBE_FRAME.width} / ${GLOBE_FRAME.height}` }}>
         <canvas
           ref={canvasRef}
           aria-hidden="true"
