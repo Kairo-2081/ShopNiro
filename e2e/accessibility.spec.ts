@@ -51,6 +51,9 @@ const assertKeyboardReachability = async (page: import('@playwright/test').Page,
       const element = document.activeElement as HTMLElement | null;
       return {
         index: element?.dataset.a11yTabIndex,
+        label: element?.dataset.a11yLabel,
+        tagName: element?.tagName,
+        className: typeof element?.className === 'string' ? element.className : '',
         outline: element ? getComputedStyle(element).outlineStyle : 'none',
         outlineWidth: element ? getComputedStyle(element).outlineWidth : '0px',
         boxShadow: element ? getComputedStyle(element).boxShadow : 'none',
@@ -61,7 +64,10 @@ const assertKeyboardReachability = async (page: import('@playwright/test').Page,
       (focus.outline !== 'none' && focus.outlineWidth !== '0px') ||
       focus.boxShadow !== 'none'
     );
-    expect(hasIndicator, `${label} control ${focus.index ?? 'unknown'} has a visible focus indicator`).toBe(true);
+    expect(
+      hasIndicator,
+      `${label} control ${focus.index ?? 'unknown'} (${focus.label ?? focus.tagName ?? 'no active element'}) has a visible focus indicator; outline=${focus.outline} ${focus.outlineWidth}, shadow=${focus.boxShadow}, class=${focus.className}`,
+    ).toBe(true);
   }
   const missing = expected.filter(({ index }) => !visited.has(index));
   expect(visited.size, `${label} controls missing from tab order: ${missing.map(({ index, label: control }) => `${index}: ${control}`).join('; ')}`).toBe(expected.length);
