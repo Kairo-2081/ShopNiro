@@ -42,3 +42,17 @@ test('the policy pages promise a contact address', () => {
     assert.ok(JSON.stringify(policy).includes(BUSINESS.supportEmail), `${policy.id} lists the support email`);
   }
 });
+
+test('policies disclose the unregistered operator and provisional retention schedule', () => {
+  const text = POLICIES.flatMap((policy) => policy.sections.flatMap((section) => [
+    ...(section.paragraphs || []),
+    ...(section.bullets || []),
+  ])).join('\n');
+  assert.equal(BUSINESS.name, 'ShopNiro');
+  assert.match(BUSINESS.address, /pending/i);
+  assert.ok(text.includes('not registered as "ShopNiro Ltd."'));
+  assert.ok(text.includes('12 months'));
+  assert.ok(text.includes('90 days'));
+  assert.ok(text.includes('not confirmed Bangladesh statutory periods'));
+  assert.ok(text.includes('Automated deletion is not enabled'));
+});

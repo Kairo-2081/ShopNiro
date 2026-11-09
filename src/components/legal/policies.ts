@@ -29,7 +29,7 @@ export const POLICIES: Policy[] = [
       {
         heading: '1. Who we are and what these terms cover',
         paragraphs: [
-          `${B.name} ("ShopNiro", "we", "us") runs an online marketplace at ${B.siteUrl} where independent sellers list products, customers buy them, and riders deliver them. Our legal business identity and registered address are pending registration. By creating an account or placing an order you agree to these terms, our Privacy Policy, our Refund and Return Policy and our Delivery Policy.`,
+          `${B.name} ("ShopNiro", "we", "us") runs an online marketplace at ${B.siteUrl} where independent sellers list products, customers buy them, and riders deliver them. ShopNiro is a brand and is not registered as "ShopNiro Ltd."; the legal operator, required registrations, and an authorized service address are pending. By creating an account or placing an order you agree to these terms, our Privacy Policy, our Refund and Return Policy and our Delivery Policy.`,
           'You must be at least 18 years old, or use ShopNiro under the supervision of a parent or guardian who accepts these terms for you.',
         ],
       },
@@ -97,7 +97,7 @@ export const POLICIES: Policy[] = [
           'These terms are governed by the laws of Bangladesh, and the courts of Dhaka have jurisdiction, without affecting any right you have to bring a consumer complaint to the competent authority.',
         ],
       },
-      { heading: '11. Contact', paragraphs: [`${B.name}, ${B.address}. Email: ${B.supportEmail}.`] },
+      { heading: '11. Contact', paragraphs: [`${B.name}. ${B.address}. Email: ${B.supportEmail}.`] },
     ],
   },
   {
@@ -108,7 +108,7 @@ export const POLICIES: Policy[] = [
     sections: [
       {
         heading: '1. Who is responsible',
-        paragraphs: [`ShopNiro is the marketplace brand. Its legal operator and registered address are pending registration; do not treat "${B.name}" as a registered legal entity. Contact: ${B.supportEmail}.`],
+        paragraphs: [`ShopNiro is the marketplace brand and is not registered as "ShopNiro Ltd." Its legal operator, required registrations, and an authorized service address are pending. Contact: ${B.supportEmail}.`],
       },
       {
         heading: '2. What we collect',
@@ -151,7 +151,9 @@ export const POLICIES: Policy[] = [
         heading: '6. How long we keep data',
         bullets: [
           'Account data is kept while your account is open. If you request account deletion, we disable the account and remove or pseudonymize profile data; order and payment records may be retained where needed for fulfilment, accounting, refunds, fraud prevention or disputes.',
-          'Final retention periods for old order/payment records and seller or rider identity documents are pending business and Bangladesh-qualified legal review. We will publish specific periods before enabling automated deletion.',
+          'Provisional schedule, subject to Bangladesh legal and accounting review: remove order delivery/contact details from operational records 12 months after the order is finally resolved. Keep only the order/payment evidence needed for accounting or disputes, minimized or pseudonymized where possible, for up to 6 years after the relevant tax year or longer if a legal hold or applicable requirement applies.',
+          'Provisional schedule for rider identity, driving-licence, and CV files: keep them only while the rider is active and verification remains necessary; delete them within 90 days after an application is rejected or the rider relationship ends, unless a legal hold applies. Retain only minimal verification outcome and licence-expiry metadata where needed, and review active files at least annually.',
+          'These periods are ShopNiro planning rules, not confirmed Bangladesh statutory periods. Automated deletion is not enabled; the schedule and start dates must be confirmed by Bangladesh counsel and an accountant before operational use.',
           'Encrypted backups of our database are kept for about 30 days.',
         ],
       },
