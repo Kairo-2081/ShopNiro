@@ -224,6 +224,14 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
                   key={item.tab || item.sellerTab || item.adminTab}
                   type="button"
                   onClick={() => selectItem({ label, icon: Icon, ...item })}
+                  onFocus={(event) => {
+                    event.currentTarget.style.outline = '2px solid var(--focus-ring)';
+                    event.currentTarget.style.outlineOffset = '3px';
+                  }}
+                  onBlur={(event) => {
+                    event.currentTarget.style.removeProperty('outline');
+                    event.currentTarget.style.removeProperty('outline-offset');
+                  }}
                   aria-current={isActive ? 'page' : undefined}
                   className={`group flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-semibold transition-colors focus:outline-solid focus:outline-2 focus:outline-offset-2 focus:outline-[#80734f] dark:focus:outline-[#d0c8a5] focus-visible:ring-2 focus-visible:ring-[#a99b72] ${
                     isActive
