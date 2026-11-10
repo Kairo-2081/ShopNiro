@@ -1,7 +1,7 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import { AUTH, resetWorld } from './global-setup.ts';
 import { E2E } from './seed.ts';
-import { blockNonLocalTraffic, openCheckout, parseMoney, withDb } from './helpers.ts';
+import { blockNonLocalTraffic, openCheckout, parseMoney, selectWorkspaceNavigationItem, withDb } from './helpers.ts';
 
 // One story across four roles: an admin approves a new seller, the seller lists a product, a customer buys it
 // with cash on delivery, the seller ships it, and a rider delivers it with the customer's confirmation code.
@@ -72,7 +72,7 @@ test('admin approves a seller, who lists a product that a customer buys and a ri
 
   await test.step('seller ships the order', async () => {
     const seller = await asRole(browser, 'seller');
-    await seller.getByRole('button', { name: /Fulfillment Orders/ }).click();
+    await selectWorkspaceNavigationItem(seller, /Fulfillment Orders/);
     await seller.getByRole('combobox').first().selectOption('shipped');
     await expect.poll(async () => withDb(async (c) => (await c.query('SELECT status FROM orders WHERE id = $1', [orderId])).rows[0].status)).toBe('shipped');
     await seller.context().close();
@@ -94,7 +94,7 @@ test('admin approves a seller, who lists a product that a customer buys and a ri
       `SELECT rd.confirmation_code FROM rider_deliveries rd JOIN seller_fulfillments sf ON sf.id = rd.fulfillment_id
         WHERE sf.order_id = $1`, [orderId])).rows[0].confirmation_code as string);
     const customer = await asRole(browser, 'customer');
-    await customer.getByRole('button', { name: /Orders|My orders/ }).first().click();
+    await selectWorkspaceNavigationItem(customer, /Orders|My orders/);
     await customer.getByPlaceholder('6-digit code').fill(code);
     await customer.getByRole('button', { name: 'Confirm received' }).click();
     await expect(customer.getByText(/Delivery confirmed/)).toBeVisible();

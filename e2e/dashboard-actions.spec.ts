@@ -1,21 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { AUTH } from './global-setup.ts';
 import { E2E } from './seed.ts';
-import { blockNonLocalTraffic, openStorefront, withDb } from './helpers.ts';
-
-const expectWorkspaceNavigationItem = async (page: import('@playwright/test').Page, name: string | RegExp) => {
-  if ((page.viewportSize()?.width ?? Number.POSITIVE_INFINITY) < 768) {
-    const trigger = page.getByRole('button', { name: 'Open navigation' });
-    await expect(trigger).toBeVisible();
-    await trigger.click();
-    const drawer = page.getByRole('dialog', { name: 'Navigation menu' });
-    await expect(drawer.getByRole('button', { name })).toBeVisible();
-    await page.keyboard.press('Escape');
-    await expect(drawer).toHaveCount(0);
-  } else {
-    await expect(page.getByRole('button', { name })).toBeVisible();
-  }
-};
+import { blockNonLocalTraffic, openStorefront, selectWorkspaceNavigationItem, withDb } from './helpers.ts';
 
 test.describe('storefront assistant spacing', () => {
   test.use({ storageState: AUTH.customer });
@@ -43,7 +29,7 @@ test.describe('seller dashboard row actions', () => {
     try {
       await blockNonLocalTraffic(page);
       await page.goto('/');
-      await expectWorkspaceNavigationItem(page, /Product Catalog/);
+      await selectWorkspaceNavigationItem(page, /Product Catalog/);
       await expect(page.getByRole('button', { name: 'Open ShopNiro AI Assistant' })).toHaveCount(1);
 
       const restock = page.getByRole('button', { name: 'Restock' });
@@ -91,9 +77,9 @@ test.describe('admin dashboard row actions', () => {
     await blockNonLocalTraffic(page);
     await page.goto('/');
 
-    await expectWorkspaceNavigationItem(page, /Governance Overview/);
+    await selectWorkspaceNavigationItem(page, /Governance Overview/);
     await expect(page.getByRole('button', { name: 'Open ShopNiro AI Assistant' })).toHaveCount(1);
-    await page.getByRole('button', { name: /Category Registry/ }).click();
+    await selectWorkspaceNavigationItem(page, /Category Registry/);
 
     const edit = page.getByRole('button', { name: 'Edit category E2E Category' });
     const remove = page.getByRole('button', { name: 'Delete category E2E Category' });
