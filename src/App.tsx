@@ -1,5 +1,6 @@
 import React from 'react';
-import { POLICIES } from './components/legal/policies';
+import { POLICY_NAV } from './components/legal/policyNav';
+import { useLocale } from './lib/i18n';
 import {
   UserRole,
   Customer,
@@ -20,7 +21,6 @@ import {
 import { api } from './lib/api';
 import { getProfileCompletion } from './lib/profileCompletion';
 import { shopNiroLogo } from './lib/branding';
-import { LandingPage } from './components/LandingPage';
 import { MarketplaceClosing, MarketplaceStat } from './components/MarketplaceClosing';
 import { Navbar } from './components/Navbar';
 import { NavigationSidebar } from './components/NavigationSidebar';
@@ -58,6 +58,7 @@ const AdminSignupModal = React.lazy(() => import('./components/admin/AdminSignup
 const LoginModal = React.lazy(() => import('./components/LoginModal').then((module) => ({ default: module.LoginModal })));
 const GeminiChatbot = React.lazy(() => import('./components/chat/GeminiChatbot').then((module) => ({ default: module.GeminiChatbot })));
 const RiderSignupModal = React.lazy(() => import('./components/rider/RiderSignupModal').then((module) => ({ default: module.RiderSignupModal })));
+const LandingPage = React.lazy(() => import('./components/LandingPage').then((module) => ({ default: module.LandingPage })));
 const STORE_PRODUCT_PAGE_SIZE = 24;
 
 const scrollViewportToTop = () => {
@@ -70,6 +71,7 @@ const scrollViewportToTop = () => {
 };
 
 export default function App() {
+  const { t } = useLocale();
   // Navigation & View Mode
   const [viewMode, setViewMode] = React.useState<'landing' | 'app'>('landing');
 
@@ -1506,9 +1508,9 @@ export default function App() {
           <div className="text-micro text-surface-600 dark:text-surface-400 font-mono text-center md:text-right">
             <span>© {new Date().getFullYear()} ShopNiro • Smart commerce network</span>
             <nav aria-label="Policies" className="mt-1 flex flex-wrap justify-center gap-x-3 md:justify-end">
-              {POLICIES.map((policy) => (
+              {POLICY_NAV.map((policy) => (
                 <a key={policy.id} href={policy.path} className="hover:text-brand-500 dark:hover:text-brand-400">
-                  {policy.title}
+                  {t(policy.titleKey)}
                 </a>
               ))}
             </nav>

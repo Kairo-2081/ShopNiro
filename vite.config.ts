@@ -19,6 +19,7 @@ export default defineConfig(() => {
             if (/\/node_modules\/(react|react-dom|scheduler)\//.test(id)) return 'vendor-react';
             if (/\/node_modules\/(recharts|d3-[^/]+)\//.test(id)) return 'vendor-charts';
             if (/\/node_modules\/(leaflet|react-leaflet)\//.test(id)) return 'vendor-maps';
+            if (/\/node_modules\/lucide-react\//.test(id)) return 'vendor-icons';
           },
         },
       },
