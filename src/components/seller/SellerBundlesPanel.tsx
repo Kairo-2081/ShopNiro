@@ -2,6 +2,7 @@ import React from 'react';
 import { Product, ProductBundle } from '../../types';
 import { api, formatCurrency, formatDate } from '../../lib/api';
 import { Check, Plus, Tag, Trash2 } from 'lucide-react';
+import { useLocale } from '../../lib/i18n';
 
 interface SellerBundlesPanelProps {
   products: Product[];
@@ -16,6 +17,7 @@ const toLocalDateTimeInput = (value?: string) => {
 };
 
 export const SellerBundlesPanel: React.FC<SellerBundlesPanelProps> = ({ products }) => {
+  const { t } = useLocale();
   const [bundles, setBundles] = React.useState<ProductBundle[]>([]);
   const [name, setName] = React.useState('');
   const [productIds, setProductIds] = React.useState<string[]>([]);
@@ -119,7 +121,7 @@ export const SellerBundlesPanel: React.FC<SellerBundlesPanelProps> = ({ products
             </label>
           )) : <p className="py-3 text-xs text-surface-500">Add active, in-stock products before creating bundles.</p>}
         </fieldset>
-        <button type="submit" disabled={isSaving || productIds.length < 2} className="inline-flex items-center gap-2 rounded-lg bg-success-700 px-4 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"><Plus className="h-4 w-4" />{isSaving ? 'Creating…' : 'Create bundle'}</button>
+        <button type="submit" disabled={isSaving || productIds.length < 2} className="inline-flex items-center gap-2 rounded-lg bg-success-700 px-4 py-2.5 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"><Plus className="h-4 w-4" />{isSaving ? t('processing') : t('createBundle')}</button>
       </form>
 
       <section className="space-y-3">
@@ -138,7 +140,7 @@ export const SellerBundlesPanel: React.FC<SellerBundlesPanelProps> = ({ products
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
                   <button type="button" onClick={() => void setActive(bundle, !bundle.Active)} aria-label={`${bundle.Active ? 'Pause' : 'Activate'} ${bundle.Name}`} className="inline-flex items-center gap-1 rounded-md border border-surface-300 px-2.5 py-1.5 text-micro font-bold text-surface-700 dark:border-surface-700 dark:text-surface-200"><Check className="h-3.5 w-3.5" />{bundle.Active ? 'Pause' : 'Activate'}</button>
-                  <button type="button" onClick={() => void deleteBundle(bundle)} aria-label={`Delete ${bundle.Name}`} className="rounded-md border border-surface-300 p-1.5 text-surface-500 hover:text-danger-600 dark:border-surface-700"><Trash2 className="h-3.5 w-3.5" /></button>
+                  <button type="button" onClick={() => void deleteBundle(bundle)} aria-label={`${t('deleteAction')} ${bundle.Name}`} className="rounded-md border border-surface-300 p-1.5 text-surface-500 hover:text-danger-600 dark:border-surface-700"><Trash2 className="h-3.5 w-3.5" /></button>
                 </div>
               </div>
             </article>

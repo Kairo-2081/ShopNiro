@@ -4,6 +4,7 @@ import { api } from '../../lib/api';
 import { AccountLocationPicker } from '../AccountLocationPicker';
 import { OAuthProviderButtons } from '../OAuthProviderButtons';
 import { X, Store, Send, MapPin, Lock, Eye, EyeOff, User, Mail, Phone, Image, Sparkles } from 'lucide-react';
+import { useLocale } from '../../lib/i18n';
 
 interface SellerSignupModalProps {
   isOpen: boolean;
@@ -25,6 +26,7 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
   onRegisterSeller,
   onSuccessRegistered,
 }) => {
+  const { t } = useLocale();
   const [username, setUsername] = useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -327,7 +329,7 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
                 className="inline-flex items-center gap-1.5 text-success-700 dark:text-success-300 font-semibold hover:text-success-800 dark:hover:text-success-200 disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-success-500 rounded-md"
               >
                 <Sparkles className="w-3.5 h-3.5" />
-                {isGeneratingDescription ? 'Writing...' : 'Write with AI'}
+                {isGeneratingDescription ? t('drafting') : t('generateWithAi')}
               </button>
             </div>
             <textarea
@@ -410,7 +412,7 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
               onClick={onClose}
               className="px-4 py-2 text-surface-600 hover:bg-surface-100 dark:text-surface-400 dark:hover:bg-surface-800 rounded-full transition-colors cursor-pointer"
             >
-              Cancel
+              {t('cancel')}
             </button>
             <button
               type="submit"
@@ -418,7 +420,7 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
               className="flex items-center gap-2 px-6 py-2.5 bg-success-600 hover:bg-success-500 text-white font-bold rounded-full shadow-lg shadow-success-500/30 disabled:opacity-50 transition-all cursor-pointer"
             >
               <Send className="w-4 h-4" />
-              <span>{isSubmitting ? 'Submitting Application...' : 'Submit Application'}</span>
+              <span>{isSubmitting ? t('submittingApplication') : t('submitApplication')}</span>
             </button>
           </div>
         </form>
