@@ -296,6 +296,8 @@ export type AppTab =
   | 'live-tracking'
   | 'support';
 
+export type SellerDashboardTab = 'products' | 'orders' | 'analytics' | 'reviews' | 'wallet' | 'promotions';
+export type AdminDashboardTab = 'overview' | 'metrics' | 'sellers' | 'riders' | 'categories' | 'products' | 'payments' | 'cancellations' | 'support';
 export type UserRole = 'customer' | 'seller' | 'admin' | 'rider';
 
 export interface CurrentUser {

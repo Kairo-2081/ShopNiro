@@ -106,7 +106,7 @@ export const SellerBundlesPanel: React.FC<SellerBundlesPanelProps> = ({ products
         <label className="block space-y-1 text-xs font-semibold text-surface-700 dark:text-surface-300">Bundle name<input required maxLength={120} value={name} onChange={(event) => setName(event.target.value)} placeholder="Home-Office Kit" className={inputClass} /></label>
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block space-y-1 text-xs font-semibold text-surface-700 dark:text-surface-300">Extra discount (%)<input required type="number" min="0.01" max="50" step="0.01" value={discountPercent} onChange={(event) => setDiscountPercent(Number(event.target.value))} className={inputClass} /></label>
-          <label className="block space-y-1 text-xs font-semibold text-surface-700 dark:text-surface-300">Offer ends (optional)<input type="datetime-local" value={endsAt} onChange={(event) => setEndsAt(event.target.value)} min={toLocalDateTimeInput(new Date().toISOString())} className={inputClass} /></label>
+          <label className="block space-y-1 text-xs font-semibold text-surface-700 dark:text-surface-300">Offer ends (optional)<input type="datetime-local" value={endsAt} onChange={(event) => setEndsAt(event.target.value)} onFocus={(event) => { event.currentTarget.style.outline = '2px solid var(--focus-ring)'; event.currentTarget.style.outlineOffset = '3px'; }} onBlur={(event) => { event.currentTarget.style.removeProperty('outline'); event.currentTarget.style.removeProperty('outline-offset'); }} min={toLocalDateTimeInput(new Date().toISOString())} className={inputClass} /></label>
         </div>
         <fieldset className="space-y-2">
           <legend className="text-xs font-semibold text-surface-700 dark:text-surface-300">Products ({productIds.length}/5)</legend>
@@ -143,7 +143,7 @@ export const SellerBundlesPanel: React.FC<SellerBundlesPanelProps> = ({ products
               </div>
             </article>
           );
-        }) : <p className="py-8 text-center text-xs text-surface-500">No bundles yet.</p>}
+        }) : <p className="py-8 text-center text-xs text-surface-500 dark:text-surface-300">No bundles yet.</p>}
       </section>
     </section>
   );

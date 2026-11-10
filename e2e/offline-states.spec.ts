@@ -1,40 +1,41 @@
 import { expect, test } from '@playwright/test';
 import { AUTH } from './global-setup.ts';
-import { blockNonLocalTraffic } from './helpers.ts';
+import { blockNonLocalTraffic, selectWorkspaceNavigationItem } from './helpers.ts';
 
 test('keeps a readable offline notice on every role home and navigation screen', async ({ browser, baseURL }) => {
   test.setTimeout(120_000);
   const cases = [
-    { role: 'customer', home: 'My orders', navigation: ['Top charts', 'Live tracking', 'My Profile', 'Support'] },
-    { role: 'seller', home: 'Seller Studio', navigation: ['Preview Storefront', 'Support'] },
-    { role: 'admin', home: 'Admin Governance', navigation: ['Public Storefront', 'Support'] },
-    { role: 'rider', home: 'Rider deliveries', navigation: ['Support'] },
+    { role: 'customer', home: 'Shop', dashboard: [], navigation: ['Top charts', 'Live tracking', 'Profile', 'Support'] },
+    { role: 'seller', home: 'Product Catalog', dashboard: ['Seller Studio'], navigation: ['Fulfillment Orders', 'Sales Analytics', 'Preview storefront', 'Support'] },
+    { role: 'admin', home: 'Governance Overview', dashboard: ['Admin dashboard'], navigation: ['Marketplace Metrics', 'Merchant Approvals', 'Storefront', 'Support'] },
+    { role: 'rider', home: 'Deliveries', dashboard: [], navigation: ['Support'] },
   ] as const;
 
-  for (const { role, home, navigation } of cases) {
+  for (const { role, home, dashboard, navigation } of cases) {
     const context = await browser.newContext({ baseURL, storageState: AUTH[role] });
     const page = await context.newPage();
     try {
       await blockNonLocalTraffic(page);
       await page.goto('/');
-      const primaryNavigation = page.getByRole('navigation', { name: 'Primary navigation' });
-      await expect(primaryNavigation.getByRole('button', { name: home })).toBeVisible();
+      await selectWorkspaceNavigationItem(page, home);
       // Visit each screen once while online so its lazy-loaded code is already in the browser.
       for (const label of navigation) {
-        await primaryNavigation.getByRole('button', { name: label }).click();
+        await selectWorkspaceNavigationItem(page, label);
         await page.waitForTimeout(700);
       }
-      await primaryNavigation.getByRole('button', { name: home }).click();
+      for (const label of dashboard) await selectWorkspaceNavigationItem(page, label);
+      await selectWorkspaceNavigationItem(page, home);
       await page.waitForTimeout(700);
       await context.setOffline(true);
       // Chromium does not reliably emit the offline event when the context is switched, so send it explicitly.
       await page.evaluate(() => window.dispatchEvent(new Event('offline')));
-      const notice = page.getByRole('alert').filter({ hasText: 'You are offline' });
+      // The seller analytics tab also shows its own inline "You are offline" error, so match the global banner, the one with a Retry button.
+      const notice = page.getByRole('alert').filter({ hasText: 'You are offline' }).filter({ has: page.getByRole('button', { name: 'Retry' }) });
       await expect(notice).toBeVisible();
       await expect(notice.getByRole('button', { name: 'Retry' })).toBeVisible();
 
       for (const label of navigation) {
-        await primaryNavigation.getByRole('button', { name: label }).click();
+        await selectWorkspaceNavigationItem(page, label);
         await expect(notice).toBeVisible();
       }
     } finally {
