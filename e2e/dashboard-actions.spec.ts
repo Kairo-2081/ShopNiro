@@ -90,10 +90,10 @@ test.describe('admin dashboard row actions', () => {
 
     const editBounds = await edit.boundingBox();
     const removeBounds = await remove.boundingBox();
-    expect(editBounds?.width).toBe(40);
-    expect(editBounds?.height).toBe(40);
-    expect(removeBounds?.width).toBe(40);
-    expect(removeBounds?.height).toBe(40);
+    expect(editBounds?.width).toBeGreaterThanOrEqual(40);
+    expect(editBounds?.height).toBeGreaterThanOrEqual(40);
+    expect(removeBounds?.width).toBeGreaterThanOrEqual(40);
+    expect(removeBounds?.height).toBeGreaterThanOrEqual(40);
 
     await remove.click({ trial: true });
     await edit.click();

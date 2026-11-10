@@ -25,8 +25,11 @@ export async function openStorefront(page: Page) {
 
 export async function selectWorkspaceNavigationItem(page: Page, name: string | RegExp) {
   const navigation = page.getByRole('navigation', { name: 'Workspace navigation' });
+  const desktopItem = page.locator('aside nav[aria-label="Workspace navigation"] button').filter({ hasText: name });
   if ((page.viewportSize()?.width ?? Number.POSITIVE_INFINITY) >= 768) {
-    await navigation.getByRole('button', { name }).click();
+    const item = navigation.getByRole('button', { name });
+    await item.click();
+    await expect(item).toHaveAttribute('aria-current', 'page');
     return;
   }
 
@@ -36,6 +39,7 @@ export async function selectWorkspaceNavigationItem(page: Page, name: string | R
   const drawer = page.getByRole('dialog', { name: 'Navigation menu' });
   await drawer.getByRole('button', { name }).click();
   await expect(drawer).toHaveCount(0);
+  await expect(desktopItem).toHaveAttribute('aria-current', 'page');
 }
 
 export async function addToCart(page: Page, productId: string) {
