@@ -127,6 +127,9 @@ test('public and role-specific pages have no critical or serious axe violations'
   try {
     await blockNonLocalTraffic(publicPage);
     await publicPage.goto('/');
+    // The globe is a lazy chunk. On a cold dev server the page can still be painting when the scan starts, so wait for it.
+    await publicPage.locator('canvas').waitFor();
+    await publicPage.waitForLoadState('networkidle').catch(() => undefined);
     await scanPage(publicPage, 'Public marketplace');
     for (const path of ['/terms', '/privacy', '/refunds', '/delivery']) {
       await publicPage.goto(path);
@@ -286,27 +289,18 @@ test('reduced motion stops the orbit globe animation without hiding its content'
 test('checkout and cart dialogs have no critical or serious axe violations in either theme', async ({ browser, baseURL }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop', 'The dialog sweep runs once per CI workflow.');
   test.setTimeout(120_000);
+  // Start from a known cart instead of clicking a product card: earlier specs leave stock and carts in all sorts of states.
+  await clearCartAndOrders();
+  await seedCart({ [E2E.products.blanket.id]: 1 });
   const context = await browser.newContext({ baseURL, storageState: AUTH.customer });
   const page = await context.newPage();
   try {
     await blockNonLocalTraffic(page);
-    await page.goto('/');
-    await page.getByRole('navigation', { name: 'Workspace navigation' }).getByRole('button', { name: 'Orders' }).waitFor();
-    const card = page.locator('[data-testid="product-card"]').first();
-    await card.scrollIntoViewIfNeeded();
-    await card.getByRole('button', { name: 'Add to Cart' }).click();
+    await openStorefront(page);
 
-    const scan = async (label: string) => {
-      for (const theme of ['light', 'dark']) {
-        await page.evaluate((isDark) => document.documentElement.classList.toggle('dark', isDark), theme === 'dark');
-        await page.waitForTimeout(1200);
-        const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
-        const serious = results.violations.filter((violation) => violation.impact === 'serious' || violation.impact === 'critical');
-        expect(serious.map((violation) => ({ label, theme, id: violation.id, targets: violation.nodes.map((node) => node.target.join(' ')).slice(0, 4) })), `${label} (${theme})`).toEqual([]);
-      }
-    };
+    const scan = (label: string) => scanBothThemes(page, label);
 
-    await page.getByRole('button', { name: /cart/i }).first().click();
+    await page.getByRole('button', { name: 'Shopping Cart' }).click();
     await expect(page.getByRole('button', { name: /Proceed to checkout/i })).toBeVisible();
     await scan('Cart drawer');
     await page.getByRole('button', { name: /Proceed to checkout/i }).click();
@@ -314,6 +308,7 @@ test('checkout and cart dialogs have no critical or serious axe violations in ei
     await scan('Checkout dialog');
   } finally {
     await context.close();
+    await clearCartAndOrders();
   }
 });
 
