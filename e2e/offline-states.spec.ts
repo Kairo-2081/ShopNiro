@@ -5,13 +5,13 @@ import { blockNonLocalTraffic, selectWorkspaceNavigationItem } from './helpers.t
 test('keeps a readable offline notice on every role home and navigation screen', async ({ browser, baseURL }) => {
   test.setTimeout(120_000);
   const cases = [
-    { role: 'customer', home: 'Shop', navigation: ['Top charts', 'Live tracking', 'Profile', 'Support'] },
-    { role: 'seller', home: 'Product Catalog', navigation: ['Fulfillment Orders', 'Sales Analytics', 'Preview storefront', 'Support'] },
-    { role: 'admin', home: 'Governance Overview', navigation: ['Marketplace Metrics', 'Merchant Approvals', 'Storefront', 'Support'] },
-    { role: 'rider', home: 'Deliveries', navigation: ['Support'] },
+    { role: 'customer', home: 'Shop', dashboard: [], navigation: ['Top charts', 'Live tracking', 'Profile', 'Support'] },
+    { role: 'seller', home: 'Product Catalog', dashboard: ['Seller Studio'], navigation: ['Fulfillment Orders', 'Sales Analytics', 'Preview storefront', 'Support'] },
+    { role: 'admin', home: 'Governance Overview', dashboard: ['Admin dashboard'], navigation: ['Marketplace Metrics', 'Merchant Approvals', 'Storefront', 'Support'] },
+    { role: 'rider', home: 'Deliveries', dashboard: [], navigation: ['Support'] },
   ] as const;
 
-  for (const { role, home, navigation } of cases) {
+  for (const { role, home, dashboard, navigation } of cases) {
     const context = await browser.newContext({ baseURL, storageState: AUTH[role] });
     const page = await context.newPage();
     try {
@@ -23,6 +23,7 @@ test('keeps a readable offline notice on every role home and navigation screen',
         await selectWorkspaceNavigationItem(page, label);
         await page.waitForTimeout(700);
       }
+      for (const label of dashboard) await selectWorkspaceNavigationItem(page, label);
       await selectWorkspaceNavigationItem(page, home);
       await page.waitForTimeout(700);
       await context.setOffline(true);
