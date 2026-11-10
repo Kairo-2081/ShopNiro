@@ -1,49 +1,40 @@
 import { expect, test } from '@playwright/test';
 import { AUTH } from './global-setup.ts';
-import { blockNonLocalTraffic } from './helpers.ts';
+import { blockNonLocalTraffic, selectWorkspaceNavigationItem } from './helpers.ts';
 
-test('keeps a readable offline notice on every role home and navigation screen', async ({ browser, baseURL }, testInfo) => {
+test('keeps a readable offline notice on every role home and navigation screen', async ({ browser, baseURL }) => {
   test.setTimeout(120_000);
   const cases = [
-    { role: 'customer', home: 'Shop', backToHome: 'Shop', navigation: ['Top charts', 'Live tracking', 'Profile', 'Support'] },
-    // The sidebar shows the dashboard tabs only while the dashboard is open. From the storefront or support it shows a single
-    // entry back to the dashboard, so that entry is how each role returns after visiting the other screens.
-    { role: 'seller', home: 'Product Catalog', backToHome: 'Seller Studio', navigation: ['Fulfillment Orders', 'Sales Analytics', 'Preview storefront', 'Support'] },
-    { role: 'admin', home: 'Governance Overview', backToHome: 'Admin dashboard', navigation: ['Marketplace Metrics', 'Merchant Approvals', 'Storefront', 'Support'] },
-    { role: 'rider', home: 'Deliveries', backToHome: 'Deliveries', navigation: ['Support'] },
+    { role: 'customer', home: 'Shop', dashboard: [], navigation: ['Top charts', 'Live tracking', 'Profile', 'Support'] },
+    { role: 'seller', home: 'Product Catalog', dashboard: ['Seller Studio'], navigation: ['Fulfillment Orders', 'Sales Analytics', 'Preview storefront', 'Support'] },
+    { role: 'admin', home: 'Governance Overview', dashboard: ['Admin dashboard'], navigation: ['Marketplace Metrics', 'Merchant Approvals', 'Storefront', 'Support'] },
+    { role: 'rider', home: 'Deliveries', dashboard: [], navigation: ['Support'] },
   ] as const;
 
-  const selectNavigationItem = async (page: import('@playwright/test').Page, label: string) => {
-    if (testInfo.project.name !== 'desktop') {
-      await page.getByRole('button', { name: 'Open navigation' }).click();
-    }
-    await page.getByRole('navigation', { name: 'Workspace navigation' }).getByRole('button', { name: label }).click();
-  };
-
-  for (const { role, home, backToHome, navigation } of cases) {
+  for (const { role, home, dashboard, navigation } of cases) {
     const context = await browser.newContext({ baseURL, storageState: AUTH[role] });
     const page = await context.newPage();
     try {
       await blockNonLocalTraffic(page);
       await page.goto('/');
-      await selectNavigationItem(page, home);
+      await selectWorkspaceNavigationItem(page, home);
       // Visit each screen once while online so its lazy-loaded code is already in the browser.
       for (const label of navigation) {
-        await selectNavigationItem(page, label);
+        await selectWorkspaceNavigationItem(page, label);
         await page.waitForTimeout(700);
       }
-      await selectNavigationItem(page, backToHome);
+      for (const label of dashboard) await selectWorkspaceNavigationItem(page, label);
+      await selectWorkspaceNavigationItem(page, home);
       await page.waitForTimeout(700);
       await context.setOffline(true);
       // Chromium does not reliably emit the offline event when the context is switched, so send it explicitly.
       await page.evaluate(() => window.dispatchEvent(new Event('offline')));
-      // Some screens (seller analytics, for one) also show their own inline offline error, so pick out the global banner by its text.
-      const notice = page.getByRole('alert').filter({ hasText: 'Some ShopNiro features may be unavailable' });
+      const notice = page.getByRole('alert').filter({ hasText: 'You are offline' });
       await expect(notice).toBeVisible();
       await expect(notice.getByRole('button', { name: 'Retry' })).toBeVisible();
 
       for (const label of navigation) {
-        await selectNavigationItem(page, label);
+        await selectWorkspaceNavigationItem(page, label);
         await expect(notice).toBeVisible();
       }
     } finally {

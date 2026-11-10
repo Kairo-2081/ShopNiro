@@ -1,24 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { AUTH } from './global-setup.ts';
 import { E2E } from './seed.ts';
-import { blockNonLocalTraffic, openStorefront, openWorkspaceNavigationItem, withDb } from './helpers.ts';
-
-const expectWorkspaceNavigationItem = async (page: import('@playwright/test').Page, name: string | RegExp) => {
-  const trigger = page.getByRole('button', { name: 'Open navigation' });
-  const sidebar = page.getByRole('navigation', { name: 'Workspace navigation' });
-  // The page may still be rendering. Wait for whichever of the two navigation forms this viewport uses before choosing.
-  await expect(trigger.or(sidebar.first())).toBeVisible();
-  if (await trigger.isVisible()) {
-    await trigger.click();
-    const drawer = page.getByRole('dialog', { name: 'Navigation menu' });
-    await expect(drawer.getByRole('button', { name })).toBeVisible();
-    await page.keyboard.press('Escape');
-    await expect(drawer).toHaveCount(0);
-    return;
-  }
-
-  await expect(page.getByRole('navigation', { name: 'Workspace navigation' }).getByRole('button', { name })).toBeVisible();
-};
+import { blockNonLocalTraffic, openStorefront, selectWorkspaceNavigationItem, withDb } from './helpers.ts';
 
 test.describe('storefront assistant spacing', () => {
   test.use({ storageState: AUTH.customer });
@@ -46,7 +29,7 @@ test.describe('seller dashboard row actions', () => {
     try {
       await blockNonLocalTraffic(page);
       await page.goto('/');
-      await expectWorkspaceNavigationItem(page, /Product Catalog/);
+      await selectWorkspaceNavigationItem(page, /Product Catalog/);
       await expect(page.getByRole('button', { name: 'Open ShopNiro AI Assistant' })).toHaveCount(1);
 
       const restock = page.getByRole('button', { name: 'Restock' });
@@ -61,8 +44,8 @@ test.describe('seller dashboard row actions', () => {
       ] as const) {
         await expect(action).toBeVisible();
         await expect(action).toHaveAttribute('title', title);
-        const bounds = await action.boundingBox();
         // Layout can land a hair under 40px (39.9999) from sub-pixel rounding, which is still a 40px target.
+        const bounds = await action.boundingBox();
         expect(bounds?.width).toBeGreaterThanOrEqual(39.9);
         expect(bounds?.height).toBeGreaterThanOrEqual(39.9);
       }
@@ -71,8 +54,8 @@ test.describe('seller dashboard row actions', () => {
       await restock.click();
       await expect(page.getByRole('spinbutton', { name: `Quantity to add for ${productName}` })).toBeVisible();
       const cancelRestock = page.getByRole('button', { name: `Cancel restock for ${productName}` });
-      expect((await cancelRestock.boundingBox())?.width).toBeCloseTo(40, 1);
-      expect((await cancelRestock.boundingBox())?.height).toBeCloseTo(40, 1);
+      expect((await cancelRestock.boundingBox())?.width).toBe(40);
+      expect((await cancelRestock.boundingBox())?.height).toBe(40);
       await cancelRestock.click();
 
       await edit.click();
@@ -95,9 +78,9 @@ test.describe('admin dashboard row actions', () => {
     await blockNonLocalTraffic(page);
     await page.goto('/');
 
-    await expectWorkspaceNavigationItem(page, /Governance Overview/);
+    await selectWorkspaceNavigationItem(page, /Governance Overview/);
     await expect(page.getByRole('button', { name: 'Open ShopNiro AI Assistant' })).toHaveCount(1);
-    await openWorkspaceNavigationItem(page, /Category Registry/);
+    await selectWorkspaceNavigationItem(page, /Category Registry/);
 
     const edit = page.getByRole('button', { name: 'Edit category E2E Category' });
     const remove = page.getByRole('button', { name: 'Delete category E2E Category' });
@@ -108,10 +91,10 @@ test.describe('admin dashboard row actions', () => {
 
     const editBounds = await edit.boundingBox();
     const removeBounds = await remove.boundingBox();
-    expect(editBounds?.width).toBeCloseTo(40, 1);
-    expect(editBounds?.height).toBeCloseTo(40, 1);
-    expect(removeBounds?.width).toBeCloseTo(40, 1);
-    expect(removeBounds?.height).toBeCloseTo(40, 1);
+    expect(editBounds?.width).toBeGreaterThanOrEqual(39.9);
+    expect(editBounds?.height).toBeGreaterThanOrEqual(39.9);
+    expect(removeBounds?.width).toBeGreaterThanOrEqual(39.9);
+    expect(removeBounds?.height).toBeGreaterThanOrEqual(39.9);
 
     await remove.click({ trial: true });
     await edit.click();

@@ -23,6 +23,25 @@ export async function openStorefront(page: Page) {
   await expect(page.getByRole('button', { name: 'Shopping Cart' })).toBeVisible();
 }
 
+export async function selectWorkspaceNavigationItem(page: Page, name: string | RegExp) {
+  const navigation = page.getByRole('navigation', { name: 'Workspace navigation' });
+  const activeDesktopItem = page.locator('aside nav[aria-label="Workspace navigation"] button[aria-current="page"]');
+  if ((page.viewportSize()?.width ?? Number.POSITIVE_INFINITY) >= 768) {
+    const item = navigation.getByRole('button', { name });
+    await item.click();
+    await expect(activeDesktopItem).toHaveCount(1);
+    return;
+  }
+
+  const trigger = page.getByRole('button', { name: 'Open navigation' });
+  await expect(trigger).toBeVisible();
+  await trigger.click();
+  const drawer = page.getByRole('dialog', { name: 'Navigation menu' });
+  await drawer.getByRole('button', { name }).click();
+  await expect(drawer).toHaveCount(0);
+  await expect(activeDesktopItem).toHaveCount(1);
+}
+
 export async function addToCart(page: Page, productId: string) {
   const card = page.locator(`[data-testid="product-card"][data-product-id="${productId}"]`);
   await card.scrollIntoViewIfNeeded();
@@ -124,16 +143,3 @@ export async function latestPayment() {
     return rows[0] as { status: string; amount: number; payment_method: string } | undefined;
   });
 }
-
-// Opens a workspace tab from whichever navigation this viewport has: the drawer on phones, the sidebar on desktop.
-export const openWorkspaceNavigationItem = async (page: Page, name: string | RegExp) => {
-  const trigger = page.getByRole('button', { name: 'Open navigation' });
-  const sidebar = page.getByRole('navigation', { name: 'Workspace navigation' });
-  await expect(trigger.or(sidebar.first())).toBeVisible();
-  if (await trigger.isVisible()) {
-    await trigger.click();
-    await page.getByRole('dialog', { name: 'Navigation menu' }).getByRole('button', { name }).click();
-    return;
-  }
-  await sidebar.getByRole('button', { name }).click();
-};
