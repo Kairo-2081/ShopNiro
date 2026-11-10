@@ -29,7 +29,8 @@ test('keeps a readable offline notice on every role home and navigation screen',
       await context.setOffline(true);
       // Chromium does not reliably emit the offline event when the context is switched, so send it explicitly.
       await page.evaluate(() => window.dispatchEvent(new Event('offline')));
-      const notice = page.getByRole('alert').filter({ hasText: 'You are offline' });
+      // The seller analytics tab also shows its own inline "You are offline" error, so match the global banner, the one with a Retry button.
+      const notice = page.getByRole('alert').filter({ hasText: 'You are offline' }).filter({ has: page.getByRole('button', { name: 'Retry' }) });
       await expect(notice).toBeVisible();
       await expect(notice.getByRole('button', { name: 'Retry' })).toBeVisible();
 
