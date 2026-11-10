@@ -57,7 +57,7 @@ test('the landing globe stays still, ignores dragging, and only brightens its ro
 test('the floating badges never sit on top of the globe at any width', async ({ browser, baseURL }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop', 'Widths are set here, so this runs once per CI workflow.');
   test.setTimeout(90_000);
-  for (const width of [360, 768, 899, 900, 1280]) {
+  for (const width of [360, 768, 900, 1024, 1099, 1100, 1280, 1536]) {
     const context = await browser.newContext({ baseURL, storageState: guestStorageState, viewport: { width, height: 800 } });
     const page = await context.newPage();
     try {
