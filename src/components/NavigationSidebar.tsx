@@ -250,7 +250,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
 
   return (
     <>
-      <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-64 shrink-0 flex-col border-r border-[#80734f]/20 bg-[#f6f5ef] px-3 py-5 dark:border-white/10 dark:bg-[#10100f] md:flex">
+      <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-64 shrink-0 flex-col border-r border-[#80734f]/20 bg-[#f6f5ef]/85 px-3 py-5 backdrop-blur-xl dark:border-white/10 dark:bg-[#10100f]/75 md:flex">
         <div className="-mx-2 min-h-0 flex-1 overflow-y-auto overscroll-contain px-2">
           {renderNavigation()}
         </div>
