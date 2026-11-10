@@ -21,7 +21,7 @@ export const PUBLIC_API_RULES: Array<[string, RegExp]> = [
   ['POST', /^\/api\/payment\/sslcommerz\/(success|fail|cancel|ipn)$/],
   ['POST', /^\/api\/support\/requests$/],
   ['GET', /^\/api\/riders\/payroll\/settle$/],
-  ['POST', /^\/api\/cron\/(expire-orders|refunds)$/],
+  ['POST', /^\/api\/cron\/(expire-orders|refunds|reconcile-payments)$/],
 ];
 
 export function isPublicApiRoute(method: string, path: string): boolean {
