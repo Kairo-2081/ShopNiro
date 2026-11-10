@@ -150,6 +150,7 @@ export default function App() {
   const [isLoginModalOpen, setIsLoginModalOpen] = React.useState(false);
   const [loginModalInitialTab, setLoginModalInitialTab] = React.useState<'login' | 'register'>('login');
   const [loginModalInitialRole, setLoginModalInitialRole] = React.useState<'customer' | 'seller' | 'rider'>('customer');
+  const [passwordResetToken, setPasswordResetToken] = React.useState<string | null>(null);
   const [authNotice, setAuthNotice] = React.useState<string | null>(null);
   const [, setIsValidatingAuth] = React.useState<boolean>(false);
   const [paymentResult, setPaymentResult] = React.useState<{ status: PaymentResultStatus; orderId: string; order: Order | null } | null>(null);
@@ -241,6 +242,18 @@ export default function App() {
     const params = new URLSearchParams(window.location.search);
     const oauthError = params.get('oauth_error');
     const oauthSignup = params.get('oauth_signup');
+    const resetHashPrefix = '#/reset-password?';
+    const hashQueryIndex = window.location.hash.startsWith(resetHashPrefix)
+      ? window.location.hash.indexOf('?')
+      : -1;
+    const resetToken = hashQueryIndex >= 0
+      ? new URLSearchParams(window.location.hash.slice(hashQueryIndex + 1)).get('token')
+      : null;
+    if (resetToken) {
+      setPasswordResetToken(resetToken);
+      openLogin();
+      window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}`);
+    }
     if (!oauthError && !['seller', 'rider'].includes(oauthSignup || '')) return;
 
     const messages: Record<string, string> = {
@@ -1038,11 +1051,13 @@ export default function App() {
             onClose={() => {
               setIsLoginModalOpen(false);
               setAuthNotice(null);
+              setPasswordResetToken(null);
             }}
             onLoginSuccess={handleLoginSuccess}
             noticeMessage={authNotice}
             initialTab={loginModalInitialTab}
             initialRole={loginModalInitialRole}
+            initialPasswordResetToken={passwordResetToken}
           />
         )}
       </>

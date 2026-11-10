@@ -115,6 +115,13 @@ export const loginBody = z.object({
   password: z.string({ error: 'Username/Email and Password are required' }).min(1, 'Username/Email and Password are required').max(1000, 'Username/Email and Password are required'),
 });
 
+export const forgotPasswordBody = z.object({ email });
+
+export const resetPasswordBody = z.object({
+  token: z.string().min(32).max(128),
+  password: z.string().min(8, 'Password must be at least 8 characters.').max(128, 'Password must be 128 characters or fewer.'),
+});
+
 // --- payments and payouts -------------------------------------------------
 
 /** `.loose()` on purpose: the handler rejects server-controlled fields (amount, customerId, ...) by name. */
