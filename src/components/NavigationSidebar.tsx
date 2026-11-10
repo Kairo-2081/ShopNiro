@@ -250,13 +250,15 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
 
   return (
     <>
-      <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-64 shrink-0 flex-col border-r border-[#80734f]/20 bg-[#f6f5ef]/85 px-3 py-5 backdrop-blur-xl dark:border-white/10 dark:bg-[#10100f]/75 md:flex">
-        <div className="-mx-2 min-h-0 flex-1 overflow-y-auto overscroll-contain px-2">
-          {renderNavigation()}
-        </div>
-        <div className="mt-4 border-t border-[#80734f]/15 px-3 pt-4 text-xs text-surface-500 dark:border-white/10 dark:text-surface-400">
-          <p className="font-semibold text-surface-700 dark:text-surface-200">ShopNiro</p>
-          <p className="mt-1">Marketplace workspace</p>
+      <aside className="hidden min-h-[calc(100vh-4rem)] w-64 shrink-0 self-stretch border-r border-[#80734f]/20 bg-[#f6f5ef]/85 px-3 py-5 backdrop-blur-xl dark:border-white/10 dark:bg-[#10100f]/75 md:block">
+        <div className="sticky top-16 flex h-[calc(100vh-4rem)] flex-col">
+          <div className="-mx-2 min-h-0 flex-1 overflow-y-auto overscroll-contain px-2">
+            {renderNavigation()}
+          </div>
+          <div className="mt-4 border-t border-[#80734f]/15 px-3 pt-4 text-xs text-surface-500 dark:border-white/10 dark:text-surface-400">
+            <p className="font-semibold text-surface-700 dark:text-surface-200">ShopNiro</p>
+            <p className="mt-1">Marketplace workspace</p>
+          </div>
         </div>
       </aside>
 
