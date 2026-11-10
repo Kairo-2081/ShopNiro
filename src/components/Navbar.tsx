@@ -78,7 +78,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <header className="glass-header sticky top-0 z-30 border-b border-[#80734f]/20 bg-[#f6f5ef] shadow-[0_8px_24px_rgba(41,40,33,0.10)] transition-colors duration-200 dark:border-white/10 dark:bg-[#10100f] dark:shadow-[0_12px_32px_rgba(6,6,4,0.25)]">
-      <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
+      <div className="w-full px-3 sm:px-6 lg:px-8">
         <div className="flex min-h-16 flex-wrap items-center justify-between gap-2 py-2 sm:gap-3">
           <div className="order-1 flex min-w-0 items-center gap-2 md:order-none">
             <button
