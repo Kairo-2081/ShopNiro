@@ -74,6 +74,28 @@ test.describe('seller dashboard row actions', () => {
 test.describe('admin dashboard row actions', () => {
   test.use({ storageState: AUTH.admin });
 
+  test('keeps the desktop sidebar rail as tall as long dashboard content', async ({ page }) => {
+    test.skip((page.viewportSize()?.width ?? 0) < 768, 'The full-height sidebar rail is desktop-only.');
+    await blockNonLocalTraffic(page);
+    await page.goto('/');
+    await expect(page.getByText('Seller Approval Workflow')).toBeVisible();
+
+    const layout = await page.evaluate(() => {
+      const sidebar = document.querySelector('aside');
+      const main = document.querySelector('main');
+      const root = document.querySelector('#root');
+      return {
+        sidebarHeight: sidebar?.getBoundingClientRect().height ?? 0,
+        mainHeight: main?.getBoundingClientRect().height ?? 0,
+        pageHeight: root?.scrollHeight ?? 0,
+        viewportHeight: window.innerHeight,
+      };
+    });
+
+    expect(layout.pageHeight).toBeGreaterThan(layout.viewportHeight);
+    expect(layout.sidebarHeight).toBeGreaterThanOrEqual(layout.mainHeight - 1);
+  });
+
   test('keeps category row actions labeled, 40px, and clickable', async ({ page }) => {
     await blockNonLocalTraffic(page);
     await page.goto('/');
