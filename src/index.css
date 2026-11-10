@@ -589,17 +589,13 @@
     animation: ambientFloat 9s ease-in-out infinite alternate;
   }
 
-  .hero-orbit-wrap {
-    animation: ambientFloat 7s ease-in-out infinite;
-  }
-
   .floating-badge {
     position: absolute;
     top: 25%;
     padding: 0.45rem 0.7rem;
     border-radius: 9999px;
-    background: rgba(12, 20, 25, 0.82);
-    border: 1px solid rgba(208, 200, 165, 0.2);
+    background: rgba(24, 23, 16, 0.78);
+    border: 1px solid rgba(208, 200, 165, 0.3);
     color: #e7e5d6;
     font-size: 0.62rem;
     font-weight: 700;
@@ -610,14 +606,24 @@
     z-index: 2;
   }
 
+  /* Each badge is placed from the edge of the 440px globe, not from the edge of the hero, so a wider font can only push it
+     further away from the globe and never onto it. */
   .floating-badge-left {
-    left: 6%;
+    right: calc(50% + 252px);
   }
 
   .floating-badge-right {
-    right: 7%;
+    left: calc(50% + 252px);
     top: 28%;
     animation-delay: 0.8s;
+  }
+
+  /* Beside the globe there is room for these from a small laptop width up. Below that they would sit on top of the globe and
+     hide its delivery hubs, so they are left out. */
+  @media (max-width: 1099px) {
+    .floating-badge {
+      display: none;
+    }
   }
 
   .product-tilt {
@@ -704,7 +710,6 @@ html body > * {
   .animate-pulse,
   .animate-spin,
   .hero-glow,
-  .hero-orbit-wrap,
   .floating-badge,
   .brand-chip,
   .logo-float,

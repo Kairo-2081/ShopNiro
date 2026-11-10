@@ -144,7 +144,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <div className="py-1 md:py-2 relative hero-orbit-wrap">
             <div className="floating-badge floating-badge-left">Shop products</div>
             <div className="floating-badge floating-badge-right">Seller approved</div>
-            <React.Suspense fallback={<div aria-hidden="true" className="h-[284px]" />}>
+            <React.Suspense fallback={<div aria-hidden="true" className="h-[284px] md:h-[374px]" />}>
               <OrbitGlobe />
             </React.Suspense>
           </div>
