@@ -1,14 +1,16 @@
 import { Router, Response } from 'express';
 import rateLimit from 'express-rate-limit';
-import { randomBytes, randomUUID } from 'node:crypto';
+import type { PoolClient } from 'pg';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { pool, query, mapAddress } from '../db/index.ts';
 import { hashPassword, comparePassword, needsPasswordRehash } from '../db/password.ts';
 import { getUserProfileCompletion } from '../services/profileCompletion.service.ts';
+import { isPasswordResetEmailConfigured, sendPasswordResetEmail } from '../services/email.service.ts';
 import { recordCustomerPolicyConsent } from '../lib/policyConsent.ts';
 import { issueAuthCookie, issueOAuthRegistrationCookie, readOAuthRegistrationCookie, clearAuthCookie, optionalAuth, AUTH_COOKIE_NAME, AuthRequest } from '../middleware/auth.ts';
 
 import { validateBody } from '../middleware/validate.ts';
-import { emptyBody, loginBody, signupBody } from '../validation/schemas.ts';
+import { emptyBody, forgotPasswordBody, loginBody, resetPasswordBody, signupBody } from '../validation/schemas.ts';
 
 const router = Router();
 // The browser tests sign in several roles from one address; they raise this through the environment.
@@ -25,6 +27,20 @@ const signupRateLimit = rateLimit({
   limit: 8,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
+});
+const passwordRecoveryRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { error: 'Too many password recovery attempts. Please try again later.' },
+});
+const passwordResetRateLimit = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { error: 'Too many password reset attempts. Please try again later.' },
 });
 const loginFailures = new Map<string, { count: number; windowStartedAt: number; lockedUntil: number }>();
 const loginFailureWindowMs = 15 * 60 * 1000;
@@ -269,6 +285,126 @@ router.get('/oauth/registration', (req, res) => {
   const registration = readOAuthRegistrationCookie(req);
   res.setHeader('Cache-Control', 'no-store');
   return res.json({ registration });
+});
+
+router.post('/password/forgot', passwordRecoveryRateLimit, validateBody(forgotPasswordBody), async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  if (!isPasswordResetEmailConfigured()) {
+    return res.status(503).json({ error: 'Password recovery email is temporarily unavailable. Please try again later.' });
+  }
+
+  const email = String(req.body.email).trim().toLowerCase();
+  let client: PoolClient | undefined;
+  let recipient: { email: string; token: string } | null = null;
+  try {
+    client = await pool.connect();
+    await client.query('BEGIN');
+    await client.query('SELECT pg_advisory_xact_lock(hashtextextended($1, 0))', [`password-reset:${email}`]);
+    const accounts = await client.query<{ id: string; email: string }>(
+      'SELECT id, email FROM users WHERE LOWER(email) = $1 ORDER BY id LIMIT 2 FOR UPDATE',
+      [email],
+    );
+
+    // A recent live link is left alone. Without this, anyone who knows an address could keep requesting links to
+    // invalidate the one the owner just received, or to fill their inbox.
+    const recentLink = accounts.rowCount === 1
+      ? await client.query(
+        `SELECT 1 FROM password_reset_tokens
+         WHERE user_id = $1 AND used_at IS NULL AND expires_at > CURRENT_TIMESTAMP
+           AND created_at > CURRENT_TIMESTAMP - INTERVAL '60 seconds'`,
+        [accounts.rows[0].id],
+      )
+      : null;
+
+    if (accounts.rowCount === 1 && !recentLink?.rowCount) {
+      const token = randomBytes(32).toString('base64url');
+      const tokenHash = createHash('sha256').update(token).digest('hex');
+      await client.query('DELETE FROM password_reset_tokens WHERE expires_at < CURRENT_TIMESTAMP - INTERVAL \'1 day\'');
+      await client.query(
+        `INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
+         VALUES ($1, $2, CURRENT_TIMESTAMP + INTERVAL '30 minutes')
+         ON CONFLICT (user_id) DO UPDATE
+         SET token_hash = EXCLUDED.token_hash,
+             expires_at = EXCLUDED.expires_at,
+             created_at = CURRENT_TIMESTAMP,
+             used_at = NULL`,
+        [accounts.rows[0].id, tokenHash],
+      );
+      recipient = { email: accounts.rows[0].email, token };
+    }
+
+    await client.query('COMMIT');
+  } catch (error) {
+    if (client) await client.query('ROLLBACK').catch(() => {});
+    req.log.error({ err: error }, 'Could not create password recovery request:');
+    return res.status(500).json({ error: 'Could not process password recovery. Please try again later.' });
+  } finally {
+    client?.release();
+  }
+
+  if (recipient) {
+    // Not awaited: the provider call takes noticeable time, and waiting for it only when the account exists would let a
+    // caller tell registered addresses from unknown ones by how long the response takes.
+    sendPasswordResetEmail(recipient)
+      .then((sent) => {
+        if (!sent) req.log.error('Password recovery email was not sent because email delivery is not configured.');
+      })
+      .catch((error) => {
+        req.log.error({ err: error }, 'Password recovery email delivery failed:');
+      });
+  }
+
+  return res.status(202).json({
+    message: 'If an account exists for that email, password reset instructions will be sent shortly.',
+  });
+});
+
+router.post('/password/reset', passwordResetRateLimit, validateBody(resetPasswordBody), async (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  const tokenHash = createHash('sha256').update(String(req.body.token)).digest('hex');
+  const passwordHash = await hashPassword(String(req.body.password));
+  let client: PoolClient | undefined;
+
+  try {
+    client = await pool.connect();
+    await client.query('BEGIN');
+    const reset = await client.query<{ user_id: string }>(
+      `SELECT user_id FROM password_reset_tokens
+       WHERE token_hash = $1 AND used_at IS NULL AND expires_at > CURRENT_TIMESTAMP
+       FOR UPDATE`,
+      [tokenHash],
+    );
+    if (!reset.rowCount) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'This password reset link is invalid or expired. Request a new one.' });
+    }
+
+    const userId = reset.rows[0].user_id;
+    const passwordUpdate = await client.query<{ updated: boolean }>(
+      'SELECT shopniro_auth_password_update($1, $2, $3) AS updated',
+      ['user', userId, passwordHash],
+    );
+    if (!passwordUpdate.rows[0]?.updated) throw new Error('Password reset user no longer exists.');
+
+    await client.query(
+      `UPDATE password_reset_tokens SET used_at = CURRENT_TIMESTAMP
+       WHERE user_id = $1 AND token_hash = $2`,
+      [userId, tokenHash],
+    );
+    await client.query(
+      'UPDATE auth_sessions SET revoked_at = CURRENT_TIMESTAMP WHERE user_id = $1 AND revoked_at IS NULL',
+      [userId],
+    );
+    await client.query('COMMIT');
+    clearAuthCookie(res);
+    return res.json({ success: true, message: 'Your password has been changed. Please sign in with your new password.' });
+  } catch (error) {
+    if (client) await client.query('ROLLBACK').catch(() => {});
+    req.log.error({ err: error }, 'Could not reset account password:');
+    return res.status(500).json({ error: 'Could not reset your password. Please try again later.' });
+  } finally {
+    client?.release();
+  }
 });
 
 router.post('/signup', signupRateLimit, validateBody(signupBody), async (req, res) => {

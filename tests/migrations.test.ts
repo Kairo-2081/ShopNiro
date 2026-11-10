@@ -66,6 +66,7 @@ test('migration runner applies, verifies, and baselines schemas safely', {
       '0009_payment_reconciliation',
       '0010_lock_public_schema',
       '0011_customer_privacy_controls',
+      '0012_password_recovery_tokens',
     ]);
 
     await cp(path.join(migrationDirectory, '0001_baseline.sql'), path.join(baselineMigrations, '0001_baseline.sql'));
@@ -277,7 +278,7 @@ test('migration runner applies, verifies, and baselines schemas safely', {
         (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
          WHERE n.nspname = 'public' AND left(p.proname, 9) = 'shopniro_') AS shopniro_function_count
     `);
-    assert.equal(Number(schemaCounts.rows[0]?.table_count), 38);
+    assert.equal(Number(schemaCounts.rows[0]?.table_count), 39);
     assert.equal(Number(schemaCounts.rows[0]?.shopniro_function_count), 54);
 
     const recordedBeforeRerun = await freshClient.query<{ applied_at: string }>(
