@@ -21,6 +21,8 @@ ShopNiro is a multi-vendor marketplace where customers shop, pay with bKash or S
 
 Optional welcome-offer email delivery: customers can opt in to one NEW20 welcome email during registration. Configure `RESEND_API_KEY`, `SHOPNIRO_FROM_EMAIL` (a verified Resend sender), and `SHOPNIRO_PUBLIC_URL` in the server environment. Without all three values, account creation still succeeds and no email is sent.
 
+Password recovery uses the same Resend settings. When configured, customers and other account holders can request a one-time recovery link from the sign-in screen; links expire after 30 minutes and resetting a password revokes existing sessions. Recovery requests return a generic response regardless of whether an account matches the submitted email.
+
 Support requests are stored in PostgreSQL and optionally emailed through Resend. Configure `SHOPNIRO_SUPPORT_EMAIL` (default public contact: `shopnirosupport@gmail.com`) with `RESEND_API_KEY` and `SHOPNIRO_FROM_EMAIL` to receive notifications.
 
 4. Production configuration requires `JWT_SECRET` (at least 32 characters), `DATABASE_URL`, `CRON_SECRET`, `SSLCOMMERZ_STORE_ID`, `SSLCOMMERZ_STORE_PASSWORD`, `SSLCOMMERZ_IPN_TOKEN`, and `SSLCOMMERZ_IS_SANDBOX=false`. `PAYMENT_SIMULATOR=true` works only when `NODE_ENV` is explicitly `development` or `test`. Rotate any credential that has appeared in source control or git history; deleting it from current files is not sufficient. For a demo with no real money, set `PAYMENT_MODE=sandbox-demo` and `SSLCOMMERZ_IS_SANDBOX=true` with sandbox credentials; this mode never reaches the live gateway and must be removed before going live.

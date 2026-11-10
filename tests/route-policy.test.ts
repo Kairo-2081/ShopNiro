@@ -115,6 +115,8 @@ test('public API routes are exactly the reviewed list', () => {
     'POST /api/analytics/events',
     'POST /api/auth/login',
     'POST /api/auth/logout',
+    'POST /api/auth/password/forgot',
+    'POST /api/auth/password/reset',
     'POST /api/auth/signup',
     'POST /api/customers',
     'POST /api/cron/expire-orders',
@@ -182,6 +184,13 @@ test('public login requests reach the login handler without a session', async ()
 test('signup requests reach public validation without a session', async () => {
   const response = await request('POST', '/api/auth/signup', {});
   assert.equal(response.status, 400, JSON.stringify(response.body));
+});
+
+test('password recovery endpoints reach public validation without a session', async () => {
+  const forgot = await request('POST', '/api/auth/password/forgot', {});
+  const reset = await request('POST', '/api/auth/password/reset', {});
+  assert.equal(forgot.status, 400, JSON.stringify(forgot.body));
+  assert.equal(reset.status, 400, JSON.stringify(reset.body));
 });
 
 test('customer password signup requires explicit policy acceptance before database work', async () => {
