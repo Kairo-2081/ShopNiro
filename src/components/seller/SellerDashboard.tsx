@@ -1,5 +1,5 @@
 import React from 'react';
-import { Seller, Product, Order, Review, Category, ProductStatus } from '../../types';
+import { Seller, Product, Order, Review, Category, ProductStatus, SellerDashboardTab } from '../../types';
 import { api, formatCurrency, formatDate } from '../../lib/api';
 import { SellerProductModal } from './SellerProductModal';
 import { SellerProfileModal } from './SellerProfileModal';
@@ -18,8 +18,6 @@ import {
   Clock,
   XCircle,
   Truck,
-  Wallet,
-  BarChart3,
   Tag,
   X,
 } from 'lucide-react';
@@ -29,6 +27,8 @@ import { fallbackToBrandLogo } from '../../lib/branding';
 
 const compactSellerValue = (value: number) => value >= 1000 ? `${(value / 1000).toFixed(1)}k` : String(Math.round(value));
 interface SellerDashboardProps {
+  activeTab: SellerDashboardTab;
+  setActiveTab: React.Dispatch<React.SetStateAction<SellerDashboardTab>>;
   currentSeller: Seller;
   products: Product[];
   categories: Category[];
@@ -47,6 +47,8 @@ interface SellerDashboardProps {
 }
 
 export const SellerDashboard: React.FC<SellerDashboardProps> = ({
+  activeTab,
+  setActiveTab,
   currentSeller,
   products,
   categories,
@@ -63,7 +65,6 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
   profileComplete = true,
   requireIdentityDocument = false,
 }) => {
-  const [activeTab, setActiveTab] = React.useState<'products' | 'orders' | 'analytics' | 'reviews' | 'wallet' | 'promotions'>('products');
   const [isProductModalOpen, setIsProductModalOpen] = React.useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = React.useState(false);
   const [productToEdit, setProductToEdit] = React.useState<Product | null>(null);
@@ -414,81 +415,6 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
             <Star className="w-5 h-5" />
           </div>
         </div>
-      </div>
-
-      {/* Tabs Bar */}
-      <div className="flex max-w-full flex-wrap gap-2 border-b border-[#a99b72]/25 pb-2 dark:border-[#a99b72]/20">
-        <button
-          onClick={() => setActiveTab('products')}
-          className={`shrink-0 whitespace-nowrap px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
-            activeTab === 'products'
-              ? 'premium-button text-white shadow-md'
-              : 'text-surface-500 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-[#181F2A]'
-          }`}
-        >
-          <Package className="w-4 h-4" />
-          <span>Product Catalog ({sellerProducts.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('orders')}
-          className={`shrink-0 whitespace-nowrap px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
-            activeTab === 'orders'
-              ? 'premium-button text-white shadow-md'
-              : 'text-surface-500 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-[#181F2A]'
-          }`}
-        >
-          <Truck className="w-4 h-4" />
-          <span>Fulfillment Orders ({sellerOrders.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('reviews')}
-          className={`shrink-0 whitespace-nowrap px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
-            activeTab === 'reviews'
-              ? 'premium-button text-white shadow-md'
-              : 'text-surface-500 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-[#181F2A]'
-          }`}
-        >
-          <Star className="w-4 h-4" />
-          <span>Customer Reviews ({sellerReviews.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('analytics')}
-          className={`shrink-0 whitespace-nowrap px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
-            activeTab === 'analytics'
-              ? 'premium-button text-white shadow-md'
-              : 'text-surface-500 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-[#181F2A]'
-          }`}
-        >
-          <BarChart3 className="h-4 w-4" />
-          <span>Sales Analytics</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('promotions')}
-          className={`shrink-0 whitespace-nowrap px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
-            activeTab === 'promotions'
-              ? 'premium-button text-white shadow-md'
-              : 'text-surface-500 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-[#181F2A]'
-          }`}
-        >
-          <Tag className="h-4 w-4" />
-          <span>Deals &amp; Bundles</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('wallet')}
-          className={`shrink-0 whitespace-nowrap px-5 py-2.5 font-bold text-xs rounded-full transition-all flex items-center gap-2 cursor-pointer ${
-            activeTab === 'wallet'
-              ? 'premium-button text-white shadow-md'
-              : 'text-surface-500 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white hover:bg-surface-100 dark:hover:bg-[#181F2A]'
-          }`}
-        >
-          <Wallet className="w-4 h-4" />
-          <span>COD remittances</span>
-        </button>
       </div>
 
       {/* Tab Content */}

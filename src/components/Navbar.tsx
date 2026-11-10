@@ -2,55 +2,17 @@ import React from 'react';
 import { UserRole, Customer, Seller, Admin, AppTab } from '../types';
 import { shopNiroLogoSmall } from '../lib/branding';
 import {
-  ShoppingBag,
   ShoppingCart,
-  PackageCheck,
   User,
-  Store,
-  ShieldCheck,
   Sun,
   Moon,
   LogIn,
   LogOut,
   Sparkles,
-  Radio,
-  Flame,
-  Truck,
-  LifeBuoy,
   Languages,
+  Menu,
 } from 'lucide-react';
-import { useLocale, type MessageKey } from '../lib/i18n';
-
-const mobileNavItems = (isLoggedIn: boolean, role: UserRole, t: (key: MessageKey) => string) => {
-  if (isLoggedIn && role === 'customer') return [
-    { tab: 'storefront' as AppTab, label: t('shop'), icon: ShoppingBag },
-    { tab: 'charts' as AppTab, label: t('topCharts'), icon: Flame },
-    { tab: 'orders' as AppTab, label: t('orders'), icon: PackageCheck },
-    { tab: 'profile' as AppTab, label: t('profile'), icon: User },
-    { tab: 'support' as AppTab, label: t('support'), icon: LifeBuoy },
-  ];
-  if (isLoggedIn && role === 'seller') return [
-    { tab: 'seller-dashboard' as AppTab, label: 'Studio', icon: Store },
-    { tab: 'storefront' as AppTab, label: t('storefront'), icon: ShoppingBag },
-    { tab: 'support' as AppTab, label: t('support'), icon: LifeBuoy },
-  ];
-  if (isLoggedIn && role === 'admin') return [
-    { tab: 'admin-dashboard' as AppTab, label: 'Governance', icon: ShieldCheck },
-    { tab: 'storefront' as AppTab, label: t('storefront'), icon: ShoppingBag },
-    { tab: 'support' as AppTab, label: t('support'), icon: LifeBuoy },
-  ];
-  if (isLoggedIn && role === 'rider') return [
-    { tab: 'rider-dashboard' as AppTab, label: t('deliveries'), icon: Truck },
-    { tab: 'support' as AppTab, label: t('support'), icon: LifeBuoy },
-  ];
-  return [
-    { tab: 'storefront' as AppTab, label: t('browse'), icon: ShoppingBag },
-    { tab: 'charts' as AppTab, label: t('topCharts'), icon: Flame },
-    { tab: 'orders' as AppTab, label: t('orders'), icon: PackageCheck },
-    { tab: 'profile' as AppTab, label: t('account'), icon: User },
-    { tab: 'support' as AppTab, label: t('support'), icon: LifeBuoy },
-  ];
-};
+import { useLocale } from '../lib/i18n';
 
 interface NavbarProps {
   isLoggedIn: boolean;
@@ -64,6 +26,8 @@ interface NavbarProps {
   onOpenCart: () => void;
   onOpenLogin: () => void;
   onLogout: () => void;
+  onOpenNavigation: () => void;
+  isNavigationOpen: boolean;
   theme?: 'dark' | 'light';
   onToggleTheme?: () => void;
   onOpenChat?: () => void;
@@ -75,12 +39,13 @@ export const Navbar: React.FC<NavbarProps> = ({
   currentCustomer,
   currentSeller,
   admin,
-  activeTab,
   setActiveTab,
   cartCount,
   onOpenCart,
   onOpenLogin,
   onLogout,
+  onOpenNavigation,
+  isNavigationOpen,
   theme = 'dark',
   onToggleTheme,
   onOpenChat,
@@ -112,287 +77,53 @@ export const Navbar: React.FC<NavbarProps> = ({
   }, [isAccountMenuOpen]);
 
   return (
-    <header className="glass-header relative z-30 bg-[#f6f5ef] dark:bg-[#10100f] border-b border-[#80734f]/20 dark:border-white/10 shadow-[0_8px_24px_rgba(41,40,33,0.10)] dark:shadow-[0_12px_32px_rgba(6,6,4,0.25)] transition-colors duration-200">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-        <div className="flex min-h-16 flex-wrap items-center justify-between gap-2 py-2 sm:gap-3 md:flex-nowrap">
-          {/* Logo & Brand matching Landing Page */}
-          <button
-            type="button"
-            aria-label={`ShopNiro ${t('storefrontCatalog')}`}
-            onClick={() => setActiveTab('storefront')}
-            className="order-1 flex min-h-11 shrink-0 items-center gap-2 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 sm:gap-2.5 md:order-none"
-          >
-            <img
-              src={shopNiroLogoSmall}
-              alt="ShopNiro"
-              className="h-9 w-9 rounded-full object-cover border border-[#d0c8a5]/50 shadow-[0_8px_20px_rgba(169,155,114,0.24)] sm:h-10 sm:w-10"
-            />
-            <span>
+    <header className="glass-header sticky top-0 z-30 border-b border-[#80734f]/20 bg-[#f6f5ef] shadow-[0_8px_24px_rgba(41,40,33,0.10)] transition-colors duration-200 dark:border-white/10 dark:bg-[#10100f] dark:shadow-[0_12px_32px_rgba(6,6,4,0.25)]">
+      <div className="mx-auto max-w-7xl px-3 sm:px-6 lg:px-8">
+        <div className="flex min-h-16 flex-wrap items-center justify-between gap-2 py-2 sm:gap-3">
+          <div className="order-1 flex min-w-0 items-center gap-2 md:order-none">
+            <button
+              type="button"
+              onClick={onOpenNavigation}
+              aria-label={isNavigationOpen ? 'Navigation open' : 'Open navigation'}
+              aria-expanded={isNavigationOpen}
+              aria-controls="mobile-navigation-drawer"
+              aria-haspopup="dialog"
+              className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-[#80734f]/20 bg-white/70 text-surface-700 transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a99b72] dark:border-white/10 dark:bg-[#161C24] dark:text-surface-200 dark:hover:bg-[#202833] md:hidden"
+            >
+              <Menu aria-hidden="true" className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              aria-label={`ShopNiro ${t('storefrontCatalog')}`}
+              onClick={() => setActiveTab('storefront')}
+              className="flex min-h-11 shrink-0 items-center gap-2 rounded-lg text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 sm:gap-2.5"
+            >
+              <img
+                src={shopNiroLogoSmall}
+                alt="ShopNiro"
+                className="h-9 w-9 rounded-full border border-[#d0c8a5]/50 object-cover shadow-[0_8px_20px_rgba(169,155,114,0.24)] sm:h-10 sm:w-10"
+              />
               <span className="font-display text-lg font-normal leading-none text-[#0f1f1d] dark:text-white sm:text-xl">
                 ShopNiro
               </span>
-            </span>
-          </button>
-
-          {/* Navigation Links according to Active Role and Login State */}
-          <nav aria-label="Primary navigation" className="order-3 flex w-full min-w-0 max-w-full flex-nowrap items-center justify-start gap-1.5 overflow-x-auto pb-1 md:order-none md:flex-1 md:justify-center md:pb-0">
-            {/* If NOT logged in: Guest Navigation with page-level auth validation */}
-            {!isLoggedIn && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('storefront')}
-                  aria-current={activeTab === 'storefront' ? 'page' : undefined}
-                  className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                    activeTab === 'storefront'
-                      ? 'premium-button text-white shadow-[0_12px_26px_rgba(235,127,45,0.34)]'
-                      : 'text-surface-700 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white hover:bg-white/10 dark:hover:bg-[#181F2A]'
-                  }`}
-                >
-                  {t('storefrontCatalog')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('charts')}
-                  aria-current={activeTab === 'charts' ? 'page' : undefined}
-                  className={`flex shrink-0 items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                    activeTab === 'charts'
-                      ? 'premium-button text-white shadow-[0_12px_26px_rgba(235,127,45,0.34)]'
-                      : 'text-surface-700 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white hover:bg-white/10 dark:hover:bg-[#181F2A]'
-                  }`}
-                >
-                  <Flame className="w-3.5 h-3.5 text-warning-400" />
-                  {t('topCharts')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('orders')}
-                  aria-current={activeTab === 'orders' ? 'page' : undefined}
-                  className={`flex shrink-0 items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                    activeTab === 'orders'
-                      ? 'premium-button text-white shadow-[0_12px_26px_rgba(235,127,45,0.34)]'
-                      : 'text-surface-700 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white hover:bg-white/10 dark:hover:bg-[#181F2A]'
-                  }`}
-                >
-                  <PackageCheck className="w-3.5 h-3.5" />
-                  {t('myOrders')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('live-tracking')}
-                  aria-current={activeTab === 'live-tracking' ? 'page' : undefined}
-                  className={`flex shrink-0 items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                    activeTab === 'live-tracking'
-                      ? 'premium-button text-white shadow-[0_12px_26px_rgba(235,127,45,0.34)]'
-                      : 'text-surface-700 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white hover:bg-white/10 dark:hover:bg-[#181F2A]'
-                  }`}
-                >
-                  <Radio className="w-3.5 h-3.5 text-brand-400 animate-pulse" />
-                  {t('liveTracking')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('seller-dashboard')}
-                  aria-current={activeTab === 'seller-dashboard' ? 'page' : undefined}
-                  className={`flex shrink-0 items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                    activeTab === 'seller-dashboard'
-                      ? 'bg-[#77775a] text-white shadow-[0_12px_26px_rgba(86,80,57,0.3)]'
-                      : 'bg-[#f6f5ef] text-surface-700 dark:bg-[#10100f] dark:text-surface-300 hover:text-surface-900 dark:hover:text-white hover:bg-[#edece3] dark:hover:bg-[#181F2A]'
-                  }`}
-                >
-                  <Store className="w-3.5 h-3.5" />
-                  {t('sellerStudio')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('admin-dashboard')}
-                  aria-current={activeTab === 'admin-dashboard' ? 'page' : undefined}
-                  className={`flex shrink-0 items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                    activeTab === 'admin-dashboard'
-                      ? 'bg-[#522750] text-white shadow-[0_12px_26px_rgba(82,39,80,0.28)]'
-                      : 'text-surface-700 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white hover:bg-white/10 dark:hover:bg-[#181F2A]'
-                  }`}
-                >
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  {t('adminDashboard')}
-                </button>
-              </>
-            )}
-
-            {/* If Logged in as CUSTOMER */}
-            {isLoggedIn && currentRole === 'customer' && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('storefront')}
-                  aria-current={activeTab === 'storefront' ? 'page' : undefined}
-                  className={`shrink-0 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                    activeTab === 'storefront'
-                      ? 'premium-button text-white shadow-[0_12px_26px_rgba(235,127,45,0.34)]'
-                      : 'text-surface-700 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white hover:bg-white/10 dark:hover:bg-[#181F2A]'
-                  }`}
-                >
-                  {t('storefrontCatalog')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('charts')}
-                  aria-current={activeTab === 'charts' ? 'page' : undefined}
-                  className={`flex shrink-0 items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                    activeTab === 'charts'
-                      ? 'premium-button text-white shadow-[0_12px_26px_rgba(235,127,45,0.34)]'
-                      : 'text-surface-700 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white hover:bg-white/10 dark:hover:bg-[#181F2A]'
-                  }`}
-                >
-                  <Flame className="w-3.5 h-3.5 text-warning-400" />
-                  {t('topCharts')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('orders')}
-                  aria-current={activeTab === 'orders' ? 'page' : undefined}
-                  className={`flex shrink-0 items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                    activeTab === 'orders'
-                      ? 'premium-button text-white shadow-[0_12px_26px_rgba(235,127,45,0.34)]'
-                      : 'text-surface-700 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white hover:bg-white/10 dark:hover:bg-[#181F2A]'
-                  }`}
-                >
-                  <PackageCheck className="w-3.5 h-3.5" />
-                  {t('myOrders')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('live-tracking')}
-                  aria-current={activeTab === 'live-tracking' ? 'page' : undefined}
-                  className={`flex shrink-0 items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                    activeTab === 'live-tracking'
-                      ? 'premium-button text-white shadow-[0_12px_26px_rgba(235,127,45,0.34)]'
-                      : 'text-surface-700 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white hover:bg-white/10 dark:hover:bg-[#181F2A]'
-                  }`}
-                >
-                  <Radio className="w-3.5 h-3.5 text-brand-400 animate-pulse" />
-                  {t('liveTracking')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('profile')}
-                  aria-current={activeTab === 'profile' ? 'page' : undefined}
-                  className={`flex shrink-0 items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                    activeTab === 'profile'
-                      ? 'premium-button text-white shadow-[0_10px_25px_rgba(235,127,45,0.35)]'
-                      : 'text-surface-700 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white hover:bg-white/10 dark:hover:bg-[#181F2A]'
-                  }`}
-                >
-                  <User className="w-3.5 h-3.5" />
-                  My Profile
-                </button>
-              </>
-            )}
-
-            {/* If Logged in as SELLER */}
-            {isLoggedIn && currentRole === 'seller' && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('seller-dashboard')}
-                  aria-current={activeTab === 'seller-dashboard' ? 'page' : undefined}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                    activeTab === 'seller-dashboard'
-                      ? 'bg-[#77775a] text-white shadow-[0_12px_26px_rgba(86,80,57,0.3)]'
-                      : 'text-surface-700 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white hover:bg-white/10 dark:hover:bg-[#181F2A]'
-                  }`}
-                >
-                  <Store className="w-3.5 h-3.5" />
-                  {t('sellerStudio')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('storefront')}
-                  aria-current={activeTab === 'storefront' ? 'page' : undefined}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                    activeTab === 'storefront'
-                      ? 'bg-[#77775a] text-white shadow-[0_12px_26px_rgba(86,80,57,0.3)]'
-                      : 'bg-[#f6f5ef] text-surface-700 dark:bg-[#10100f] dark:text-surface-300 hover:text-surface-900 dark:hover:text-white hover:bg-[#edece3] dark:hover:bg-[#181F2A]'
-                  }`}
-                >
-                  Preview Storefront
-                </button>
-              </>
-            )}
-
-            {/* If Logged in as ADMIN */}
-            {isLoggedIn && currentRole === 'admin' && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('admin-dashboard')}
-                  aria-current={activeTab === 'admin-dashboard' ? 'page' : undefined}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                    activeTab === 'admin-dashboard'
-                      ? 'bg-[#522750] text-white shadow-[0_12px_26px_rgba(82,39,80,0.28)]'
-                      : 'text-surface-700 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white hover:bg-white/10 dark:hover:bg-[#181F2A]'
-                  }`}
-                >
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  Admin Governance
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('storefront')}
-                  aria-current={activeTab === 'storefront' ? 'page' : undefined}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                    activeTab === 'storefront'
-                      ? 'bg-[#522750] text-white shadow-[0_12px_26px_rgba(82,39,80,0.28)]'
-                      : 'text-surface-700 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white hover:bg-white/10 dark:hover:bg-[#181F2A]'
-                  }`}
-                >
-                  Public Storefront
-                </button>
-              </>
-            )}
-
-            {isLoggedIn && currentRole === 'rider' && (
-              <button
-                type="button"
-                onClick={() => setActiveTab('rider-dashboard')}
-                aria-current={activeTab === 'rider-dashboard' ? 'page' : undefined}
-                className={`flex shrink-0 items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                  activeTab === 'rider-dashboard'
-                    ? 'bg-success-700 text-white shadow-[0_12px_26px_rgba(5,100,70,0.24)]'
-                    : 'text-surface-700 dark:text-surface-300 hover:text-success-800 dark:hover:text-white hover:bg-white/10 dark:hover:bg-[#181F2A]'
-                }`}
-              >
-                <Truck className="w-3.5 h-3.5" />
-                Rider deliveries
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => setActiveTab('support')}
-              aria-current={activeTab === 'support' ? 'page' : undefined}
-              className={`flex shrink-0 items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-semibold transition-colors ${activeTab === 'support' ? 'bg-surface-900 text-white dark:bg-surface-100 dark:text-surface-900' : 'text-surface-700 hover:bg-white/60 dark:text-surface-300 dark:hover:bg-surface-800'}`}
-            >
-              <LifeBuoy className="h-3.5 w-3.5" />{t('support')}
             </button>
-          </nav>
+          </div>
 
-          {/* Right Actions */}
-          <div className="order-2 flex w-full items-center justify-center gap-2 md:order-none md:w-auto md:justify-normal">
-            {/* AI Assistant Button */}
+          <div className="order-2 flex w-full flex-wrap items-center justify-end gap-2 md:order-none md:w-auto">
             {onOpenChat && isLoggedIn && ['seller', 'admin'].includes(currentRole) && (
               <button
                 type="button"
                 onClick={onOpenChat}
                 aria-label="Ask AI: Open ShopNiro AI Assistant"
-                className="luxury-control min-h-9 items-center gap-1.5 rounded-full border border-[#8a7f4a]/40 bg-[#d0c8a5]/30 px-3 text-xs font-semibold text-[#4f4720] hover:bg-[#d0c8a5]/45 dark:border-[#d0c8a5]/25 dark:bg-[#d0c8a5]/10 dark:font-normal dark:text-[#d0c8a5] dark:hover:bg-[#d0c8a5]/15 cursor-pointer group"
+                className="luxury-control min-h-9 items-center gap-1.5 rounded-full border border-[#8a7f4a]/40 bg-[#d0c8a5]/30 px-3 text-xs font-semibold text-[#4f4720] hover:bg-[#d0c8a5]/45 dark:border-[#d0c8a5]/25 dark:bg-[#d0c8a5]/10 dark:font-normal dark:text-[#d0c8a5] dark:hover:bg-[#d0c8a5]/15"
                 title="Open ShopNiro AI Assistant"
               >
-                <Sparkles className="w-3.5 h-3.5 text-warning-700 dark:text-warning-400" />
+                <Sparkles aria-hidden="true" className="h-3.5 w-3.5 text-warning-700 dark:text-warning-400" />
                 <span className="hidden sm:inline">Ask AI</span>
               </button>
             )}
 
-            {!isLoggedIn || currentRole === 'customer' ? (
+            {(!isLoggedIn || currentRole === 'customer') && (
               <button
                 type="button"
                 onClick={() => setLocale(locale === 'en' ? 'bn' : 'en')}
@@ -400,51 +131,46 @@ export const Navbar: React.FC<NavbarProps> = ({
                 aria-label={`${t('language')}: ${locale === 'en' ? t('switchToBangla') : t('switchToEnglish')}`}
                 title="Change language"
               >
-                <Languages className="h-4 w-4" />
+                <Languages aria-hidden="true" className="h-4 w-4" />
                 <span>{t('language')}</span>
               </button>
-            ) : null}
+            )}
 
-            {/* Theme Toggle Button */}
             {onToggleTheme && (
               <button
                 type="button"
                 onClick={onToggleTheme}
-                className="luxury-control h-9 w-9 min-h-9 rounded-full bg-surface-100 dark:bg-[#161C24] text-surface-700 dark:text-surface-300 border border-surface-200 dark:border-surface-800 hover:bg-surface-200 dark:hover:bg-surface-800 cursor-pointer"
+                className="luxury-control h-11 w-11 min-h-11 rounded-full border border-surface-200 bg-surface-100 text-surface-700 hover:bg-surface-200 dark:border-surface-800 dark:bg-[#161C24] dark:text-surface-300 dark:hover:bg-surface-800"
                 aria-label={theme === 'dark' ? t('changeThemeToLight') : t('changeThemeToDark')}
                 title={theme === 'dark' ? t('changeThemeToLight') : t('changeThemeToDark')}
               >
-                {theme === 'dark' ? (
-                  <Sun className="w-4 h-4 text-warning-400" />
-                ) : (
-                  <Moon className="w-4 h-4 text-brand-600" />
-                )}
+                {theme === 'dark' ? <Sun aria-hidden="true" className="h-4 w-4 text-warning-400" /> : <Moon aria-hidden="true" className="h-4 w-4 text-brand-600" />}
               </button>
             )}
 
-            {/* Cart Button */}
             {(!isLoggedIn || currentRole === 'customer') && (
               <button
+                type="button"
                 onClick={onOpenCart}
-                className="luxury-control relative h-9 w-9 min-h-9 rounded-full bg-surface-100 dark:bg-[#161C24] border border-surface-200 dark:border-surface-800 text-surface-700 dark:text-surface-300 hover:bg-surface-200 dark:hover:bg-surface-800 cursor-pointer"
-                aria-label={cartCount > 0 ? `Shopping Cart: ${cartCount}` : "Shopping Cart"}
+                className="luxury-control relative h-11 w-11 min-h-11 rounded-full border border-surface-200 bg-surface-100 text-surface-700 hover:bg-surface-200 dark:border-surface-800 dark:bg-[#161C24] dark:text-surface-300 dark:hover:bg-surface-800"
+                aria-label={cartCount > 0 ? `Shopping Cart: ${cartCount}` : 'Shopping Cart'}
               >
-                <ShoppingCart className="w-4 h-4" />
+                <ShoppingCart aria-hidden="true" className="h-4 w-4" />
                 {cartCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-brand-600 text-white text-micro font-bold w-5 h-5 rounded-full flex items-center justify-center animate-[pulse_3s_ease-in-out_infinite] shadow-md shadow-brand-600/40">
+                  <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-micro font-bold text-white shadow-md shadow-brand-600/40">
                     {cartCount}
                   </span>
                 )}
               </button>
             )}
 
-            {/* User Session Auth Button */}
             {!isLoggedIn ? (
               <button
+                type="button"
                 onClick={onOpenLogin}
-                className="luxury-control premium-button rounded-full px-4 text-white text-xs shadow-md cursor-pointer hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] focus-visible:ring-offset-2 focus-visible:ring-offset-white/20"
+                className="luxury-control premium-button min-h-11 rounded-full px-4 text-xs text-white shadow-md hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] focus-visible:ring-offset-2 focus-visible:ring-offset-white/20"
               >
-                <LogIn className="w-3.5 h-3.5" />
+                <LogIn aria-hidden="true" className="h-3.5 w-3.5" />
                 <span>{t('signIn')}</span>
               </button>
             ) : (
@@ -458,7 +184,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   aria-controls="account-menu"
                   className="luxury-control min-h-11 gap-1.5 rounded-full border border-surface-200 bg-white px-3 text-xs font-semibold text-surface-800 hover:bg-surface-50 dark:border-surface-700 dark:bg-[#161C24] dark:text-surface-200 dark:hover:bg-surface-800"
                 >
-                  <User className="h-4 w-4" />
+                  <User aria-hidden="true" className="h-4 w-4" />
                   <span className="hidden sm:inline">Account</span>
                 </button>
                 {isAccountMenuOpen && (
@@ -470,7 +196,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       onClick={() => { setIsAccountMenuOpen(false); onLogout(); }}
                       className="mt-3 flex min-h-11 w-full items-center gap-2 rounded-lg px-3 text-left text-sm font-semibold text-danger-700 hover:bg-danger-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-danger-500 dark:text-danger-300 dark:hover:bg-danger-950/50"
                     >
-                      <LogOut className="h-4 w-4" />
+                      <LogOut aria-hidden="true" className="h-4 w-4" />
                       {t('logOut')}
                     </button>
                   </div>
@@ -480,17 +206,6 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
       </div>
-      <nav aria-label="Mobile navigation" className="glass-bar fixed inset-x-0 bottom-0 z-40 grid grid-cols-4 border-t border-[#a99b72]/25 bg-[#f6f5ef]/95 px-2 pt-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] shadow-[0_-8px_24px_rgba(41,40,33,0.12)] backdrop-blur-xl dark:border-white/10 dark:bg-[#10100f]/95 md:hidden" style={{ gridTemplateColumns: `repeat(${mobileNavItems(isLoggedIn, currentRole, t).length}, minmax(0, 1fr))` }}>
-        {mobileNavItems(isLoggedIn, currentRole, t).map(({ tab, label, icon: Icon }) => {
-          const isActive = activeTab === tab;
-          return (
-            <button key={tab} type="button" onClick={() => setActiveTab(tab)} aria-current={isActive ? 'page' : undefined} className={`flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 py-1.5 text-micro font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] ${isActive ? 'text-[#80734f] dark:text-[#d0c8a5]' : 'text-surface-500 dark:text-surface-400'}`}>
-              <Icon className="h-5 w-5" />
-              <span className="max-w-full truncate">{label}</span>
-            </button>
-          );
-        })}
-      </nav>
     </header>
   );
 };

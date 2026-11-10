@@ -13,6 +13,8 @@ import {
   SellerStatus,
   ProductStatus,
   AppTab,
+  AdminDashboardTab,
+  SellerDashboardTab,
   Rider,
 } from './types';
 import { api } from './lib/api';
@@ -21,6 +23,7 @@ import { shopNiroLogo } from './lib/branding';
 import { LandingPage } from './components/LandingPage';
 import { MarketplaceClosing, MarketplaceStat } from './components/MarketplaceClosing';
 import { Navbar } from './components/Navbar';
+import { NavigationSidebar } from './components/NavigationSidebar';
 import { RoleSwitcher } from './components/RoleSwitcher';
 import { AuthenticationGuard } from './components/AuthenticationGuard';
 import { ChatFloatingTrigger } from './components/chat/ChatFloatingTrigger';
@@ -80,6 +83,9 @@ export default function App() {
   const [profileComplete, setProfileComplete] = React.useState(true);
   const [profileMissingFields, setProfileMissingFields] = React.useState<string[]>([]);
   const [activeTab, setActiveTab] = React.useState<AppTab>('storefront');
+  const [sellerDashboardTab, setSellerDashboardTab] = React.useState<SellerDashboardTab>('products');
+  const [adminDashboardTab, setAdminDashboardTab] = React.useState<AdminDashboardTab>('overview');
+  const [isNavigationOpen, setIsNavigationOpen] = React.useState(false);
 
   // Logged-in Entities
   const [selectedCustomer, setSelectedCustomer] = React.useState<Customer | null>(null);
@@ -130,6 +136,18 @@ export default function App() {
   const [toastMessages, setToastMessages] = React.useState<AppToast[]>([]);
   const toastSequence = React.useRef(0);
   const catalogSearchSequence = React.useRef(0);
+
+  const sellerNavigationCounts = React.useMemo(() => {
+    if (!selectedSeller) return { products: 0, orders: 0, reviews: 0, promotions: 0 };
+    const sellerProducts = products.filter((product) => product.Seller_ID === selectedSeller.Seller_ID);
+    const sellerProductIds = new Set(sellerProducts.map((product) => product.Product_ID));
+    return {
+      products: sellerProducts.length,
+      orders: orders.filter((order) => order.Items.some((item) => item.Seller_ID === selectedSeller.Seller_ID)).length,
+      reviews: reviews.filter((review) => sellerProductIds.has(review.Product_ID)).length,
+      promotions: sellerProducts.filter((product) => Boolean(product.Voucher)).length,
+    };
+  }, [selectedSeller, products, orders, reviews]);
 
   const showToast = (message: string, tone: ToastTone = 'error') => {
     const id = ++toastSequence.current;
@@ -701,6 +719,7 @@ export default function App() {
   const handleLogout = () => {
     api.logout();
     setIsLoggedIn(false);
+    setIsNavigationOpen(false);
     setProfileComplete(true);
     setProfileMissingFields([]);
     setViewMode('landing');
@@ -1113,13 +1132,36 @@ export default function App() {
         }}
         onOpenLogin={openLogin}
         onLogout={handleLogout}
+        onOpenNavigation={() => setIsNavigationOpen(true)}
+        isNavigationOpen={isNavigationOpen}
         theme={theme}
         onToggleTheme={toggleTheme}
         onOpenChat={() => setIsChatOpen(true)}
       />
 
+      <div className="flex flex-1 items-stretch">
+      <NavigationSidebar
+        isLoggedIn={isLoggedIn}
+        currentRole={currentRole}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        sellerTab={sellerDashboardTab}
+        setSellerTab={setSellerDashboardTab}
+        adminTab={adminDashboardTab}
+        setAdminTab={setAdminDashboardTab}
+        isOpen={isNavigationOpen}
+        onClose={() => setIsNavigationOpen(false)}
+        sellerOrderCount={sellerNavigationCounts.orders}
+        sellerProductCount={sellerNavigationCounts.products}
+        sellerReviewCount={sellerNavigationCounts.reviews}
+        sellerPromotionCount={sellerNavigationCounts.promotions}
+        adminSellerCount={sellers.length}
+        adminCategoryCount={categories.length}
+        adminProductCount={products.length}
+      />
+      <div className="flex min-w-0 flex-1 flex-col">
       {/* Main Content Area */}
-      <main className={`flex-1 max-w-7xl w-full mx-auto px-3 pt-4 ${activeTab === 'storefront' ? 'pb-24' : 'pb-16'} app-panel animate-fade-up sm:px-6 lg:px-8 lg:pt-6`}>
+      <main className="app-panel mx-auto w-full max-w-7xl flex-1 animate-fade-up px-3 pb-24 pt-4 sm:px-6 lg:px-8 lg:pt-6">
         <React.Suspense fallback={<div className="flex min-h-[40vh] items-center justify-center text-sm text-surface-900 dark:text-surface-200">Loading marketplace...</div>}>
         {/* Authentication Notice Banner if set */}
         {isLoggedIn && !profileComplete && (
@@ -1312,6 +1354,8 @@ export default function App() {
         {activeTab === 'seller-dashboard' && (
           isLoggedIn && selectedSeller ? (
             <SellerDashboard
+              activeTab={sellerDashboardTab}
+              setActiveTab={setSellerDashboardTab}
               currentSeller={selectedSeller}
               products={products}
               categories={categories}
@@ -1345,6 +1389,8 @@ export default function App() {
         {activeTab === 'admin-dashboard' && (
           isLoggedIn && selectedAdmin ? (
             <AdminDashboard
+              activeTab={adminDashboardTab}
+              setActiveTab={setAdminDashboardTab}
               sellers={sellers}
               products={products}
               orders={orders}
@@ -1469,6 +1515,8 @@ export default function App() {
           </div>
         </div>
       </footer>
+      </div>
+      </div>
 
       <React.Suspense fallback={null}>
       {/* Product Detail Modal */}

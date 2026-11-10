@@ -5,10 +5,10 @@ import { E2E } from './seed.ts';
 import { blockNonLocalTraffic, clearCartAndOrders, openCheckout, openStorefront, seedCart } from './helpers.ts';
 
 const rolePages = [
-  { role: 'customer', home: 'My orders', pages: ['Storefront catalog', 'Top charts', 'My orders', 'Live tracking', 'My Profile', 'Support'] },
-  { role: 'seller', home: 'Seller Studio', pages: ['Preview Storefront', 'Support'] },
-  { role: 'admin', home: 'Admin Governance', pages: ['Public Storefront', 'Support'] },
-  { role: 'rider', home: 'Rider deliveries', pages: ['Support'] },
+  { role: 'customer', home: 'Shop', pages: ['Top charts', 'Orders', 'Live tracking', 'Profile', 'Support'] },
+  { role: 'seller', home: 'Product Catalog', pages: ['Fulfillment Orders', 'Sales Analytics', 'Customer Reviews', 'Deals & Bundles', 'COD remittances', 'Preview storefront', 'Support'] },
+  { role: 'admin', home: 'Governance Overview', pages: ['Marketplace Metrics', 'Merchant Approvals', 'Category Registry', 'Rider Hiring', 'Product Moderation', 'Online Payments', 'Order Cancellations', 'Support Inbox', 'Storefront', 'Support'] },
+  { role: 'rider', home: 'Deliveries', pages: ['Support'] },
 ] as const;
 
 const guestStorageState = { cookies: [], origins: [] };
@@ -24,22 +24,7 @@ const assertKeyboardReachability = async (page: import('@playwright/test').Page,
     function done() { observer.disconnect(); window.clearTimeout(quiet); window.clearTimeout(limit); resolve(); }
     observer.observe(document.body, { childList: true, subtree: true, attributes: true });
   }));
-  const expected = await page.evaluate(() => {
-    const selector = 'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])';
-    return Array.from(document.querySelectorAll<HTMLElement>(selector))
-      .filter((element) => element.tabIndex >= 0 && element.getClientRects().length > 0 && !element.closest('[inert]'))
-      .map((element, index) => {
-        element.dataset.a11yTabIndex = String(index);
-        element.dataset.a11yLabel = element.getAttribute('aria-label') || (element.innerText ?? element.textContent ?? '').trim().replace(/\s+/g, ' ') || element.title || `${element.tagName.toLowerCase()} control`;
-        const style = getComputedStyle(element);
-        element.dataset.a11yOutline = `${style.outlineStyle} ${style.outlineWidth}`;
-        element.dataset.a11yShadow = style.boxShadow;
-        return { index, label: element.dataset.a11yLabel };
-      });
-  });
-  expect(expected.length, `${label} has keyboard-accessible controls`).toBeGreaterThan(0);
-  // Blurring does not move the browser's sequential focus start point, which stays on the nav button that was just clicked.
-  // Focus a throwaway element at the very top of the page so the first Tab lands on the first control.
+  // Start without a pointer-focused navigation item so its existing focus style is not mistaken for the baseline.
   await page.evaluate(() => {
     (document.activeElement as HTMLElement | null)?.blur();
     const anchor = document.createElement('div');
@@ -48,27 +33,42 @@ const assertKeyboardReachability = async (page: import('@playwright/test').Page,
     anchor.focus();
     anchor.remove();
   });
-
+  const expected = await page.evaluate(() => {
+    const selector = 'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])';
+    return Array.from(document.querySelectorAll<HTMLElement>(selector))
+      .filter((element) => element.tabIndex >= 0 && element.getClientRects().length > 0 && !element.closest('[inert]'))
+      .map((element, index) => {
+        element.dataset.a11yTabIndex = String(index);
+        element.dataset.a11yLabel = element.getAttribute('aria-label') || (element.innerText ?? element.textContent ?? '').trim().replace(/\s+/g, ' ') || element.title || `${element.tagName.toLowerCase()} control`;
+        return { index, label: element.dataset.a11yLabel };
+      });
+  });
+  expect(expected.length, `${label} has keyboard-accessible controls`).toBeGreaterThan(0);
   const visited = new Set<number>();
-  for (let index = 0; index < expected.length; index += 1) {
+  const maxTabPresses = expected.length * 2;
+  for (let tabPress = 0; tabPress < maxTabPresses && visited.size < expected.length; tabPress += 1) {
     await page.keyboard.press('Tab');
     const focus = await page.evaluate(() => {
       const element = document.activeElement as HTMLElement | null;
       return {
         index: element?.dataset.a11yTabIndex,
+        label: element?.dataset.a11yLabel,
+        tagName: element?.tagName,
+        className: typeof element?.className === 'string' ? element.className : '',
         outline: element ? getComputedStyle(element).outlineStyle : 'none',
         outlineWidth: element ? getComputedStyle(element).outlineWidth : '0px',
         boxShadow: element ? getComputedStyle(element).boxShadow : 'none',
-        initialOutline: element?.dataset.a11yOutline,
-        initialShadow: element?.dataset.a11yShadow,
       };
     });
     if (focus.index !== undefined) visited.add(Number(focus.index));
     const hasIndicator = (
-      (focus.outline !== 'none' && focus.outlineWidth !== '0px' && `${focus.outline} ${focus.outlineWidth}` !== focus.initialOutline) ||
-      (focus.boxShadow !== 'none' && focus.boxShadow !== focus.initialShadow)
+      (focus.outline !== 'none' && focus.outlineWidth !== '0px') ||
+      focus.boxShadow !== 'none'
     );
-    expect(hasIndicator, `${label} control ${focus.index ?? 'unknown'} has a visible focus indicator`).toBe(true);
+    expect(
+      hasIndicator,
+      `${label} control ${focus.index ?? 'unknown'} (${focus.label ?? focus.tagName ?? 'no active element'}) has a visible focus indicator; outline=${focus.outline} ${focus.outlineWidth}, shadow=${focus.boxShadow}, class=${focus.className}`,
+    ).toBe(true);
   }
   const missing = expected.filter(({ index }) => !visited.has(index));
   expect(visited.size, `${label} controls missing from tab order: ${missing.map(({ index, label: control }) => `${index}: ${control}`).join('; ')}`).toBe(expected.length);
@@ -145,7 +145,7 @@ test('public and role-specific pages have no critical or serious axe violations'
     try {
       await blockNonLocalTraffic(page);
       await page.goto('/');
-      const navigation = page.getByRole('navigation', { name: 'Primary navigation' });
+      const navigation = page.getByRole('navigation', { name: 'Workspace navigation' });
       await expect(navigation.getByRole('button', { name: home })).toBeVisible();
       await scanPage(page, `${role} ${home}`);
       for (const label of pages) {
@@ -199,7 +199,7 @@ test('role pages expose every visible control to keyboard navigation', async ({ 
     try {
       await blockNonLocalTraffic(page);
       await page.goto('/');
-      const navigation = page.getByRole('navigation', { name: 'Primary navigation' });
+      const navigation = page.getByRole('navigation', { name: 'Workspace navigation' });
       await expect(navigation.getByRole('button', { name: home })).toBeVisible();
       await assertKeyboardReachability(page, `${role} home`);
 
@@ -210,6 +210,31 @@ test('role pages expose every visible control to keyboard navigation', async ({ 
     } finally {
       await context.close();
     }
+  }
+});
+
+test('mobile navigation drawer closes with Escape and returns focus to its trigger', async ({ browser, baseURL }, testInfo) => {
+  test.skip(!['phone', 'narrow'].includes(testInfo.project.name), 'The drawer interaction check runs on phone viewports.');
+  const context = await browser.newContext({ baseURL, storageState: AUTH.customer });
+  const page = await context.newPage();
+  try {
+    await blockNonLocalTraffic(page);
+    await page.goto('/');
+    const trigger = page.getByRole('button', { name: 'Open navigation' });
+    await expect(trigger).toBeVisible();
+    await trigger.click();
+    const dialog = page.getByRole('dialog', { name: 'Navigation menu' });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByRole('button', { name: 'Close navigation' })).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(dialog).toHaveCount(0);
+    await expect(trigger).toBeFocused();
+
+    await trigger.click();
+    await page.getByRole('navigation', { name: 'Workspace navigation' }).getByRole('button', { name: 'Top charts' }).click();
+    await expect(dialog).toHaveCount(0);
+  } finally {
+    await context.close();
   }
 });
 
@@ -361,7 +386,7 @@ test('product detail dialog has no critical or serious axe violations in either 
   try {
     await blockNonLocalTraffic(page);
     await page.goto('/');
-    await page.getByRole('navigation', { name: 'Primary navigation' }).getByRole('button', { name: 'My orders' }).waitFor();
+    await page.getByRole('navigation', { name: 'Workspace navigation' }).getByRole('button', { name: 'Orders' }).waitFor();
     await page.locator('[data-testid="product-card"]').first().getByRole('button', { name: /view details|details/i }).click();
     await expect(page.getByRole('dialog')).toBeVisible();
     await scanBothThemes(page, 'Product detail dialog');
