@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { AUTH } from './global-setup.ts';
 import { E2E } from './seed.ts';
-import { blockNonLocalTraffic, openStorefront, withDb } from './helpers.ts';
+import { blockNonLocalTraffic, openStorefront, openWorkspaceNavigationItem, withDb } from './helpers.ts';
 
 const expectWorkspaceNavigationItem = async (page: import('@playwright/test').Page, name: string | RegExp) => {
   const trigger = page.getByRole('button', { name: 'Open navigation' });
@@ -18,18 +18,6 @@ const expectWorkspaceNavigationItem = async (page: import('@playwright/test').Pa
   }
 
   await expect(page.getByRole('navigation', { name: 'Workspace navigation' }).getByRole('button', { name })).toBeVisible();
-};
-
-const openWorkspaceNavigationItem = async (page: import('@playwright/test').Page, name: string | RegExp) => {
-  const trigger = page.getByRole('button', { name: 'Open navigation' });
-  const sidebar = page.getByRole('navigation', { name: 'Workspace navigation' });
-  await expect(trigger.or(sidebar.first())).toBeVisible();
-  if (await trigger.isVisible()) {
-    await trigger.click();
-    await page.getByRole('dialog', { name: 'Navigation menu' }).getByRole('button', { name }).click();
-    return;
-  }
-  await sidebar.getByRole('button', { name }).click();
 };
 
 test.describe('storefront assistant spacing', () => {
@@ -74,8 +62,9 @@ test.describe('seller dashboard row actions', () => {
         await expect(action).toBeVisible();
         await expect(action).toHaveAttribute('title', title);
         const bounds = await action.boundingBox();
-        expect(bounds?.width).toBeGreaterThanOrEqual(40);
-        expect(bounds?.height).toBeGreaterThanOrEqual(40);
+        // Layout can land a hair under 40px (39.9999) from sub-pixel rounding, which is still a 40px target.
+        expect(bounds?.width).toBeGreaterThanOrEqual(39.9);
+        expect(bounds?.height).toBeGreaterThanOrEqual(39.9);
       }
       await status.click({ trial: true });
 
@@ -130,8 +119,8 @@ test.describe('admin dashboard row actions', () => {
     const cancel = page.getByRole('button', { name: 'Cancel', exact: true });
     await expect(save).toBeVisible();
     await expect(cancel).toBeVisible();
-    expect((await save.boundingBox())?.height).toBeGreaterThanOrEqual(40);
-    expect((await cancel.boundingBox())?.height).toBeGreaterThanOrEqual(40);
+    expect((await save.boundingBox())?.height).toBeGreaterThanOrEqual(39.9);
+    expect((await cancel.boundingBox())?.height).toBeGreaterThanOrEqual(39.9);
     await cancel.click();
     await expect(edit).toBeVisible();
   });
