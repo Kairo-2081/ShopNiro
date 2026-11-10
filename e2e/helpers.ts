@@ -23,6 +23,21 @@ export async function openStorefront(page: Page) {
   await expect(page.getByRole('button', { name: 'Shopping Cart' })).toBeVisible();
 }
 
+export async function selectWorkspaceNavigationItem(page: Page, name: string | RegExp) {
+  const navigation = page.getByRole('navigation', { name: 'Workspace navigation' });
+  if ((page.viewportSize()?.width ?? Number.POSITIVE_INFINITY) >= 768) {
+    await navigation.getByRole('button', { name }).click();
+    return;
+  }
+
+  const trigger = page.getByRole('button', { name: 'Open navigation' });
+  await expect(trigger).toBeVisible();
+  await trigger.click();
+  const drawer = page.getByRole('dialog', { name: 'Navigation menu' });
+  await drawer.getByRole('button', { name }).click();
+  await expect(drawer).toHaveCount(0);
+}
+
 export async function addToCart(page: Page, productId: string) {
   const card = page.locator(`[data-testid="product-card"][data-product-id="${productId}"]`);
   await card.scrollIntoViewIfNeeded();
