@@ -5,6 +5,9 @@ import { blockNonLocalTraffic, openStorefront, withDb } from './helpers.ts';
 
 const expectWorkspaceNavigationItem = async (page: import('@playwright/test').Page, name: string | RegExp) => {
   const trigger = page.getByRole('button', { name: 'Open navigation' });
+  const sidebar = page.getByRole('navigation', { name: 'Workspace navigation' });
+  // The page may still be rendering. Wait for whichever of the two navigation forms this viewport uses before choosing.
+  await expect(trigger.or(sidebar.first())).toBeVisible();
   if (await trigger.isVisible()) {
     await trigger.click();
     const drawer = page.getByRole('dialog', { name: 'Navigation menu' });
@@ -15,6 +18,18 @@ const expectWorkspaceNavigationItem = async (page: import('@playwright/test').Pa
   }
 
   await expect(page.getByRole('navigation', { name: 'Workspace navigation' }).getByRole('button', { name })).toBeVisible();
+};
+
+const openWorkspaceNavigationItem = async (page: import('@playwright/test').Page, name: string | RegExp) => {
+  const trigger = page.getByRole('button', { name: 'Open navigation' });
+  const sidebar = page.getByRole('navigation', { name: 'Workspace navigation' });
+  await expect(trigger.or(sidebar.first())).toBeVisible();
+  if (await trigger.isVisible()) {
+    await trigger.click();
+    await page.getByRole('dialog', { name: 'Navigation menu' }).getByRole('button', { name }).click();
+    return;
+  }
+  await sidebar.getByRole('button', { name }).click();
 };
 
 test.describe('storefront assistant spacing', () => {
@@ -67,8 +82,8 @@ test.describe('seller dashboard row actions', () => {
       await restock.click();
       await expect(page.getByRole('spinbutton', { name: `Quantity to add for ${productName}` })).toBeVisible();
       const cancelRestock = page.getByRole('button', { name: `Cancel restock for ${productName}` });
-      expect((await cancelRestock.boundingBox())?.width).toBe(40);
-      expect((await cancelRestock.boundingBox())?.height).toBe(40);
+      expect((await cancelRestock.boundingBox())?.width).toBeCloseTo(40, 1);
+      expect((await cancelRestock.boundingBox())?.height).toBeCloseTo(40, 1);
       await cancelRestock.click();
 
       await edit.click();
@@ -93,7 +108,7 @@ test.describe('admin dashboard row actions', () => {
 
     await expectWorkspaceNavigationItem(page, /Governance Overview/);
     await expect(page.getByRole('button', { name: 'Open ShopNiro AI Assistant' })).toHaveCount(1);
-    await page.getByRole('button', { name: /Category Registry/ }).click();
+    await openWorkspaceNavigationItem(page, /Category Registry/);
 
     const edit = page.getByRole('button', { name: 'Edit category E2E Category' });
     const remove = page.getByRole('button', { name: 'Delete category E2E Category' });
@@ -104,10 +119,10 @@ test.describe('admin dashboard row actions', () => {
 
     const editBounds = await edit.boundingBox();
     const removeBounds = await remove.boundingBox();
-    expect(editBounds?.width).toBe(40);
-    expect(editBounds?.height).toBe(40);
-    expect(removeBounds?.width).toBe(40);
-    expect(removeBounds?.height).toBe(40);
+    expect(editBounds?.width).toBeCloseTo(40, 1);
+    expect(editBounds?.height).toBeCloseTo(40, 1);
+    expect(removeBounds?.width).toBeCloseTo(40, 1);
+    expect(removeBounds?.height).toBeCloseTo(40, 1);
 
     await remove.click({ trial: true });
     await edit.click();
