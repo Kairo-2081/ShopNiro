@@ -124,3 +124,16 @@ export async function latestPayment() {
     return rows[0] as { status: string; amount: number; payment_method: string } | undefined;
   });
 }
+
+// Opens a workspace tab from whichever navigation this viewport has: the drawer on phones, the sidebar on desktop.
+export const openWorkspaceNavigationItem = async (page: Page, name: string | RegExp) => {
+  const trigger = page.getByRole('button', { name: 'Open navigation' });
+  const sidebar = page.getByRole('navigation', { name: 'Workspace navigation' });
+  await expect(trigger.or(sidebar.first())).toBeVisible();
+  if (await trigger.isVisible()) {
+    await trigger.click();
+    await page.getByRole('dialog', { name: 'Navigation menu' }).getByRole('button', { name }).click();
+    return;
+  }
+  await sidebar.getByRole('button', { name }).click();
+};
