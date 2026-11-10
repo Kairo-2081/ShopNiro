@@ -7,6 +7,7 @@ import { X, Package, Save, Sparkles, Plus, Trash2, Upload } from 'lucide-react';
 import { prepareProductImage } from '../../lib/productImage';
 import { money } from '../../lib/format';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { useLocale } from '../../lib/i18n';
 const toLocalDateTimeInput = (value?: string) => {
   if (!value) return '';
   const date = new Date(value);
@@ -82,6 +83,7 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
   currentSeller,
   onSaveProduct,
 }) => {
+  const { t } = useLocale();
   useEscapeKey(onClose, isOpen);
   const dialogRef = useFocusTrap<HTMLDivElement>(isOpen);
   const [name, setName] = React.useState('');
@@ -720,7 +722,7 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
               onClick={onClose}
               className="px-4 py-2 rounded-full text-surface-600 hover:bg-surface-100 dark:text-surface-400 dark:hover:bg-surface-800 transition-colors cursor-pointer"
             >
-              Cancel
+              {t('cancel')}
             </button>
             <button
               type="submit"
@@ -728,7 +730,7 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
               className="flex items-center gap-2 px-6 py-2.5 bg-success-600 hover:bg-success-500 disabled:opacity-50 text-white font-bold rounded-full shadow-lg shadow-success-500/30 transition-all cursor-pointer"
             >
               <Save className="w-4 h-4" />
-              <span>{isSaving ? 'Saving...' : 'Save Product'}</span>
+              <span>{isSaving ? t('saving') : productToEdit ? t('updateProduct') : t('addProduct')}</span>
             </button>
           </div>
         </form>

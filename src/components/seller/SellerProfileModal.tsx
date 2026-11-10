@@ -4,6 +4,7 @@ import { AccountLocationPicker } from '../AccountLocationPicker';
 import { FileText, MapPin, X } from 'lucide-react';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { useLocale } from '../../lib/i18n';
 
 interface SellerProfileModalProps {
   seller: Seller;
@@ -14,6 +15,7 @@ interface SellerProfileModalProps {
 }
 
 export const SellerProfileModal: React.FC<SellerProfileModalProps> = ({ seller, onClose, onSave, required = false, requireIdentityDocument = false }) => {
+  const { t } = useLocale();
   useEscapeKey(onClose, true);
   const dialogRef = useFocusTrap<HTMLElement>(true);
   const [name, setName] = React.useState(seller.Name);
@@ -153,7 +155,7 @@ export const SellerProfileModal: React.FC<SellerProfileModalProps> = ({ seller, 
 
           <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-surface-200 pt-4 dark:border-surface-800">
             <p className="text-xs text-warning-700 dark:text-warning-300">Saving any change sets your store to pending until an admin approves it.</p>
-            <button type="submit" disabled={isSaving} className="rounded-lg bg-success-700 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">{isSaving ? 'Saving...' : 'Save and request review'}</button>
+            <button type="submit" disabled={isSaving} className="rounded-lg bg-success-700 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50">{isSaving ? t('saving') : t('saveProfile')}</button>
           </footer>
         </form>
       </section>

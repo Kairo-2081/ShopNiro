@@ -24,6 +24,7 @@ import {
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { fallbackToBrandLogo } from '../../lib/branding';
+import { useLocale } from '../../lib/i18n';
 
 const compactSellerValue = (value: number) => value >= 1000 ? `${(value / 1000).toFixed(1)}k` : String(Math.round(value));
 interface SellerDashboardProps {
@@ -65,6 +66,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
   profileComplete = true,
   requireIdentityDocument = false,
 }) => {
+  const { t } = useLocale();
   const [isProductModalOpen, setIsProductModalOpen] = React.useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = React.useState(false);
   const [productToEdit, setProductToEdit] = React.useState<Product | null>(null);
@@ -331,7 +333,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
               className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-surface-300 text-surface-700 dark:border-surface-700 dark:text-surface-200 text-xs font-bold hover:bg-surface-50 dark:hover:bg-surface-800"
             >
               <Edit className="w-4 h-4" />
-              <span>Edit store details</span>
+              <span>{t('editStoreProfile')}</span>
             </button>
             {sellerProducts.length > 0 && (
               <button
@@ -348,7 +350,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                 }`}
               >
                 <Plus className="w-4 h-4" />
-                <span>Add New Product Listing</span>
+                <span>{t('addNewProduct')}</span>
               </button>
             )}
           </div>
@@ -436,7 +438,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
             <div role="alert" className="space-y-4 rounded-2xl border border-danger-300 bg-danger-50 p-6 text-center text-danger-800 dark:border-danger-900 dark:bg-danger-950/40 dark:text-danger-200">
               <h3 className="font-bold">Products could not be loaded</h3>
               <p className="text-sm">{productsLoadError}</p>
-              {onRetryProducts && <button type="button" onClick={onRetryProducts} className="min-h-11 rounded-full bg-danger-700 px-5 font-bold text-white">Retry</button>}
+              {onRetryProducts && <button type="button" onClick={onRetryProducts} className="min-h-11 rounded-full bg-danger-700 px-5 font-bold text-white">{t('retry')}</button>}
             </div>
           ) : sellerProducts.length === 0 ? (
             <div className="text-center py-16 bg-white dark:bg-[#12161D] rounded-3xl border border-brand-100 dark:border-brand-500/20 p-8 space-y-3">
