@@ -48,7 +48,11 @@ Routes are listed from `server/routes/*.ts`; prefixes come from the mounts in `s
 | GET | `/api/auth/me` | Public; returns current session when present |
 | POST | `/api/auth/login` | Public |
 | POST | `/api/auth/signup` | Public; customer signup requires `acceptedTerms: true` |
+| POST | `/api/auth/password/forgot` | Public; emails a one-time reset link when the email belongs to an account |
+| POST | `/api/auth/password/reset` | Public; consumes a valid one-time reset token and revokes existing sessions |
 | POST | `/api/auth/logout` | Public; revokes current session when present |
+
+Password recovery uses `POST /api/auth/password/forgot` with `{ "email": "customer@example.com" }` and returns the same `202` message whether or not an account matches. Configure `RESEND_API_KEY`, `SHOPNIRO_FROM_EMAIL`, and `SHOPNIRO_PUBLIC_URL` on the server to enable delivery. The emailed token is single-use, expires after 30 minutes, and is submitted to `POST /api/auth/password/reset` as `{ "token": "...", "password": "new-password" }`. A successful reset revokes the account's existing sessions.
 
 ## Bundles, cart, and categories
 
