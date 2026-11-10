@@ -1,273 +1,84 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { drawGlobe, GLOBE_FRAME } from './globe/drawGlobe';
+import { DESTINATION_HUBS, GLOBE_VIEW, HOME_HUB } from './globe/network';
+import { project } from './globe/projection';
 
 interface OrbitGlobeProps {
+  /** Called when someone asks to trace the delivery routes. */
   onGreet?: () => void;
 }
 
+const TRACE_MS = 3200;
+
+// Dhaka's position on the canvas as a share of its width and height, for the pulse ring laid over it.
+const HOME_POINT = (() => {
+  const p = project(HOME_HUB.lon, HOME_HUB.lat, GLOBE_VIEW);
+  return {
+    left: `${((GLOBE_FRAME.cx + p.x * GLOBE_FRAME.radius) / GLOBE_FRAME.width) * 100}%`,
+    top: `${((GLOBE_FRAME.cy - p.y * GLOBE_FRAME.radius) / GLOBE_FRAME.height) * 100}%`,
+  };
+})();
+
+const DESCRIPTION = `A still globe centred on South Asia with delivery routes running from ${HOME_HUB.name} to ${DESTINATION_HUBS.map((hub) => hub.name).join(', ')}.`;
+
 export const OrbitGlobe: React.FC<OrbitGlobeProps> = ({ onGreet }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [rotation, setRotation] = useState<number>(0);
-  const [isDragging, setIsDragging] = useState<boolean>(false);
-  const [dragStartX, setDragStartX] = useState<number>(0);
-  const [isWaving, setIsWaving] = useState<boolean>(false);
-  const [greetingText, setGreetingText] = useState<string | null>(null);
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(() =>
-    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  );
+  const [isTracing, setIsTracing] = useState(false);
 
-  useEffect(() => {
-    const preference = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const updatePreference = () => setPrefersReducedMotion(preference.matches);
-    preference.addEventListener('change', updatePreference);
-    return () => preference.removeEventListener('change', updatePreference);
-  }, []);
-
-  // Render planet on canvas
+  // Draw the globe. It is a still picture: it is drawn again only to call out the routes, never on a timer.
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    const ctx = canvas?.getContext('2d');
+    if (!canvas || !ctx) return;
+    // Draw in CSS pixels but back the canvas with real device pixels, so dots and lines stay sharp on dense screens.
+    // The picture can be shown up to 1.4 times its drawn size on wide screens, so back it with extra pixels to keep it sharp.
+    const pixelRatio = Math.min((window.devicePixelRatio || 1) * 1.5, 4);
+    canvas.width = Math.round(GLOBE_FRAME.width * pixelRatio);
+    canvas.height = Math.round(GLOBE_FRAME.height * pixelRatio);
+    ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+    drawGlobe(ctx, GLOBE_FRAME, { emphasis: isTracing ? 1 : 0 });
+  }, [isTracing]);
 
-    const width = canvas.width;
-    const height = canvas.height;
-    const centerX = width / 2;
-    const centerY = height / 2 + 10;
-    const radius = 86;
+  useEffect(() => {
+    if (!isTracing) return undefined;
+    const timer = window.setTimeout(() => setIsTracing(false), TRACE_MS);
+    return () => window.clearTimeout(timer);
+  }, [isTracing]);
 
-    ctx.clearRect(0, 0, width, height);
-
-    // 1. Outer Atmospheric Glow
-    const glowGradient = ctx.createRadialGradient(
-      centerX,
-      centerY,
-      radius * 0.8,
-      centerX,
-      centerY,
-      radius * 1.55
-    );
-    glowGradient.addColorStop(0, 'rgba(56, 189, 248, 0.45)');
-    glowGradient.addColorStop(0.5, 'rgba(37, 99, 235, 0.18)');
-    glowGradient.addColorStop(1, 'rgba(37, 99, 235, 0)');
-    ctx.fillStyle = glowGradient;
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, radius * 1.55, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 2. Orbital Ring with Nodes
-    ctx.save();
-    ctx.translate(centerX, centerY);
-    ctx.rotate((-22 * Math.PI) / 180);
-    ctx.beginPath();
-    ctx.ellipse(0, 0, radius * 1.45, radius * 0.48, 0, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(147, 197, 253, 0.4)';
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([4, 6]);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    // Orbiting Satellite / Package Pod
-    const orbitAngle = (rotation * Math.PI) / 90;
-    const satX = Math.cos(orbitAngle) * radius * 1.45;
-    const satY = Math.sin(orbitAngle) * radius * 0.48;
-    ctx.fillStyle = '#38BDF8';
-    ctx.beginPath();
-    ctx.arc(satX, satY, 4, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#FFFFFF';
-    ctx.beginPath();
-    ctx.arc(satX, satY, 2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-
-    // 3. Globe Base Circle with Radial Sphere Shading
-    ctx.save();
-    ctx.beginPath();
-    ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
-    ctx.clip();
-
-    // Sphere Gradient: deep navy blue to brilliant cyan/azure
-    const sphereGrad = ctx.createRadialGradient(
-      centerX - radius * 0.35,
-      centerY - radius * 0.35,
-      radius * 0.1,
-      centerX,
-      centerY,
-      radius
-    );
-    sphereGrad.addColorStop(0, '#60A5FA');
-    sphereGrad.addColorStop(0.35, '#2563EB');
-    sphereGrad.addColorStop(0.8, '#1D4ED8');
-    sphereGrad.addColorStop(1, '#0F172A');
-    ctx.fillStyle = sphereGrad;
-    ctx.fillRect(centerX - radius, centerY - radius, radius * 2, radius * 2);
-
-    // 4. Continents / Landmasses with rotation offset
-    ctx.fillStyle = 'rgba(14, 165, 233, 0.85)';
-    const radRot = (rotation * Math.PI) / 180;
-
-    // Stylized procedural islands / continents that scroll with rotation
-    const continents = [
-      { baseAngle: 0, lat: -15, r: 24 },
-      { baseAngle: 50, lat: 25, r: 20 },
-      { baseAngle: 110, lat: -10, r: 28 },
-      { baseAngle: 170, lat: 30, r: 18 },
-      { baseAngle: 230, lat: -25, r: 22 },
-      { baseAngle: 290, lat: 15, r: 26 },
-      { baseAngle: 340, lat: -5, r: 16 },
-    ];
-
-    continents.forEach((cont) => {
-      const angle = (cont.baseAngle * Math.PI) / 180 + radRot;
-      const xOffset = Math.sin(angle) * (radius * 0.85);
-      const isVisible = Math.cos(angle) > -0.2; // hemisphere check
-
-      if (isVisible) {
-        const landX = centerX + xOffset;
-        const landY = centerY + cont.lat;
-        const landR = cont.r * (Math.cos(angle) * 0.5 + 0.5);
-
-        ctx.beginPath();
-        ctx.ellipse(landX, landY, Math.max(3, landR), Math.max(2, landR * 0.65), 0.2, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(125, 211, 252, 0.4)';
-        ctx.fill();
-
-        // Inner land highlight
-        ctx.beginPath();
-        ctx.arc(landX, landY, Math.max(2, landR * 0.45), 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(224, 242, 254, 0.6)';
-        ctx.fill();
-      }
-    });
-
-    // 5. Atmosphere Crescent / Rim Lighting
-    const rimGrad = ctx.createLinearGradient(centerX - radius, centerY, centerX + radius, centerY);
-    rimGrad.addColorStop(0, 'rgba(255, 255, 255, 0.45)');
-    rimGrad.addColorStop(0.2, 'rgba(56, 189, 248, 0.2)');
-    rimGrad.addColorStop(0.85, 'transparent');
-    ctx.fillStyle = rimGrad;
-    ctx.fillRect(centerX - radius, centerY - radius, radius * 2, radius * 2);
-
-    ctx.restore();
-
-    // 6. Cute Courier Character Standing on Top of the Planet!
-    const charBaseX = centerX;
-    const charBaseY = centerY - radius + 3;
-
-    ctx.save();
-    // Body & Legs
-    ctx.fillStyle = '#1E3A8A'; // Dark navy pants
-    ctx.fillRect(charBaseX - 3.5, charBaseY - 14, 7, 14);
-
-    // Orange/Coral Delivery Jacket
-    ctx.fillStyle = '#FB923C'; // bright courier jacket
-    ctx.beginPath();
-    ctx.roundRect(charBaseX - 6, charBaseY - 26, 12, 13, 3);
-    ctx.fill();
-
-    // Delivery Backpack
-    ctx.fillStyle = '#0284C7';
-    ctx.beginPath();
-    ctx.roundRect(charBaseX + 4, charBaseY - 25, 5, 10, 2);
-    ctx.fill();
-
-    // Courier Cap / Head
-    ctx.fillStyle = '#FBBF24'; // skin tone
-    ctx.beginPath();
-    ctx.arc(charBaseX, charBaseY - 29, 4.5, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Blue Cap
-    ctx.fillStyle = '#0284C7';
-    ctx.beginPath();
-    ctx.arc(charBaseX, charBaseY - 31, 4.5, Math.PI, 0);
-    ctx.fill();
-    ctx.fillRect(charBaseX - 6, charBaseY - 31.5, 9, 2); // Cap visor
-
-    // Waving Hand
-    if (isWaving) {
-      ctx.strokeStyle = '#FBBF24';
-      ctx.lineWidth = 2.5;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(charBaseX - 5, charBaseY - 22);
-      ctx.lineTo(charBaseX - 11, charBaseY - 32);
-      ctx.stroke();
-
-      // Parcel in other hand
-      ctx.fillStyle = '#F59E0B';
-      ctx.fillRect(charBaseX + 2, charBaseY - 18, 6, 6);
-    } else {
-      ctx.strokeStyle = '#FBBF24';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(charBaseX - 5, charBaseY - 22);
-      ctx.lineTo(charBaseX - 8, charBaseY - 17);
-      ctx.stroke();
-    }
-
-    ctx.restore();
-  }, [rotation, isWaving]);
-
-  const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    setIsDragging(true);
-    setDragStartX(e.clientX);
-  };
-
-  const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    if (!isDragging) return;
-    const deltaX = e.clientX - dragStartX;
-    setRotation((prev) => (prev + deltaX * 0.8 + 360) % 360);
-    setDragStartX(e.clientX);
-  };
-
-  const handlePointerUp = () => {
-    setIsDragging(false);
-  };
-
-  const handleGlobeClick = () => {
-    setIsWaving(true);
-    setGreetingText('Hello there! 👋 Parcel en route!');
-    if (onGreet) onGreet();
-    setTimeout(() => {
-      setIsWaving(false);
-      setGreetingText(null);
-    }, 2800);
+  const traceRoutes = () => {
+    setIsTracing(true);
+    onGreet?.();
   };
 
   return (
-    <div className="relative flex h-[284px] flex-col items-center justify-center select-none py-2">
-      {/* Speech Bubble when greeted */}
-      {greetingText && (
-        <div role="status" className="absolute top-2 z-20 px-3.5 py-1.5 rounded-full bg-white dark:bg-surface-900 border border-brand-200 dark:border-brand-800 text-brand-600 dark:text-brand-300 font-semibold text-xs shadow-lg animate-bounce">
-          {greetingText}
-        </div>
-      )}
+    <div className="relative flex h-[284px] select-none md:h-[374px] flex-col items-center justify-center py-2">
+      <div className="relative w-[320px] max-w-full md:w-[440px]" style={{ aspectRatio: `${GLOBE_FRAME.width} / ${GLOBE_FRAME.height}` }}>
+        <canvas
+          ref={canvasRef}
+          aria-hidden="true"
+          width={GLOBE_FRAME.width}
+          height={GLOBE_FRAME.height}
+          className="block h-full w-full"
+        />
+        {/* A slow ping on the home hub says the network is live. It is a plain fade, and stops under reduced motion. */}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#f6efd2]/70 motion-safe:animate-ping"
+          style={{ ...HOME_POINT, animationDuration: '2.8s' }}
+        />
+      </div>
+      <p className="sr-only">{DESCRIPTION}</p>
 
-      {/* Interactive 3D Canvas */}
-      <canvas
-        ref={canvasRef}
-        aria-hidden="true"
-        width={300}
-        height={240}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerUp}
-        onPointerLeave={handlePointerUp}
-        onClick={handleGlobeClick}
-        className={`cursor-grab active:cursor-grabbing touch-none transition-transform hover:scale-102 ${prefersReducedMotion ? '' : 'animate-spin'}`}
-        style={prefersReducedMotion ? undefined : { animationDuration: '45s' }}
-        title="Drag to rotate the globe"
-      />
+      <div role="status" className="h-0">
+        {isTracing && <span className="sr-only">Delivery routes highlighted.</span>}
+      </div>
 
-      {/* Pill Badge Instruction */}
       <button
         type="button"
-        onClick={handleGlobeClick}
-        className="mt-1 inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-brand-50 dark:bg-brand-950/40 border border-brand-200/80 dark:border-brand-800/80 text-brand-700 dark:text-brand-300 text-micro font-medium tracking-wide shadow-2xs hover:bg-brand-100 dark:hover:bg-brand-900/50 transition-colors cursor-pointer"
+        onClick={traceRoutes}
+        className="mt-1 inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-brand-200/80 bg-brand-50 px-3.5 py-1 text-micro font-medium tracking-wide text-brand-700 shadow-2xs transition-colors hover:bg-brand-100 dark:border-brand-800/80 dark:bg-brand-950/40 dark:text-brand-300 dark:hover:bg-brand-900/50"
       >
-        <span>Drag to rotate. Activate to greet the courier.</span>
+        <span>Trace the delivery routes</span>
       </button>
     </div>
   );
