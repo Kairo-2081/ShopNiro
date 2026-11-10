@@ -1,16 +1,17 @@
 import React from 'react';
 import { BUSINESS } from './business';
-import { POLICIES, type Policy } from './policies';
+import { POLICIES, policyByPath, type Policy } from './policies';
 import { POLICY_TRANSLATIONS } from './policyTranslations';
 import { Languages } from 'lucide-react';
 import { useLocale } from '../../lib/i18n';
 
 interface LegalPageProps {
-  policy: Policy;
+  policy?: Policy;
 }
 
 /** Standalone, public policy page. Rendered by main.tsx for /terms, /privacy, /refunds and /delivery. */
-export const LegalPage: React.FC<LegalPageProps> = ({ policy }) => {
+export const LegalPage: React.FC<LegalPageProps> = ({ policy: propPolicy }) => {
+  const policy = propPolicy ?? (typeof window !== 'undefined' ? policyByPath(window.location.pathname) : undefined) ?? POLICIES[0];
   const { t, locale, setLocale } = useLocale();
   const localizedPolicy = locale === 'bn' ? POLICY_TRANSLATIONS[policy.id] : policy;
   const updatedAt = locale === 'bn'

@@ -1,6 +1,6 @@
 import React from 'react';
-import { POLICIES, type PolicyId } from './policies';
-import { useLocale, type MessageKey } from '../../lib/i18n';
+import { POLICY_NAV, type PolicyId } from './policyNav';
+import { useLocale } from '../../lib/i18n';
 
 interface PolicyLinksProps {
   ids?: PolicyId[];
@@ -10,13 +10,7 @@ interface PolicyLinksProps {
 /** Inline links to policy pages. They open in a new tab so a half-filled form is never lost. */
 export const PolicyLinks: React.FC<PolicyLinksProps> = ({ ids, className }) => {
   const { t, locale } = useLocale();
-  const items = POLICIES.filter((policy) => !ids || ids.includes(policy.id));
-  const titleKeys: Record<PolicyId, MessageKey> = {
-    terms: 'termsOfService',
-    privacy: 'privacyPolicy',
-    refunds: 'refundPolicy',
-    delivery: 'deliveryPolicy',
-  };
+  const items = POLICY_NAV.filter((policy) => !ids || ids.includes(policy.id));
   return (
     <>
       {items.map((policy, index) => (
@@ -28,7 +22,7 @@ export const PolicyLinks: React.FC<PolicyLinksProps> = ({ ids, className }) => {
             rel="noopener noreferrer"
             className={className ?? 'font-semibold text-brand-600 underline dark:text-brand-400'}
           >
-            {t(titleKeys[policy.id])}
+            {t(policy.titleKey)}
           </a>
         </React.Fragment>
       ))}
