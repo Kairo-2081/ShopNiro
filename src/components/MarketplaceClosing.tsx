@@ -1,5 +1,6 @@
 import React from 'react';
 import { shopNiroAnimation } from '../lib/branding';
+import { useLocale } from '../lib/i18n';
 
 export interface MarketplaceStat {
   label: string;
@@ -48,7 +49,9 @@ interface MarketplaceClosingProps {
   stats: MarketplaceStat[];
 }
 
-export const MarketplaceClosing: React.FC<MarketplaceClosingProps> = ({ stats }) => (
+export const MarketplaceClosing: React.FC<MarketplaceClosingProps> = ({ stats }) => {
+  const { t } = useLocale();
+  return (
   <section
     aria-label="ShopNiro marketplace overview"
     className="marketplace-closing flex flex-col sm:flex-row sm:items-center gap-5 sm:gap-7 rounded-2xl border border-[#d0c8a5]/25 bg-white/65 dark:bg-[#11110f]/75 px-5 py-5 sm:px-7 sm:py-6 backdrop-blur-xl"
@@ -71,7 +74,7 @@ export const MarketplaceClosing: React.FC<MarketplaceClosingProps> = ({ stats })
           ShopNiro
         </p>
         <h2 className="mt-1 text-2xl sm:text-3xl text-surface-900 dark:text-white">
-          Shop Smart. Ship Fast.
+          {t('shopSmartShipFast')}
         </h2>
       </div>
 
@@ -90,4 +93,5 @@ export const MarketplaceClosing: React.FC<MarketplaceClosingProps> = ({ stats })
       </dl>
     </div>
   </section>
-);
+  );
+};
