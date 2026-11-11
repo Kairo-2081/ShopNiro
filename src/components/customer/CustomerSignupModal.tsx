@@ -3,6 +3,7 @@ import { Customer, Address } from '../../types';
 import { AccountLocationPicker } from '../AccountLocationPicker';
 import { PolicyLinks } from '../legal/PolicyLinks';
 import { X, UserPlus, Send, Lock, Eye, EyeOff, User, Mail, Phone, MapPin } from 'lucide-react';
+import { useLocale } from '../../lib/i18n';
 
 interface CustomerSignupModalProps {
   isOpen: boolean;
@@ -17,6 +18,7 @@ export const CustomerSignupModal: React.FC<CustomerSignupModalProps> = ({
   onRegisterCustomer,
   onSuccessRegistered,
 }) => {
+  const { t } = useLocale();
   const [username, setUsername] = useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -41,15 +43,15 @@ export const CustomerSignupModal: React.FC<CustomerSignupModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || !email.trim() || !password.trim()) {
-      setError('Please provide name, email, and password.');
+      setError(t('provideNameEmailPassword'));
       return;
     }
     if (!number.trim() || !hasSelectedLocation) {
-      setError('Enter a phone number and use current location or select a point on the map.');
+      setError(t('enterPhoneAndLocation'));
       return;
     }
     if (!acceptedTerms) {
-      setError('Accept the Terms of Service and Privacy Policy to create an account.');
+      setError(t('acceptTermsToRegister'));
       return;
     }
     setError(null);
@@ -71,7 +73,7 @@ export const CustomerSignupModal: React.FC<CustomerSignupModalProps> = ({
       onSuccessRegistered(newCustomer);
       onClose();
     } catch (err: any) {
-      setError(err.message || 'Failed to create customer account.');
+      setError(err.message || t('createCustomerAccountFailed'));
     } finally {
       setIsSubmitting(false);
     }
@@ -87,13 +89,14 @@ export const CustomerSignupModal: React.FC<CustomerSignupModalProps> = ({
               <UserPlus className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-surface-900 dark:text-white">Customer Registration</h3>
-              <p className="text-xs text-surface-500 dark:text-surface-400">Join ShopNiro marketplace &amp; track orders live</p>
+              <h3 className="text-base font-bold text-surface-900 dark:text-white">{t('customerRegistration')}</h3>
+              <p className="text-xs text-surface-500 dark:text-surface-400">{t('joinMarketplace')}</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
+            aria-label={t('close')}
             className="p-2 rounded-full text-surface-400 hover:text-surface-700 dark:hover:text-surface-200 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
@@ -110,12 +113,12 @@ export const CustomerSignupModal: React.FC<CustomerSignupModalProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">Username *</label>
+              <label className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">{t('username')} *</label>
               <div className="relative">
                 <input
                   type="text"
                   required
-                  placeholder="e.g. marcus_v"
+                  placeholder={t('usernamePlaceholder')}
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="w-full p-2.5 pl-8 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500 focus:ring-2 focus:ring-brand-500 focus:outline-none"
@@ -125,11 +128,11 @@ export const CustomerSignupModal: React.FC<CustomerSignupModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">Full Name *</label>
+              <label className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">{t('fullName')} *</label>
               <input
                 type="text"
                 required
-                placeholder="e.g. Marcus Vance"
+                placeholder={t('fullNamePlaceholder')}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="w-full p-2.5 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500 focus:ring-2 focus:ring-brand-500 focus:outline-none"
@@ -139,12 +142,12 @@ export const CustomerSignupModal: React.FC<CustomerSignupModalProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">Email Address *</label>
+              <label className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">{t('emailAddress')} *</label>
               <div className="relative">
                 <input
                   type="email"
                   required
-                  placeholder="e.g. marcus@example.com"
+                  placeholder={t('emailPlaceholder')}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full p-2.5 pl-8 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500 focus:ring-2 focus:ring-brand-500 focus:outline-none"
@@ -154,12 +157,12 @@ export const CustomerSignupModal: React.FC<CustomerSignupModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">Password *</label>
+              <label className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">{t('passwordLabel')} *</label>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
                   required
-                  placeholder="Set account password"
+                  placeholder={t('setAccountPassword')}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full p-2.5 pl-8 pr-9 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500 focus:ring-2 focus:ring-brand-500 focus:outline-none"
@@ -168,6 +171,7 @@ export const CustomerSignupModal: React.FC<CustomerSignupModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? t('hidePassword') : t('showPassword')}
                   className="absolute right-2.5 top-3 text-surface-400 hover:text-surface-600 dark:hover:text-surface-300"
                 >
                   {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
@@ -177,12 +181,12 @@ export const CustomerSignupModal: React.FC<CustomerSignupModalProps> = ({
           </div>
 
           <div>
-              <label className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">Phone Number *</label>
+              <label className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">{t('phoneNumber')} *</label>
             <div className="relative">
               <input
                 type="tel"
                 required
-                placeholder="+880 1XXX-XXXXXX"
+                placeholder={t('phoneNumberPlaceholder')}
                 value={number}
                 onChange={(e) => setNumber(e.target.value)}
                 className="w-full p-2.5 pl-8 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500 focus:ring-2 focus:ring-brand-500 focus:outline-none"
@@ -193,10 +197,10 @@ export const CustomerSignupModal: React.FC<CustomerSignupModalProps> = ({
 
           <div className="pt-2 border-t border-surface-100 dark:border-surface-800">
             <h4 className="font-semibold text-surface-900 dark:text-white mb-2 flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-brand-500" /> Shipping &amp; Delivery Address
+              <MapPin className="w-3.5 h-3.5 text-brand-500" /> {t('shippingDeliveryAddress')}
             </h4>
             <div className="mb-3">
-              <label className="block text-surface-600 dark:text-surface-400 mb-1">Location *</label>
+              <label className="block text-surface-600 dark:text-surface-400 mb-1">{t('location')} *</label>
               <AccountLocationPicker
                 onAddressSelected={(selectedAddress) => {
                   setHasSelectedLocation(Boolean(selectedAddress));
@@ -208,42 +212,42 @@ export const CustomerSignupModal: React.FC<CustomerSignupModalProps> = ({
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-surface-600 dark:text-surface-400 mb-1">House / Apt / Suite</label>
+                <label className="block text-surface-600 dark:text-surface-400 mb-1">{t('houseAptSuite')}</label>
                 <input
                   type="text"
-                  placeholder="e.g. Apt 4B"
+                  placeholder={t('apartmentPlaceholder')}
                   value={address.House_Name}
                   onChange={(e) => setAddress({ ...address, House_Name: e.target.value })}
                   className="w-full p-2 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl text-surface-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none"
                 />
               </div>
               <div>
-                  <label className="block text-surface-600 dark:text-surface-400 mb-1">Street Address *</label>
+                  <label className="block text-surface-600 dark:text-surface-400 mb-1">{t('streetAddress')} *</label>
                 <input
                   type="text"
                     required
-                  placeholder="e.g. 742 Evergreen Terrace"
+                  placeholder={t('streetExample')}
                   value={address.Street}
                   onChange={(e) => setAddress({ ...address, Street: e.target.value })}
                   className="w-full p-2 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl text-surface-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none"
                 />
               </div>
               <div>
-                  <label className="block text-surface-600 dark:text-surface-400 mb-1">City *</label>
+                  <label className="block text-surface-600 dark:text-surface-400 mb-1">{t('city')} *</label>
                 <input
                   type="text"
                     required
-                  placeholder="e.g. Springfield"
+                  placeholder={t('cityExample')}
                   value={address.City}
                   onChange={(e) => setAddress({ ...address, City: e.target.value })}
                   className="w-full p-2 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl text-surface-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none"
                 />
               </div>
               <div>
-                <label className="block text-surface-600 dark:text-surface-400 mb-1">Postal Code</label>
+                <label className="block text-surface-600 dark:text-surface-400 mb-1">{t('postalCodeLabel')}</label>
                 <input
                   type="text"
-                  placeholder="e.g. 97477"
+                  placeholder="e.g. 1207"
                   value={address.Postal_Code}
                   onChange={(e) => setAddress({ ...address, Postal_Code: e.target.value })}
                   className="w-full p-2 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl text-surface-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none"
@@ -254,7 +258,7 @@ export const CustomerSignupModal: React.FC<CustomerSignupModalProps> = ({
 
           <label className="flex items-start gap-2 border-t border-surface-100 pt-3 text-micro text-surface-600 dark:border-surface-800 dark:text-surface-300">
             <input type="checkbox" checked={marketingConsent} onChange={(event) => setMarketingConsent(event.target.checked)} className="mt-0.5" />
-            <span>Email me the one-time NEW20 welcome offer for eligible apparel. This is optional.</span>
+            <span>{t('marketingOptIn')}</span>
           </label>
 
           <label className="flex items-start gap-2 text-micro text-surface-600 dark:text-surface-300">
@@ -265,7 +269,7 @@ export const CustomerSignupModal: React.FC<CustomerSignupModalProps> = ({
               className="mt-0.5"
               required
             />
-            <span>I am 18 or older and agree to the <PolicyLinks ids={['terms', 'privacy']} />.</span>
+            <span>{t('ageAndTermsConsent')} <PolicyLinks ids={['terms', 'privacy']} />.</span>
           </label>
 
           <div className="pt-3 flex items-center justify-end gap-3">
@@ -274,7 +278,7 @@ export const CustomerSignupModal: React.FC<CustomerSignupModalProps> = ({
               onClick={onClose}
               className="px-4 py-2 text-surface-600 hover:bg-surface-100 dark:text-surface-400 dark:hover:bg-surface-800 rounded-full transition-colors cursor-pointer"
             >
-              Cancel
+              {t('cancel')}
             </button>
             <button
               type="submit"
@@ -282,7 +286,7 @@ export const CustomerSignupModal: React.FC<CustomerSignupModalProps> = ({
               className="flex items-center gap-2 px-6 py-2.5 bg-brand-600 hover:bg-brand-500 text-white font-bold rounded-full shadow-lg shadow-brand-500/30 disabled:opacity-50 transition-all cursor-pointer"
             >
               <Send className="w-4 h-4" />
-              <span>{isSubmitting ? 'Registering...' : 'Create Account'}</span>
+              <span>{isSubmitting ? t('registering') : t('createAccount')}</span>
             </button>
           </div>
         </form>
