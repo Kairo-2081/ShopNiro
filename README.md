@@ -97,3 +97,53 @@ flowchart LR
 - **Private seller documents.** Seller verification files use a private Supabase Storage bucket and signed access, rather than public URLs. Keep the service-role key on the server.
 - **External scheduled work.** GitHub Actions and Vercel call protected cron endpoints instead of relying on a web process staying alive. Hosted schedules can be delayed; use a host-provided scheduler if a job needs tighter timing.
 - **Provisional privacy handling.** Customers can export their account data and request deletion, but some order, payment, and consent records may be retained. Automated retention cleanup is disabled pending legal and accounting review; see [docs/legal-review.md](./docs/legal-review.md).
+
+## Getting started
+
+### Prerequisites
+
+- Node.js 22 (the version used in CI)
+- PostgreSQL 16 and a database reserved for local development
+
+### Install and configure
+
+```sh
+git clone https://github.com/Kairo-2081/ShopNiro.git
+cd ShopNiro
+npm ci
+cp .env.example .env
+```
+
+In PowerShell, copy the example with `Copy-Item .env.example .env`. Edit `.env` and set `NODE_ENV=development`, `DATABASE_URL` to your local database, and a unique `JWT_SECRET` of at least 32 characters. Generate a secret with:
+
+```sh
+node -e "console.log(require('node:crypto').randomBytes(64).toString('hex'))"
+```
+
+Never commit `.env` or use development credentials in production. For a new development database, apply the migrations and start the app:
+
+```sh
+npm run migrate
+npm run dev
+```
+
+The development server starts at `http://localhost:3000` by default. To seed a fresh development database, set `SEED_ON_START=true` and provide unique `SHOPNIRO_SEED_ADMIN_PASSWORD`, `SHOPNIRO_SEED_SELLER_PASSWORD`, and `SHOPNIRO_SEED_CUSTOMER_PASSWORD` values (at least 16 characters each). Seeding is disabled by default and must never be enabled in production.
+
+### Environment variables
+
+| Variable(s) | When needed | Purpose |
+| --- | --- | --- |
+| `NODE_ENV` | Always | Set explicitly to `development`, `test`, or `production`. |
+| `DATABASE_URL` | Always | PostgreSQL connection for the API. |
+| `JWT_SECRET` | Always | Signs session tokens; minimum 32 characters. |
+| `CRON_SECRET` | Production and scheduled jobs | Authorizes protected scheduler requests. |
+| `SSLCOMMERZ_STORE_ID`, `SSLCOMMERZ_STORE_PASSWORD`, `SSLCOMMERZ_IPN_TOKEN` | Production online payments | Gateway credentials and callback verification. |
+| `SSLCOMMERZ_IS_SANDBOX` | Production online payments | Must be `false` when using live credentials. |
+| `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Seller documents or product-image uploads | Server-side storage access; never expose the service-role key to the browser. |
+| `GROQ_API_KEY` | AI features | Enables the AI assistant and AI-assisted tools. |
+| `RESEND_API_KEY`, `SHOPNIRO_FROM_EMAIL`, `SHOPNIRO_PUBLIC_URL` | Email delivery | Enables welcome and password-recovery emails; configure a verified sender. |
+| `SHOPNIRO_SUPPORT_EMAIL` | Optional | Support-request notification recipient. |
+| `VITE_API_URL` | Separate frontend hosting | API origin used by the browser build. |
+| `ONLINE_PAYMENTS_ENABLED` | Optional | Set to `false` to disable new online payment sessions while keeping COD available. |
+
+This table highlights common settings, not the full configuration. See the [complete environment and deployment guide](./README-DEPLOY.md) and [`.env.example`](./.env.example). For local payment testing only, the simulator is restricted to `development` and `test`; do not use it to process real payments.
