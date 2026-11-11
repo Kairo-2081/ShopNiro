@@ -147,3 +147,64 @@ The development server starts at `http://localhost:3000` by default. To seed a f
 | `ONLINE_PAYMENTS_ENABLED` | Optional | Set to `false` to disable new online payment sessions while keeping COD available. |
 
 This table highlights common settings, not the full configuration. See the [complete environment and deployment guide](./README-DEPLOY.md) and [`.env.example`](./.env.example). For local payment testing only, the simulator is restricted to `development` and `test`; do not use it to process real payments.
+
+## Testing
+
+Use an isolated, disposable PostgreSQL database for tests. Apply migrations before running the suite, and never point tests at production or shared customer data.
+
+```sh
+npm run migrate
+npm test
+npm run lint
+npm run build
+npm run e2e
+npm run test:a11y -- --project=desktop
+```
+
+CI creates a temporary PostgreSQL 16 database and runs validation, browser, and accessibility checks. The browser suite uses the built-in payment simulator; it does not use a real payment gateway. Payment latency and idempotency benchmarks are available with `npm run bench:payments`; see [docs/benchmarks.md](./docs/benchmarks.md).
+
+## Scheduled jobs
+
+- GitHub Actions calls `/api/cron/expire-orders` and `/api/cron/refunds` every five minutes.
+- A separate nightly GitHub Actions workflow calls `/api/cron/reconcile-payments`.
+- Vercel calls `/api/riders/payroll/settle` daily.
+
+Configure the GitHub Actions repository secrets `APP_URL` (the API origin) and `CRON_SECRET`; the API checks the same cron secret. Scheduler runs may be delayed, so use a host-provided scheduler if tighter timing is required.
+
+## Documentation
+
+- [API routes](./docs/api.md)
+- [Database design](./docs/database-design.md) and [ER diagram](./docs/erd.md)
+- [Operational flows](./docs/flows.md)
+- [Seller and rider payouts](./docs/payouts.md)
+- [Deployment guide](./README-DEPLOY.md)
+- [Legal review and retention checklist](./docs/legal-review.md)
+- [Runbooks](./docs/runbooks/README.md)
+
+## Project structure
+
+```text
+src/                  React frontend
+server/               Express API, middleware, and route handlers
+db/migrations/        Numbered PostgreSQL migrations
+docs/                 API, architecture, policies, and operational guides
+e2e/                  Playwright browser tests
+tests/                Unit, integration, and route-policy tests
+android/              Capacitor Android project
+electron/             Desktop application wrapper
+scripts/              Migrations, checks, and maintenance utilities
+```
+
+## Roadmap
+
+- Complete Bangladesh counsel/accountant review of policy copy, business disclosures, and retention decisions.
+- Confirm production operations and scheduled-job monitoring for the intended deployment.
+- Continue expanding automated coverage for marketplace flows and supported device sizes.
+
+## Author
+
+Built by [Kairo-2081](https://github.com/Kairo-2081).
+
+## License
+
+MIT. See [LICENSE](./LICENSE).
