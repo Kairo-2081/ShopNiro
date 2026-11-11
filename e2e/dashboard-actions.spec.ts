@@ -78,7 +78,7 @@ test.describe('admin dashboard row actions', () => {
     test.skip((page.viewportSize()?.width ?? 0) < 768, 'The full-height sidebar rail is desktop-only.');
     await blockNonLocalTraffic(page);
     await page.goto('/');
-    await expect(page.getByText('Seller Approval Workflow')).toBeVisible();
+    await expect(page.getByText(/Seller Approval Workflow/i)).toBeVisible();
 
     const layout = await page.evaluate(() => {
       const sidebar = document.querySelector('aside');

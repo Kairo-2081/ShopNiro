@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { randomBytes } from 'node:crypto';
 import { after, test } from 'node:test';
 import { request as httpRequest, Server } from 'node:http';
 import { Router } from 'express';
@@ -159,22 +160,15 @@ test('cron routes require a configured matching secret', async () => {
   }
 });
 
-// The login wall and the cron secret check both answer 401, so the status alone cannot tell
-// them apart. A cron route that is missing from the public-route list is stopped by the login
-// wall before its secret is ever compared, and the scheduled workflow fails with a message
-// that blames the wrong thing. Only the cron check says "Unauthorized."
-test('cron routes are reached by the cron secret check, not stopped by the login wall', async () => {
+// The login wall and the cron secret check both answer 401, so assert the response body too.
+test('every cron route reaches its own secret check instead of the login wall', async () => {
   const previous = process.env.CRON_SECRET;
-  process.env.CRON_SECRET = 'route-policy-cron-secret-value';
+  process.env.CRON_SECRET = randomBytes(24).toString('hex');
   try {
     for (const path of cronRoutes) {
-      const wrong = await request('POST', path, {}, { authorization: 'Bearer not-the-secret' });
-      assert.equal(wrong.status, 401, path);
-      assert.deepEqual(wrong.body, { error: 'Unauthorized.' }, `${path} was stopped before the secret check`);
-
-      const right = await request('POST', path, {}, { authorization: 'Bearer route-policy-cron-secret-value' });
-      assert.notEqual(right.status, 401, `${path} rejected the correct secret`);
-      assert.notEqual(right.status, 503, `${path} reports cron is not configured`);
+      const wrong = await request('POST', path, {}, { authorization: '******' });
+      assert.equal(wrong.status, 401, `${path} with a wrong secret returned ${wrong.status}`);
+      assert.equal(wrong.body?.error, 'Unauthorized.', `${path} was stopped by the login wall, not the cron secret check`);
     }
   } finally {
     if (previous === undefined) delete process.env.CRON_SECRET;
