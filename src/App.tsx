@@ -370,6 +370,10 @@ export default function App() {
     setOrdersLoadError(null);
     try {
       const storefrontFailures: string[] = [];
+      // The sign-in check does not depend on the public data, so start it with the public requests instead of after them.
+      // On a slow connection that removes one whole round trip from the first load. It never rejects (a failed check
+      // resolves as signed out), so it is safe to leave unawaited until the storefront data is in.
+      const authRequest = api.validateAuth();
       // Public storefront data (categories, products, reviews, approved sellers)
       const [cats, sels, productPage, revs] = await Promise.all([
         api.getCategories().catch((err) => {
@@ -405,7 +409,7 @@ export default function App() {
       if (revs && revs.length > 0) setReviews(revs);
 
       // Verify authentication before attempting to query protected user endpoints
-      const auth = await api.validateAuth();
+      const auth = await authRequest;
       if (auth.authenticated && auth.role && auth.entity) {
         setIsLoggedIn(true);
         setCurrentRole(auth.role);
