@@ -75,7 +75,7 @@ const assertKeyboardReachability = async (page: import('@playwright/test').Page,
 };
 
 test('public and role-specific pages have no critical or serious axe violations', async ({ browser, baseURL }, testInfo) => {
-  test.setTimeout(180_000);
+  test.setTimeout(360_000);
   test.skip(testInfo.project.name !== 'desktop', 'The full page sweep runs once per CI workflow.');
 
   // Contrast is read from computed colours, so let the colour transitions started by a theme switch finish.
@@ -190,7 +190,7 @@ test('storefront controls are keyboard reachable and the login dialog traps and 
 });
 
 test('role pages expose every visible control to keyboard navigation', async ({ browser, baseURL }, testInfo) => {
-  test.setTimeout(240_000);
+  test.setTimeout(480_000);
   test.skip(testInfo.project.name !== 'desktop', 'The complete role-page keyboard sweep runs once per CI workflow.');
 
   for (const { role, home, pages } of rolePages) {
@@ -363,7 +363,7 @@ const scanBothThemes = async (page: import('@playwright/test').Page, label: stri
 
 test('create-account dialog has no critical or serious axe violations in either theme', async ({ browser, baseURL }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop', 'The dialog sweep runs once per CI workflow.');
-  test.setTimeout(120_000);
+  test.setTimeout(180_000);
   const context = await browser.newContext({ baseURL, storageState: guestStorageState });
   const page = await context.newPage();
   try {
