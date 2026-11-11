@@ -120,6 +120,7 @@ test('public API routes are exactly the reviewed list', () => {
     'POST /api/auth/signup',
     'POST /api/customers',
     'POST /api/cron/expire-orders',
+    'POST /api/cron/reconcile-payments',
     'POST /api/cron/refunds',
     'POST /api/payment/simulator/complete',
     'POST /api/payment/sslcommerz/cancel',
@@ -149,10 +150,35 @@ test('readiness endpoint is registered before API authentication middleware', ()
   assert.ok(readinessIndex < authPolicyIndex, 'readiness route should bypass API authentication middleware');
 });
 
+const cronRoutes = ['/api/cron/expire-orders', '/api/cron/refunds', '/api/cron/reconcile-payments'];
+
 test('cron routes require a configured matching secret', async () => {
-  for (const path of ['/api/cron/expire-orders', '/api/cron/refunds']) {
+  for (const path of cronRoutes) {
     const response = await request('POST', path);
     assert.ok([401, 503].includes(response.status), `${path} returned ${response.status}`);
+  }
+});
+
+// The login wall and the cron secret check both answer 401, so the status alone cannot tell
+// them apart. A cron route that is missing from the public-route list is stopped by the login
+// wall before its secret is ever compared, and the scheduled workflow fails with a message
+// that blames the wrong thing. Only the cron check says "Unauthorized."
+test('cron routes are reached by the cron secret check, not stopped by the login wall', async () => {
+  const previous = process.env.CRON_SECRET;
+  process.env.CRON_SECRET = 'route-policy-cron-secret-value';
+  try {
+    for (const path of cronRoutes) {
+      const wrong = await request('POST', path, {}, { authorization: 'Bearer not-the-secret' });
+      assert.equal(wrong.status, 401, path);
+      assert.deepEqual(wrong.body, { error: 'Unauthorized.' }, `${path} was stopped before the secret check`);
+
+      const right = await request('POST', path, {}, { authorization: 'Bearer route-policy-cron-secret-value' });
+      assert.notEqual(right.status, 401, `${path} rejected the correct secret`);
+      assert.notEqual(right.status, 503, `${path} reports cron is not configured`);
+    }
+  } finally {
+    if (previous === undefined) delete process.env.CRON_SECRET;
+    else process.env.CRON_SECRET = previous;
   }
 });
 
