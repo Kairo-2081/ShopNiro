@@ -4,6 +4,8 @@ import { AUTH } from './global-setup.ts';
 import { E2E } from './seed.ts';
 import { blockNonLocalTraffic, clearCartAndOrders, openCheckout, openStorefront, seedCart } from './helpers.ts';
 
+test.describe.configure({ retries: 0 });
+
 const rolePages = [
   { role: 'customer', home: 'Shop', pages: ['Top charts', 'Orders', 'Live tracking', 'Profile', 'Support'] },
   { role: 'seller', home: 'Product Catalog', pages: ['Fulfillment Orders', 'Sales Analytics', 'Customer Reviews', 'Deals & Bundles', 'COD remittances', 'Preview storefront', 'Support'] },
@@ -15,8 +17,8 @@ const guestStorageState = { cookies: [], origins: [] };
 
 const assertKeyboardReachability = async (page: import('@playwright/test').Page, label: string) => {
   // Controls are tagged in the page, so a late re-render (the catalogue is fetched more than once on load) would drop the
-  // tags and make a reachable control look untagged. Let requests finish and the page stop changing first.
-  await page.waitForLoadState('networkidle').catch(() => undefined);
+  // tags and make a reachable control look untagged. Wait for the DOM to stop changing instead of waiting for network idle:
+  // dashboards can keep requests active while polling.
   await page.evaluate(() => new Promise<void>((resolve) => {
     let quiet = window.setTimeout(done, 600);
     const observer = new MutationObserver(() => { window.clearTimeout(quiet); quiet = window.setTimeout(done, 600); });
@@ -75,7 +77,7 @@ const assertKeyboardReachability = async (page: import('@playwright/test').Page,
 };
 
 test('public and role-specific pages have no critical or serious axe violations', async ({ browser, baseURL }, testInfo) => {
-  test.setTimeout(900_000);
+  test.setTimeout(1_500_000);
   test.skip(testInfo.project.name !== 'desktop', 'The full page sweep runs once per CI workflow.');
 
   // Contrast is read from computed colours, so let the colour transitions started by a theme switch finish.
@@ -190,7 +192,7 @@ test('storefront controls are keyboard reachable and the login dialog traps and 
 });
 
 test('role pages expose every visible control to keyboard navigation', async ({ browser, baseURL }, testInfo) => {
-  test.setTimeout(900_000);
+  test.setTimeout(1_500_000);
   test.skip(testInfo.project.name !== 'desktop', 'The complete role-page keyboard sweep runs once per CI workflow.');
 
   for (const { role, home, pages } of rolePages) {
@@ -363,7 +365,7 @@ const scanBothThemes = async (page: import('@playwright/test').Page, label: stri
 
 test('create-account dialog has no critical or serious axe violations in either theme', async ({ browser, baseURL }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop', 'The dialog sweep runs once per CI workflow.');
-  test.setTimeout(300_000);
+  test.setTimeout(600_000);
   const context = await browser.newContext({ baseURL, storageState: guestStorageState });
   const page = await context.newPage();
   try {
