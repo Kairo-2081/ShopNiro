@@ -4,6 +4,7 @@ import { CircleMarker, MapContainer, Polyline, Popup, TileLayer, Tooltip, useMap
 import { Address, Order, Seller } from '../../types';
 import { formatCurrency } from '../../lib/api';
 import { Truck, MapPin, Radio, CheckCircle2, ShieldCheck, RefreshCw, Phone, X, Navigation } from 'lucide-react';
+import { useLocale } from '../../lib/i18n';
 import 'leaflet/dist/leaflet.css';
 
 interface TrackingCoordinates {
@@ -135,6 +136,7 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
   onClose,
   isModal = false,
 }) => {
+  const { t } = useLocale();
   const trackableOrders = Array.from(
     new globalThis.Map<string, Order>(
       [...orders, ...(initialOrder ? [initialOrder] : [])]
@@ -320,8 +322,8 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
     return (
       <div className="rounded-2xl border border-surface-200 dark:border-surface-800 bg-white dark:bg-[#12161D] p-6 text-center space-y-2">
         <Truck className="w-8 h-8 text-surface-400 mx-auto" />
-        <h3 className="font-bold text-surface-900 dark:text-white">Tracking starts when your order ships</h3>
-        <p className="text-xs text-surface-500 dark:text-surface-400">Your vendor will mark the order as shipped before its live route appears here.</p>
+        <h3 className="font-bold text-surface-900 dark:text-white">{t('trackingStartsWhenShips')}</h3>
+        <p className="text-xs text-surface-500 dark:text-surface-400">{t('vendorMarkShippedNotice')}</p>
       </div>
     );
   }
@@ -337,15 +339,15 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-black tracking-tight text-surface-900 dark:text-white">
-                OpenStreetMap Delivery Tracking
+                {t('osmDeliveryTracking')}
               </h2>
               <span className="px-2 py-0.5 rounded-full bg-success-100 dark:bg-success-950/80 text-success-700 dark:text-success-400 text-micro font-bold tracking-wider uppercase border border-success-300 dark:border-success-800/60 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-success-500 animate-ping" />
-                {activeOrder.Status === 'delivered' ? 'Delivered' : 'Live Radar'}
+                {activeOrder.Status === 'delivered' ? t('delivered') : 'Live Radar'}
               </span>
             </div>
             <p className="text-xs text-surface-500 dark:text-surface-400">
-              Tracking Waybill <strong className="font-mono text-brand-600 dark:text-brand-400">{activeOrder.Tracking_ID}</strong> • Order ID: {activeOrder.Order_ID}
+              {t('trackingWaybill')} <strong className="font-mono text-brand-600 dark:text-brand-400">{activeOrder.Tracking_ID}</strong> • {t('orderId')}: {activeOrder.Order_ID}
             </p>
           </div>
         </div>
@@ -370,7 +372,7 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
             </button>
           ) : (
             <span className="px-3 py-1.5 rounded-xl bg-success-100 dark:bg-success-950/40 text-success-700 dark:text-success-300 text-xs font-bold">
-              Delivered
+              {t('delivered')}
             </span>
           )}
 
@@ -379,6 +381,7 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
             <button
               type="button"
               onClick={onClose}
+              aria-label={t('close')}
               className="w-9 h-9 rounded-full bg-surface-200 dark:bg-surface-800 text-surface-700 dark:text-surface-300 flex items-center justify-center hover:bg-surface-300 dark:hover:bg-surface-700 transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
@@ -395,12 +398,12 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
           <div className="absolute top-4 left-4 z-20 flex flex-wrap items-center gap-2 pointer-events-auto">
             <div className="bg-surface-900/90 backdrop-blur-md px-3 py-1.5 rounded-2xl border border-surface-700 text-white text-xs flex items-center gap-2 shadow-lg">
               <Truck className="w-4 h-4 text-brand-400" />
-              <span>Courier Transit: <strong>{stopsRemaining} stops away</strong></span>
+              <span>{t('courierTransit')} <strong>{stopsRemaining} stops away</strong></span>
               <span className="text-surface-500">•</span>
               <span className="text-success-400 font-bold">
                 {routeStatus === 'ready' && route
-                  ? `Road distance: ${(route.distanceMeters / 1000).toFixed(1)} km`
-                  : routeStatus === 'loading' ? 'Finding road distance...' : 'Road distance unavailable'}
+                  ? t('roadDistance', { distance: (route.distanceMeters / 1000).toFixed(1) })
+                  : routeStatus === 'loading' ? t('findingRoadDistance') : t('roadDistanceUnavailable')}
               </span>
             </div>
 
@@ -434,29 +437,29 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
               </CircleMarker>
               {courierLocation && <CircleMarker center={courierLocation} radius={12} pathOptions={{ color: '#fff', weight: 3, fillColor: '#2772ce', fillOpacity: 1 }}>
                 <Tooltip direction="top">{activeOrder.Items[0]?.Name || 'Parcel in transit'}</Tooltip>
-                <Popup>Courier in transit</Popup>
+                <Popup>{t('courierInTransit')}</Popup>
               </CircleMarker>}
               <CircleMarker center={deliveryDestination} radius={9} pathOptions={{ color: '#fff', weight: 3, fillColor: '#7d7e5e', fillOpacity: 1 }}>
-                <Tooltip permanent direction="top">Customer Destination</Tooltip>
+                <Tooltip permanent direction="top">{t('customerDestination')}</Tooltip>
                 <Popup>{activeOrder.Shipping_Address.Street}, {activeOrder.Shipping_Address.City}</Popup>
               </CircleMarker>
             </MapContainer>
-            {routeStatus === 'error' && <div className="absolute bottom-3 left-3 z-10 rounded bg-white/95 px-3 py-2 text-xs text-danger-700 shadow dark:bg-surface-900/95 dark:text-danger-300">Road route is unavailable right now.</div>}
+            {routeStatus === 'error' && <div className="absolute bottom-3 left-3 z-10 rounded bg-white/95 px-3 py-2 text-xs text-danger-700 shadow dark:bg-surface-900/95 dark:text-danger-300">{t('roadRouteUnavailable')}</div>}
           </div> : <div className="flex flex-1 min-h-[420px] items-center justify-center bg-surface-100 px-6 text-center text-sm text-surface-600 dark:bg-[#161F2C] dark:text-surface-300">
-            {!shopLocation ? 'The seller shop location is missing map coordinates.' : 'The customer destination is missing map coordinates.'}
+            {!shopLocation ? t('missingSellerCoords') : t('missingCustomerCoords')}
           </div>}
 
           {/* Bottom Map Legend */}
           <div className="p-3 bg-surface-900/90 backdrop-blur-md border-t border-surface-800 text-surface-300 text-xs flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-4 text-micro">
               <span className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-surface-400" /> Shop: {activeSeller?.Name || activeFulfillment?.Seller_Name || 'Seller'}
+                <span className="w-2.5 h-2.5 rounded-full bg-surface-400" /> {t('shopLabel', { name: activeSeller?.Name || activeFulfillment?.Seller_Name || 'Seller' })}
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-brand-500 animate-pulse" /> Live Product Location
+                <span className="w-2.5 h-2.5 rounded-full bg-brand-500 animate-pulse" /> {t('liveProductLocation')}
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-success-500" /> Destination: {activeOrder.Shipping_Address.Street}
+                <span className="w-2.5 h-2.5 rounded-full bg-success-500" /> {t('destinationLabel', { street: activeOrder.Shipping_Address.Street })}
               </span>
             </div>
             <span className="text-micro text-surface-500 font-mono">
@@ -471,7 +474,7 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
           {orders.length > 1 && (
             <div className="space-y-1.5">
               <label className="text-micro font-bold uppercase tracking-wider text-surface-500 dark:text-surface-400 block">
-                Select Order to Track
+                {t('selectOrderToTrack')}
               </label>
               <select
                 value={activeOrder.Order_ID}
@@ -494,7 +497,7 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
           {activeFulfillments.length > 1 && (
             <div className="space-y-1.5">
               <label className="text-micro font-bold uppercase tracking-wider text-surface-500 dark:text-surface-400 block" htmlFor="tracking-fulfillment">
-                Select Shop Shipment
+                {t('selectShopShipment')}
               </label>
               <select
                 id="tracking-fulfillment"
@@ -516,21 +519,21 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
             <div className="flex items-center justify-between text-xs font-bold">
               <span className="text-surface-900 dark:text-white flex items-center gap-1.5">
                 <Navigation className="w-4 h-4 text-brand-600 dark:text-brand-400" />
-                Delivery Milestones
+                {t('deliveryMilestones')}
               </span>
               <span className="text-micro text-brand-600 dark:text-brand-400 font-bold bg-brand-100 dark:bg-brand-950/60 px-2 py-0.5 rounded-full">
-                {Math.round(movementStep * 100)}% Completed
+                {t('completedPercentage', { percent: Math.round(movementStep * 100) })}
               </span>
             </div>
 
             {isCompletingDelivery && (
               <p className="text-micro text-surface-500 dark:text-surface-400" role="status">
-                Route complete. Updating order status to delivered...
+                {t('routeCompleteUpdating')}
               </p>
             )}
             {activeOrder.Status === 'delivered' && (
               <p className="text-micro text-success-700 dark:text-success-300" role="status">
-                Shipment delivered successfully.
+                {t('shipmentDeliveredSuccess')}
               </p>
             )}
             {deliveryUpdateError && (
@@ -541,7 +544,7 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
                   onClick={() => void completeDelivery(activeOrder.Order_ID)}
                   className="font-bold underline underline-offset-2 shrink-0"
                 >
-                  Retry
+                  {t('retry')}
                 </button>
               </div>
             )}
@@ -553,7 +556,7 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
                   <CheckCircle2 className="w-3.5 h-3.5" />
                 </div>
                 <div>
-                  <span className="font-bold text-surface-800 dark:text-surface-200 block">Dispatched from Shop</span>
+                  <span className="font-bold text-surface-800 dark:text-surface-200 block">{t('dispatchedFromShop')}</span>
                   <span className="text-micro text-surface-500 dark:text-surface-500">{activeSeller?.Name || activeFulfillment?.Seller_Name || 'Seller shop'}</span>
                 </div>
               </div>
@@ -564,7 +567,7 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
                 </div>
                 <div>
                   <span className="font-bold text-brand-600 dark:text-brand-300 block">
-                    {activeOrder.Status === 'delivered' ? 'Delivered' : 'Out for Delivery (In Transit)'}
+                    {activeOrder.Status === 'delivered' ? t('delivered') : t('courierInTransit')}
                   </span>
                   <span className="text-micro text-surface-500 dark:text-surface-400">
                     {routeStatus === 'ready' && route
@@ -579,7 +582,7 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
                   <MapPin className="w-3 h-3" />
                 </div>
                 <div>
-                  <span className="font-bold text-surface-700 dark:text-surface-400 block">Customer Destination</span>
+                  <span className="font-bold text-surface-700 dark:text-surface-400 block">{t('customerDestination')}</span>
                   <span className="text-micro text-surface-500 dark:text-surface-500">
                     {activeOrder.Shipping_Address.Street}, {activeOrder.Shipping_Address.City}
                   </span>
@@ -592,7 +595,7 @@ export const LiveProductTrackingMap: React.FC<LiveProductTrackingMapProps> = ({
           <div className="space-y-2.5">
             <h3 className="text-xs font-bold uppercase tracking-wider text-surface-500 dark:text-surface-400 flex items-center justify-between">
               <span>Products in this Shipment ({activeOrder.Items.length})</span>
-              <span className="text-micro text-brand-500 font-semibold">Live GPS Tagged</span>
+              <span className="text-micro text-brand-500 font-semibold">{t('liveGpsTagged')}</span>
             </h3>
 
             <div className="space-y-2">

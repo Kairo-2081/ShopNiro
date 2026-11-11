@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { drawGlobe, GLOBE_FRAME } from './globe/drawGlobe';
 import { DESTINATION_HUBS, GLOBE_VIEW, HOME_HUB } from './globe/network';
 import { project } from './globe/projection';
+import { useLocale } from '../../lib/i18n';
 
 interface OrbitGlobeProps {
   /** Called when someone asks to trace the delivery routes. */
@@ -19,11 +20,15 @@ const HOME_POINT = (() => {
   };
 })();
 
-const DESCRIPTION = `A still globe centred on South Asia with delivery routes running from ${HOME_HUB.name} to ${DESTINATION_HUBS.map((hub) => hub.name).join(', ')}.`;
-
 export const OrbitGlobe: React.FC<OrbitGlobeProps> = ({ onGreet }) => {
+  const { t } = useLocale();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isTracing, setIsTracing] = useState(false);
+
+  const description = t('globeNetworkDescription', {
+    home: HOME_HUB.name,
+    destinations: DESTINATION_HUBS.map((hub) => hub.name).join(', '),
+  });
 
   // Draw the globe. It is a still picture: it is drawn again only to call out the routes, never on a timer.
   useEffect(() => {
@@ -67,10 +72,10 @@ export const OrbitGlobe: React.FC<OrbitGlobeProps> = ({ onGreet }) => {
           style={{ ...HOME_POINT, animationDuration: '2.8s' }}
         />
       </div>
-      <p className="sr-only">{DESCRIPTION}</p>
+      <p className="sr-only">{description}</p>
 
       <div role="status" className="h-0">
-        {isTracing && <span className="sr-only">Delivery routes highlighted.</span>}
+        {isTracing && <span className="sr-only">{t('deliveryRoutesHighlighted')}</span>}
       </div>
 
       <button
@@ -78,7 +83,7 @@ export const OrbitGlobe: React.FC<OrbitGlobeProps> = ({ onGreet }) => {
         onClick={traceRoutes}
         className="mt-1 inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-brand-200/80 bg-brand-50 px-3.5 py-1 text-micro font-medium tracking-wide text-brand-700 shadow-2xs transition-colors hover:bg-brand-100 dark:border-brand-800/80 dark:bg-brand-950/40 dark:text-brand-300 dark:hover:bg-brand-900/50"
       >
-        <span>Trace the delivery routes</span>
+        <span>{t('traceDeliveryRoutes')}</span>
       </button>
     </div>
   );
