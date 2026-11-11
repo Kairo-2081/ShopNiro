@@ -4,6 +4,7 @@ import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
 import { buildContentSecurityPolicy } from './middleware/csp.ts';
+import { compressResponses } from './middleware/compress.ts';
 import pino from 'pino';
 import pinoHttp from 'pino-http';
 import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
@@ -58,6 +59,7 @@ app.set('trust proxy', 1);
 
 const logger = pino({ redact: ['req.headers.authorization', 'req.headers.cookie'] });
 app.use(pinoHttp({ logger, genReqId: () => randomUUID() }));
+app.use(compressResponses);
 
 const keyedRateLimit = (req: express.Request) => (req as AuthRequest).user?.userId || ipKeyGenerator(req.ip || '');
 const apiRateLimit = rateLimit({
