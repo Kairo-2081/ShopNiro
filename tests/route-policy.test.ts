@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { randomBytes } from 'node:crypto';
 import { after, test } from 'node:test';
 import { request as httpRequest, Server } from 'node:http';
 import { Router } from 'express';
@@ -120,6 +121,7 @@ test('public API routes are exactly the reviewed list', () => {
     'POST /api/auth/signup',
     'POST /api/customers',
     'POST /api/cron/expire-orders',
+    'POST /api/cron/reconcile-payments',
     'POST /api/cron/refunds',
     'POST /api/payment/simulator/complete',
     'POST /api/payment/sslcommerz/cancel',
@@ -153,6 +155,24 @@ test('cron routes require a configured matching secret', async () => {
   for (const path of ['/api/cron/expire-orders', '/api/cron/refunds']) {
     const response = await request('POST', path);
     assert.ok([401, 503].includes(response.status), `${path} returned ${response.status}`);
+  }
+});
+
+// The login wall and the cron secret check both answer 401, so the status alone cannot tell them apart. The login wall
+// says "Missing or invalid authentication session"; the secret check says "Unauthorized." A request that reaches the secret check at all
+// proves the right secret would get through; one stopped at the wall can never run, which is how the nightly reconciliation failed on every call.
+test('every cron route reaches its own secret check instead of the login wall', async () => {
+  const previous = process.env.CRON_SECRET;
+  // Built at run time so no secret-shaped literal sits in the source for the secret scanner to flag.
+  process.env.CRON_SECRET = randomBytes(24).toString('hex');
+  try {
+    for (const path of ['/api/cron/expire-orders', '/api/cron/refunds', '/api/cron/reconcile-payments']) {
+      const wrong = await request('POST', path, {}, { authorization: 'Bearer not-the-secret' });
+      assert.equal(wrong.status, 401, `${path} with a wrong secret returned ${wrong.status}`);
+      assert.equal(wrong.body?.error, 'Unauthorized.', `${path} was stopped by the login wall, not the cron secret check`);
+    }
+  } finally {
+    if (previous === undefined) delete process.env.CRON_SECRET; else process.env.CRON_SECRET = previous;
   }
 });
 
