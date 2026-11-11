@@ -24,6 +24,7 @@ Vercel supplies `VERCEL_URL` and `VERCEL_PROJECT_PRODUCTION_URL`; the API includ
 
 - `AUTH_COOKIE_SAME_SITE`: `lax`, `strict`, or `none`. Production defaults to `none` for separately hosted frontend/API deployments and always sets `Secure`. Prefer `lax` when both are on the same site.
 - `RESEND_API_KEY`, `SHOPNIRO_FROM_EMAIL`, `SHOPNIRO_PUBLIC_URL`: welcome-offer and password-recovery email delivery. The sender must be verified with Resend. Password recovery is unavailable until all three are configured; reset links expire after 30 minutes and are single-use.
+- Verify production reset-email delivery, sender placement, password change, existing-session revocation, and one-time link behavior using an account you own and the [production password-recovery runbook](docs/runbooks/password-recovery-live-check.md). Automated tests mock Resend and do not verify production delivery.
 - `SSLCOMMERZ_STORE_ID`, `SSLCOMMERZ_STORE_PASSWORD`, `SSLCOMMERZ_IS_SANDBOX`: payment gateway credentials and environment. Set sandbox mode to `false` only with production credentials.
 - `SSLCOMMERZ_IPN_TOKEN`: shared secret configured in SSLCommerz and ShopNiro. This token authenticates IPN callbacks and is required for payment status updates.
 - `ONLINE_PAYMENTS_ENABLED`: optional runtime checkout switch. Defaults to enabled; set to `false` on the production API host to hide online methods and reject new gateway sessions while keeping COD and existing payment callbacks available. See [Disable online payments; COD only](docs/runbooks/disable-online-payments.md).
