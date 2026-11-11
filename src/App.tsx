@@ -19,7 +19,7 @@ import {
 } from './types';
 import { api } from './lib/api';
 import { getProfileCompletion } from './lib/profileCompletion';
-import { shopNiroLogo } from './lib/branding';
+import { shopNiroLogoSmall } from './lib/branding';
 import { prefetchWhenIdle } from './lib/idlePrefetch';
 import { LandingPage } from './components/LandingPage';
 import { MarketplaceClosing, MarketplaceStat } from './components/MarketplaceClosing';
@@ -1454,8 +1454,11 @@ export default function App() {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-surface-500 dark:text-surface-400">
           <div className="flex items-center gap-3">
             <img
-              src={shopNiroLogo}
+              src={shopNiroLogoSmall}
               alt="ShopNiro"
+              width={32}
+              height={32}
+              decoding="async"
               className="w-8 h-8 rounded-full object-cover border border-brand-100 dark:border-surface-700 shadow-md shadow-brand-500/20"
             />
             <div>
