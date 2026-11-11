@@ -12,7 +12,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 async function placeCodOrder(page: Page) {
-  await page.getByText('Cash on Delivery (COD)').click();
+  await page.getByText(/Cash on Delivery \(COD\)/i).click();
   await page.getByRole('checkbox').check();
   const shownTotal = parseMoney(await page.getByTestId('checkout-total').innerText());
   await page.getByTestId('checkout-submit').click();
@@ -82,7 +82,7 @@ test('double clicking the confirm button creates one order', async ({ page }) =>
   await seedCart({ [blanket.id]: 1 });
   await openStorefront(page);
   await openCheckout(page);
-  await page.getByText('Cash on Delivery (COD)').click();
+  await page.getByText(/Cash on Delivery \(COD\)/i).click();
   await page.getByRole('checkbox').check();
   await page.getByTestId('checkout-submit').dblclick();
   await expect(page.getByRole('heading', { name: 'Order placed' })).toBeVisible();
@@ -95,7 +95,7 @@ test('a first order completes at 360px with the total and pay action pinned toge
   await openStorefront(page);
   await openCheckout(page);
 
-  const checkout = page.getByRole('dialog', { name: 'Direct Checkout & Payment' });
+  const checkout = page.getByRole('dialog', { name: /Direct checkout and payment/i });
   await expect(checkout.getByRole('navigation', { name: 'Checkout steps' })).toBeVisible();
   for (const step of ['Address', 'Payment', 'Review']) {
     await expect(checkout.getByRole('navigation', { name: 'Checkout steps' })).toContainText(step);
@@ -128,7 +128,7 @@ test('a first order completes at 360px with the total and pay action pinned toge
     expect(bounds?.height).toBeGreaterThanOrEqual(44);
   }
 
-  await page.getByRole('button', { name: 'Select cash on delivery as payment method' }).click();
+  await page.getByRole('button', { name: /Select cash on delivery as payment method/i }).click();
   await checkout.getByRole('checkbox').check();
   await page.route('**/api/orders', async (route) => {
     if (route.request().method() === 'POST') await new Promise((resolve) => setTimeout(resolve, 300));
@@ -139,7 +139,7 @@ test('a first order completes at 360px with the total and pay action pinned toge
   await expect(submit).toContainText('Processing');
   await expect(page.getByRole('heading', { name: 'Order placed' })).toBeVisible();
   // The confirmation offers one action (View order) next to the always-present Close button.
-  await expect(page.getByRole('dialog', { name: 'Direct Checkout & Payment' }).getByRole('button')).toHaveCount(2);
+  await expect(page.getByRole('dialog', { name: /Direct checkout and payment/i }).getByRole('button')).toHaveCount(2);
   await expect(page.getByRole('button', { name: 'View order' })).toBeVisible();
 
   await page.getByRole('button', { name: 'View order' }).click();

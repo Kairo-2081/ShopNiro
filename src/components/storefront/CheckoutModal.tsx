@@ -77,6 +77,13 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
   const [paymentMethod, setPaymentMethod] = React.useState<
     'bkash' | 'nagad' | 'rocket' | 'visa_mastercard' | 'cash_on_delivery'
   >(initialPaymentMethod);
+  const paymentMethodLabel = paymentMethod === 'bkash'
+    ? t('bkashMobileBanking')
+    : paymentMethod === 'nagad'
+      ? t('nagadDigitalPayment')
+      : paymentMethod === 'rocket'
+        ? t('rocketDbblMfs')
+        : t('cardsNetBanking');
   const [isSSLModalOpen, setIsSSLModalOpen] = React.useState(false);
   const [additionalNotes, setAdditionalNotes] = React.useState(currentCustomer.Address?.Additional_Info || '');
   const [isSuggestingInstructions, setIsSuggestingInstructions] = React.useState(false);
@@ -867,7 +874,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
                       <>
                         <Lock aria-hidden="true" className="h-4 w-4 shrink-0" />
                         <span className="min-w-0 break-words">
-                          {t('payWith', { method: paymentMethod === 'visa_mastercard' ? t('paymentCard') : paymentMethod })}
+                          {t('payWith', { method: paymentMethodLabel })}
                         </span>
                         <ArrowRight aria-hidden="true" className="h-4 w-4 shrink-0" />
                       </>
