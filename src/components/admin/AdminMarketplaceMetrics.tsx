@@ -14,6 +14,7 @@ import {
   Truck,
   UserRound,
 } from 'lucide-react';
+import { useLocale } from '../../lib/i18n';
 
 interface AdminMarketplaceMetricsProps {
   products: Product[];
@@ -40,16 +41,12 @@ interface Leaderboard {
   entries: MetricEntry[];
 }
 
-const formatMetricDate = (value?: string) => {
-  if (!value || Number.isNaN(Date.parse(value))) return 'Date unavailable';
-  return new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-};
-
 export const AdminMarketplaceMetrics: React.FC<AdminMarketplaceMetricsProps> = ({
   products,
   sellers,
   orders,
 }) => {
+  const { t, locale } = useLocale();
   const [activeGroup, setActiveGroup] = React.useState<MetricGroup>('products');
   const [trendingProducts, setTrendingProducts] = React.useState<Awaited<ReturnType<typeof fetchTrendingProducts>>>([]);
   const [topRatedProducts, setTopRatedProducts] = React.useState<Awaited<ReturnType<typeof fetchTopRatedProducts>>>([]);
@@ -58,6 +55,11 @@ export const AdminMarketplaceMetrics: React.FC<AdminMarketplaceMetricsProps> = (
   const [loading, setLoading] = React.useState(true);
   const [loadErrors, setLoadErrors] = React.useState<string[]>([]);
   const [reloadKey, setReloadKey] = React.useState(0);
+
+  const formatMetricDate = (value?: string) => {
+    if (!value || Number.isNaN(Date.parse(value))) return t('valueNotAvailable');
+    return new Date(value).toLocaleDateString(locale === 'bn' ? 'bn-BD' : 'en-BD', { year: 'numeric', month: 'short', day: 'numeric' });
+  };
 
   React.useEffect(() => {
     let isMounted = true;
@@ -110,12 +112,12 @@ export const AdminMarketplaceMetrics: React.FC<AdminMarketplaceMetricsProps> = (
 
   const productLeaderboards: Leaderboard[] = [
     {
-      title: 'Top Rated Products',
-      description: 'Average rating · minimum 3 reviews',
+      title: t('topRatedProductsTitle'),
+      description: t('topRatedProductsDesc'),
       entries: topRatedProducts.map((product) => ({
         id: product.product_id,
         name: product.product_name,
-        detail: `${product.total_reviews} reviews`,
+        detail: `${product.total_reviews} ${t('reviews')}`,
         value: `${Number(product.average_rating).toFixed(1)} / 5`,
         image: product.image,
         measure: Number(product.average_rating),
@@ -123,20 +125,20 @@ export const AdminMarketplaceMetrics: React.FC<AdminMarketplaceMetricsProps> = (
       })),
     },
     {
-      title: 'Top Trends',
-      description: 'Ranked by units sold',
+      title: t('topTrends'),
+      description: t('rankedByUnitsSold'),
       entries: trendingProducts.map((product) => ({
         id: product.product_id,
         name: product.product_name,
         detail: product.category_name,
-        value: `${Number(product.total_units_sold).toLocaleString()} sold`,
+        value: `${Number(product.total_units_sold).toLocaleString()} ${t('sold')}`,
         image: product.image,
         measure: Number(product.total_units_sold),
       })),
     },
     {
-      title: 'Latest Added',
-      description: 'Most recently listed active products',
+      title: t('latestAddedTitle'),
+      description: t('latestAddedDesc'),
       entries: products
         .filter((product) => product.Product_Status?.toLowerCase() === 'active')
         .slice()
@@ -145,7 +147,7 @@ export const AdminMarketplaceMetrics: React.FC<AdminMarketplaceMetricsProps> = (
         .map((product) => ({
           id: product.Product_ID,
           name: product.Name,
-          detail: sellerById.get(product.Seller_ID)?.Name || 'Vendor unavailable',
+          detail: sellerById.get(product.Seller_ID)?.Name || t('vendorUnavailable'),
           value: formatMetricDate(product.Created_At),
           image: product.Image,
         })),
@@ -154,12 +156,12 @@ export const AdminMarketplaceMetrics: React.FC<AdminMarketplaceMetricsProps> = (
 
   const vendorLeaderboards: Leaderboard[] = [
     {
-      title: 'Top Rated Vendors',
-      description: 'Ranked by customer reviews',
+      title: t('topRatedVendorsTitle'),
+      description: t('topRatedVendorsDesc'),
       entries: topRatedSellers.map((seller) => ({
         id: seller.seller_id,
         name: seller.seller_name,
-        detail: `${seller.total_reviews} product reviews`,
+        detail: `${seller.total_reviews} ${t('reviews')}`,
         value: `${Number(seller.average_rating).toFixed(1)} / 5`,
         image: seller.logo,
         measure: Number(seller.average_rating),
@@ -167,8 +169,8 @@ export const AdminMarketplaceMetrics: React.FC<AdminMarketplaceMetricsProps> = (
       })),
     },
     {
-      title: 'Top Selling Vendors',
-      description: 'Units sold across non-cancelled orders',
+      title: t('topSellingVendorsTitle'),
+      description: t('topSellingVendorsDesc'),
       entries: Array.from(vendorSales.entries())
         .sort((a, b) => b[1] - a[1])
         .slice(0, 5)
@@ -177,16 +179,16 @@ export const AdminMarketplaceMetrics: React.FC<AdminMarketplaceMetricsProps> = (
           return seller ? [{
             id: sellerId,
             name: seller.Name,
-            detail: `${seller.Status} vendor`,
-            value: `${units.toLocaleString()} sold`,
+            detail: t('activeVendorLabel', { status: seller.Status }),
+            value: `${units.toLocaleString()} ${t('sold')}`,
             image: seller.Logo,
             measure: units,
           }] : [];
         }),
     },
     {
-      title: 'Latest Vendors',
-      description: 'Most recently registered vendors',
+      title: t('latestVendorsTitle'),
+      description: t('latestVendorsDesc'),
       entries: sellers
         .slice()
         .sort((a, b) => Date.parse(b.Created_At || '') - Date.parse(a.Created_At || ''))
@@ -194,7 +196,7 @@ export const AdminMarketplaceMetrics: React.FC<AdminMarketplaceMetricsProps> = (
         .map((seller) => ({
           id: seller.Seller_ID,
           name: seller.Name,
-          detail: `${seller.Status} vendor`,
+          detail: t('activeVendorLabel', { status: seller.Status }),
           value: formatMetricDate(seller.Created_At),
           image: seller.Logo,
         })),
@@ -204,8 +206,8 @@ export const AdminMarketplaceMetrics: React.FC<AdminMarketplaceMetricsProps> = (
   const approvedRiders = riders.filter((rider) => rider.Status === 'approved');
   const riderLeaderboards: Leaderboard[] = [
     {
-      title: 'Top Timely Riders',
-      description: 'Ranked by on-time deliveries · rate shown',
+      title: t('topTimelyRidersTitle'),
+      description: t('topTimelyRidersDesc'),
       entries: approvedRiders
         .filter((rider) => rider.Timely_Deliveries > 0)
         .slice()
@@ -214,15 +216,15 @@ export const AdminMarketplaceMetrics: React.FC<AdminMarketplaceMetricsProps> = (
         .map((rider) => ({
           id: rider.Rider_ID,
           name: rider.Name,
-          detail: `${rider.Total_Deliveries > 0 ? Math.round((rider.Timely_Deliveries / rider.Total_Deliveries) * 100) : 0}% on time`,
-          value: `${rider.Timely_Deliveries.toLocaleString()} on time`,
+          detail: t('onTimeLabel', { percent: rider.Total_Deliveries > 0 ? Math.round((rider.Timely_Deliveries / rider.Total_Deliveries) * 100) : 0 }),
+          value: t('onTimeDeliveriesDetail', { count: rider.Timely_Deliveries.toLocaleString() }),
           image: rider.Profile_Image,
           measure: rider.Timely_Deliveries,
         })),
     },
     {
-      title: 'Top Delivery Makers',
-      description: 'Ranked by completed deliveries',
+      title: t('topDeliveryMakersTitle'),
+      description: t('topDeliveryMakersDesc'),
       entries: approvedRiders
         .filter((rider) => rider.Total_Deliveries > 0)
         .slice()
@@ -231,15 +233,15 @@ export const AdminMarketplaceMetrics: React.FC<AdminMarketplaceMetricsProps> = (
         .map((rider) => ({
           id: rider.Rider_ID,
           name: rider.Name,
-          detail: `${rider.Timely_Deliveries.toLocaleString()} on-time deliveries`,
-          value: `${rider.Total_Deliveries.toLocaleString()} deliveries`,
+          detail: t('onTimeDeliveriesDetail', { count: rider.Timely_Deliveries.toLocaleString() }),
+          value: t('deliveriesCountDetail', { count: rider.Total_Deliveries.toLocaleString() }),
           image: rider.Profile_Image,
           measure: rider.Total_Deliveries,
         })),
     },
     {
-      title: 'Top Rated Riders',
-      description: 'Customer rating average',
+      title: t('topRatedRidersTitle'),
+      description: t('topRatedRidersDesc'),
       entries: approvedRiders
         .filter((rider) => Number(rider.Average_Rating) > 0)
         .slice()
@@ -248,7 +250,7 @@ export const AdminMarketplaceMetrics: React.FC<AdminMarketplaceMetricsProps> = (
         .map((rider) => ({
           id: rider.Rider_ID,
           name: rider.Name,
-          detail: `${rider.Total_Deliveries.toLocaleString()} deliveries`,
+          detail: t('deliveriesCountDetail', { count: rider.Total_Deliveries.toLocaleString() }),
           value: `${Number(rider.Average_Rating).toFixed(1)} / 5`,
           image: rider.Profile_Image,
           measure: Number(rider.Average_Rating),
@@ -258,9 +260,9 @@ export const AdminMarketplaceMetrics: React.FC<AdminMarketplaceMetricsProps> = (
   ];
 
   const groupOptions: { id: MetricGroup; label: string; icon: React.ElementType }[] = [
-    { id: 'products', label: 'Products', icon: Package },
-    { id: 'vendors', label: 'Vendors', icon: Store },
-    { id: 'riders', label: 'Riders', icon: Truck },
+    { id: 'products', label: t('productsGroup'), icon: Package },
+    { id: 'vendors', label: t('vendorsGroup'), icon: Store },
+    { id: 'riders', label: t('ridersGroup'), icon: Truck },
   ];
   const selectedLeaderboards = activeGroup === 'products'
     ? productLeaderboards
@@ -288,8 +290,8 @@ export const AdminMarketplaceMetrics: React.FC<AdminMarketplaceMetricsProps> = (
     <section className="space-y-4">
       <header className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h2 className="text-lg font-bold text-surface-900 dark:text-white">Marketplace Metrics</h2>
-          <p className="text-xs text-surface-500 dark:text-surface-400">Ranked product, vendor, and rider performance.</p>
+          <h2 className="text-lg font-bold text-surface-900 dark:text-white">{t('marketplaceMetrics')}</h2>
+          <p className="text-xs text-surface-500 dark:text-surface-400">{t('marketplaceMetricsDesc')}</p>
         </div>
         <button
           type="button"
@@ -298,7 +300,7 @@ export const AdminMarketplaceMetrics: React.FC<AdminMarketplaceMetricsProps> = (
           className="inline-flex items-center gap-2 rounded-lg border border-surface-300 px-3 py-2 text-xs font-semibold text-surface-700 hover:bg-surface-50 disabled:opacity-50 dark:border-surface-700 dark:text-surface-200 dark:hover:bg-surface-800"
         >
           <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
-          Refresh metrics
+          {t('refreshMetrics')}
         </button>
       </header>
 
@@ -323,7 +325,7 @@ export const AdminMarketplaceMetrics: React.FC<AdminMarketplaceMetricsProps> = (
 
       {loadErrors.length > 0 && (
         <div role="status" className="rounded-lg border border-warning-200 bg-warning-50 px-4 py-3 text-xs text-warning-900 dark:border-warning-900/60 dark:bg-warning-950/30 dark:text-warning-200">
-          Some rankings could not be loaded: {loadErrors.join(', ')}. Refresh to try again.
+          {t('someRankingsFailed', { errors: loadErrors.join(', ') })}
         </div>
       )}
 
@@ -402,7 +404,7 @@ export const AdminMarketplaceMetrics: React.FC<AdminMarketplaceMetricsProps> = (
                     ))}
                   </ol>
                 ) : (
-                  <p className="py-6 text-center text-xs text-surface-500 dark:text-surface-400">No ranking data available yet.</p>
+                  <p className="py-6 text-center text-xs text-surface-500 dark:text-surface-400">{t('noRankingData')}</p>
                 )}
               </section>
             ))}

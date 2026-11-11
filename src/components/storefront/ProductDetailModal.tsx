@@ -2,10 +2,11 @@ import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Product, Category, Seller, Review, Customer, ProductBundle } from '../../types';
 import { StarRating } from '../StarRating';
-import { api, fetchRelatedProducts, formatCurrency, formatDate } from '../../lib/api';
+import { api, fetchRelatedProducts, formatCurrency } from '../../lib/api';
 import { describeVoucher, discountedPriceForVoucher, getVoucherCountdownLabel, isVoucherExpired } from '../../lib/vouchers';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { useLocale } from '../../lib/i18n';
 import {
   X,
   ShoppingCart,
@@ -69,6 +70,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   onOpenLogin,
   onAskAI,
 }) => {
+  const { t, locale } = useLocale();
   useEscapeKey(onClose, Boolean(product));
   const [quantity, setQuantity] = React.useState(1);
   const [selectedSize, setSelectedSize] = React.useState('');
@@ -79,7 +81,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   const [isDraftingReview, setIsDraftingReview] = React.useState(false);
   const [reviewDraftError, setReviewDraftError] = React.useState('');
   const [isSubmittingReview, setIsSubmittingReview] = React.useState(false);
-  const [reviewSubmittedMessage, setReviewSubmittedMessage] = React.useState('');
+  const [reviewSubmitted, setReviewSubmitted] = React.useState(false);
   const [imgError, setImgError] = React.useState(false);
   const [justAdded, setJustAdded] = React.useState(false);
 
@@ -145,7 +147,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   React.useEffect(() => {
     setNewRating(0);
     setNewReviewText('');
-    setReviewSubmittedMessage('');
+    setReviewSubmitted(false);
     setSelectedSize('');
     setGalleryIndex(0);
     setImgError(false);
@@ -177,8 +179,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
       await onSubmitReview(product.Product_ID, newRating, newReviewText.trim());
       setNewRating(0);
       setNewReviewText('');
-      setReviewSubmittedMessage('Thank you! Your review has been recorded.');
-      setTimeout(() => setReviewSubmittedMessage(''), 4000);
+      setReviewSubmitted(true);
+      setTimeout(() => setReviewSubmitted(false), 4000);
     } finally {
       setIsSubmittingReview(false);
     }
@@ -233,14 +235,14 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
         <div className="flex items-center justify-between px-6 py-4 border-b border-surface-100 dark:border-surface-800 bg-surface-50/50 dark:bg-[#161C24]/80">
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">
-              {category?.Name || 'Product Detail'}
+              {category?.Name || t('productDetails')}
             </span>
             <span className="text-surface-300 dark:text-surface-700">•</span>
             <span className="text-xs text-surface-500 dark:text-surface-400 font-mono">ID: {product.Product_ID}</span>
           </div>
           <button
             onClick={onClose}
-            aria-label="Close product details"
+            aria-label={t('closeProductDetails')}
             className="p-1.5 rounded-full text-surface-400 hover:text-surface-700 dark:hover:text-surface-200 hover:bg-surface-200 dark:hover:bg-surface-800 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5]"
           >
             <X className="w-5 h-5" />
@@ -263,14 +265,14 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 {product.Voucher && (
                   <div className="absolute top-4 left-4 bg-brand-600 text-white text-xs font-bold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5">
                     <Tag className="w-4 h-4" />
-                    Voucher: {product.Voucher}
+                    {t('voucher')}: {product.Voucher}
                   </div>
                 )}
               </div>
               {productImages.length > 1 && (
                 <div className="flex gap-2 overflow-x-auto">
                   {productImages.map((imageUrl, index) => (
-                    <button key={`${imageUrl}-${index}`} type="button" onClick={() => { setGalleryIndex(index); setImgError(false); }} aria-label={`Show product image ${index + 1}`} aria-pressed={galleryIndex === index} className={`h-14 w-14 shrink-0 overflow-hidden rounded-lg border-2 ${galleryIndex === index ? 'border-brand-600' : 'border-surface-200 dark:border-surface-700'}`}>
+                    <button key={`${imageUrl}-${index}`} type="button" onClick={() => { setGalleryIndex(index); setImgError(false); }} aria-label={t('showProductImage', { number: index + 1 })} aria-pressed={galleryIndex === index} className={`h-14 w-14 shrink-0 overflow-hidden rounded-lg border-2 ${galleryIndex === index ? 'border-brand-600' : 'border-surface-200 dark:border-surface-700'}`}>
                       <img src={imageUrl} alt="" className="h-full w-full object-cover" />
                     </button>
                   ))}
@@ -278,7 +280,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               )}
               {product.Video_URL && (
                 <video controls preload="metadata" src={product.Video_URL} className="w-full rounded-xl border border-surface-200 bg-black dark:border-surface-800">
-                  Your browser does not support product video playback.
+                  {t('videoPlaybackUnsupported')}
                 </video>
               )}
 
@@ -300,7 +302,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                         <span className="truncate">{seller.Name}</span>
                       </span>
                       <span className="bg-success-500/10 text-success-700 dark:text-success-400 px-2.5 py-0.5 rounded-full font-semibold text-micro uppercase shrink-0 border border-success-500/20">
-                        Approved Seller
+                        {t('approvedSeller')}
                       </span>
                     </div>
                     {seller.Description && (
@@ -331,7 +333,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   <StarRating rating={avgRating} size="md" showText totalReviews={productReviews.length} />
                   <span className="text-surface-300 dark:text-surface-700">•</span>
                     <span className="text-xs text-success-600 dark:text-success-400 font-medium flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Available from this seller
+                    <CheckCircle2 className="w-3.5 h-3.5" /> {t('availableFromSeller')}
                   </span>
                 </div>
 
@@ -339,7 +341,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 <div className="p-4 rounded-2xl bg-brand-50/50 dark:bg-[#161C24] border border-brand-100 dark:border-brand-900/40 flex items-baseline justify-between">
                   <div>
                     <span className="text-xs text-surface-500 dark:text-surface-400 uppercase tracking-wider font-semibold block">
-                      {hasVoucherDiscount ? 'Price with code' : 'Price'}
+                      {hasVoucherDiscount ? t('priceWithCode') : t('price')}
                     </span>
                     <span className="text-3xl font-black text-brand-600 dark:text-brand-400">
                       {formatCurrency(voucherPrice)}
@@ -348,7 +350,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   </div>
                   {hasActiveVoucher && (
                     <span title={describeVoucher(product.Voucher)} className="max-w-[180px] text-right text-micro font-semibold text-brand-700 dark:text-brand-300">
-                      <span className="block">Use code <code className="font-bold">{product.Voucher}</code></span>
+                      <span className="block">{t('useCode')} <code className="font-bold">{product.Voucher}</code></span>
                       <span className="mt-0.5 block font-normal text-surface-500 dark:text-surface-400">{describeVoucher(product.Voucher)}</span>
                       {voucherCountdown && <span className="mt-0.5 block font-semibold text-warning-700 dark:text-warning-300">{voucherCountdown}</span>}
                     </span>
@@ -358,7 +360,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 {/* Description */}
                 <div>
                   <h3 className="text-xs font-bold uppercase tracking-wider text-surface-500 dark:text-surface-400 mb-1">
-                    Product Details
+                    {t('productDetails')}
                   </h3>
                   <div className="space-y-2 text-sm leading-relaxed text-surface-600 dark:text-surface-300">
                     <ReactMarkdown components={{
@@ -371,14 +373,14 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                       ol: ({ children }) => <ol className="list-decimal space-y-1 pl-5">{children}</ol>,
                       li: ({ children }) => <li>{children}</li>,
                     }}>
-                      {product.Description || 'No description provided.'}
+                      {product.Description || t('noProductDescription')}
                     </ReactMarkdown>
                   </div>
                 </div>
 
                 {product.Highlights?.some((highlight) => highlight.trim()) && (
                   <section className="rounded-xl border border-surface-200 bg-surface-50 p-4 dark:border-surface-800 dark:bg-[#161C24]">
-                    <h3 className="mb-2 text-xs font-bold text-surface-800 dark:text-surface-200">Key product specs</h3>
+                    <h3 className="mb-2 text-xs font-bold text-surface-800 dark:text-surface-200">{t('keyProductSpecs')}</h3>
                     <ul className="space-y-1.5 text-xs text-surface-600 dark:text-surface-300">
                       {product.Highlights.filter((highlight) => highlight.trim()).map((highlight) => (
                         <li key={highlight} className="flex items-start gap-2">
@@ -392,16 +394,16 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
                 {(product.Warranty_Information || product.Return_Policy) && (
                   <section className="rounded-xl border border-surface-200 bg-surface-50 p-4 dark:border-surface-800 dark:bg-[#161C24]">
-                    <h3 className="mb-2 text-xs font-bold text-surface-800 dark:text-surface-200">Seller-provided policies</h3>
+                    <h3 className="mb-2 text-xs font-bold text-surface-800 dark:text-surface-200">{t('sellerPolicies')}</h3>
                     {product.Warranty_Information && (
                       <div className="text-xs text-surface-600 dark:text-surface-300">
-                        <strong className="text-surface-800 dark:text-surface-100">Coverage:</strong>
+                        <strong className="text-surface-800 dark:text-surface-100">{t('coverage')}:</strong>
                         <PolicyText text={product.Warranty_Information} />
                       </div>
                     )}
                     {product.Return_Policy && (
                       <div className="mt-2 text-xs text-surface-600 dark:text-surface-300">
-                        <strong className="text-surface-800 dark:text-surface-100">Returns:</strong>
+                        <strong className="text-surface-800 dark:text-surface-100">{t('returns')}:</strong>
                         <PolicyText text={product.Return_Policy} />
                       </div>
                     )}
@@ -411,12 +413,12 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 {/* Specs pills */}
                 <div className="grid grid-cols-2 gap-3 text-xs">
                   <div className="p-3 rounded-2xl bg-surface-50 dark:bg-[#161C24] border border-surface-200 dark:border-surface-800">
-                    <span className="text-surface-500 dark:text-surface-500 block text-micro uppercase font-bold">Category</span>
+                    <span className="text-surface-500 dark:text-surface-500 block text-micro uppercase font-bold">{t('category')}</span>
                     <span className="font-semibold text-surface-800 dark:text-surface-200">{category?.Name || 'General'}</span>
                   </div>
                   <div className="p-3 rounded-2xl bg-surface-50 dark:bg-[#161C24] border border-surface-200 dark:border-surface-800">
-                    <span className="text-surface-500 dark:text-surface-500 block text-micro uppercase font-bold">Available Inventory</span>
-                    <span className="font-semibold text-surface-800 dark:text-surface-200">{product.Stock} units</span>
+                    <span className="text-surface-500 dark:text-surface-500 block text-micro uppercase font-bold">{t('availableInventory')}</span>
+                    <span className="font-semibold text-surface-800 dark:text-surface-200">{product.Stock} {t('inventoryUnits')}</span>
                   </div>
                 </div>
               </div>
@@ -426,8 +428,8 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 {product.Sizes?.length ? (
                   <div className="space-y-2">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-xs font-semibold text-surface-600 dark:text-surface-400">Choose size{product.Size_Gender ? ` · ${product.Size_Gender}` : ''}</span>
-                      {product.Size_Chart?.length ? <span className="text-micro text-surface-500">Measurements in cm</span> : null}
+                      <span className="text-xs font-semibold text-surface-600 dark:text-surface-400">{t('chooseSize')}{product.Size_Gender ? ` · ${product.Size_Gender}` : ''}</span>
+                      {product.Size_Chart?.length ? <span className="text-micro text-surface-500">{t('measurementsCm')}</span> : null}
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {product.Sizes.map((size) => <button key={size} type="button" aria-pressed={selectedSize === size} onClick={() => setSelectedSize(size)} className={`min-w-10 rounded-lg border px-3 py-2 text-xs font-bold ${selectedSize === size ? 'border-brand-700 bg-brand-700 text-white' : 'border-surface-300 text-surface-700 dark:border-surface-700 dark:text-surface-300'}`}>{size}</button>)}
@@ -435,7 +437,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                     {product.Size_Chart?.length ? (
                       <div className="overflow-x-auto rounded-lg border border-surface-200 dark:border-surface-800">
                         <table className="w-full min-w-[420px] text-left text-micro">
-                          <thead className="bg-surface-50 text-surface-500 dark:bg-[#181F2A] dark:text-surface-400"><tr><th className="p-2">Size</th><th>Chest</th><th>Waist</th><th>Hip</th><th>Length</th></tr></thead>
+                          <thead className="bg-surface-50 text-surface-500 dark:bg-[#181F2A] dark:text-surface-400"><tr><th className="p-2">{t('size')}</th><th>{t('chest')}</th><th>{t('waist')}</th><th>{t('hip')}</th><th>{t('length')}</th></tr></thead>
                           <tbody>{product.Size_Chart.filter((row) => product.Sizes?.includes(row.Size)).map((row) => <tr key={row.Size} className="border-t border-surface-100 dark:border-surface-800"><td className="p-2 font-bold">{row.Size}</td><td>{row.Chest_CM ?? '-'}</td><td>{row.Waist_CM ?? '-'}</td><td>{row.Hip_CM ?? '-'}</td><td>{row.Length_CM ?? '-'}</td></tr>)}</tbody>
                         </table>
                       </div>
@@ -443,7 +445,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   </div>
                 ) : null}
                 <div className="flex items-center gap-4">
-                  <span className="text-xs font-semibold text-surface-600 dark:text-surface-400">Quantity:</span>
+                  <span className="text-xs font-semibold text-surface-600 dark:text-surface-400">{t('quantityLabel')}:</span>
                   <div className="flex items-center border border-surface-200 dark:border-surface-700 rounded-full overflow-hidden bg-surface-50 dark:bg-[#181F2A]">
                     <button
                       type="button"
@@ -479,7 +481,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                     }`}
                   >
                     {justAdded ? <Check className="w-5 h-5" /> : <ShoppingCart className="w-5 h-5" />}
-                    <span>{justAdded ? 'Added to cart' : 'Add to Cart'}</span>
+                    <span>{justAdded ? t('added') : t('addToCart')}</span>
                   </button>
                   <button
                     type="button"
@@ -487,7 +489,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                     onClick={() => onBuyNow(product, quantity, selectedSize || undefined)}
                     className="w-full rounded-full bg-brand-600 px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-brand-600/30 transition-colors hover:bg-brand-500 disabled:cursor-not-allowed disabled:bg-surface-200 disabled:text-surface-600 disabled:shadow-none dark:disabled:bg-surface-800 dark:disabled:text-surface-300"
                   >
-                    Buy Now · {formatCurrency(Number(product.Price) * quantity)}
+                    {t('buyNow')} · {formatCurrency(Number(product.Price) * quantity)}
                   </button>
                 </div>
 
@@ -503,7 +505,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                     className="w-full py-2.5 px-4 rounded-full font-semibold text-xs border border-brand-500/30 text-brand-600 dark:text-brand-400 bg-brand-50/50 dark:bg-[#181F2A] hover:bg-brand-100 dark:hover:bg-[#202938] flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs"
                   >
                     <Sparkles className="w-4 h-4 text-warning-400" />
-                    <span>Ask ShopNiro AI Assistant about this product</span>
+                    <span>{t('askAiAboutProduct')}</span>
                   </button>
                 )}
               </div>
@@ -514,10 +516,10 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             <section className="space-y-3 border-t border-surface-200 pt-6 dark:border-surface-800">
               <header>
                 <h2 className="text-base font-bold text-surface-900 dark:text-white">
-                  {relatedProducts.basedOnOrders ? 'Frequently bought together' : 'You may also like'}
+                  {relatedProducts.basedOnOrders ? t('frequentlyBoughtTogether') : t('youMayAlsoLike')}
                 </h2>
                 <p className="mt-1 text-xs text-surface-500 dark:text-surface-400">
-                  {relatedProducts.basedOnOrders ? 'Suggestions based on products in the same orders.' : 'More available products from the marketplace.'}
+                  {relatedProducts.basedOnOrders ? t('suggestionsFromOrders') : t('moreMarketplaceProducts')}
                 </p>
               </header>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -532,7 +534,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                         onClick={() => suggestion.Sizes?.length ? onSelectProduct?.(suggestion) : onAddToCart(suggestion, 1)}
                         className="mt-1 text-micro font-semibold text-brand-700 hover:underline dark:text-brand-300"
                       >
-                        {suggestion.Sizes?.length ? 'Choose options' : 'Add to cart'}
+                        {suggestion.Sizes?.length ? t('chooseOptions') : t('addToCart')}
                       </button>
                     </div>
                   </article>
@@ -544,18 +546,18 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
           {matchingBundles.length > 0 && (
             <section className="space-y-3 border-t border-surface-200 pt-6 dark:border-surface-800">
               <header>
-                <h2 className="text-base font-bold text-surface-900 dark:text-white">Bundle and save</h2>
-                <p className="mt-1 text-xs text-surface-500 dark:text-surface-400">Add every item in a bundle to your cart; savings are applied at checkout and can stack with vouchers.</p>
+                <h2 className="text-base font-bold text-surface-900 dark:text-white">{t('bundleAndSave')}</h2>
+                <p className="mt-1 text-xs text-surface-500 dark:text-surface-400">{t('bundleSavingsDescription')}</p>
               </header>
               {matchingBundles.map((bundle) => (
                 <article key={bundle.Bundle_ID} className="border-l-2 border-warning-400 bg-warning-50/70 p-4 dark:bg-warning-950/20">
-                  <h3 className="text-sm font-bold text-surface-900 dark:text-white">{bundle.Name} · {bundle.Discount_Percent}% off</h3>
-                  {bundle.Ends_At && <p className="mt-1 text-micro text-warning-800 dark:text-warning-300">Offer ends {new Date(bundle.Ends_At).toLocaleString()}</p>}
+                  <h3 className="text-sm font-bold text-surface-900 dark:text-white">{bundle.Name} · {t('percentOff', { percent: bundle.Discount_Percent })}</h3>
+                  {bundle.Ends_At && <p className="mt-1 text-micro text-warning-800 dark:text-warning-300">{t('offerEnds')} {new Date(bundle.Ends_At).toLocaleString(locale === 'bn' ? 'bn-BD' : 'en-BD')}</p>}
                   <div className="mt-3 flex flex-wrap gap-2">
                     {bundle.Product_IDs.filter((productId) => productId !== product.Product_ID).map((productId) => {
                       const bundleProduct = allProducts.find((candidate) => candidate.Product_ID === productId);
                       if (!bundleProduct) return null;
-                      return <button key={productId} type="button" onClick={() => bundleProduct.Sizes?.length ? onSelectProduct?.(bundleProduct) : onAddToCart(bundleProduct, 1)} className="rounded-md border border-warning-300 px-3 py-2 text-micro font-bold text-warning-900 hover:bg-warning-100 dark:border-warning-800 dark:text-warning-200 dark:hover:bg-warning-950/50">Add {bundleProduct.Name}</button>;
+                      return <button key={productId} type="button" onClick={() => bundleProduct.Sizes?.length ? onSelectProduct?.(bundleProduct) : onAddToCart(bundleProduct, 1)} className="rounded-md border border-warning-300 px-3 py-2 text-micro font-bold text-warning-900 hover:bg-warning-100 dark:border-warning-800 dark:text-warning-200 dark:hover:bg-warning-950/50">{t('add')} {bundleProduct.Name}</button>;
                     })}
                   </div>
                 </article>
@@ -569,10 +571,10 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               <div>
                 <h2 className="text-lg font-bold text-surface-900 dark:text-white flex items-center gap-2">
                   <MessageSquare className="w-5 h-5 text-brand-600 dark:text-brand-400" />
-                  Customer Reviews ({productReviews.length})
+                  {t('customerReviews')} ({productReviews.length})
                 </h2>
                 <p className="text-xs text-surface-500 dark:text-surface-400">
-                  Verified customer ratings and feedback
+                  {t('verifiedRatingsFeedback')}
                 </p>
               </div>
               <div className="flex items-center gap-2">
@@ -586,18 +588,18 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 <>
                   <h3 className="text-xs font-bold uppercase tracking-wider text-surface-700 dark:text-surface-300 flex items-center gap-1.5">
                     <UserCheck className="w-4 h-4 text-success-500" />
-                    Leave a Review as {currentCustomer.Name}
+                    {t('leaveReviewAs')} {currentCustomer.Name}
                   </h3>
 
-                  {reviewSubmittedMessage && (
+                  {reviewSubmitted && (
                     <div className="p-3 bg-success-50 text-success-700 dark:bg-success-950/50 dark:text-success-300 rounded-xl text-xs font-semibold">
-                      {reviewSubmittedMessage}
+                      {t('reviewSubmitted')}
                     </div>
                   )}
 
                   <form onSubmit={handleReviewSubmit} className="space-y-3">
                     <div className="flex items-center gap-3">
-                      <span className="text-xs text-surface-500 dark:text-surface-400 font-medium">Your Rating:</span>
+                      <span className="text-xs text-surface-500 dark:text-surface-400 font-medium">{t('yourRating')}:</span>
                       <StarRating
                         rating={newRating}
                         interactive
@@ -605,7 +607,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                         onRatingChange={(r) => setNewRating(r)}
                       />
                       <span className="text-xs font-bold text-warning-500">
-                        {newRating > 0 ? `${newRating} / 5 stars` : 'Choose a rating'}
+                        {newRating > 0 ? t('ratingScore', { rating: newRating, total: 5 }) : t('chooseRating')}
                       </span>
                     </div>
 
@@ -613,15 +615,15 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                       rows={2}
                       value={newReviewText}
                       onChange={(e) => setNewReviewText(e.target.value)}
-                      placeholder="Share your experience with this product..."
+                      placeholder={t('shareProductExperience')}
                       className="luxury-input w-full p-3 text-xs bg-white dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-warning-500/40 text-surface-900 dark:text-surface-100 placeholder-surface-400"
                     />
 
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div className="inline-flex rounded-lg border border-surface-200 bg-white p-1 dark:border-surface-700 dark:bg-[#181F2A]">
-                        {(['good', 'bad'] as const).map((sentiment) => <button key={sentiment} type="button" aria-pressed={reviewSentiment === sentiment} onClick={() => setReviewSentiment(sentiment)} className={`rounded-md px-3 py-1.5 text-micro font-bold capitalize ${reviewSentiment === sentiment ? 'bg-brand-700 text-white' : 'text-surface-600 dark:text-surface-300'}`}>{sentiment}</button>)}
+                        {(['good', 'bad'] as const).map((sentiment) => <button key={sentiment} type="button" aria-pressed={reviewSentiment === sentiment} onClick={() => setReviewSentiment(sentiment)} className={`rounded-md px-3 py-1.5 text-micro font-bold capitalize ${reviewSentiment === sentiment ? 'bg-brand-700 text-white' : 'text-surface-600 dark:text-surface-300'}`}>{t(sentiment)}</button>)}
                       </div>
-                      <button type="button" onClick={() => void draftReview()} disabled={isDraftingReview} className="inline-flex items-center gap-1.5 rounded-lg border border-brand-300 px-3 py-2 text-xs font-bold text-brand-700 disabled:opacity-50 dark:border-brand-900 dark:text-brand-300"><Sparkles className="h-3.5 w-3.5" />{isDraftingReview ? 'Drafting...' : 'Draft with AI'}</button>
+                      <button type="button" onClick={() => void draftReview()} disabled={isDraftingReview} className="inline-flex items-center gap-1.5 rounded-lg border border-brand-300 px-3 py-2 text-xs font-bold text-brand-700 disabled:opacity-50 dark:border-brand-900 dark:text-brand-300"><Sparkles className="h-3.5 w-3.5" />{isDraftingReview ? t('drafting') : t('draftWithAi')}</button>
                     </div>
                     {reviewDraftError && <p role="alert" className="text-xs text-danger-600">{reviewDraftError}</p>}
 
@@ -632,7 +634,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                         className="flex items-center gap-1.5 px-5 py-2 bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white rounded-full text-xs font-semibold shadow-xs transition-colors cursor-pointer"
                       >
                         <Send className="w-3.5 h-3.5" />
-                        <span>Post review</span>
+                        <span>{t('postReview')}</span>
                       </button>
                     </div>
                   </form>
@@ -640,7 +642,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               ) : (
                 <div className="text-center py-4 space-y-2">
                   <p className="text-xs text-surface-600 dark:text-surface-400">
-                    Sign in to leave a verified review and rating for this product.
+                    {t('signInForVerifiedReview')}
                   </p>
                   {onOpenLogin && (
                     <button
@@ -652,7 +654,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                       className="inline-flex items-center gap-1.5 px-4 py-2 bg-brand-600 hover:bg-brand-500 text-white rounded-full text-xs font-bold shadow-md shadow-brand-600/30 transition-all cursor-pointer"
                     >
                       <LogIn className="w-3.5 h-3.5" />
-                      <span>Sign In to Review</span>
+                      <span>{t('signInToReview')}</span>
                     </button>
                   )}
                 </div>
@@ -663,7 +665,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             <div className="space-y-3">
               {productReviews.length === 0 ? (
                 <p className="text-xs text-surface-500 dark:text-surface-500 text-center py-4 italic">
-                  No customer reviews yet. Be the first to review this product!
+                  {t('noCustomerReviews')}
                 </p>
               ) : (
                 productReviews.map((rev) => (
@@ -678,10 +680,10 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                         </span>
                         <div>
                           <span className="text-xs font-semibold text-surface-900 dark:text-white block leading-tight">
-                            Verified Customer #{rev.Customer_ID}
+                            {t('verifiedCustomerNumber', { number: rev.Customer_ID })}
                           </span>
                           <span className="text-micro text-surface-500 dark:text-surface-500">
-                            {formatDate(rev.Created_At)}
+                            {new Date(rev.Created_At).toLocaleDateString(locale === 'bn' ? 'bn-BD' : 'en-BD')}
                           </span>
                         </div>
                       </div>

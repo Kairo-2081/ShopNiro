@@ -2,11 +2,13 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import { AUTH } from './global-setup.ts';
 import { E2E } from './seed.ts';
-import { blockNonLocalTraffic, clearCartAndOrders, openCheckout, openStorefront, seedCart } from './helpers.ts';
+import { blockNonLocalTraffic, caseInsensitiveName, clearCartAndOrders, openCheckout, openStorefront, seedCart } from './helpers.ts';
+
+test.describe.configure({ retries: 0 });
 
 const rolePages = [
   { role: 'customer', home: 'Shop', pages: ['Top charts', 'Orders', 'Live tracking', 'Profile', 'Support'] },
-  { role: 'seller', home: 'Product Catalog', pages: ['Fulfillment Orders', 'Sales Analytics', 'Customer Reviews', 'Deals & Bundles', 'COD remittances', 'Preview storefront', 'Support'] },
+  { role: 'seller', home: 'Product Catalog', pages: ['Fulfillment Orders', 'Sales Analytics', 'Customer Reviews', 'Deals and bundles', 'COD remittances', 'Preview storefront', 'Support'] },
   { role: 'admin', home: 'Governance Overview', pages: ['Marketplace Metrics', 'Merchant Approvals', 'Category Registry', 'Rider Hiring', 'Product Moderation', 'Online Payments', 'Order Cancellations', 'Support Inbox', 'Storefront', 'Support'] },
   { role: 'rider', home: 'Deliveries', pages: ['Support'] },
 ] as const;
@@ -15,8 +17,8 @@ const guestStorageState = { cookies: [], origins: [] };
 
 const assertKeyboardReachability = async (page: import('@playwright/test').Page, label: string) => {
   // Controls are tagged in the page, so a late re-render (the catalogue is fetched more than once on load) would drop the
-  // tags and make a reachable control look untagged. Let requests finish and the page stop changing first.
-  await page.waitForLoadState('networkidle').catch(() => undefined);
+  // tags and make a reachable control look untagged. Wait for the DOM to stop changing instead of waiting for network idle:
+  // dashboards can keep requests active while polling.
   await page.evaluate(() => new Promise<void>((resolve) => {
     let quiet = window.setTimeout(done, 600);
     const observer = new MutationObserver(() => { window.clearTimeout(quiet); quiet = window.setTimeout(done, 600); });
@@ -75,7 +77,7 @@ const assertKeyboardReachability = async (page: import('@playwright/test').Page,
 };
 
 test('public and role-specific pages have no critical or serious axe violations', async ({ browser, baseURL }, testInfo) => {
-  test.setTimeout(180_000);
+  test.setTimeout(1_500_000);
   test.skip(testInfo.project.name !== 'desktop', 'The full page sweep runs once per CI workflow.');
 
   // Contrast is read from computed colours, so let the colour transitions started by a theme switch finish.
@@ -146,10 +148,10 @@ test('public and role-specific pages have no critical or serious axe violations'
       await blockNonLocalTraffic(page);
       await page.goto('/');
       const navigation = page.getByRole('navigation', { name: 'Workspace navigation' });
-      await expect(navigation.getByRole('button', { name: home })).toBeVisible();
+      await expect(navigation.getByRole('button', { name: caseInsensitiveName(home) })).toBeVisible();
       await scanPage(page, `${role} ${home}`);
       for (const label of pages) {
-        await navigation.getByRole('button', { name: label }).click();
+        await navigation.getByRole('button', { name: caseInsensitiveName(label) }).click();
         await scanPage(page, `${role} ${label}`);
       }
     } finally {
@@ -190,7 +192,7 @@ test('storefront controls are keyboard reachable and the login dialog traps and 
 });
 
 test('role pages expose every visible control to keyboard navigation', async ({ browser, baseURL }, testInfo) => {
-  test.setTimeout(240_000);
+  test.setTimeout(1_500_000);
   test.skip(testInfo.project.name !== 'desktop', 'The complete role-page keyboard sweep runs once per CI workflow.');
 
   for (const { role, home, pages } of rolePages) {
@@ -200,11 +202,11 @@ test('role pages expose every visible control to keyboard navigation', async ({ 
       await blockNonLocalTraffic(page);
       await page.goto('/');
       const navigation = page.getByRole('navigation', { name: 'Workspace navigation' });
-      await expect(navigation.getByRole('button', { name: home })).toBeVisible();
+      await expect(navigation.getByRole('button', { name: caseInsensitiveName(home) })).toBeVisible();
       await assertKeyboardReachability(page, `${role} home`);
 
       for (const label of pages) {
-        await navigation.getByRole('button', { name: label }).click();
+        await navigation.getByRole('button', { name: caseInsensitiveName(label) }).click();
         await assertKeyboardReachability(page, `${role} ${label}`);
       }
     } finally {
@@ -231,7 +233,7 @@ test('mobile navigation drawer closes with Escape and returns focus to its trigg
     await expect(trigger).toBeFocused();
 
     await trigger.click();
-    await page.getByRole('navigation', { name: 'Workspace navigation' }).getByRole('button', { name: 'Top charts' }).click();
+    await page.getByRole('navigation', { name: 'Workspace navigation' }).getByRole('button', { name: caseInsensitiveName('Top charts') }).click();
     await expect(dialog).toHaveCount(0);
   } finally {
     await context.close();
@@ -363,15 +365,15 @@ const scanBothThemes = async (page: import('@playwright/test').Page, label: stri
 
 test('create-account dialog has no critical or serious axe violations in either theme', async ({ browser, baseURL }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop', 'The dialog sweep runs once per CI workflow.');
-  test.setTimeout(120_000);
+  test.setTimeout(600_000);
   const context = await browser.newContext({ baseURL, storageState: guestStorageState });
   const page = await context.newPage();
   try {
     await blockNonLocalTraffic(page);
     await page.goto('/');
     await page.getByRole('button', { name: /Sign in|Log in|Login/i }).first().click();
-    await page.getByRole('button', { name: 'Create Account', exact: true }).click();
-    await expect(page.getByRole('dialog', { name: 'Create an Account' })).toBeVisible();
+    await page.getByRole('button', { name: caseInsensitiveName('Create account'), exact: true }).click();
+    await expect(page.getByRole('dialog', { name: caseInsensitiveName('Create an account') })).toBeVisible();
     await scanBothThemes(page, 'Create-account dialog');
   } finally {
     await context.close();

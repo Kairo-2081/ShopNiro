@@ -54,7 +54,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [isAccountMenuOpen, setIsAccountMenuOpen] = React.useState(false);
   const accountMenuRef = React.useRef<HTMLDivElement>(null);
   const accountButtonRef = React.useRef<HTMLButtonElement>(null);
-  const accountName = currentCustomer?.Name || currentSeller?.Name || admin?.Name || 'Rider account';
+  const accountName = currentCustomer?.Name || currentSeller?.Name || admin?.Name || t('riderAccount');
   const accountEmail = currentCustomer?.Email || currentSeller?.Email || admin?.Email;
 
   React.useEffect(() => {
@@ -84,7 +84,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               type="button"
               onClick={onOpenNavigation}
-              aria-label={isNavigationOpen ? 'Navigation open' : 'Open navigation'}
+              aria-label={isNavigationOpen ? t('navigationOpen') : t('openNavigation')}
               aria-expanded={isNavigationOpen}
               aria-controls="mobile-navigation-drawer"
               aria-haspopup="dialog"
@@ -114,12 +114,12 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 type="button"
                 onClick={onOpenChat}
-                aria-label="Ask AI: Open ShopNiro AI Assistant"
+                aria-label={`${t('askAi')}: ${t('openAiAssistant')}`}
                 className="luxury-control min-h-9 items-center gap-1.5 rounded-full border border-[#8a7f4a]/40 bg-[#d0c8a5]/30 px-3 text-xs font-semibold text-[#4f4720] hover:bg-[#d0c8a5]/45 dark:border-[#d0c8a5]/25 dark:bg-[#d0c8a5]/10 dark:font-normal dark:text-[#d0c8a5] dark:hover:bg-[#d0c8a5]/15"
-                title="Open ShopNiro AI Assistant"
+                title={t('openAiAssistant')}
               >
                 <Sparkles aria-hidden="true" className="h-3.5 w-3.5 text-warning-700 dark:text-warning-400" />
-                <span className="hidden sm:inline">Ask AI</span>
+                <span className="hidden sm:inline">{t('askAi')}</span>
               </button>
             )}
 
@@ -129,7 +129,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onClick={() => setLocale(locale === 'en' ? 'bn' : 'en')}
                 className="luxury-control min-h-11 gap-1.5 rounded-full border border-surface-200 bg-white px-3 text-xs font-semibold text-surface-800 hover:bg-surface-50 dark:border-surface-700 dark:bg-[#161C24] dark:text-surface-200 dark:hover:bg-surface-800"
                 aria-label={`${t('language')}: ${locale === 'en' ? t('switchToBangla') : t('switchToEnglish')}`}
-                title="Change language"
+                title={t('changeLanguage')}
               >
                 <Languages aria-hidden="true" className="h-4 w-4" />
                 <span>{t('language')}</span>
@@ -153,7 +153,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 type="button"
                 onClick={onOpenCart}
                 className="luxury-control relative h-11 w-11 min-h-11 rounded-full border border-surface-200 bg-surface-100 text-surface-700 hover:bg-surface-200 dark:border-surface-800 dark:bg-[#161C24] dark:text-surface-300 dark:hover:bg-surface-800"
-                aria-label={cartCount > 0 ? `Shopping Cart: ${cartCount}` : 'Shopping Cart'}
+                aria-label={cartCount > 0 ? t('shoppingCartCount', { count: cartCount }) : t('shoppingCart')}
               >
                 <ShoppingCart aria-hidden="true" className="h-4 w-4" />
                 {cartCount > 0 && (
@@ -179,13 +179,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                   ref={accountButtonRef}
                   type="button"
                   onClick={() => setIsAccountMenuOpen((open) => !open)}
-                  aria-label="Open account menu"
+                  aria-label={t('openAccountMenu')}
                   aria-expanded={isAccountMenuOpen}
                   aria-controls="account-menu"
                   className="luxury-control min-h-11 gap-1.5 rounded-full border border-surface-200 bg-white px-3 text-xs font-semibold text-surface-800 hover:bg-surface-50 dark:border-surface-700 dark:bg-[#161C24] dark:text-surface-200 dark:hover:bg-surface-800"
                 >
                   <User aria-hidden="true" className="h-4 w-4" />
-                  <span className="hidden sm:inline">Account</span>
+                  <span className="hidden sm:inline">{t('account')}</span>
                 </button>
                 {isAccountMenuOpen && (
                   <div id="account-menu" className="absolute right-0 top-full z-50 mt-2 w-64 rounded-xl border border-surface-200 bg-white p-3 text-surface-900 shadow-xl dark:border-surface-700 dark:bg-[#171713] dark:text-surface-100">

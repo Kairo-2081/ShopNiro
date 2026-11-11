@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Admin, Address } from '../../types';
 import { AccountLocationPicker } from '../AccountLocationPicker';
 import { X, ShieldPlus, Send, Eye, EyeOff, Lock, User, Mail, Phone, MapPin } from 'lucide-react';
+import { useLocale } from '../../lib/i18n';
 
 interface AdminSignupModalProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ export const AdminSignupModal: React.FC<AdminSignupModalProps> = ({
   onRegisterAdmin,
   onSuccessRegistered,
 }) => {
+  const { t } = useLocale();
   const [username, setUsername] = useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -88,8 +90,8 @@ export const AdminSignupModal: React.FC<AdminSignupModalProps> = ({
               <ShieldPlus className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-surface-900 dark:text-white">Admin Officer Registration</h3>
-              <p className="text-xs text-surface-500 dark:text-surface-400">Register new Governance Officer account</p>
+              <h3 className="text-base font-bold text-surface-900 dark:text-white">{t('adminOfficerRegistration')}</h3>
+              <p className="text-xs text-surface-500 dark:text-surface-400">{t('registerGovernanceOfficer')}</p>
             </div>
           </div>
           <button
@@ -197,7 +199,7 @@ export const AdminSignupModal: React.FC<AdminSignupModalProps> = ({
 
           <div className="pt-2 border-t border-surface-100 dark:border-surface-800">
             <h4 className="font-semibold text-surface-900 dark:text-white mb-2 flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-brand-500" /> Operational / Office Address
+              <MapPin className="w-3.5 h-3.5 text-brand-500" /> {t('operationalOfficeAddress')}
             </h4>
             <div className="mb-3">
               <label className="block text-surface-600 dark:text-surface-400 mb-1">Location *</label>
@@ -212,7 +214,7 @@ export const AdminSignupModal: React.FC<AdminSignupModalProps> = ({
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-surface-600 dark:text-surface-400 mb-1">Building / Floor</label>
+                <label className="block text-surface-600 dark:text-surface-400 mb-1">{t('buildingFloor')}</label>
                 <input
                   type="text"
                   placeholder="e.g. Floor 12"
@@ -244,7 +246,7 @@ export const AdminSignupModal: React.FC<AdminSignupModalProps> = ({
                 />
               </div>
               <div>
-                <label className="block text-surface-600 dark:text-surface-400 mb-1">Postal Code</label>
+                <label className="block text-surface-600 dark:text-surface-400 mb-1">{t('postalCode')}</label>
                 <input
                   type="text"
                   placeholder="e.g. 95113"
@@ -262,7 +264,7 @@ export const AdminSignupModal: React.FC<AdminSignupModalProps> = ({
               onClick={onClose}
               className="px-4 py-2 text-surface-600 hover:bg-surface-100 dark:text-surface-400 dark:hover:bg-surface-800 rounded-full transition-colors cursor-pointer"
             >
-              Cancel
+              {t('cancel')}
             </button>
             <button
               type="submit"
@@ -270,7 +272,7 @@ export const AdminSignupModal: React.FC<AdminSignupModalProps> = ({
               className="flex items-center gap-2 px-6 py-2.5 bg-brand-600 hover:bg-brand-500 text-white font-bold rounded-full shadow-lg shadow-brand-500/30 disabled:opacity-50 transition-all cursor-pointer"
             >
               <Send className="w-4 h-4" />
-              <span>{isSubmitting ? 'Registering...' : 'Register Admin'}</span>
+              <span>{isSubmitting ? t('registering') : t('registerOfficer')}</span>
             </button>
           </div>
         </form>
