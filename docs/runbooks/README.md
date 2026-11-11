@@ -7,6 +7,7 @@ Use the runbook matching the incident. The payment shutdown control requires the
 - [Leaked secret or key](leaked-secret.md)
 - [Seller payout dispute](seller-payout-dispute.md)
 - [Disable online payments; COD only](disable-online-payments.md)
+- [Production password-recovery verification](password-recovery-live-check.md)
 - [Production access and secret custody](production-access.md)
 - [Gateway error practice drill](gateway-error-drill.md)
 
