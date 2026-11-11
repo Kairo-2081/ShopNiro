@@ -80,11 +80,11 @@ test('admin approves a seller, who lists a product that a customer buys and a ri
 
   await test.step('rider accepts, starts and records cash for the delivery', async () => {
     const rider = await asRole(browser, 'rider');
-    await rider.getByRole('button', { name: /Refresh jobs/i }).click();
-    await rider.getByRole('button', { name: /Accept shipment/i }).click();
-    await rider.getByRole('button', { name: /Start delivery/i }).click();
+    await rider.getByRole('button', { name: /^Refresh$/i }).click();
+    await rider.getByRole('button', { name: /Claim delivery/i }).click();
+    await rider.getByRole('button', { name: /On the way/i }).click();
     await expect(rider.getByText(/Tell the customer this delivery code/i)).toBeVisible();
-    await rider.getByRole('button', { name: /collected/ }).click();
+    await rider.getByRole('button', { name: /Confirm received/i }).click();
     await expect(rider.getByText(/COD collection recorded/)).toBeVisible();
     await rider.context().close();
   });
