@@ -8,6 +8,7 @@ import { ShieldCheck, Store, FolderTree, CheckCircle2, Clock, Plus, Edit, Trash2
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { fallbackToBrandLogo } from '../../lib/branding';
+import { useLocale } from '../../lib/i18n';
 
 const AdminOverviewAnalytics = React.lazy(() =>
   import('./AdminOverviewAnalytics').then(({ AdminOverviewAnalytics: Component }) => ({ default: Component }))
@@ -51,6 +52,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onDeleteCategory,
   onOpenSellerSignup,
 }) => {
+  const { t } = useLocale();
   const adminTab = activeTab;
   const setAdminTab = setActiveTab;
   const [newCategoryName, setNewCategoryName] = React.useState('');
@@ -366,7 +368,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       )}
 
       {adminTab === 'cancellations' && (
-        <Section title="Order cancellation requests" description="Approved online refunds are processed through SSLCommerz and remain pending until the gateway confirms completion." className="space-y-4" action={<button type="button" onClick={() => void fetchCancellationRequests()} disabled={loadingCancellations} className="inline-flex items-center gap-2 rounded-full border border-surface-300 px-3 py-2 text-xs font-semibold dark:border-surface-700"><RefreshCw className={`h-3.5 w-3.5 ${loadingCancellations ? 'animate-spin' : ''}`} />Refresh</button>}>
+        <Section title="Order cancellation requests" description="Approved online refunds are processed through SSLCommerz and remain pending until the gateway confirms completion." className="space-y-4" action={<button type="button" onClick={() => void fetchCancellationRequests()} disabled={loadingCancellations} className="inline-flex items-center gap-2 rounded-full border border-surface-300 px-3 py-2 text-xs font-semibold dark:border-surface-700"><RefreshCw className={`h-3.5 w-3.5 ${loadingCancellations ? 'animate-spin' : ''}`} />{t('refresh')}</button>}>
           {loadingCancellations ? (
             <div role="status" aria-label="Loading cancellation requests" className="premium-skeleton h-40 rounded-2xl" />
           ) : cancellationRequests.length === 0 ? (
@@ -397,8 +399,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <span className="text-xs text-surface-500 dark:text-surface-400">No payment refund is required.</span>
                       )}
                       <div className="flex gap-2">
-                        <button type="button" disabled={reviewingCancellationId === request.Request_ID} onClick={() => void reviewCancellationRequest(request, 'rejected')} className="rounded-full border border-surface-300 px-3 py-2 text-xs font-bold dark:border-surface-700">Reject</button>
-                        <button type="button" disabled={reviewingCancellationId === request.Request_ID || (request.Payment_Status === 'paid' && request.Payment_Method === 'cash_on_delivery' && !confirmedCashReturnIds.includes(request.Request_ID))} onClick={() => void reviewCancellationRequest(request, 'approved')} className="rounded-full bg-success-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">Approve cancellation</button>
+                        <button type="button" disabled={reviewingCancellationId === request.Request_ID} onClick={() => void reviewCancellationRequest(request, 'rejected')} className="rounded-full border border-surface-300 px-3 py-2 text-xs font-bold dark:border-surface-700">{t('reject')}</button>
+                        <button type="button" disabled={reviewingCancellationId === request.Request_ID || (request.Payment_Status === 'paid' && request.Payment_Method === 'cash_on_delivery' && !confirmedCashReturnIds.includes(request.Request_ID))} onClick={() => void reviewCancellationRequest(request, 'approved')} className="rounded-full bg-success-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-50">{t('approveCancellation')}</button>
                       </div>
                     </div>
                   )}
@@ -410,7 +412,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       )}
 
       {adminTab === 'support' && (
-        <Section title="Support inbox" description="Review customer requests and record resolution notes." className="space-y-4" action={<button type="button" onClick={() => void fetchSupportRequests()} disabled={loadingSupportRequests} className="inline-flex items-center gap-2 rounded-full border border-surface-300 px-3 py-2 text-xs font-semibold dark:border-surface-700"><RefreshCw className={`h-3.5 w-3.5 ${loadingSupportRequests ? 'animate-spin' : ''}`} />Refresh</button>}>
+        <Section title="Support inbox" description="Review customer requests and record resolution notes." className="space-y-4" action={<button type="button" onClick={() => void fetchSupportRequests()} disabled={loadingSupportRequests} className="inline-flex items-center gap-2 rounded-full border border-surface-300 px-3 py-2 text-xs font-semibold dark:border-surface-700"><RefreshCw className={`h-3.5 w-3.5 ${loadingSupportRequests ? 'animate-spin' : ''}`} />{t('refresh')}</button>}>
           {loadingSupportRequests ? (
             <div role="status" aria-label="Loading support requests" className="premium-skeleton h-40 rounded-2xl" />
           ) : supportRequests.length === 0 ? (
@@ -433,7 +435,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <option value="open">Open</option><option value="in_progress">In progress</option><option value="resolved">Resolved</option>
                     </select>
                     <input value={supportNotes[request.Request_ID] || ''} onChange={(event) => setSupportNotes((current) => ({ ...current, [request.Request_ID]: event.target.value }))} maxLength={2000} placeholder="Internal resolution note" className="min-w-0 rounded-lg border border-surface-300 bg-white px-3 py-2 text-xs dark:border-surface-700 dark:bg-[#181F2A]" />
-                    <button type="button" disabled={savingSupportId === request.Request_ID} onClick={() => void updateSupportRequest(request)} className="rounded-lg bg-success-700 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">{savingSupportId === request.Request_ID ? 'Saving…' : 'Save'}</button>
+                    <button type="button" disabled={savingSupportId === request.Request_ID} onClick={() => void updateSupportRequest(request)} className="rounded-lg bg-success-700 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">{savingSupportId === request.Request_ID ? t('saving') : t('save')}</button>
                   </div>
                 </article>
               ))}
@@ -714,7 +716,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               title={`Review ${seller.Name}`}
                               className="inline-flex min-h-10 items-center px-3 py-1 bg-success-600 hover:bg-success-500 disabled:opacity-50 text-white rounded-full text-xs font-bold transition-all cursor-pointer shadow-sm shadow-success-500/20"
                             >
-                              Review &amp; approve
+                              {t('reviewAndApprove')}
                             </button>
                           )}
                           {seller.Status !== 'rejected' && seller.Status === 'pending' && (
@@ -725,7 +727,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               title={`Reject ${seller.Name}`}
                               className="inline-flex min-h-10 items-center px-3 py-1 bg-surface-200 hover:bg-surface-300 dark:bg-surface-700 dark:hover:bg-surface-600 disabled:opacity-50 text-surface-800 dark:text-surface-200 rounded-full text-xs font-bold transition-colors cursor-pointer"
                             >
-                              Reject
+                              {t('reject')}
                             </button>
                           )}
                           {seller.Status !== 'suspended' && (
@@ -736,7 +738,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                               title={`Suspend ${seller.Name}`}
                               className="inline-flex min-h-10 items-center px-3 py-1 bg-danger-600/80 hover:bg-danger-500 disabled:opacity-50 text-white rounded-full text-xs font-bold transition-all cursor-pointer"
                             >
-                              Suspend
+                              {t('suspend')}
                             </button>
                           )}
                         </div>
@@ -777,7 +779,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 className="w-full py-2.5 bg-brand-600 hover:bg-brand-500 disabled:opacity-50 text-white font-bold rounded-full shadow-lg shadow-brand-500/25 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
-                <span>Create Category</span>
+                <span>{t('createCategory')}</span>
               </button>
             </form>
           </div>
@@ -822,7 +824,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             title={`Save ${cat.Name}`}
                             className="min-h-10 px-4 py-2 bg-success-600 hover:bg-success-500 text-white font-bold rounded-full text-micro cursor-pointer"
                           >
-                            Save
+                            {t('save')}
                           </button>
                           <button
                             type="button"
@@ -830,7 +832,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                             title={`Cancel editing ${cat.Name}`}
                             className="min-h-10 px-4 py-2 bg-surface-200 dark:bg-surface-800 text-surface-700 dark:text-surface-400 font-bold rounded-full text-micro cursor-pointer"
                           >
-                            Cancel
+                            {t('cancel')}
                           </button>
                         </>
                       ) : (
@@ -1125,14 +1127,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <section className="overflow-hidden rounded-2xl border border-surface-200 bg-white dark:border-surface-800 dark:bg-[#12161D]">
             <header className="flex items-center justify-between gap-3 border-b border-surface-200 p-4 dark:border-surface-800">
               <div><h2 className="text-sm font-bold text-surface-900 dark:text-white">Seller payout requests</h2><p className="text-xs text-surface-500 dark:text-surface-400">Verify account details and record an external reference when paying.</p></div>
-              <button type="button" onClick={() => void fetchSellerPayouts()} disabled={loadingPayouts} aria-label="Refresh seller payouts" className="rounded-lg border border-surface-300 p-2 text-surface-600 disabled:opacity-50 dark:border-surface-700 dark:text-surface-300"><RefreshCw className={`h-4 w-4 ${loadingPayouts ? 'animate-spin' : ''}`} /></button>
+              <button type="button" onClick={() => void fetchSellerPayouts()} disabled={loadingPayouts} aria-label={t('refresh')} className="rounded-lg border border-surface-300 p-2 text-surface-600 disabled:opacity-50 dark:border-surface-700 dark:text-surface-300"><RefreshCw className={`h-4 w-4 ${loadingPayouts ? 'animate-spin' : ''}`} /></button>
             </header>
             <div className="divide-y divide-surface-200 dark:divide-surface-800">
               {sellerPayouts.map((payout) => (
                 <article key={payout.id} className="grid gap-3 p-4 lg:grid-cols-[1fr_auto_auto] lg:items-center">
                   <div className="min-w-0"><p className="text-sm font-semibold text-surface-900 dark:text-white">{payout.seller_name} · {formatCurrency(Number(payout.amount))}</p><p className="mt-1 break-all text-xs text-surface-500 dark:text-surface-400">{payout.method}: {payout.account} · {payout.id}</p></div>
                   <label className="text-xs font-semibold text-surface-600 dark:text-surface-300">External reference<input value={payoutReferences[payout.id] || ''} onChange={(event) => setPayoutReferences((current) => ({ ...current, [payout.id]: event.target.value }))} className="mt-1 block w-full rounded-lg border border-surface-300 bg-white px-3 py-2 text-sm dark:border-surface-700 dark:bg-[#181F2A]" /></label>
-                  <div className="flex gap-2"><button type="button" onClick={() => void processSellerPayout(payout, 'pay')} className="rounded-lg bg-success-700 px-3 py-2 text-xs font-bold text-white">Mark paid</button><button type="button" onClick={() => void processSellerPayout(payout, 'reject')} className="rounded-lg border border-danger-300 px-3 py-2 text-xs font-bold text-danger-700 dark:border-danger-900 dark:text-danger-300">Reject</button></div>
+                  <div className="flex gap-2"><button type="button" onClick={() => void processSellerPayout(payout, 'pay')} className="rounded-lg bg-success-700 px-3 py-2 text-xs font-bold text-white">{t('markPaid')}</button><button type="button" onClick={() => void processSellerPayout(payout, 'reject')} className="rounded-lg border border-danger-300 px-3 py-2 text-xs font-bold text-danger-700 dark:border-danger-900 dark:text-danger-300">{t('reject')}</button></div>
                 </article>
               ))}
               {!sellerPayouts.length && <p className="p-6 text-center text-sm text-surface-500">{loadingPayouts ? 'Loading payout requests…' : 'No pending seller payouts.'}</p>}
@@ -1260,7 +1262,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   disabled={updatingSellerId === selectedSeller.Seller_ID || !Object.values(sellerChecklist).every(Boolean)}
                   className="rounded-lg bg-success-600 px-4 py-2 text-xs font-bold text-white hover:bg-success-500 disabled:opacity-50"
                 >
-                  {updatingSellerId === selectedSeller.Seller_ID ? 'Updating...' : 'Approve seller'}
+                  {updatingSellerId === selectedSeller.Seller_ID ? t('saving') : t('approveSeller')}
                 </button>
               )}
               {selectedSeller.Status === 'pending' && (
@@ -1270,7 +1272,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   disabled={updatingSellerId === selectedSeller.Seller_ID}
                   className="rounded-lg border border-surface-300 px-4 py-2 text-xs font-bold text-surface-700 hover:bg-surface-100 disabled:opacity-50 dark:border-surface-700 dark:text-surface-200 dark:hover:bg-surface-800"
                 >
-                  Reject
+                  {t('reject')}
                 </button>
               )}
               {selectedSeller.Status !== 'suspended' && (
@@ -1280,7 +1282,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   disabled={updatingSellerId === selectedSeller.Seller_ID}
                   className="rounded-lg bg-danger-600 px-4 py-2 text-xs font-bold text-white hover:bg-danger-500 disabled:opacity-50"
                 >
-                  Suspend
+                  {t('suspend')}
                 </button>
               )}
             </footer>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Admin, Address } from '../../types';
 import { AccountLocationPicker } from '../AccountLocationPicker';
 import { X, ShieldPlus, Send, Eye, EyeOff, Lock, User, Mail, Phone, MapPin } from 'lucide-react';
+import { useLocale } from '../../lib/i18n';
 
 interface AdminSignupModalProps {
   isOpen: boolean;
@@ -16,6 +17,7 @@ export const AdminSignupModal: React.FC<AdminSignupModalProps> = ({
   onRegisterAdmin,
   onSuccessRegistered,
 }) => {
+  const { t } = useLocale();
   const [username, setUsername] = useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -262,7 +264,7 @@ export const AdminSignupModal: React.FC<AdminSignupModalProps> = ({
               onClick={onClose}
               className="px-4 py-2 text-surface-600 hover:bg-surface-100 dark:text-surface-400 dark:hover:bg-surface-800 rounded-full transition-colors cursor-pointer"
             >
-              Cancel
+              {t('cancel')}
             </button>
             <button
               type="submit"
@@ -270,7 +272,7 @@ export const AdminSignupModal: React.FC<AdminSignupModalProps> = ({
               className="flex items-center gap-2 px-6 py-2.5 bg-brand-600 hover:bg-brand-500 text-white font-bold rounded-full shadow-lg shadow-brand-500/30 disabled:opacity-50 transition-all cursor-pointer"
             >
               <Send className="w-4 h-4" />
-              <span>{isSubmitting ? 'Registering...' : 'Register Admin'}</span>
+              <span>{isSubmitting ? t('registering') : t('registerOfficer')}</span>
             </button>
           </div>
         </form>
