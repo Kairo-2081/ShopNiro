@@ -1,0 +1,140 @@
+// Times how long a phone on mobile 4G waits for the first product card, from a cold cache.
+//
+//   node scripts/measure-storefront-load.mjs [--url http://127.0.0.1:3200] [--runs 7] [--budget-ms 3000]
+//
+// Point it at a production build (npm run build, then node dist/server.cjs) over a seeded database. The dev server
+// ships unbundled React and says nothing about what a visitor downloads.
+//
+// Two scenarios, because they take different roads to the same screen:
+//   guest      opens the site, taps "Explore Marketplace", waits for the first product card
+//   returning  a signed-in customer opens the site and lands on the storefront directly
+//
+// The network and CPU profile is the one Lighthouse calls "Slow 4G on a mid-range phone": 150 ms round trip, 1.6 Mbps
+// down, 750 kbps up, a CPU four times slower than this machine. The budget applies to the median AND the slowest run,
+// so one lucky run cannot pass and one unlucky run cannot hide.
+import { chromium, devices, request } from '@playwright/test';
+
+const args = process.argv.slice(2);
+const option = (name, fallback) => {
+  const at = args.indexOf(`--${name}`);
+  return at >= 0 && args[at + 1] ? args[at + 1] : fallback;
+};
+const baseURL = option('url', 'http://127.0.0.1:3200').replace(/\/$/, '');
+const runs = Number(option('runs', '7'));
+const budgetMs = Number(option('budget-ms', '3000'));
+const productName = option('product', 'E2E Linen Blanket');
+// The seeded customer from e2e/seed.ts. The script signs in once through the real login API, so it works against any
+// production build whatever secret it was started with.
+const customerLogin = { email: option('customer', 'e2e-customer'), password: option('password', 'E2e-password-1!'), role: 'customer' };
+
+// The server allows 120 API calls a minute per address. A cold load makes about twenty, so back-to-back runs would trip
+// the limit and measure error pages. Stay under 100 a minute by pacing the runs, and fail loudly if a 429 slips through.
+const API_CALLS_PER_MINUTE = 100;
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+const PROFILE = {
+  latency: 150,
+  downloadThroughput: (1.6 * 1024 * 1024) / 8,
+  uploadThroughput: (750 * 1024) / 8,
+  cpuSlowdown: 4,
+};
+
+const median = (values) => {
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+};
+
+// A returning visitor has the session cookie and the browser-only hint the app writes after a confirmed sign-in.
+async function signedInState() {
+  const api = await request.newContext({ baseURL, extraHTTPHeaders: { Origin: baseURL } });
+  const response = await api.post('/api/auth/login', { data: customerLogin });
+  if (!response.ok()) throw new Error(`Sign-in failed: ${response.status()} ${await response.text()}`);
+  const state = await api.storageState();
+  await api.dispose();
+  state.origins = [{ origin: baseURL, localStorage: [{ name: 'shopniro_signed_in_hint', value: String(Date.now()) }] }];
+  return state;
+}
+
+async function oneRun(browser, scenario, returningState) {
+  const storageState = scenario === 'returning' ? returningState : { cookies: [], origins: [] };
+  const context = await browser.newContext({ ...devices['Pixel 5'], baseURL, storageState });
+  const page = await context.newPage();
+  const cdp = await context.newCDPSession(page);
+  await cdp.send('Network.enable');
+  await cdp.send('Network.setCacheDisabled', { cacheDisabled: true });
+  await cdp.send('Network.emulateNetworkConditions', {
+    offline: false,
+    latency: PROFILE.latency,
+    downloadThroughput: PROFILE.downloadThroughput,
+    uploadThroughput: PROFILE.uploadThroughput,
+  });
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: PROFILE.cpuSlowdown });
+
+  let transferred = 0;
+  let apiCalls = 0;
+  let rateLimited = 0;
+  page.on('response', (response) => {
+    if (!new URL(response.url()).pathname.startsWith('/api/')) return;
+    apiCalls += 1;
+    if (response.status() === 429) rateLimited += 1;
+  });
+  cdp.on('Network.loadingFinished', (event) => { transferred += event.encodedDataLength; });
+  await page.addInitScript(() => {
+    window.__lcp = 0;
+    new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) window.__lcp = entry.startTime;
+    }).observe({ type: 'largest-contentful-paint', buffered: true });
+  });
+
+  const started = performance.now();
+  await page.goto('/', { waitUntil: 'commit' });
+  if (scenario === 'guest') {
+    await page.getByRole('button', { name: 'Explore Marketplace' }).click();
+  }
+  try {
+    await page.getByText(productName, { exact: false }).first().waitFor({ state: 'visible', timeout: 60_000 });
+  } catch (error) {
+    throw new Error(`${scenario}: "${productName}" never appeared (page text starts: ${(await page.evaluate(() => document.body.innerText).catch(() => '')).slice(0, 160).replace(/\s+/g, ' ')}): ${error.message.split('\n')[0]}`);
+  }
+  const elapsed = performance.now() - started;
+  const lcp = await page.evaluate(() => window.__lcp).catch(() => 0);
+  await context.close();
+  if (rateLimited > 0) throw new Error(`${scenario}: the server answered ${rateLimited} API call(s) with 429, so this run measured an error page. Wait a minute and run again.`);
+  return { elapsedMs: Math.round(elapsed), lcpMs: Math.round(lcp), transferredKb: Math.round(transferred / 1024), apiCalls, wallMs: Math.round(performance.now() - started) };
+}
+
+const browser = await chromium.launch();
+const report = { baseURL, runs, budgetMs, profile: PROFILE, scenarios: {} };
+let failed = false;
+try {
+  const returningState = await signedInState();
+  for (const scenario of ['guest', 'returning']) {
+    // One throwaway run first: it warms the server's own caches (module compile, connection pool) so the numbers describe
+    // the visitor's network and CPU rather than a server that has just started.
+    const paced = async () => {
+      const result = await oneRun(browser, scenario, returningState);
+      await sleep(Math.max(0, (result.apiCalls * 60_000) / API_CALLS_PER_MINUTE - result.wallMs));
+      return result;
+    };
+    await paced();
+    const results = [];
+    for (let i = 0; i < runs; i += 1) results.push(await paced());
+    const times = results.map((r) => r.elapsedMs);
+    const summary = {
+      medianMs: Math.round(median(times)),
+      worstMs: Math.max(...times),
+      bestMs: Math.min(...times),
+      medianLcpMs: Math.round(median(results.map((r) => r.lcpMs))),
+      medianTransferredKb: Math.round(median(results.map((r) => r.transferredKb))),
+      runsMs: times,
+    };
+    report.scenarios[scenario] = summary;
+    if (summary.medianMs > budgetMs || summary.worstMs > budgetMs) failed = true;
+  }
+} finally {
+  await browser.close();
+}
+report.withinBudget = !failed;
+console.log(JSON.stringify(report, null, 2));
+process.exit(failed ? 1 : 0);

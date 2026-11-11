@@ -15,6 +15,7 @@
     "e2e": "playwright test",
     "test:a11y": "playwright test e2e/accessibility.spec.ts",
     "test:lighthouse:a11y": "node scripts/check-lighthouse-a11y.mjs",
+    "perf:storefront": "node scripts/measure-storefront-load.mjs",
     "migrate": "tsx scripts/migrate.ts",
     "migrate:status": "tsx scripts/migrate.ts --status",
     "migrate:drift": "tsx scripts/schema-drift.ts",
