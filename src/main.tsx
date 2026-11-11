@@ -1,12 +1,14 @@
-import {StrictMode} from 'react';
+import React, {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
-import LegalPage from './components/legal/LegalPage.tsx';
 import { AppErrorBoundary } from './components/AppErrorBoundary.tsx';
 import { NetworkStatusBanner } from './components/NetworkStatusBanner.tsx';
 import { LocaleProvider } from './lib/i18n.tsx';
-import { policyByPath } from './components/legal/policies.ts';
 import './index.css';
+
+const LegalPage = React.lazy(() =>
+  import('./components/legal/LegalPage.tsx').then((m) => ({ default: m.LegalPage }))
+);
 
 const brandFonts = document.getElementById('brand-fonts') as HTMLLinkElement | null;
 if (brandFonts) {
@@ -36,14 +38,23 @@ if (typeof window !== 'undefined') {
 }
 
 // Public policy pages (/terms, /privacy, /refunds, /delivery) render without the app shell or any API call.
-const policy = typeof window !== 'undefined' ? policyByPath(window.location.pathname) : undefined;
+const policyPaths = ['/terms', '/privacy', '/refunds', '/delivery'];
+const isPolicy = typeof window !== 'undefined' && policyPaths.includes(window.location.pathname);
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     {/* Outside the error boundary so the offline notice survives a failed lazy chunk. */}
     <NetworkStatusBanner />
     <AppErrorBoundary>
-      <LocaleProvider>{policy ? <LegalPage policy={policy} /> : <App />}</LocaleProvider>
+      <LocaleProvider>
+        {isPolicy ? (
+          <React.Suspense fallback={<div className="flex min-h-screen items-center justify-center text-sm text-surface-500">Loading...</div>}>
+            <LegalPage />
+          </React.Suspense>
+        ) : (
+          <App />
+        )}
+      </LocaleProvider>
     </AppErrorBoundary>
   </StrictMode>,
 );

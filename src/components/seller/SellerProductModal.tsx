@@ -7,6 +7,7 @@ import { X, Package, Save, Sparkles, Plus, Trash2, Upload } from 'lucide-react';
 import { prepareProductImage } from '../../lib/productImage';
 import { money } from '../../lib/format';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { useLocale } from '../../lib/i18n';
 const toLocalDateTimeInput = (value?: string) => {
   if (!value) return '';
   const date = new Date(value);
@@ -82,6 +83,7 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
   currentSeller,
   onSaveProduct,
 }) => {
+  const { t } = useLocale();
   useEscapeKey(onClose, isOpen);
   const dialogRef = useFocusTrap<HTMLDivElement>(isOpen);
   const [name, setName] = React.useState('');
@@ -389,7 +391,7 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
               <h2 id="seller-product-modal-title" className="font-bold text-surface-900 dark:text-white text-base">
                 {productToEdit ? 'Edit Product Listing' : 'Create New Product Listing'}
               </h2>
-              <p className="text-xs text-surface-500 dark:text-surface-400">Publish catalog items on ShopNiro marketplace</p>
+              <p className="text-xs text-surface-500 dark:text-surface-400">{t('publishCatalogItems')}</p>
             </div>
           </div>
           <button
@@ -423,7 +425,7 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
               className="w-full p-2.5 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-success-500 text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500"
             />
             <div className="mt-1 flex justify-between gap-3 text-micro text-surface-500 dark:text-surface-400">
-              <span>Lead with the brand, model, and main feature.</span>
+              <span>{t('brandModelFeatureTip')}</span>
               <span className="shrink-0 tabular-nums">{name.length}/80</span>
             </div>
           </div>
@@ -449,7 +451,7 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
 
             <div>
               <label className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">
-                Product Status
+                {t('productStatusLabel')}
               </label>
               <select
                 value={status}
@@ -477,7 +479,7 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
                 onChange={(e) => setPrice(e.target.value === '' ? '' : Number(e.target.value))}
                 className="w-full p-2.5 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-success-500 text-surface-900 dark:text-white"
               />
-              <p className="mt-1 text-micro text-surface-500 dark:text-surface-400">Whole-number and decimal prices are accepted.</p>
+              <p className="mt-1 text-micro text-surface-500 dark:text-surface-400">{t('wholeNumberDecimalAccepted')}</p>
             </div>
 
             <div>
@@ -516,19 +518,19 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
                 </div>
               )}
               <label className="mt-2 block text-micro font-semibold text-surface-600 dark:text-surface-300">
-                Offer end date
+                {t('offerEndDate')}
                 <input type="datetime-local" value={voucherExpiresAt} onChange={(event) => setVoucherExpiresAt(event.target.value)} disabled={!voucher.trim()} className="mt-1 w-full rounded-lg border border-surface-200 bg-surface-50 px-2.5 py-2 text-xs text-surface-900 disabled:opacity-50 dark:border-surface-700 dark:bg-[#181F2A] dark:text-white" />
               </label>
               <label className="mt-2 flex items-center gap-2 text-micro font-semibold text-surface-600 dark:text-surface-300">
                 <input type="checkbox" checked={featuredDeal} onChange={(event) => setFeaturedDeal(event.target.checked)} disabled={!voucher.trim()} />
-                Show in Featured Deals
+                {t('showFeaturedDeals')}
               </label>
             </div>
           </div>
 
           <section className="space-y-2">
             <div className="flex items-baseline justify-between gap-3">
-              <label className="block text-surface-700 dark:text-surface-300 font-semibold">Product Images</label>
+              <label className="block text-surface-700 dark:text-surface-300 font-semibold">{t('productImagesLabel')}</label>
               <span className="shrink-0 text-micro tabular-nums text-surface-500 dark:text-surface-400">
                 {[image, ...additionalImages].filter((url) => url.trim()).length}/7
               </span>
@@ -538,7 +540,7 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
                 type="url"
                 value={image}
                 onChange={(e) => setImage(e.target.value)}
-                placeholder="Primary image link, or upload a file"
+                placeholder={t('primaryImagePlaceholder')}
                 className="min-w-0 flex-1 p-2.5 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-success-500 text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500"
               />
               {renderUploadButton(0)}
@@ -549,7 +551,7 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
                   type="url"
                   value={url}
                   onChange={(event) => setAdditionalImages((current) => current.map((item, itemIndex) => itemIndex === index ? event.target.value : item))}
-                  placeholder={`Additional image ${index + 2} link, or upload a file`}
+                  placeholder={t('additionalImagePlaceholder', { index: index + 2 })}
                   className="min-w-0 flex-1 p-2.5 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-success-500 text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500"
                 />
                 {renderUploadButton(index + 1)}
@@ -558,7 +560,7 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
             ))}
             <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="text-micro text-surface-500 dark:text-surface-400">Add 1–7 clear product views. Upload a file, or paste a link. Uploaded pictures are always shown; links from other websites may be blocked.</p>
-              <button type="button" disabled={[image, ...additionalImages].filter((url) => url.trim()).length >= 7} onClick={() => setAdditionalImages((current) => [...current, ''])} className="inline-flex items-center gap-1.5 rounded-lg border border-success-300 px-3 py-2 text-xs font-bold text-success-800 hover:bg-success-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-success-800 dark:text-success-300"><Plus className="h-3.5 w-3.5" />Add image</button>
+              <button type="button" disabled={[image, ...additionalImages].filter((url) => url.trim()).length >= 7} onClick={() => setAdditionalImages((current) => [...current, ''])} className="inline-flex items-center gap-1.5 rounded-lg border border-success-300 px-3 py-2 text-xs font-bold text-success-800 hover:bg-success-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-success-800 dark:text-success-300"><Plus className="h-3.5 w-3.5" />{t('addImage')}</button>
             </div>
           </section>
 
@@ -571,7 +573,7 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h3 className="text-xs font-bold text-surface-800 dark:text-surface-200">Key product specs</h3>
-                <p className="mt-0.5 text-micro text-surface-500 dark:text-surface-400">Add up to 5 concise benefits or specifications.</p>
+                <p className="mt-0.5 text-micro text-surface-500 dark:text-surface-400">{t('addSpecsTip')}</p>
               </div>
               <span className="text-micro tabular-nums text-surface-500 dark:text-surface-400">{highlights.filter(Boolean).length}/5</span>
             </div>
@@ -582,7 +584,7 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
                   maxLength={120}
                   value={highlight}
                   onChange={(event) => setHighlights((current) => current.map((item, itemIndex) => itemIndex === index ? event.target.value : item))}
-                  placeholder={`Key spec ${index + 1}`}
+                  placeholder={t('keySpecPlaceholder', { index: index + 1 })}
                   aria-label={`Key product spec ${index + 1}`}
                   className="min-w-0 flex-1 rounded-lg border border-surface-200 bg-surface-50 px-3 py-2 text-xs text-surface-900 focus:outline-none focus:ring-2 focus:ring-success-500 dark:border-surface-700 dark:bg-[#181F2A] dark:text-white"
                 />
@@ -591,7 +593,7 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
             ))}
             {highlights.length < 5 && (
               <button type="button" onClick={() => setHighlights((current) => [...current, ''])} className="inline-flex items-center gap-1.5 rounded-lg border border-surface-300 px-3 py-2 text-xs font-semibold text-surface-700 hover:bg-surface-50 dark:border-surface-700 dark:text-surface-200 dark:hover:bg-surface-800">
-                <Plus className="h-3.5 w-3.5" />Add spec
+                <Plus className="h-3.5 w-3.5" />{t('addSpec')}
               </button>
             )}
           </section>
@@ -599,21 +601,21 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
           <section className="space-y-3 rounded-xl border border-surface-200 p-4 dark:border-surface-800">
             <label className="flex items-center gap-2 text-sm font-semibold text-surface-800 dark:text-surface-200">
               <input type="checkbox" checked={hasSizes} onChange={(event) => { setHasSizes(event.target.checked); setSizeError(null); }} />
-              This apparel product has size options
+              {t('apparelSizeOptionsNotice')}
             </label>
             {hasSizes && (
               <div className="space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
-                  <label className="text-xs font-semibold text-surface-600 dark:text-surface-300">Size group
+                  <label className="text-xs font-semibold text-surface-600 dark:text-surface-300">{t('sizeGroupLabel')}
                     <select value={sizeGender} onChange={(event) => setSizeGender(event.target.value as 'men' | 'women' | 'unisex')} className="ml-2 rounded-lg border border-surface-300 bg-white px-3 py-2 text-xs dark:border-surface-700 dark:bg-[#181F2A]">
-                      <option value="men">Men</option><option value="women">Women</option><option value="unisex">Unisex</option>
+                      <option value="men">Men</option><option value="women">{t('women')}</option><option value="unisex">{t('unisex')}</option>
                     </select>
                   </label>
                   <button type="button" onClick={handleGenerateSizeChart} disabled={isGeneratingSizeChart} className="inline-flex items-center gap-1.5 rounded-lg border border-success-300 px-3 py-2 text-xs font-bold text-success-800 hover:bg-success-50 disabled:opacity-50 dark:border-success-800 dark:text-success-300 dark:hover:bg-success-950/30">
                     <Sparkles className="h-3.5 w-3.5" />{isGeneratingSizeChart ? 'Reading image...' : 'Suggest size chart from image'}
                   </button>
                 </div>
-                <p className="text-micro text-warning-700 dark:text-warning-300">AI measurements are visual estimates. Verify them against the actual garment before publishing.</p>
+                <p className="text-micro text-warning-700 dark:text-warning-300">{t('aiMeasurementsNotice')}</p>
                 <div className="flex flex-wrap gap-2">
                   {['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'].map((size) => (
                     <button key={size} type="button" aria-pressed={sizes.includes(size)} onClick={() => toggleSize(size)} className={`rounded-lg border px-3 py-1.5 text-xs font-bold ${sizes.includes(size) ? 'border-success-700 bg-success-700 text-white' : 'border-surface-300 text-surface-700 dark:border-surface-700 dark:text-surface-300'}`}>{size}</button>
@@ -622,7 +624,7 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
                 {sizes.length > 0 && (
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[540px] text-left text-xs">
-                      <thead className="text-surface-500 dark:text-surface-400"><tr><th className="py-2">Size</th><th>Chest cm</th><th>Waist cm</th><th>Hip cm</th><th>Length cm</th></tr></thead>
+                      <thead className="text-surface-500 dark:text-surface-400"><tr><th className="py-2">Size</th><th>{t('chestCm')}</th><th>{t('waistCm')}</th><th>{t('hipCm')}</th><th>{t('lengthCm')}</th></tr></thead>
                       <tbody className="divide-y divide-surface-200 dark:divide-surface-800">
                         {sizes.map((size) => {
                           const row = sizeChart.find((measurement) => measurement.Size === size);
@@ -661,7 +663,7 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
               placeholder={'## Highlights\n**Benefit one:** ...\n**Benefit two:** ...\n\n## Specifications\n- ...'}
               className="w-full p-2.5 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-success-500 text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500"
             />
-            <p className="mt-1 text-micro text-surface-500 dark:text-surface-400">AI uses your entered product specs to write polished, detailed copy. Verify every claim before publishing.</p>
+            <p className="mt-1 text-micro text-surface-500 dark:text-surface-400">{t('aiSpecsCopyNotice')}</p>
             <p className="mt-1 text-right text-micro tabular-nums text-surface-500 dark:text-surface-400">
               {description.trim() ? description.trim().split(/\s+/).filter(Boolean).length : 0}/300 words
             </p>
@@ -670,17 +672,17 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
 
           <section className="space-y-3 rounded-xl border border-surface-200 p-4 dark:border-surface-800">
             <div>
-              <h3 className="text-xs font-bold text-surface-800 dark:text-surface-200">Warranty and guarantee</h3>
-              <p className="mt-1 text-micro text-surface-500 dark:text-surface-400">Choose the coverage offered. AI drafts use editable placeholders when no terms are provided.</p>
+              <h3 className="text-xs font-bold text-surface-800 dark:text-surface-200">{t('warrantyGuaranteeTitle')}</h3>
+              <p className="mt-1 text-micro text-surface-500 dark:text-surface-400">{t('warrantyCoverageNotice')}</p>
             </div>
             <div className="flex flex-wrap gap-4">
               <label className="inline-flex items-center gap-2 text-xs font-semibold text-surface-700 dark:text-surface-300">
                 <input type="checkbox" checked={warrantyEnabled} onChange={(event) => setWarrantyEnabled(event.target.checked)} />
-                Warranty
+                {t('warrantyLabel')}
               </label>
               <label className="inline-flex items-center gap-2 text-xs font-semibold text-surface-700 dark:text-surface-300">
                 <input type="checkbox" checked={guaranteeEnabled} onChange={(event) => setGuaranteeEnabled(event.target.checked)} />
-                Guarantee
+                {t('guaranteeLabel')}
               </label>
             </div>
             {warrantyEnabled && (
@@ -689,7 +691,7 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
                   <label htmlFor="seller-warranty-info" className="block text-xs font-semibold text-surface-700 dark:text-surface-300">Warranty terms · seller verified</label>
                   <button type="button" onClick={() => void handleAICopy('warranty')} disabled={aiCopyLoading.warranty} className="inline-flex shrink-0 items-center gap-1 text-micro font-semibold text-success-700 hover:text-success-800 disabled:opacity-50 dark:text-success-300"><Sparkles className="h-3.5 w-3.5" />{aiCopyLoading.warranty ? 'Working...' : warrantyInformation.trim() ? 'Enhance with AI' : 'Draft with AI'}</button>
                 </div>
-                <textarea id="seller-warranty-info" rows={4} maxLength={2200} value={warrantyInformation} onChange={(event) => { setWarrantyInformation(event.target.value); setAiCopyErrors((current) => ({ ...current, warranty: null })); }} placeholder="Enter verified warranty coverage and duration." className="w-full rounded-xl border border-surface-200 bg-surface-50 p-2.5 text-xs text-surface-900 focus:outline-none focus:ring-2 focus:ring-success-500 dark:border-surface-700 dark:bg-[#181F2A] dark:text-white" />
+                <textarea id="seller-warranty-info" rows={4} maxLength={2200} value={warrantyInformation} onChange={(event) => { setWarrantyInformation(event.target.value); setAiCopyErrors((current) => ({ ...current, warranty: null })); }} placeholder={t('warrantyInfoPlaceholder')} className="w-full rounded-xl border border-surface-200 bg-surface-50 p-2.5 text-xs text-surface-900 focus:outline-none focus:ring-2 focus:ring-success-500 dark:border-surface-700 dark:bg-[#181F2A] dark:text-white" />
                 {aiCopyErrors.warranty && <p role="alert" className="mt-1 text-danger-600 dark:text-danger-300">{aiCopyErrors.warranty}</p>}
               </div>
             )}
@@ -699,7 +701,7 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
                   <label htmlFor="seller-guarantee-info" className="block text-xs font-semibold text-surface-700 dark:text-surface-300">Guarantee terms · seller verified</label>
                   <button type="button" onClick={() => void handleAICopy('guarantee')} disabled={aiCopyLoading.guarantee} className="inline-flex shrink-0 items-center gap-1 text-micro font-semibold text-success-700 hover:text-success-800 disabled:opacity-50 dark:text-success-300"><Sparkles className="h-3.5 w-3.5" />{aiCopyLoading.guarantee ? 'Working...' : guaranteeInformation.trim() ? 'Enhance with AI' : 'Draft with AI'}</button>
                 </div>
-                <textarea id="seller-guarantee-info" rows={4} maxLength={2200} value={guaranteeInformation} onChange={(event) => { setGuaranteeInformation(event.target.value); setAiCopyErrors((current) => ({ ...current, guarantee: null })); }} placeholder="Enter verified guarantee conditions and duration." className="w-full rounded-xl border border-surface-200 bg-surface-50 p-2.5 text-xs text-surface-900 focus:outline-none focus:ring-2 focus:ring-success-500 dark:border-surface-700 dark:bg-[#181F2A] dark:text-white" />
+                <textarea id="seller-guarantee-info" rows={4} maxLength={2200} value={guaranteeInformation} onChange={(event) => { setGuaranteeInformation(event.target.value); setAiCopyErrors((current) => ({ ...current, guarantee: null })); }} placeholder={t('guaranteeInfoPlaceholder')} className="w-full rounded-xl border border-surface-200 bg-surface-50 p-2.5 text-xs text-surface-900 focus:outline-none focus:ring-2 focus:ring-success-500 dark:border-surface-700 dark:bg-[#181F2A] dark:text-white" />
                 {aiCopyErrors.guarantee && <p role="alert" className="mt-1 text-danger-600 dark:text-danger-300">{aiCopyErrors.guarantee}</p>}
               </div>
             )}
@@ -710,7 +712,7 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
               <label htmlFor="seller-return-policy" className="block text-xs font-semibold text-surface-700 dark:text-surface-300">Return terms · seller provided</label>
               <button type="button" onClick={() => void handleAICopy('return-policy')} disabled={aiCopyLoading['return-policy']} className="inline-flex shrink-0 items-center gap-1 text-micro font-semibold text-success-700 hover:text-success-800 disabled:opacity-50 dark:text-success-300"><Sparkles className="h-3.5 w-3.5" />{aiCopyLoading['return-policy'] ? 'Working...' : returnPolicy.trim() ? 'Enhance with AI' : 'Draft with AI'}</button>
             </div>
-            <textarea id="seller-return-policy" rows={4} maxLength={2200} value={returnPolicy} onChange={(event) => { setReturnPolicy(event.target.value); setAiCopyErrors((current) => ({ ...current, 'return-policy': null })); }} placeholder="State return conditions, or leave blank." className="w-full rounded-xl border border-surface-200 bg-surface-50 p-2.5 text-xs text-surface-900 focus:outline-none focus:ring-2 focus:ring-success-500 dark:border-surface-700 dark:bg-[#181F2A] dark:text-white" />
+            <textarea id="seller-return-policy" rows={4} maxLength={2200} value={returnPolicy} onChange={(event) => { setReturnPolicy(event.target.value); setAiCopyErrors((current) => ({ ...current, 'return-policy': null })); }} placeholder={t('returnPolicyPlaceholder')} className="w-full rounded-xl border border-surface-200 bg-surface-50 p-2.5 text-xs text-surface-900 focus:outline-none focus:ring-2 focus:ring-success-500 dark:border-surface-700 dark:bg-[#181F2A] dark:text-white" />
             {aiCopyErrors['return-policy'] && <p role="alert" className="mt-1 text-danger-600 dark:text-danger-300">{aiCopyErrors['return-policy']}</p>}
           </section>
 
@@ -720,7 +722,7 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
               onClick={onClose}
               className="px-4 py-2 rounded-full text-surface-600 hover:bg-surface-100 dark:text-surface-400 dark:hover:bg-surface-800 transition-colors cursor-pointer"
             >
-              Cancel
+              {t('cancel')}
             </button>
             <button
               type="submit"
@@ -728,7 +730,7 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
               className="flex items-center gap-2 px-6 py-2.5 bg-success-600 hover:bg-success-500 disabled:opacity-50 text-white font-bold rounded-full shadow-lg shadow-success-500/30 transition-all cursor-pointer"
             >
               <Save className="w-4 h-4" />
-              <span>{isSaving ? 'Saving...' : 'Save Product'}</span>
+              <span>{isSaving ? t('saving') : productToEdit ? t('updateProduct') : t('addProduct')}</span>
             </button>
           </div>
         </form>

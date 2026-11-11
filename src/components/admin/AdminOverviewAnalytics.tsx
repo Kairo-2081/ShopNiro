@@ -16,6 +16,7 @@ import {
 } from 'recharts';
 import { formatBDT } from '../../lib/api';
 import { Order, OrderStatus } from '../../types';
+import { useLocale } from '../../lib/i18n';
 
 interface AdminOverviewAnalyticsProps {
   orders: Order[];
@@ -77,6 +78,7 @@ const AdminChartTooltip: React.FC<Partial<TooltipContentProps<number, string>>> 
 };
 
 export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ orders, isLoading = false }) => {
+  const { t } = useLocale();
   const [prefersReducedMotion, setPrefersReducedMotion] = React.useState(() =>
     typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
   );
@@ -176,10 +178,10 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
     <section aria-labelledby="admin-overview-analytics-title" className="space-y-4">
       <header>
         <h2 id="admin-overview-analytics-title" className="text-lg font-bold text-surface-900 dark:text-white">
-          Overall Platform Metrics
+          {t('overallPlatformMetrics')}
         </h2>
         <p className="mt-1 text-xs text-surface-500 dark:text-surface-400">
-          Order activity for the past 12 months and the current order status mix.
+          {t('orderActivityPast12Months')}
         </p>
       </header>
 
@@ -187,7 +189,7 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
         <section className="w-full rounded-3xl border border-brand-100 dark:border-brand-500/20 bg-gradient-to-br from-surface-900/95 via-surface-900/90 to-brand-950/70 p-5 shadow-[0_20px_60px_rgba(15,23,42,0.38)] transition-all duration-300 hover:shadow-[0_26px_70px_rgba(59,130,246,0.14)]">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
             <div>
-              <h3 className="text-sm font-bold text-white">Monthly Orders &amp; Volume</h3>
+              <h3 className="text-sm font-bold text-white">{t('orderRevenueTrends')}</h3>
               <p className="text-micro text-surface-300">Order revenue trends against completed order count</p>
             </div>
             <div className="text-right rounded-2xl border border-brand-500/20 bg-brand-500/10 px-3 py-2 shadow-inner shadow-brand-500/10">
@@ -271,16 +273,16 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
             </p>
             <details className="mt-2 text-xs">
               <summary className="min-h-11 cursor-pointer py-3 font-semibold text-brand-700 underline decoration-brand-300 underline-offset-4 dark:text-brand-300">
-                View monthly chart data as a table
+                {t('viewMonthlyDataAsTable')}
               </summary>
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[28rem] border-collapse text-left">
                   <caption className="sr-only">Monthly order count and order value for the past 12 months</caption>
                   <thead>
                     <tr className="border-b border-surface-200 dark:border-surface-700">
-                      <th scope="col" className="p-2">Month</th>
-                      <th scope="col" className="p-2">Orders</th>
-                      <th scope="col" className="p-2">Order value</th>
+                      <th scope="col" className="p-2">{t('monthCol')}</th>
+                      <th scope="col" className="p-2">{t('ordersCol')}</th>
+                      <th scope="col" className="p-2">{t('orderValueCol')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -298,15 +300,15 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
             </>
           ) : (
             <div className="flex h-[280px] items-center justify-center text-center text-xs text-surface-500 dark:text-surface-400 sm:h-[320px]">
-              No orders were placed in the past 12 months.
+              {t('noOrdersPast12Months')}
             </div>
           )}
         </section>
 
         <section className="premium-surface w-full min-w-0 rounded-xl p-5 shadow-xs transition-all hover:shadow-md">
           <div className="mb-1">
-            <h3 className="text-sm font-bold text-surface-900 dark:text-white">Order Status Mix</h3>
-            <p className="mt-1 text-micro text-surface-600 dark:text-surface-300">Lifecycle distribution across all orders</p>
+            <h3 className="text-sm font-bold text-surface-900 dark:text-white">{t('orderStatusMix')}</h3>
+            <p className="mt-1 text-micro text-surface-600 dark:text-surface-300">{t('lifecycleDistribution')}</p>
           </div>
 
           {statusMetrics.length > 0 ? (
@@ -353,7 +355,7 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
             </>
           ) : (
             <div className="my-2 flex h-[220px] items-center justify-center rounded-2xl border border-dashed border-surface-200 bg-surface-50 text-center text-micro text-surface-500 dark:border-surface-700 dark:bg-surface-900/40 dark:text-surface-400">
-              No order status data available yet.
+              {t('noOrderStatusData')}
             </div>
           )}
         </section>
@@ -361,8 +363,8 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
           <section className="premium-surface w-full rounded-xl p-5 shadow-xs transition-all hover:shadow-md">
             <div className="mb-3">
-              <h3 className="text-sm font-bold text-surface-900 dark:text-white">Revenue by Month</h3>
-              <p className="mt-1 text-micro text-surface-600 dark:text-surface-300">Order value trend over the last 12 months</p>
+              <h3 className="text-sm font-bold text-surface-900 dark:text-white">{t('revenueByMonth')}</h3>
+              <p className="mt-1 text-micro text-surface-600 dark:text-surface-300">{t('revenueTrend12Months')}</p>
             </div>
             <div role="img" aria-label="Revenue by month for the past 12 months" aria-describedby="monthly-revenue-data-caption" className="h-[220px] w-full rounded-2xl bg-surface-950/20 p-2">
               <ResponsiveContainer width="100%" height="100%">
@@ -394,15 +396,15 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
             </p>
             <details className="mt-2 text-xs">
               <summary className="min-h-11 cursor-pointer py-3 font-semibold text-brand-700 underline decoration-brand-300 underline-offset-4 dark:text-brand-300">
-                View revenue data as a table
+                {t('viewRevenueDataTable')}
               </summary>
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[20rem] border-collapse text-left">
                   <caption className="sr-only">Revenue by month for the past 12 months</caption>
                   <thead>
                     <tr className="border-b border-surface-200 dark:border-surface-700">
-                      <th scope="col" className="p-2">Month</th>
-                      <th scope="col" className="p-2">Order value</th>
+                      <th scope="col" className="p-2">{t('monthCol')}</th>
+                      <th scope="col" className="p-2">{t('orderValueCol')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -420,8 +422,8 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
 
           <section className="premium-surface w-full min-w-0 rounded-xl p-5 shadow-xs transition-all hover:shadow-md">
             <div className="mb-3">
-              <h3 className="text-sm font-bold text-surface-900 dark:text-white">Payment Method Mix</h3>
-              <p className="mt-1 text-micro text-surface-600 dark:text-surface-300">How customer orders are being paid for</p>
+              <h3 className="text-sm font-bold text-surface-900 dark:text-white">{t('paymentMethodMix')}</h3>
+              <p className="mt-1 text-micro text-surface-600 dark:text-surface-300">{t('howOrdersPaidFor')}</p>
             </div>
 
             {paymentMetrics.length > 0 ? (
@@ -464,7 +466,7 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
               </>
             ) : (
               <div className="flex h-[220px] items-center justify-center rounded-2xl border border-dashed border-surface-200 bg-surface-50 text-center text-micro text-surface-500 dark:border-surface-700 dark:bg-surface-900/40 dark:text-surface-400">
-                No payment data yet.
+                {t('noPaymentData')}
               </div>
             )}
           </section>

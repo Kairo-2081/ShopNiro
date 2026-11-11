@@ -4,6 +4,7 @@ import { formatCurrency, formatBDT, formatDate } from '../../lib/api';
 import { money } from '../../lib/format';
 import { shopNiroLogo } from '../../lib/branding';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { useLocale } from '../../lib/i18n';
 import {
   X,
   Printer,
@@ -41,6 +42,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
   onViewOrder,
 }) => {
   const dialogRef = useFocusTrap<HTMLDivElement>(isOpen);
+  const { t, locale } = useLocale();
   if (!isOpen) return null;
 
   const isPaid = order.Payment_Status === 'paid';
@@ -50,7 +52,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
     nagad: 'Nagad',
     rocket: 'Rocket',
     visa_mastercard: 'Visa / Mastercard',
-    cash_on_delivery: 'Cash on delivery',
+    cash_on_delivery: t('cashOnDelivery'),
   } as Record<string, string>)[method] || method.replaceAll('_', ' ');
 
   const createReceiptMarkup = () => {
@@ -64,23 +66,24 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
       <tr>
         <td>
           <strong>${escapeHtml(item.Name)}</strong>
-          <span class="item-detail">${item.Quantity} × ${escapeHtml(formatCurrency(item.Price))} each</span>
+          <span class="item-detail">${item.Quantity} × ${escapeHtml(formatCurrency(item.Price))} ${escapeHtml(t('each'))}</span>
         </td>
         <td class="number">${escapeHtml(formatBDT(item.Price * item.Quantity))}</td>
       </tr>`).join('');
     const total = order.Subtotal + order.Shipping_Fee;
-    const statusLabel = isPaid ? 'Payment received' : 'Payment pending';
+    const statusLabel = isPaid ? t('paymentReceived') : t('paymentPending');
     const logoUrl = escapeHtml(new URL(shopNiroLogo, window.location.href).href);
-    const customerName = escapeHtml(customer?.Name || 'Customer');
+    const customerName = escapeHtml(customer?.Name || t('customerFallback'));
     const contactNumber = customer?.Number ? escapeHtml(customer.Number) : '';
     const addressHtml = addressLines.map((line) => `<div>${escapeHtml(line)}</div>`).join('');
     const orderDate = escapeHtml(formatDate(order.Order_Placed_At));
     const orderId = escapeHtml(order.Order_ID);
-    const trackingId = escapeHtml(order.Tracking_ID || 'Not assigned');
-    const transactionId = escapeHtml(order.Transaction_ID || 'Not available');
+    const trackingId = escapeHtml(order.Tracking_ID || t('trackingUnassigned'));
+    const transactionId = escapeHtml(order.Transaction_ID || t('valueNotAvailable'));
     const paymentMethod = escapeHtml(paymentBrand);
+    const printText = (key: Parameters<typeof t>[0], values?: Parameters<typeof t>[1]) => escapeHtml(t(key, values));
     const receiptMarkup = `<!doctype html>
-      <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>ShopNiro receipt ${orderId}</title>
+      <html lang="${locale}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${printText('receiptPageTitle', { orderId })}</title>
       <style>
         @page { size: A4; margin: 16mm; }
         * { box-sizing: border-box; }
@@ -125,35 +128,35 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
         <main class="receipt">
           <header class="topline">
             <div class="brand">
-              <img class="logo" src="${logoUrl}" alt="ShopNiro logo">
-              <div><p class="brand-name">ShopNiro</p><div class="brand-caption">Shop smart. Ship fast.</div></div>
+              <img class="logo" src="${logoUrl}" alt="ShopNiro">
+              <div><p class="brand-name">ShopNiro</p><div class="brand-caption">${printText('shopSmartShipFast')}</div></div>
             </div>
-            <div><div class="document-label">Payment receipt</div><div class="document-number">Order ${orderId}</div></div>
+            <div><div class="document-label">${printText('paymentReceiptTitle')}</div><div class="document-number">${printText('orderLabel')} ${orderId}</div></div>
           </header>
           <section class="title-row">
-            <div><h1>Order receipt</h1><div class="date">Placed ${orderDate}</div></div>
+            <div><h1>${printText('orderReceiptTitle')}</h1><div class="date">${printText('placedOn')} ${orderDate}</div></div>
             <div class="status">${statusLabel}</div>
           </section>
-          <section class="meta" aria-label="Payment details">
-            <div class="meta-item"><span class="label">Payment method</span><span class="value">${paymentMethod}</span></div>
-            <div class="meta-item"><span class="label">Transaction ID</span><span class="value">${transactionId}</span></div>
-            <div class="meta-item"><span class="label">Order ID</span><span class="value">${orderId}</span></div>
-            <div class="meta-item"><span class="label">Tracking ID</span><span class="value">${trackingId}</span></div>
+          <section class="meta" aria-label="${printText('paymentDetailsTitle')}">
+            <div class="meta-item"><span class="label">${printText('receiptPaymentMethod')}</span><span class="value">${paymentMethod}</span></div>
+            <div class="meta-item"><span class="label">${printText('transactionId')}</span><span class="value">${transactionId}</span></div>
+            <div class="meta-item"><span class="label">${printText('orderId')}</span><span class="value">${orderId}</span></div>
+            <div class="meta-item"><span class="label">${printText('trackingId')}</span><span class="value">${trackingId}</span></div>
           </section>
           <section>
-            <h2 class="section-title">Deliver to</h2>
+            <h2 class="section-title">${printText('deliverTo')}</h2>
             <div class="recipient"><div class="recipient-name">${customerName}</div><div class="recipient-address">${addressHtml}</div>${contactNumber ? `<div class="recipient-contact">${contactNumber}</div>` : ''}</div>
           </section>
           <section>
-            <h2 class="section-title">Items · ${order.Items.length}</h2>
-            <table><thead><tr><th>Product</th><th class="number">Amount</th></tr></thead><tbody>${itemRows}</tbody></table>
+            <h2 class="section-title">${printText('receiptItemsCount', { count: order.Items.length })}</h2>
+            <table><thead><tr><th>${printText('product')}</th><th class="number">${printText('amount')}</th></tr></thead><tbody>${itemRows}</tbody></table>
           </section>
-          <section class="totals" aria-label="Order total">
-            <div class="total-row"><span>Subtotal</span><span>${escapeHtml(formatBDT(order.Subtotal))}</span></div>
-            <div class="total-row"><span>Delivery</span><span>${order.Shipping_Fee === 0 ? 'Free' : escapeHtml(formatBDT(order.Shipping_Fee))}</span></div>
-            <div class="total-row grand-total"><span>Total</span><span>${escapeHtml(formatBDT(total))}</span></div>
+          <section class="totals" aria-label="${printText('total')}">
+            <div class="total-row"><span>${printText('subtotal')}</span><span>${escapeHtml(formatBDT(order.Subtotal))}</span></div>
+            <div class="total-row"><span>${printText('delivery')}</span><span>${order.Shipping_Fee === 0 ? printText('free') : escapeHtml(formatBDT(order.Shipping_Fee))}</span></div>
+            <div class="total-row grand-total"><span>${printText('total')}</span><span>${escapeHtml(formatBDT(total))}</span></div>
           </section>
-          <footer class="footer"><span>Thank you for shopping with ShopNiro.</span><span>Questions? Contact ShopNiro support.</span></footer>
+          <footer class="footer"><span>${printText('receiptThankYou')}</span><span>${printText('receiptQuestions')}</span></footer>
         </main>
       </body></html>`;
 
@@ -207,7 +210,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
         <div className="bg-gradient-to-r from-[#0C1014] via-[#12161D] to-[#0C1014] p-6 text-white border-b border-brand-500/20 relative">
           <button
             onClick={onClose}
-            aria-label="Close receipt"
+            aria-label={t('closeReceipt')}
             className="receipt-screen-only absolute right-4 top-4 grid h-11 w-11 place-items-center rounded-full text-surface-300 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
@@ -217,7 +220,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
             <img src={shopNiroLogo} alt="ShopNiro" className="w-10 h-10 rounded-full object-cover border border-white/20" />
             <div>
               <span className="text-micro font-black tracking-widest text-brand-400 uppercase">
-                PAYMENT RECEIPT
+                {t('paymentReceiptTitle')}
               </span>
               <div className="text-xs font-semibold text-surface-300">SSLCOMMERZ</div>
             </div>
@@ -225,7 +228,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
 
           <h2 id="payment-receipt-title" className="text-xl font-black text-white">ShopNiro Marketplace BD</h2>
           <p className="text-xs text-surface-400 mt-0.5">
-            Order {order.Order_ID} · {paymentBrand} · {money(total)}
+            {t('orderLabel')} {order.Order_ID} · {paymentBrand} · {money(total)}
           </p>
         </div>
 
@@ -241,8 +244,8 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
             <CheckCircle2 className="w-4 h-4" />
             <span>
               {isPaid
-                ? `PAYMENT VERIFIED VIA ${method.toUpperCase()} (SSLCOMMERZ)`
-                : 'PENDING CASH ON DELIVERY'}
+                ? t('paymentVerifiedVia', { method: paymentBrand })
+                : t('pendingCashOnDelivery')}
             </span>
           </div>
           <span className="font-mono text-micro">{money(total)}</span>
@@ -254,16 +257,16 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
           <div className="grid grid-cols-2 gap-3 p-4 rounded-2xl bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-800">
             <div>
               <span className="text-micro text-surface-500 dark:text-surface-500 uppercase font-bold block">
-                Transaction ID
+                {t('transactionId')}
               </span>
               <span className="font-mono font-bold text-surface-900 dark:text-white break-all text-micro">
-                {order.Transaction_ID || 'N/A (COD)'}
+                {order.Transaction_ID || t('notApplicableCashOnDelivery')}
               </span>
             </div>
 
             <div>
               <span className="text-micro text-surface-500 dark:text-surface-500 uppercase font-bold block">
-                Waybill Radar ID
+                {t('waybillRadarId')}
               </span>
               <span className="font-mono font-bold text-brand-600 dark:text-brand-400 text-micro">
                 {order.Tracking_ID}
@@ -272,7 +275,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
 
             <div>
               <span className="text-micro text-surface-500 dark:text-surface-500 uppercase font-bold block">
-                Timestamp
+                {t('timestamp')}
               </span>
               <span className="text-surface-700 dark:text-surface-300 font-medium">
                 {formatDate(order.Order_Placed_At)}
@@ -281,7 +284,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
 
             <div>
               <span className="text-micro text-surface-500 dark:text-surface-500 uppercase font-bold block">
-                Payment Channel
+                {t('paymentChannel')}
               </span>
               <span className="font-bold text-surface-900 dark:text-white">
                   {paymentBrand}
@@ -292,16 +295,16 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
           {/* Customer & Destination */}
           <div className="p-4 rounded-2xl bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-800 space-y-1">
             <span className="text-micro text-surface-500 dark:text-surface-500 uppercase font-bold block">
-              Recipient &amp; Delivery Destination
+              {t('recipientDeliveryDestination')}
             </span>
-            <p className="font-bold text-surface-900 dark:text-white">{customer?.Name || 'Marketplace Customer'}</p>
+            <p className="font-bold text-surface-900 dark:text-white">{customer?.Name || t('marketplaceCustomer')}</p>
             <p className="text-surface-600 dark:text-surface-300">
               {order.Shipping_Address.House_Name}, {order.Shipping_Address.Street}, {order.Shipping_Address.City} ({order.Shipping_Address.Postal_Code})
             </p>
             {customer?.Number && (
               <p className="text-surface-500 dark:text-surface-400 flex items-center gap-1.5 pt-1">
                 <Smartphone className="w-3.5 h-3.5 text-[#E2136E]" />
-                <span>Contact: {customer.Number}</span>
+                <span>{t('contactLabel', { number: customer.Number })}</span>
               </p>
             )}
           </div>
@@ -309,7 +312,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
           {/* Purchased Items */}
           <div className="space-y-2">
             <span className="text-micro text-surface-500 dark:text-surface-500 uppercase font-bold block">
-              Purchased Items ({order.Items.length})
+              {t('purchasedItemsCount', { count: order.Items.length })}
             </span>
             <div className="payment-receipt-items divide-y divide-surface-100 dark:divide-surface-800 max-h-36 overflow-y-auto pr-1">
               {order.Items.map((item, idx) => (
@@ -319,7 +322,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                       {item.Quantity}x {item.Name}
                     </span>
                     <span className="text-micro text-surface-400">
-                      {formatCurrency(item.Price)} each
+                      {formatCurrency(item.Price)} {t('each')}
                     </span>
                   </div>
                   <span className="font-bold text-surface-900 dark:text-white">
@@ -333,15 +336,15 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
           {/* Amount Calculation */}
           <div className="p-4 rounded-2xl bg-brand-50/50 dark:bg-[#161C24] border border-brand-100 dark:border-brand-900/40 space-y-1.5">
             <div className="flex justify-between text-surface-600 dark:text-surface-400">
-              <span>Subtotal</span>
+              <span>{t('subtotal')}</span>
               <span>{formatCurrency(order.Subtotal)}</span>
             </div>
             <div className="flex justify-between text-surface-600 dark:text-surface-400">
-              <span>Delivery Fee</span>
-              <span>{order.Shipping_Fee === 0 ? 'FREE' : formatBDT(order.Shipping_Fee)}</span>
+              <span>{t('deliveryFee')}</span>
+              <span>{order.Shipping_Fee === 0 ? t('freeUpper') : formatBDT(order.Shipping_Fee)}</span>
             </div>
             <div className="pt-2 border-t border-brand-200 dark:border-surface-800 flex justify-between items-baseline font-black">
-              <span className="text-surface-900 dark:text-white text-sm">Total Paid</span>
+              <span className="text-surface-900 dark:text-white text-sm">{t('totalPaid')}</span>
               <div className="text-right">
                 <span className="text-brand-600 dark:text-brand-400 text-lg block font-black">
                   {formatCurrency(order.Subtotal + order.Shipping_Fee)}
@@ -355,7 +358,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
         <div className="receipt-screen-only flex flex-wrap items-center justify-between gap-3 border-t border-surface-200 bg-surface-50 px-6 py-4 dark:border-surface-800 dark:bg-[#161C24]">
           <div className="flex items-center gap-1.5 text-surface-500 dark:text-surface-400 text-micro">
             <ShieldCheck className="w-4 h-4 text-success-500" />
-            <span>SSLCOMMERZ Digitally Signed</span>
+            <span>{t('sslcommerzDigitallySigned')}</span>
           </div>
 
           <div className="flex gap-2">
@@ -366,15 +369,15 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
                 className="px-4 py-2 rounded-full border border-surface-300 dark:border-surface-700 text-xs font-bold text-surface-700 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-800 flex items-center gap-1.5 transition-colors cursor-pointer"
               >
                 <Package className="w-3.5 h-3.5" />
-                <span>Track order</span>
+                <span>{t('trackOrder')}</span>
               </button>
             )}
             <button
               type="button"
               onClick={handleDownload}
               className="min-h-11 min-w-11 rounded-full border border-surface-300 px-3 text-xs font-bold text-surface-700 transition-colors hover:bg-surface-100 dark:border-surface-700 dark:text-surface-300 dark:hover:bg-surface-800"
-              aria-label="Download receipt as HTML"
-              title="Download receipt"
+              aria-label={t('downloadReceiptAsHtml')}
+              title={t('downloadReceipt')}
             >
               <Download className="h-4 w-4" />
             </button>
@@ -383,13 +386,13 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
               className="px-4 py-2 rounded-full border border-surface-300 dark:border-surface-700 text-xs font-bold text-surface-700 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-800 flex items-center gap-1.5 transition-colors cursor-pointer"
             >
               <Printer className="w-3.5 h-3.5" />
-              <span>Print / Save PDF</span>
+              <span>{t('printSavePdf')}</span>
             </button>
             <button
               onClick={onClose}
               className="px-5 py-2 rounded-full bg-brand-600 hover:bg-brand-500 text-white text-xs font-bold shadow-md shadow-brand-600/30 transition-all cursor-pointer"
             >
-              Done
+              {t('done')}
             </button>
           </div>
         </div>
