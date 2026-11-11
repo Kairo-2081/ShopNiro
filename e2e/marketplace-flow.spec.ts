@@ -45,7 +45,7 @@ test('admin approves a seller, who lists a product that a customer buys and a ri
     const numbers = seller.locator('input[type="number"][required]');
     await numbers.nth(0).fill(String(PRODUCT.price));
     await numbers.nth(1).fill(String(PRODUCT.stock));
-    await seller.getByRole('button', { name: /Save Product/i }).click();
+    await seller.getByRole('button', { name: /Add product/i }).click();
     await expect.poll(async () => withDb(async (c) => (await c.query('SELECT COUNT(*)::int AS n FROM products WHERE name = $1', [PRODUCT.name])).rows[0].n)).toBe(1);
     await seller.context().close();
   });

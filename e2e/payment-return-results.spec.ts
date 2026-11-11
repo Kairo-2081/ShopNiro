@@ -76,7 +76,7 @@ test.describe('payment return results', () => {
         const checkout = page.getByRole('dialog', { name: /Direct checkout and payment/i });
         await expect(checkout).toBeVisible();
         if (result.query === 'cancelled') {
-          await expect(checkout.getByRole('button', { name: /Select cash on delivery as payment method/i })).toHaveAttribute('aria-pressed', 'true');
+          await expect(checkout.getByRole('button', { name: /Select cash on delivery.*as payment method/i })).toHaveAttribute('aria-pressed', 'true');
         }
       }
     }

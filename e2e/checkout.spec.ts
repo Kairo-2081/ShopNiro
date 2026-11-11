@@ -128,7 +128,7 @@ test('a first order completes at 360px with the total and pay action pinned toge
     expect(bounds?.height).toBeGreaterThanOrEqual(44);
   }
 
-  await page.getByRole('button', { name: /Select cash on delivery as payment method/i }).click();
+  await page.getByRole('button', { name: /Select cash on delivery.*as payment method/i }).click();
   await checkout.getByRole('checkbox').check();
   await page.route('**/api/orders', async (route) => {
     if (route.request().method() === 'POST') await new Promise((resolve) => setTimeout(resolve, 300));
