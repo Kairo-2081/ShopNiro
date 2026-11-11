@@ -57,17 +57,39 @@ ShopNiro brings the parts of online shopping that are often treated separatelyâ€
 3. The seller processes the order and updates its status.
 4. The shopper follows delivery updates and can review the product after it arrives.
 
+## Inside ShopNiro
+
 <div align="center">
 
 <table>
 <tr>
 <td width="50%" valign="top">
-<img src="./.github/assets/readme/shopniro-marketplace.jpg" alt="ShopNiro marketplace workspace with catalog search, sorting, stock filters, delivery offers, and navigation for orders and tracking" width="100%" />
-<p><b>Browse the marketplace.</b> Search, sort, filter stock, and explore current listings.</p>
+<img src="./.github/assets/readme/shopniro-marketplace.jpg" alt="ShopNiro marketplace with catalog search, sorting, stock filters, and customer navigation" width="100%" />
+<p><b>Find something worth bringing home.</b> Search the catalog, compare listings, and check stock.</p>
 </td>
 <td width="50%" valign="top">
-<img src="./.github/assets/readme/shopniro-sign-up.jpg" alt="Blank ShopNiro account creation form with customer, seller, and rider account types and a Terms of Service and Privacy Policy consent checkbox" width="100%" />
-<p><b>Choose an account type.</b> Registration presents the policy consent before account creation.</p>
+<img src="./.github/assets/readme/shopniro-marketplace-current.jpg" alt="ShopNiro marketplace with product rankings, best sellers, and category trends" width="100%" />
+<p><b>Catch the latest trends.</b> Marketplace charts bring best sellers, top-rated products, and new arrivals together.</p>
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+<img src="./.github/assets/readme/shopniro-product-detail.jpg" alt="ShopNiro product details showing a Bengali listing, price, verified seller, and seller-provided policies" width="100%" />
+<p><b>Know what you are ordering.</b> Product pages bring listing details, seller information, and policies into one view.</p>
+</td>
+<td width="50%" valign="top">
+<img src="./.github/assets/readme/shopniro-sign-up.jpg" alt="ShopNiro customer account creation with customer, seller, and rider account types and policy consent" width="100%" />
+<p><b>Start as a shopper.</b> Customer registration includes clear account choices and policy consent.</p>
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+<img src="./.github/assets/readme/shopniro-seller-signup.jpg" alt="ShopNiro account creation form with Merchant (Seller) selected" width="100%" />
+<p><b>Open a seller account.</b> Seller registration starts in the same guided account flow.</p>
+</td>
+<td width="50%" valign="top">
+<img src="./.github/assets/readme/shopniro-rider-signup.jpg" alt="ShopNiro account creation form with Rider delivery selected" width="100%" />
+<p><b>Join the delivery team.</b> Riders can choose their own account path at signup.</p>
 </td>
 </tr>
 </table>
