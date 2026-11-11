@@ -6,16 +6,24 @@ export interface MarketplaceStat {
   value: number;
 }
 
+// The count-up writes straight to the DOM and waits until the figure is on screen. It used to call setState on every
+// frame from the moment the page mounted, so a section below the fold cost dozens of React renders (and a layout per
+// frame, as the digits changed width) while the page was still loading. The span has no React children on purpose, so
+// React never rewrites the text the animation is changing. A screen-reader-only copy always carries the final number.
 const AnimatedStat: React.FC<{ stat: MarketplaceStat; index: number }> = ({ stat, index }) => {
-  const [displayValue, setDisplayValue] = React.useState(0);
+  const numberRef = React.useRef<HTMLSpanElement>(null);
 
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
+    const element = numberRef.current;
+    if (!element) return;
+    const finalText = stat.value.toLocaleString();
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReducedMotion || stat.value <= 0) {
-      setDisplayValue(stat.value);
+    if (prefersReducedMotion || stat.value <= 0 || typeof IntersectionObserver === 'undefined') {
+      element.textContent = finalText;
       return;
     }
 
+    element.textContent = '0';
     let frameId = 0;
     let startTime = 0;
     const delay = index * 110;
@@ -25,21 +33,27 @@ const AnimatedStat: React.FC<{ stat: MarketplaceStat; index: number }> = ({ stat
       if (!startTime) startTime = timestamp;
       const progress = Math.min(Math.max((timestamp - startTime - delay) / duration, 0), 1);
       const easedProgress = 1 - (1 - progress) ** 3;
-      setDisplayValue(Math.floor(stat.value * easedProgress));
-
+      element.textContent = Math.floor(stat.value * easedProgress).toLocaleString();
       if (progress < 1) frameId = window.requestAnimationFrame(animate);
     };
 
-    frameId = window.requestAnimationFrame(animate);
-    return () => window.cancelAnimationFrame(frameId);
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return;
+      observer.disconnect();
+      frameId = window.requestAnimationFrame(animate);
+    }, { threshold: 0.5 });
+    observer.observe(element);
+
+    return () => {
+      observer.disconnect();
+      window.cancelAnimationFrame(frameId);
+    };
   }, [index, stat.value]);
 
   return (
-    <dd
-      aria-label={stat.value.toLocaleString()}
-      className="font-display text-2xl sm:text-3xl leading-none text-surface-900 dark:text-white tabular-nums"
-    >
-      {displayValue.toLocaleString()}
+    <dd className="font-display text-2xl sm:text-3xl leading-none text-surface-900 dark:text-white tabular-nums">
+      <span className="sr-only">{stat.value.toLocaleString()}</span>
+      <span ref={numberRef} aria-hidden="true" />
     </dd>
   );
 };
