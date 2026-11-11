@@ -40,7 +40,10 @@ interface AppToast {
   tone: ToastTone;
 }
 
-const Storefront = React.lazy(() => import('./components/storefront/Storefront').then((module) => ({ default: module.Storefront })));
+// One loader for the storefront screen, shared by React.lazy and the early fetches below, so whichever asks first starts
+// the download and the others reuse the same module.
+const loadStorefront = () => import('./components/storefront/Storefront');
+const Storefront = React.lazy(() => loadStorefront().then((module) => ({ default: module.Storefront })));
 const MarketplaceTrendsTopCharts = React.lazy(() => import('./components/storefront/MarketplaceTrendsTopCharts').then((module) => ({ default: module.MarketplaceTrendsTopCharts })));
 const ProductDetailModal = React.lazy(() => import('./components/storefront/ProductDetailModal').then((module) => ({ default: module.ProductDetailModal })));
 const CartDrawer = React.lazy(() => import('./components/storefront/CartDrawer').then((module) => ({ default: module.CartDrawer })));
@@ -361,7 +364,7 @@ export default function App() {
   // A visitor on the landing page is most likely about to open the storefront, so fetch its code while they read.
   React.useEffect(() => {
     if (viewMode !== 'landing') return;
-    return prefetchWhenIdle(() => import('./components/storefront/Storefront'));
+    return prefetchWhenIdle(loadStorefront);
   }, [viewMode]);
 
   // Check authentication on every page change before processing HTTP requests
@@ -381,6 +384,10 @@ export default function App() {
       // On a slow connection that removes one whole round trip from the first load. It never rejects (a failed check
       // resolves as signed out), so it is safe to leave unawaited until the storefront data is in.
       const authRequest = api.validateAuth();
+      // A returning customer lands on the storefront as soon as the sign-in check answers, and its code used to be
+      // requested only then, so the screen waited for that download too. Start it with the data requests instead.
+      // The idle prefetch above cannot do this: it is cancelled when the sign-in check switches the view to the app.
+      void loadStorefront().catch(() => {});
       // Public storefront data (categories, products, reviews, approved sellers)
       const [cats, sels, productPage, revs] = await Promise.all([
         api.getCategories().catch((err) => {
