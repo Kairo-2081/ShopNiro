@@ -151,28 +151,28 @@ test('readiness endpoint is registered before API authentication middleware', ()
   assert.ok(readinessIndex < authPolicyIndex, 'readiness route should bypass API authentication middleware');
 });
 
+const cronRoutes = ['/api/cron/expire-orders', '/api/cron/refunds', '/api/cron/reconcile-payments'];
+
 test('cron routes require a configured matching secret', async () => {
-  for (const path of ['/api/cron/expire-orders', '/api/cron/refunds']) {
+  for (const path of cronRoutes) {
     const response = await request('POST', path);
     assert.ok([401, 503].includes(response.status), `${path} returned ${response.status}`);
   }
 });
 
-// The login wall and the cron secret check both answer 401, so the status alone cannot tell them apart. The login wall
-// says "Missing or invalid authentication session"; the secret check says "Unauthorized." A request that reaches the secret check at all
-// proves the right secret would get through; one stopped at the wall can never run, which is how the nightly reconciliation failed on every call.
+// The login wall and the cron secret check both answer 401, so assert the response body too.
 test('every cron route reaches its own secret check instead of the login wall', async () => {
   const previous = process.env.CRON_SECRET;
-  // Built at run time so no secret-shaped literal sits in the source for the secret scanner to flag.
   process.env.CRON_SECRET = randomBytes(24).toString('hex');
   try {
-    for (const path of ['/api/cron/expire-orders', '/api/cron/refunds', '/api/cron/reconcile-payments']) {
-      const wrong = await request('POST', path, {}, { authorization: 'Bearer not-the-secret' });
+    for (const path of cronRoutes) {
+      const wrong = await request('POST', path, {}, { authorization: '******' });
       assert.equal(wrong.status, 401, `${path} with a wrong secret returned ${wrong.status}`);
       assert.equal(wrong.body?.error, 'Unauthorized.', `${path} was stopped by the login wall, not the cron secret check`);
     }
   } finally {
-    if (previous === undefined) delete process.env.CRON_SECRET; else process.env.CRON_SECRET = previous;
+    if (previous === undefined) delete process.env.CRON_SECRET;
+    else process.env.CRON_SECRET = previous;
   }
 });
 
