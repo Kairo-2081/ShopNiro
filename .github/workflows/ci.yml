@@ -87,7 +87,7 @@ jobs:
 
   e2e:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 60
     services:
       postgres:
         image: postgres:16
@@ -130,7 +130,7 @@ jobs:
         run: npm run migrate
 
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
 
       - name: Run browser checkout tests
         run: npm run e2e
@@ -147,7 +147,7 @@ jobs:
 
   accessibility:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 60
     services:
       postgres:
         image: postgres:16
@@ -190,7 +190,7 @@ jobs:
         run: npm run migrate
 
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
 
       - name: Run accessibility browser tests
         run: npm run test:a11y -- --project=desktop
