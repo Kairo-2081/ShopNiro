@@ -33,7 +33,7 @@ test('a visitor registers, is signed in, and is asked to finish their profile be
 
   // The terms checkbox is required: submitting without it must not create an account.
   await page.getByRole('button', { name: /Register (?:&|and) sign in/i }).click();
-  await expect(page.getByText(/accept the Terms of Service/i)).toBeVisible();
+  await expect(page.getByText(/^Please accept the Terms of Service/i)).toBeVisible();
 
   await page.getByRole('checkbox').check();
   await page.getByRole('button', { name: /Register (?:&|and) sign in/i }).click();
