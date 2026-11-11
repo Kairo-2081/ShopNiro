@@ -20,6 +20,7 @@ import {
 import { api } from './lib/api';
 import { getProfileCompletion } from './lib/profileCompletion';
 import { shopNiroLogo } from './lib/branding';
+import { prefetchWhenIdle } from './lib/idlePrefetch';
 import { LandingPage } from './components/LandingPage';
 import { MarketplaceClosing, MarketplaceStat } from './components/MarketplaceClosing';
 import { Navbar } from './components/Navbar';
@@ -356,6 +357,12 @@ export default function App() {
       document.removeEventListener('click', rememberOutsideFocus, true);
     };
   }, []);
+
+  // A visitor on the landing page is most likely about to open the storefront, so fetch its code while they read.
+  React.useEffect(() => {
+    if (viewMode !== 'landing') return;
+    return prefetchWhenIdle(() => import('./components/storefront/Storefront'));
+  }, [viewMode]);
 
   // Check authentication on every page change before processing HTTP requests
   React.useEffect(() => {
