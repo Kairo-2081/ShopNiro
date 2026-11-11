@@ -26,17 +26,17 @@ test.afterEach(async () => {
 
 test('a visitor registers, is signed in, and is asked to finish their profile before ordering', async ({ page }) => {
   await page.goto('/');
-  await page.getByRole('button', { name: 'Sign In' }).first().click();
-  await page.getByRole('button', { name: /Create Account/ }).first().click();
+  await page.getByRole('button', { name: /Sign in/i }).first().click();
+  await page.getByRole('button', { name: /Create account/i }).first().click();
   await page.getByPlaceholder('Choose a username or enter your email').fill(NEW_USER.email);
   await page.getByPlaceholder('At least 8 characters').fill(NEW_USER.password);
 
   // The terms checkbox is required: submitting without it must not create an account.
-  await page.getByRole('button', { name: 'Register & Sign In' }).click();
-  await expect(page.getByText(/accept the Terms of Service/)).toBeVisible();
+  await page.getByRole('button', { name: /Register (?:&|and) sign in/i }).click();
+  await expect(page.getByText(/accept the Terms of Service/i)).toBeVisible();
 
   await page.getByRole('checkbox').check();
-  await page.getByRole('button', { name: 'Register & Sign In' }).click();
-  await expect(page.getByText(/Complete your profile before making account changes or placing orders/)).toBeVisible();
+  await page.getByRole('button', { name: /Register (?:&|and) sign in/i }).click();
+  await expect(page.getByText(/Complete your profile before making account changes or placing orders/i)).toBeVisible();
   await expect(page.getByRole('dialog')).toHaveCount(0);
 });

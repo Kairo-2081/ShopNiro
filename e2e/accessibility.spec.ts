@@ -2,13 +2,13 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 import { AUTH } from './global-setup.ts';
 import { E2E } from './seed.ts';
-import { blockNonLocalTraffic, clearCartAndOrders, openCheckout, openStorefront, seedCart } from './helpers.ts';
+import { blockNonLocalTraffic, caseInsensitiveName, clearCartAndOrders, openCheckout, openStorefront, seedCart } from './helpers.ts';
 
 test.describe.configure({ retries: 0 });
 
 const rolePages = [
   { role: 'customer', home: 'Shop', pages: ['Top charts', 'Orders', 'Live tracking', 'Profile', 'Support'] },
-  { role: 'seller', home: 'Product Catalog', pages: ['Fulfillment Orders', 'Sales Analytics', 'Customer Reviews', 'Deals & Bundles', 'COD remittances', 'Preview storefront', 'Support'] },
+  { role: 'seller', home: 'Product Catalog', pages: ['Fulfillment Orders', 'Sales Analytics', 'Customer Reviews', 'Deals and bundles', 'COD remittances', 'Preview storefront', 'Support'] },
   { role: 'admin', home: 'Governance Overview', pages: ['Marketplace Metrics', 'Merchant Approvals', 'Category Registry', 'Rider Hiring', 'Product Moderation', 'Online Payments', 'Order Cancellations', 'Support Inbox', 'Storefront', 'Support'] },
   { role: 'rider', home: 'Deliveries', pages: ['Support'] },
 ] as const;
@@ -148,10 +148,10 @@ test('public and role-specific pages have no critical or serious axe violations'
       await blockNonLocalTraffic(page);
       await page.goto('/');
       const navigation = page.getByRole('navigation', { name: 'Workspace navigation' });
-      await expect(navigation.getByRole('button', { name: home })).toBeVisible();
+      await expect(navigation.getByRole('button', { name: caseInsensitiveName(home) })).toBeVisible();
       await scanPage(page, `${role} ${home}`);
       for (const label of pages) {
-        await navigation.getByRole('button', { name: label }).click();
+        await navigation.getByRole('button', { name: caseInsensitiveName(label) }).click();
         await scanPage(page, `${role} ${label}`);
       }
     } finally {
@@ -202,11 +202,11 @@ test('role pages expose every visible control to keyboard navigation', async ({ 
       await blockNonLocalTraffic(page);
       await page.goto('/');
       const navigation = page.getByRole('navigation', { name: 'Workspace navigation' });
-      await expect(navigation.getByRole('button', { name: home })).toBeVisible();
+      await expect(navigation.getByRole('button', { name: caseInsensitiveName(home) })).toBeVisible();
       await assertKeyboardReachability(page, `${role} home`);
 
       for (const label of pages) {
-        await navigation.getByRole('button', { name: label }).click();
+        await navigation.getByRole('button', { name: caseInsensitiveName(label) }).click();
         await assertKeyboardReachability(page, `${role} ${label}`);
       }
     } finally {
@@ -233,7 +233,7 @@ test('mobile navigation drawer closes with Escape and returns focus to its trigg
     await expect(trigger).toBeFocused();
 
     await trigger.click();
-    await page.getByRole('navigation', { name: 'Workspace navigation' }).getByRole('button', { name: 'Top charts' }).click();
+    await page.getByRole('navigation', { name: 'Workspace navigation' }).getByRole('button', { name: caseInsensitiveName('Top charts') }).click();
     await expect(dialog).toHaveCount(0);
   } finally {
     await context.close();
@@ -372,8 +372,8 @@ test('create-account dialog has no critical or serious axe violations in either 
     await blockNonLocalTraffic(page);
     await page.goto('/');
     await page.getByRole('button', { name: /Sign in|Log in|Login/i }).first().click();
-    await page.getByRole('button', { name: 'Create Account', exact: true }).click();
-    await expect(page.getByRole('dialog', { name: 'Create an Account' })).toBeVisible();
+    await page.getByRole('button', { name: caseInsensitiveName('Create account'), exact: true }).click();
+    await expect(page.getByRole('dialog', { name: caseInsensitiveName('Create an account') })).toBeVisible();
     await scanBothThemes(page, 'Create-account dialog');
   } finally {
     await context.close();

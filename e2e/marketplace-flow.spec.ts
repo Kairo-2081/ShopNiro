@@ -30,7 +30,7 @@ test('admin approves a seller, who lists a product that a customer buys and a ri
     // Approval needs the review checklist, so it goes through the application panel, not the quick button.
     await admin.getByRole('button', { name: new RegExp(`${E2E.newSeller.name}.*View application`) }).first().click();
     for (const label of ['Identity verified', 'Documents reviewed', 'Payout account verified']) await admin.getByLabel(label).check();
-    await admin.getByRole('button', { name: 'Approve seller' }).click();
+    await admin.getByRole('button', { name: /Approve seller/i }).click();
     await expect.poll(async () => withDb(async (c) => (await c.query('SELECT status FROM sellers WHERE id = $1', [E2E.newSeller.id])).rows[0].status)).toBe('approved');
     await admin.context().close();
   });
@@ -38,14 +38,14 @@ test('admin approves a seller, who lists a product that a customer buys and a ri
   await test.step('seller lists a product', async () => {
     const seller = await asRole(browser, 'seller');
     // A seller with no products sees the first-product prompt; the header button appears after the first listing.
-    await seller.getByRole('button', { name: 'Add your first product' }).click();
+    await seller.getByRole('button', { name: /Add your first product/i }).click();
     await seller.getByPlaceholder('e.g. Wireless Noise-Canceling Headphones').fill(PRODUCT.name);
     // The form's labels are not tied to their inputs, so the fields are found by type and order.
     await seller.locator('select[required]').first().selectOption({ label: 'E2E Category' });
     const numbers = seller.locator('input[type="number"][required]');
     await numbers.nth(0).fill(String(PRODUCT.price));
     await numbers.nth(1).fill(String(PRODUCT.stock));
-    await seller.getByRole('button', { name: 'Save Product' }).click();
+    await seller.getByRole('button', { name: /Save Product/i }).click();
     await expect.poll(async () => withDb(async (c) => (await c.query('SELECT COUNT(*)::int AS n FROM products WHERE name = $1', [PRODUCT.name])).rows[0].n)).toBe(1);
     await seller.context().close();
   });
@@ -57,7 +57,7 @@ test('admin approves a seller, who lists a product that a customer buys and a ri
     await card.scrollIntoViewIfNeeded();
     await card.getByRole('button', { name: 'Add to Cart' }).click();
     await openCheckout(customer);
-    await customer.getByText('Cash on Delivery (COD)').click();
+    await customer.getByText(/Cash on Delivery \(COD\)/i).click();
     await customer.getByRole('checkbox').check();
     const shown = parseMoney(await customer.getByTestId('checkout-total').innerText());
     await customer.getByTestId('checkout-submit').click();
@@ -80,10 +80,10 @@ test('admin approves a seller, who lists a product that a customer buys and a ri
 
   await test.step('rider accepts, starts and records cash for the delivery', async () => {
     const rider = await asRole(browser, 'rider');
-    await rider.getByRole('button', { name: 'Refresh jobs' }).click();
-    await rider.getByRole('button', { name: 'Accept shipment' }).click();
-    await rider.getByRole('button', { name: 'Start delivery' }).click();
-    await expect(rider.getByText('Tell the customer this delivery code')).toBeVisible();
+    await rider.getByRole('button', { name: /Refresh jobs/i }).click();
+    await rider.getByRole('button', { name: /Accept shipment/i }).click();
+    await rider.getByRole('button', { name: /Start delivery/i }).click();
+    await expect(rider.getByText(/Tell the customer this delivery code/i)).toBeVisible();
     await rider.getByRole('button', { name: /collected/ }).click();
     await expect(rider.getByText(/COD collection recorded/)).toBeVisible();
     await rider.context().close();
@@ -96,7 +96,7 @@ test('admin approves a seller, who lists a product that a customer buys and a ri
     const customer = await asRole(browser, 'customer');
     await selectWorkspaceNavigationItem(customer, /Orders|My orders/);
     await customer.getByPlaceholder('6-digit code').fill(code);
-    await customer.getByRole('button', { name: 'Confirm received' }).click();
+    await customer.getByRole('button', { name: /Confirm received/i }).click();
     await expect(customer.getByText(/Delivery confirmed/)).toBeVisible();
     await expect.poll(async () => withDb(async (c) => (await c.query('SELECT status FROM orders WHERE id = $1', [orderId])).rows[0].status)).toBe('delivered');
     await customer.context().close();

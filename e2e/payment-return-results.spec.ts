@@ -73,10 +73,10 @@ test.describe('payment return results', () => {
       if (result.query === 'success') {
         await expect(dialog).toHaveCount(0);
       } else {
-        const checkout = page.getByRole('dialog', { name: 'Direct Checkout & Payment' });
+        const checkout = page.getByRole('dialog', { name: /Direct checkout and payment/i });
         await expect(checkout).toBeVisible();
         if (result.query === 'cancelled') {
-          await expect(checkout.getByRole('button', { name: 'Select cash on delivery as payment method' })).toHaveAttribute('aria-pressed', 'true');
+          await expect(checkout.getByRole('button', { name: /Select cash on delivery as payment method/i })).toHaveAttribute('aria-pressed', 'true');
         }
       }
     }
