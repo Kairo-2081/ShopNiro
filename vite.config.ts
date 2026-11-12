@@ -16,7 +16,7 @@ export default defineConfig(() => {
         output: {
           manualChunks(id) {
             const normalized = id.replace(/\\/g, '/');
-            if (normalized.includes('/src/lib/i18n')) return 'i18n';
+            if (normalized.endsWith('/src/lib/i18n.tsx')) return 'i18n';
             if (!normalized.includes('/node_modules/')) return;
             if (/\/node_modules\/(react|react-dom|scheduler)\//.test(normalized)) return 'vendor-react';
             if (/\/node_modules\/(recharts|d3-[^/]+)\//.test(normalized)) return 'vendor-charts';

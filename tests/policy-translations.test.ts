@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { POLICIES } from '../src/components/legal/policies.ts';
 import { POLICY_TRANSLATIONS } from '../src/components/legal/policyTranslations.ts';
-import { translateMessage } from '../src/lib/i18n.tsx';
+import { loadBengaliMessages, translateMessage } from '../src/lib/i18n.tsx';
 
 test('Bangla legal pages preserve every section and list item', () => {
   for (const policy of POLICIES) {
@@ -23,7 +23,8 @@ test('Bangla legal pages preserve every section and list item', () => {
   }
 });
 
-test('locale messages interpolate dynamic values', () => {
+test('locale messages interpolate dynamic values', async () => {
+  await loadBengaliMessages();
   assert.equal(translateMessage('bn', 'receiptItemsCount', { count: 3 }), 'পণ্য · 3');
   assert.equal(translateMessage('bn', 'resendIn', { seconds: 12 }), '12 সেকেন্ড পর আবার পাঠান');
 });

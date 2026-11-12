@@ -20,7 +20,9 @@ import {
 } from './types';
 import { api } from './lib/api';
 import { getProfileCompletion } from './lib/profileCompletion';
-import { shopNiroLogo } from './lib/branding';
+import { shopNiroLogoSmall } from './lib/branding';
+import { prefetchWhenIdle } from './lib/idlePrefetch';
+import { LandingPage } from './components/LandingPage';
 import { MarketplaceClosing, MarketplaceStat } from './components/MarketplaceClosing';
 import { Navbar } from './components/Navbar';
 import { NavigationSidebar } from './components/NavigationSidebar';
@@ -39,7 +41,10 @@ interface AppToast {
   tone: ToastTone;
 }
 
-const Storefront = React.lazy(() => import('./components/storefront/Storefront').then((module) => ({ default: module.Storefront })));
+// One loader for the storefront screen, shared by React.lazy and the early fetches below, so whichever asks first starts
+// the download and the others reuse the same module.
+const loadStorefront = () => import('./components/storefront/Storefront');
+const Storefront = React.lazy(() => loadStorefront().then((module) => ({ default: module.Storefront })));
 const MarketplaceTrendsTopCharts = React.lazy(() => import('./components/storefront/MarketplaceTrendsTopCharts').then((module) => ({ default: module.MarketplaceTrendsTopCharts })));
 const ProductDetailModal = React.lazy(() => import('./components/storefront/ProductDetailModal').then((module) => ({ default: module.ProductDetailModal })));
 const CartDrawer = React.lazy(() => import('./components/storefront/CartDrawer').then((module) => ({ default: module.CartDrawer })));
@@ -58,7 +63,6 @@ const AdminSignupModal = React.lazy(() => import('./components/admin/AdminSignup
 const LoginModal = React.lazy(() => import('./components/LoginModal').then((module) => ({ default: module.LoginModal })));
 const GeminiChatbot = React.lazy(() => import('./components/chat/GeminiChatbot').then((module) => ({ default: module.GeminiChatbot })));
 const RiderSignupModal = React.lazy(() => import('./components/rider/RiderSignupModal').then((module) => ({ default: module.RiderSignupModal })));
-const LandingPage = React.lazy(() => import('./components/LandingPage').then((module) => ({ default: module.LandingPage })));
 const STORE_PRODUCT_PAGE_SIZE = 24;
 
 const scrollViewportToTop = () => {
@@ -359,6 +363,12 @@ export default function App() {
     };
   }, []);
 
+  // A visitor on the landing page is most likely about to open the storefront, so fetch its code while they read.
+  React.useEffect(() => {
+    if (viewMode !== 'landing') return;
+    return prefetchWhenIdle(loadStorefront);
+  }, [viewMode]);
+
   // Check authentication on every page change before processing HTTP requests
   React.useEffect(() => {
     validateAuthForPage(activeTab);
@@ -372,6 +382,14 @@ export default function App() {
     setOrdersLoadError(null);
     try {
       const storefrontFailures: string[] = [];
+      // The sign-in check does not depend on the public data, so start it with the public requests instead of after them.
+      // On a slow connection that removes one whole round trip from the first load. It never rejects (a failed check
+      // resolves as signed out), so it is safe to leave unawaited until the storefront data is in.
+      const authRequest = api.validateAuth();
+      // A returning customer lands on the storefront as soon as the sign-in check answers, and its code used to be
+      // requested only then, so the screen waited for that download too. Start it with the data requests instead.
+      // The idle prefetch above cannot do this: it is cancelled when the sign-in check switches the view to the app.
+      void loadStorefront().catch(() => {});
       // Public storefront data (categories, products, reviews, approved sellers)
       const [cats, sels, productPage, revs] = await Promise.all([
         api.getCategories().catch((err) => {
@@ -407,7 +425,7 @@ export default function App() {
       if (revs && revs.length > 0) setReviews(revs);
 
       // Verify authentication before attempting to query protected user endpoints
-      const auth = await api.validateAuth();
+      const auth = await authRequest;
       if (auth.authenticated && auth.role && auth.entity) {
         setIsLoggedIn(true);
         setCurrentRole(auth.role);
@@ -1445,8 +1463,11 @@ export default function App() {
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-surface-500 dark:text-surface-400">
           <div className="flex items-center gap-3">
             <img
-              src={shopNiroLogo}
+              src={shopNiroLogoSmall}
               alt="ShopNiro"
+              width={32}
+              height={32}
+              decoding="async"
               className="w-8 h-8 rounded-full object-cover border border-brand-100 dark:border-surface-700 shadow-md shadow-brand-500/20"
             />
             <div>
