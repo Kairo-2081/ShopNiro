@@ -3,12 +3,29 @@ name: Scheduled jobs
 on:
   schedule:
     - cron: '*/5 * * * *'
+    - cron: '0 0 * * *'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
+  settle-payroll:
+    if: github.event.schedule == '0 0 * * *'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Settle rider payroll
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$APP_URL" || -z "$CRON_SECRET" ]]; then
+            echo "::error::APP_URL and CRON_SECRET repository secrets must be configured."
+            exit 1
+          fi
+          curl -fsS -H "Authorization: Bearer $CRON_SECRET" "$APP_URL/api/riders/payroll/settle"
+
   tick:
     runs-on: ubuntu-latest
     steps:

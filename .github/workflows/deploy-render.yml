@@ -1,0 +1,219 @@
+name: Deploy Render service
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Deploy the matching branch to this isolated environment
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+        default: staging
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: render-deploy-${{ inputs.target }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.target }}
+    timeout-minutes: 40
+    env:
+      API_URL: ${{ vars.API_URL }}
+      DATABASE_URL: ${{ secrets.MIGRATE_DATABASE_URL }}
+      GH_TOKEN: ${{ github.token }}
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      RENDER_SERVICE_ID: ${{ vars.RENDER_SERVICE_ID }}
+
+    steps:
+      - name: Check out the selected branch
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Require a recent production backup
+        if: inputs.target == 'production'
+        shell: bash
+        run: |
+          set -euo pipefail
+          recent_backup="$(gh run list --workflow backup.yml --limit 1 --json conclusion,createdAt)"
+          cutoff="$(date -u -d '24 hours ago' +%s)"
+          if ! jq -e --argjson cutoff "$cutoff" \
+            'length == 1 and .[0].conclusion == "success" and (.[0].createdAt | fromdateiso8601) >= $cutoff' \
+            <<< "$recent_backup" >/dev/null; then
+            echo "::error::The latest backup.yml run did not succeed within the last 24 hours."
+            exit 1
+          fi
+
+      - name: Verify CI and the selected Render service
+        id: preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          target="${{ inputs.target }}"
+          if [[ "$GITHUB_REF" != "refs/heads/$target" ]]; then
+            echo "::error::Run this workflow from the '$target' branch when targeting '$target'."
+            exit 1
+          fi
+          if [[ -z "$RENDER_API_KEY" || -z "$RENDER_SERVICE_ID" || -z "$API_URL" || -z "$DATABASE_URL" ]]; then
+            echo "::error::Set RENDER_API_KEY, RENDER_SERVICE_ID, API_URL, and MIGRATE_DATABASE_URL in the selected GitHub Environment."
+            exit 1
+          fi
+          if [[ "$API_URL" != https://* || "$API_URL" == */ ]]; then
+            echo "::error::API_URL must be an HTTPS origin without a trailing slash."
+            exit 1
+          fi
+          runs="$(curl -fsS -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$GITHUB_SHA&status=completed&per_page=50")"
+          if ! jq -e --arg sha "$GITHUB_SHA" --arg branch "$target" \
+            'any(.workflow_runs[]; .head_sha == $sha and .head_branch == $branch and .event == "push" and .conclusion == "success")' \
+            <<< "$runs" >/dev/null; then
+            echo "::error::A successful CI push run for $GITHUB_SHA on $target is required before deployment."
+            exit 1
+          fi
+          service="$(curl -fsS -H "Authorization: Bearer $RENDER_API_KEY" \
+            "https://api.render.com/v1/services/$RENDER_SERVICE_ID")"
+          if [[ "$(jq -r '.type // empty' <<< "$service")" != "web_service" ]]; then
+            echo "::error::RENDER_SERVICE_ID must identify the Render API web service."
+            exit 1
+          fi
+          service_branch="$(jq -r '.branch // empty' <<< "$service")"
+          if [[ "$service_branch" != "$target" ]]; then
+            echo "::error::The selected Render service must deploy the '$target' branch."
+            exit 1
+          fi
+          health_path="$(jq -r '.serviceDetails.healthCheckPath // empty' <<< "$service")"
+          if [[ "$health_path" != "/api/ready" ]]; then
+            echo "::error::Set the Render service health check path to /api/ready before deployment."
+            exit 1
+          fi
+          plan="$(jq -r '.serviceDetails.plan // empty' <<< "$service")"
+          if [[ -z "$plan" || "$plan" == "free" ]]; then
+            echo "::error::The Render API service must use a paid instance; refusing to deploy to an unverified/free plan."
+            exit 1
+          fi
+          auto_deploy="$(jq -r '.autoDeployTrigger // empty' <<< "$service")"
+          legacy_auto_deploy="$(jq -r '.autoDeploy // empty' <<< "$service")"
+          if [[ "$auto_deploy" != "off" && "$legacy_auto_deploy" != "no" ]]; then
+            echo "::error::Disable Render autodeploys so this workflow controls migration/deploy order."
+            exit 1
+          fi
+          deploys="$(curl -fsS -H "Authorization: Bearer $RENDER_API_KEY" \
+            "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys?limit=20")"
+          previous="$(jq -r '[.[] | select(.deploy.status == "live")][0].deploy.id // empty' <<< "$deploys")"
+          if [[ -z "$previous" ]]; then
+            echo "::error::Could not identify the currently live deploy for rollback."
+            exit 1
+          fi
+          echo "previous_deploy_id=$previous" >> "$GITHUB_OUTPUT"
+
+      - name: Apply database migrations before deploying code
+        env:
+          NODE_ENV: production
+        run: npm run migrate
+
+      - name: Deploy commit, smoke-test readiness, and roll back code if needed
+        shell: bash
+        env:
+          PREVIOUS_DEPLOY_ID: ${{ steps.preflight.outputs.previous_deploy_id }}
+        run: |
+          set -euo pipefail
+          rollback_previous() {
+            echo "::error::Deployment or readiness smoke test failed; requesting rollback to the previous Render deploy."
+            response="$(curl -fsS -X POST \
+              -H "Authorization: Bearer $RENDER_API_KEY" \
+              -H "Content-Type: application/json" \
+              -d "$(jq -nc --arg id "$PREVIOUS_DEPLOY_ID" '{deployId:$id}')" \
+              "https://api.render.com/v1/services/$RENDER_SERVICE_ID/rollback")" || {
+                echo "::error::Render rollback request failed. Escalate immediately; the database was not rolled back."
+                exit 1
+              }
+            rollback_id="$(jq -r '.id // empty' <<< "$response")"
+            if [[ -z "$rollback_id" ]]; then
+              echo "::error::Render did not return a rollback deploy ID."
+              exit 1
+            fi
+            state=""
+            for attempt in $(seq 1 60); do
+              response="$(curl -fsS -H "Authorization: Bearer $RENDER_API_KEY" \
+                "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys/$rollback_id")" || {
+                  echo "::error::Could not check the rollback deploy. Escalate immediately."
+                  exit 1
+                }
+              state="$(jq -r '.status' <<< "$response")"
+              case "$state" in
+                live) break ;;
+                build_failed|update_failed|canceled|pre_deploy_failed|deactivated)
+                  echo "::error::Rollback deployment ended in state $state."
+                  exit 1
+                  ;;
+              esac
+              sleep 10
+            done
+            if [[ "$state" != "live" ]]; then
+              echo "::error::Rollback did not become live within ten minutes."
+              exit 1
+            fi
+            for attempt in $(seq 1 12); do
+              if curl -fsS --max-time 10 "$API_URL/api/ready" | jq -e '.ok == true' >/dev/null; then
+                echo "Previous application code is live and readiness is healthy. Forward-only migrations remain applied."
+                exit 1
+              fi
+              sleep 10
+            done
+            echo "::error::Previous code was redeployed but /api/ready did not recover. Keep the incident open."
+            exit 1
+          }
+
+          response="$(curl -fsS -X POST \
+            -H "Authorization: Bearer $RENDER_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -nc --arg sha "$GITHUB_SHA" '{commitId:$sha}')" \
+            "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys")" || rollback_previous
+          deploy_id="$(jq -r '.id // empty' <<< "$response")"
+          if [[ -z "$deploy_id" ]]; then
+            rollback_previous
+          fi
+
+          state=""
+          for attempt in $(seq 1 90); do
+            response="$(curl -fsS -H "Authorization: Bearer $RENDER_API_KEY" \
+              "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys/$deploy_id")" || rollback_previous
+            state="$(jq -r '.status' <<< "$response")"
+            case "$state" in
+              live) break ;;
+              build_failed|update_failed|canceled|pre_deploy_failed|deactivated) rollback_previous ;;
+            esac
+            sleep 10
+          done
+          if [[ "$state" != "live" ]]; then
+            rollback_previous
+          fi
+
+          ready=false
+          for attempt in $(seq 1 12); do
+            if curl -fsS --max-time 10 "$API_URL/api/ready" | jq -e '.ok == true' >/dev/null; then
+              ready=true
+              break
+            fi
+            sleep 10
+          done
+          if [[ "$ready" != "true" ]]; then
+            rollback_previous
+          fi
+          echo "Deploy $deploy_id is live and $API_URL/api/ready returned {\"ok\":true}."
