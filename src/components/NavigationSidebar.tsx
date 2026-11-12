@@ -213,7 +213,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
     <nav aria-label={t('workspaceNavigation')} className="space-y-6">
       {sections.map((section) => (
         <section key={section.label} aria-label={section.label} className="space-y-1">
-          <h2 className="px-3 text-[0.65rem] font-bold uppercase tracking-[0.14em] text-surface-500 dark:text-surface-400">
+          <h2 className="px-3 text-[0.65rem] font-bold uppercase tracking-[0.14em] text-surface-500 dark:text-surface-300">
             {section.label}
           </h2>
           <div className="space-y-1">
