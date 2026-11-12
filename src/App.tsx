@@ -22,6 +22,7 @@ import { api } from './lib/api';
 import { getProfileCompletion } from './lib/profileCompletion';
 import { shopNiroLogoSmall } from './lib/branding';
 import { prefetchWhenIdle } from './lib/idlePrefetch';
+import { forgetSignedIn, hasSignedInHint, rememberSignedIn } from './lib/signedInHint';
 import { LandingPage } from './components/LandingPage';
 import { MarketplaceClosing, MarketplaceStat } from './components/MarketplaceClosing';
 import { Navbar } from './components/Navbar';
@@ -77,7 +78,10 @@ const scrollViewportToTop = () => {
 export default function App() {
   const { t } = useLocale();
   // Navigation & View Mode
-  const [viewMode, setViewMode] = React.useState<'landing' | 'app'>('landing');
+  // A returning customer starts on the storefront they came for instead of the landing page. This is only a guess made from
+  // a browser-side hint; the server's answer to the sign-in check decides, and a wrong guess falls back to the landing page.
+  const startedFromHint = React.useRef(hasSignedInHint());
+  const [viewMode, setViewMode] = React.useState<'landing' | 'app'>(() => (startedFromHint.current ? 'app' : 'landing'));
 
   // AI Chatbot State
   const [isChatOpen, setIsChatOpen] = React.useState<boolean>(false);
@@ -202,6 +206,7 @@ export default function App() {
       // Offline, keep the signed-in state instead of treating the failed check as a logout.
       const auth = await api.validateAuth({ throwOnNetworkError: true });
       if (auth.authenticated && auth.role && auth.entity) {
+        rememberSignedIn();
         setIsLoggedIn(true);
         setCurrentRole(auth.role);
         const complete = auth.profileComplete !== false;
@@ -240,6 +245,7 @@ export default function App() {
         return true;
       } else {
         // Not authenticated
+        forgetSignedIn();
         setIsLoggedIn(false);
         setProfileComplete(true);
         setProfileMissingFields([]);
@@ -304,6 +310,7 @@ export default function App() {
   // Listen for global authentication requirement/unauthorized events
   React.useEffect(() => {
     const handleAuthRequired = (e: any) => {
+      forgetSignedIn();
       setIsLoggedIn(false);
       setAuthNotice(e.detail?.message || 'Authentication required before processing this HTTP request.');
       openLogin();
@@ -427,6 +434,8 @@ export default function App() {
       // Verify authentication before attempting to query protected user endpoints
       const auth = await authRequest;
       if (auth.authenticated && auth.role && auth.entity) {
+        rememberSignedIn();
+        startedFromHint.current = false;
         setIsLoggedIn(true);
         setCurrentRole(auth.role);
         const complete = auth.profileComplete !== false;
@@ -495,6 +504,12 @@ export default function App() {
           setSelectedRider(auth.entity as Rider);
         }
       } else {
+        forgetSignedIn();
+        // The hint was wrong (the session ended), so go back to the landing page the visitor would have had without it.
+        if (startedFromHint.current) {
+          startedFromHint.current = false;
+          setViewMode('landing');
+        }
         setIsLoggedIn(false);
         setProfileComplete(true);
         setProfileMissingFields([]);
@@ -738,6 +753,7 @@ export default function App() {
   // Handle Log Out: Cleanly resets authentication state & JWT token
   const handleLogout = () => {
     api.logout();
+    forgetSignedIn();
     setIsLoggedIn(false);
     setIsNavigationOpen(false);
     setProfileComplete(true);
