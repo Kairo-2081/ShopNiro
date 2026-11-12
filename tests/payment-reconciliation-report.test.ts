@@ -45,6 +45,14 @@ test('open high-severity findings warn without marking a healthy run failed', ()
   assert.match(result.stepSummary, /Open high-severity findings: 4/);
 });
 
+test('accepts a legacy summary that predates the safe error field', () => {
+  const legacySummary = { ...baseSummary };
+  Reflect.deleteProperty(legacySummary, 'error');
+  const result = runReport(legacySummary);
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(result.stepSummary, /Status: \*\*ok\*\*/);
+});
+
 test('partial and failed runs produce actionable errors and a summary', () => {
   for (const status of ['partial', 'failed']) {
     const result = runReport({

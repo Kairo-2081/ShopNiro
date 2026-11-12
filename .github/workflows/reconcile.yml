@@ -17,6 +17,9 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
       - name: Reconcile payments
         env:
           APP_URL: ${{ secrets.APP_URL }}
@@ -28,6 +31,7 @@ jobs:
             exit 1
           fi
           body_file="$(mktemp)"
+          trap 'rm -f "$body_file"' EXIT
           http_code="$(curl -sS --max-time 600 --retry 2 --retry-delay 30 -X POST \
             -H "Authorization: Bearer ${CRON_SECRET}" \
             -H "Content-Type: application/json" \
@@ -37,7 +41,10 @@ jobs:
           response="$(cat "$body_file")"
           if [[ "$http_code" != "200" ]]; then
             echo "Reconciliation endpoint returned HTTP ${http_code}."
-            echo "Response body: ${response}"
+            api_error="$(jq -er '.error // empty' "$body_file" 2>/dev/null | cut -c1-300 || true)"
+            if [[ -n "$api_error" ]]; then
+              echo "Endpoint error: ${api_error}"
+            fi
             case "$http_code" in
               401) echo "Hint: CRON_SECRET in GitHub does not match CRON_SECRET on the app (the app that APP_URL points at)." ;;
               503) echo "Hint: the app has no CRON_SECRET set, or its database is not ready (check /api/ready)." ;;
@@ -45,5 +52,4 @@ jobs:
             esac
             exit 1
           fi
-          printf '%s\n' "$response" | jq '{runId, status, checked, matched, repaired, findingsOpened, highSeverityOpen}'
-          printf '%s\n' "$response" | jq -e '.status == "ok" and .highSeverityOpen == 0' >/dev/null
+          printf '%s\n' "$response" | node scripts/report-payment-reconciliation.mjs

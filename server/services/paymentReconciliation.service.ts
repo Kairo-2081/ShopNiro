@@ -44,6 +44,7 @@ export interface PaymentReconciliationOptions {
 export interface PaymentReconciliationSummary {
   runId: string;
   status: 'ok' | 'partial' | 'failed';
+  error: string | null;
   checked: number;
   matched: number;
   repaired: number;
@@ -100,11 +101,6 @@ const startRun = async (windowFrom: Date, windowTo: Date): Promise<string> => {
   } finally {
     client.release(discard);
   }
-};
-
-const failureReason = (error: unknown): string => {
-  const text = error instanceof Error ? `${error.name}: ${error.message}` : 'unknown error';
-  return `Payment reconciliation failed before all checks completed (${text})`.slice(0, 500);
 };
 
 const delay = (milliseconds: number) =>
@@ -365,6 +361,11 @@ export async function runPaymentReconciliation(
       } catch (error) {
         if (!isGatewayError(error)) throw error;
         partial = true;
+        console.warn('Payment reconciliation transaction lookup failed.', {
+          runId,
+          paymentId: payment.id,
+          errorType: error.name,
+        });
         continue;
       }
 
@@ -399,6 +400,10 @@ export async function runPaymentReconciliation(
         || transaction.tran_id !== payment.transaction_id
       ) {
         partial = true;
+        console.warn('Payment reconciliation received an incomplete transaction response.', {
+          runId,
+          paymentId: payment.id,
+        });
         continue;
       }
 
@@ -488,6 +493,10 @@ export async function runPaymentReconciliation(
 
       if (!transaction.val_id) {
         partial = true;
+        console.warn('Payment reconciliation could not finalize a gateway payment without a validation ID.', {
+          runId,
+          paymentId: payment.id,
+        });
         await addFinding({
           paymentId: payment.id,
           orderId: payment.order_id,
@@ -512,8 +521,13 @@ export async function runPaymentReconciliation(
           throw new GatewayError('Payment finalization is not configured.');
         }
         repaired += 1;
-      } catch {
+      } catch (error) {
         partial = true;
+        console.error('Payment reconciliation could not finalize a gateway payment.', {
+          runId,
+          paymentId: payment.id,
+          error,
+        });
         await addFinding({
           paymentId: payment.id,
           orderId: payment.order_id,
@@ -617,6 +631,11 @@ export async function runPaymentReconciliation(
       } catch (error) {
         if (!isGatewayError(error)) throw error;
         partial = true;
+        console.warn('Payment reconciliation refund lookup failed.', {
+          runId,
+          refundId: refund.id,
+          errorType: error.name,
+        });
       }
     }
 
@@ -627,28 +646,28 @@ export async function runPaymentReconciliation(
       repaired,
       findingsOpened,
       status,
-      error: partial ? 'One or more gateway checks or repairs failed.' : null,
+      error: partial ? 'One or more gateway checks or repairs failed; inspect the application log for this run.' : null,
     });
   } catch (error) {
-    const reason = failureReason(error);
-    console.error(reason);
+    console.error('Payment reconciliation failed before all checks completed.', { runId, error });
     await updateRun(runId, {
       checked,
       matched,
       repaired,
       findingsOpened,
       status: 'failed',
-      error: reason,
+      error: 'Payment reconciliation failed before all checks completed; inspect the application log for this run.',
     });
   }
 
   const finalRun = await query<{
     status: 'ok' | 'partial' | 'failed';
+    error: string | null;
     checked: number;
     matched: number;
     repaired: number;
     findings_opened: number;
-  }>('SELECT status, checked, matched, repaired, findings_opened FROM payment_reconciliation_runs WHERE id = $1', [runId]);
+  }>('SELECT status, error, checked, matched, repaired, findings_opened FROM payment_reconciliation_runs WHERE id = $1', [runId]);
   const highOpen = await query<{ count: string }>(
     "SELECT count(*)::text AS count FROM payment_reconciliation_findings WHERE status = 'open' AND severity = 'high'"
   );
@@ -657,6 +676,7 @@ export async function runPaymentReconciliation(
   return {
     runId,
     status: row.status,
+    error: row.error,
     checked: Number(row.checked),
     matched: Number(row.matched),
     repaired: Number(row.repaired),
