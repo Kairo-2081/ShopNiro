@@ -3,22 +3,23 @@
 ## Required server variables
 
 - `DATABASE_URL`: PostgreSQL connection URL. Use the provider's pooled connection URL when required.
+- `SHOPNIRO_ENV`: `development`, `staging`, or `production`. Deployed services must use `NODE_ENV=production` and set this separately to identify their isolated deployment.
 - `JWT_SECRET`: unique random value of at least 32 characters. The server refuses to start without it.
-- `SHOPNIRO_PUBLIC_URL`: exact browser frontend origin, such as `https://shopniro.vercel.app`. This origin is allowed for credentialed API requests and cookie-authenticated writes.
-- `CRON_SECRET`: shared bearer secret for order expiry, refund processing, and the Vercel payroll cron.
+- `FRONTEND_URL`: exact HTTPS browser frontend origin, such as `https://shopniro.vercel.app`. This origin is allowed for credentialed API requests and cookie-authenticated writes. `SHOPNIRO_PUBLIC_URL` remains a compatibility alias; keep it identical if configured for email links.
+- `CRON_SECRET`: unique shared bearer secret of at least 32 characters for order expiry, refund processing, payroll settlement, and other scheduled API jobs.
 - `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`: required for private seller document uploads and signed links. Keep the service-role key server-side only.
 - `SUPABASE_SELLER_DOCUMENTS_BUCKET`: optional private Storage bucket name; defaults to `seller-verification-documents`.
 - `SUPABASE_PRODUCT_IMAGES_BUCKET`: optional public Storage bucket name for product images; defaults to `product-images`. Product image uploads also require `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` on the server.
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `FACEBOOK_CLIENT_ID`, `FACEBOOK_CLIENT_SECRET`: optional credentials for customer, seller, and rider sign-in/application signup. Configure each provider's OAuth redirect URL as `https://<API origin>/api/auth/oauth/<provider>/callback`; optionally set `GOOGLE_OAUTH_REDIRECT_URI` or `FACEBOOK_OAUTH_REDIRECT_URI` when the registered callback differs. Set `APP_URL` to the API origin when it cannot be inferred from the incoming request.
 
-For a new or empty database, also configure unique values of at least 16 characters for `SHOPNIRO_SEED_ADMIN_PASSWORD`, `SHOPNIRO_SEED_SELLER_PASSWORD`, and `SHOPNIRO_SEED_CUSTOMER_PASSWORD`. The seed process hashes them before saving demo users. Do not reuse production account passwords.
+For a new or empty database, also configure unique values of at least 16 characters for `SHOPNIRO_SEED_ADMIN_PASSWORD`, `SHOPNIRO_SEED_SELLER_PASSWORD`, and `SHOPNIRO_SEED_CUSTOMER_PASSWORD`. The seed process hashes them before saving demo users. Do not reuse production account passwords. Production never runs seed-on-start.
 
 ## Frontend variables
 
 - `VITE_API_URL`: API base URL used by the browser build, for example `https://shopniro.onrender.com`. Keep this aligned with the API host and its CORS settings.
 - `VITE_CAPACITOR_API_URL`: optional API base URL embedded in the Android/iOS build. Native Capacitor builds ignore a browser-only localhost `VITE_API_URL` and default to `https://shopniro.onrender.com`.
 
-Vercel supplies `VERCEL_URL` and `VERCEL_PROJECT_PRODUCTION_URL`; the API includes those origins when present. For other frontend hosts, configure `SHOPNIRO_PUBLIC_URL` on the API service.
+Vercel hosts the static frontend only; its `VITE_API_URL` must point to the selected Render API. Configure that API's `FRONTEND_URL` to the exact Vercel origin. `vercel.json` must not route `/api/*` to a Vercel serverless Express instance.
 
 ## Optional integrations
 
@@ -39,44 +40,48 @@ Vercel supplies `VERCEL_URL` and `VERCEL_PROJECT_PRODUCTION_URL`; the API includ
 
 ## Environments and the safe deploy path
 
-There are two stacks. They share nothing: not a database, a secret, a storage bucket or a gateway account.
+There are three runtime environments. Staging and production must not share a database, a secret, a storage bucket, or a gateway account.
 
-| | Staging | Production |
-|---|---|---|
-| Git branch | `staging` | `main` |
-| Host service | its own web service, auto-deploy from `staging` | the existing service |
-| Database | its own Supabase project, fake data only | the production project |
-| Payment gateway | sandbox credentials | sandbox now, live credentials at launch |
-| Email | `RESEND_API_KEY` unset, so nothing is sent | configured |
-| GitHub Environment | `staging` (no approval) | `production` (approval required) |
+| | Development | Staging | Production |
+|---|---|---|---|
+| `SHOPNIRO_ENV` | `development` | `staging` | `production` |
+| `NODE_ENV` | `development` | `production` | `production` |
+| Backend | local process | dedicated Render web service | dedicated Render web service |
+| Database | local/test database | separate Supabase project | production Supabase project |
+| Gateway | simulator/sandbox as needed | separate SSLCommerz sandbox credentials; simulator off | live SSLCommerz credentials; sandbox and simulator off |
+| Payments | controlled by local config | sandbox only; separate account | live only; `ONLINE_PAYMENTS_ENABLED=false` remains the incident switch |
+| GitHub Environment | not used | `staging` | `production` |
 
 Set up staging once:
 
 1. Create a second Supabase project. Never restore a production dump into it, because it would hold real customers' details.
 2. Create the same storage buckets (`seller-verification-documents` private, `product-images` public).
-3. Create a second web service from this repository that deploys the `staging` branch. Give it its own `DATABASE_URL`, `JWT_SECRET`, `CRON_SECRET`, `SSLCOMMERZ_IPN_TOKEN`, `SUPABASE_SERVICE_ROLE_KEY` and `SHOPNIRO_PUBLIC_URL`. A `JWT_SECRET` shared with production would let a staging login token work there.
-4. Build the staging frontend with `VITE_API_URL` set to the staging API. Without it the browser build calls the production API (`src/apiConfig.ts`). The `wiring` browser test fails if any API call leaves the site under test.
+3. Create a paid Render web service for the staging API. Set its health check to `/api/ready`, disable Render autodeploys, and give it unique staging values for `DATABASE_URL`, `JWT_SECRET`, `CRON_SECRET`, `SSLCOMMERZ_IPN_TOKEN`, `SUPABASE_SERVICE_ROLE_KEY`, and `FRONTEND_URL`. Set `NODE_ENV=production`, `SHOPNIRO_ENV=staging`, `SSLCOMMERZ_IS_SANDBOX=true`, `PAYMENT_MODE=sandbox-demo`, and `PAYMENT_SIMULATOR=false`. Never share production gateway or database credentials.
+4. Build/deploy the staging frontend with `VITE_API_URL` set to the staging API. Without it the browser build calls the production API (`src/apiConfig.ts`). The `wiring` browser test fails if any API call leaves the site under test.
 5. Set `LOGIN_RATE_LIMIT_MAX=100` on the staging service only. The browser suite signs several roles in from one address. The general API limit (120 requests a minute per address) also applies on a deployed host, so a run that fails with 429 responses means the limit was hit, not that a feature broke.
-6. In GitHub create the `staging` Environment with the secret `MIGRATE_DATABASE_URL` (staging Session pooler URL) and `E2E_DATABASE_URL` (the staging database URL), and the variables `STAGING_URL` and `STAGING_DB_IDENTITY` (`user@host:port/database`, no password). Keep `MIGRATE_DATABASE_URL` in the `production` Environment pointing at production, with required reviewers.
+6. In GitHub create the `staging` Environment with secrets `MIGRATE_DATABASE_URL` (staging Session pooler URL), `E2E_DATABASE_URL` (staging database URL), and `RENDER_API_KEY`; add variables `RENDER_SERVICE_ID`, `API_URL`, `STAGING_URL`, and `STAGING_DB_IDENTITY` (`user@host:port/database`, no password). Add the corresponding production secrets/variables to the `production` Environment. Use a Render API key scoped as narrowly as Render supports.
+7. Configure the Render API services as paid instances with health check `/api/ready` and autodeploy disabled. A GitHub Environment name by itself does not create an approval gate. When checked on 2026-11-12, GitHub reported **zero protection rules** for both `staging` and `production`; add the production branch restriction and an authorized required reviewer in GitHub Settings → Environments → `production` before treating migration/deploy as approval-gated.
 
-The path a change takes:
+The controlled Render API deployment path:
 
-1. A feature branch opens a pull request into `main`. CI runs `validate` and `e2e` on throwaway databases.
-2. Merge it into `staging`. The staging service deploys it.
-3. If it contains a migration, run **Database migrations** with target `staging` and mode `apply`, then `drift`.
-4. Run **Staging browser tests**. They seed and empty the staging database, so the suite refuses any database that is not exactly the one named in `STAGING_DB_IDENTITY`, refuses the production site, and skips the online-payment cases (they need the built-in simulator, which only runs locally). Click through the changed screen once by hand.
-5. Merge to `main`. For a migration, run `backup.yml`, wait for it to succeed, then run **Database migrations** with target `production`; the workflow stops unless a backup succeeded in the last 24 hours. Deploy the API before the frontend when the contract changes.
-6. After the deploy, check `/api/ready` and sign in once. Migrations only roll forward, so on a problem fix forward.
+1. A feature branch opens a pull request. CI validates code and browser tests against throwaway databases.
+2. Merge to `staging`. Confirm the staging code commit has a successful CI push run. Do not let Render or Vercel deploy automatically.
+3. From the `staging` branch, dispatch **Deploy Render service** with target `staging`. The workflow verifies CI, checks the paid Render service and `/api/ready` health-check configuration, applies migrations to the staging database, deploys the exact commit, and polls `/api/ready`. If deploy or readiness smoke checks fail, it requests a rollback to the previously live Render deploy. It never rolls the database backward.
+4. Dispatch **Staging browser tests**. These tests seed and empty the staging database, so the suite refuses any database that is not exactly the one named in `STAGING_DB_IDENTITY`, refuses the production site, and skips online-payment cases (the built-in simulator runs only locally). Click through changed screens once by hand.
+5. Promote the reviewed commit to `main`. Before dispatching **Deploy Render service** for target `production`, confirm the production reviewer gate is active and a successful production backup completed in the previous 24 hours. The workflow rechecks backup status, applies migrations, deploys the exact commit to Render, smoke-tests readiness, and rolls back application code on failure. Deploy a separately hosted Vercel static frontend only after the API is healthy and its contract is compatible.
+6. Verify `/api/ready`, `/api/db/status`, sign-in, a protected page, the selected frontend's API wiring, and payment mode. Migrations are forward-only; application rollback leaves the schema in place. All migrations must remain compatible with the previous application version during the rollback window.
+
+For exact inputs, setup, rollback, and the **not-yet-rehearsed** staging exercise, follow [Deployment and rollback rehearsal](docs/deployment-rehearsal.md). The workflows cannot create GitHub reviewer rules, change Render plan/autodeploy settings, or prove that staging and production provider credentials are distinct; those remain dashboard-owner setup checks.
 
 ## Deployment checks
 
 Production incident procedures are in [docs/runbooks](docs/runbooks/README.md). Production host access and secret rotation must be verified for two named operators before treating the access controls as complete.
 
 1. Configure secrets in the host dashboard, not in committed files.
-2. Apply pending database migrations to staging first, then production, through the approved migration workflow (see "Environments and the safe deploy path" above and "Adding a migration" below). The host does not apply them automatically.
-3. Confirm the frontend origin exactly matches `SHOPNIRO_PUBLIC_URL` and the API CORS allowlist.
+2. Apply pending database migrations to staging first, then production, through the controlled deployment workflow (or the explicit **Database migrations** workflow for a separately approved maintenance action). The host does not apply them automatically.
+3. Confirm the frontend origin exactly matches `FRONTEND_URL` (and `SHOPNIRO_PUBLIC_URL` if used for email) and the API CORS allowlist.
 4. Deploy the API before the frontend when changing API contracts.
-5. Verify `/api/db/status`, sign in, load a protected page, and sign out in the deployed browser origin.
+5. Verify `/api/ready`, `/api/db/status`, sign in, load a protected page, and sign out in the deployed browser origin.
 6. Confirm the session cookie is marked `HttpOnly`, `Secure` in production, and has the intended `SameSite` value.
 7. Create the seller-document Storage bucket as private, then run `npx tsx scripts/migrate-seller-documents-to-storage.ts` against a backed-up database to move existing verification files.
 8. Configure GitHub Actions secrets `APP_URL` and `CRON_SECRET`; dispatch the scheduled-jobs workflow once and confirm both cron endpoints respond successfully. The separate **Nightly payment reconciliation** workflow runs at 20:00 UTC (02:00 Dhaka) and can also be dispatched manually. It fails if the run is not `ok` or any high-severity finding remains open. Review findings through the admin-only `/api/payment/reconciliation` endpoint and acknowledge reviewed records with `PATCH /api/payment/reconciliation/:id/acknowledge`. Keep `RECONCILE_AUTO_REPAIR=false` until the report-only runs have been reviewed; gateway queries are limited to five per second.
@@ -98,8 +103,8 @@ For every schema change:
 2. Make changes additive first. Deploy new columns or functions alongside old ones; remove old objects only in a later migration after application code no longer uses them.
 3. Add constraints as `NOT VALID`, repair existing data, then validate them in a later migration.
 4. Test against a disposable PostgreSQL database using `npm run migrate`, `npm run migrate:status`, `npm run lint`, and `npm test`. Never point migration tests at production or shared data.
-5. Apply migrations to staging first. Before production, run `backup.yml`, wait for a successful backup, and use the approved `migrate.yml` workflow with the production Environment approval. The workflow checks for a successful backup from the previous 24 hours before applying changes.
-6. Configure the GitHub Actions secret `MIGRATE_DATABASE_URL` with the production Session pooler URL and require approval for the `production` Environment. Run the workflow in `drift` mode first. It builds a reference database from the migration files and compares production with it, listing every missing or different table, column, constraint, index, function, trigger and view. If the schema matches `0001` exactly, run `baseline` once, then `status`; baseline records the existing schema without executing the baseline SQL. If production is an existing, intentionally drifted schema, do not claim it matches `0001`: review the complete drift and data checks, test the reconciliation on a production-shaped copy, take a recent backup, then run `adopt` with production Environment approval. Adoption records the immutable `0001` checksum and a fingerprint of the actual starting schema; it does not mark `0001` as applied or execute SQL. Subsequent `apply` runs skip `0001`, verify the live schema still matches the latest recorded fingerprint, and update that fingerprint atomically with each successful migration. Any untracked schema change blocks migration until reviewed. A database with application tables but no migration history cannot be migrated blindly. Run the same drift check locally with `DATABASE_URL=<live> npm run migrate:drift -- --reference <freshly migrated database>`; it only reads the catalog. The reference should be the same PostgreSQL major version as the live database (the workflow uses 17).
+5. Apply migrations to staging first. For production, the **Deploy Render service** workflow requires a successful backup from the previous 24 hours and applies migrations before deploying the exact CI-passing commit. GitHub currently reports no protection rules for `production`; configure and verify a required reviewer before calling this approval-gated.
+6. Configure the GitHub Actions secret `MIGRATE_DATABASE_URL` with the production Session pooler URL and protect the `production` Environment before running production operations. The standalone **Database migrations** workflow can run `drift` mode first. It builds a reference database from the migration files and compares production with it, listing every missing or different table, column, constraint, index, function, trigger and view. If the schema matches `0001` exactly, run `baseline` once, then `status`; baseline records the existing schema without executing the baseline SQL. If production is an existing, intentionally drifted schema, do not claim it matches `0001`: review the complete drift and data checks, test the reconciliation on a production-shaped copy, take a recent backup, then run `adopt` only after a production reviewer gate is active. Adoption records the immutable `0001` checksum and a fingerprint of the actual starting schema; it does not mark `0001` as applied or execute SQL. Subsequent `apply` runs skip `0001`, verify the live schema still matches the latest recorded fingerprint, and update that fingerprint atomically with each successful migration. Any untracked schema change blocks migration until reviewed. A database with application tables but no migration history cannot be migrated blindly. Run the same drift check locally with `DATABASE_URL=<live> npm run migrate:drift -- --reference <freshly migrated database>`; it only reads the catalog. The reference should be the same PostgreSQL major version as the live database (the workflow uses 17).
 
 The schema-reconciliation migrations restore the missing foreign keys as `NOT VALID` before validating them in the following migration. They also restore the baseline username uniqueness and review-rating check. Migration `0004_reconcile_column_types.sql` aligns the reported application-column types and required nullability after preflight checks reject overlength, fractional, overflowing, or unresolved-NULL values. It interprets legacy timestamps without a timezone as UTC and backfills only the approved legacy order values (`payment_method = 'unknown'` and `payment_status = 'pending'`). Money columns that were plain `numeric` may carry floating point noise (production has an order subtotal of 183.58999999999997): differences below a millionth are rounded to the cent by the type change, while a genuine fractional amount still stops the migration for review. Triggers declared `UPDATE OF <column>` or with a `WHEN` clause (production has `trigger_prevent_user_role_change`) block column type changes, so they are dropped and recreated. The migration preserves view/function owners, comments, options, and grants, recreates the seven baseline views, and restores any dependent routines that PostgreSQL drops during the type changes. Migration `0005_align_column_defaults.sql` then aligns the seven column defaults that differed from `0001`; the one deliberate departure is `sellers.status`, which defaults to `'pending'` (production's value) rather than `0001`'s `'approved'`, so a seller inserted without a status can never skip review.
 
