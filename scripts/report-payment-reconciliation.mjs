@@ -16,7 +16,7 @@ const readResponse = () => {
     || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(response.runId)
     || !['ok', 'partial', 'failed'].includes(response.status)
     || countFields.some((field) => !Number.isSafeInteger(response[field]) || response[field] < 0)
-    || (response.error !== null && typeof response.error !== 'string')
+    || (response.error !== undefined && response.error !== null && typeof response.error !== 'string')
   ) {
     throw new Error('Reconciliation endpoint returned an invalid summary.');
   }
@@ -26,6 +26,7 @@ const readResponse = () => {
 
 try {
   const result = readResponse();
+  const error = result.error ?? null;
   const summary = [
     '# Payment reconciliation',
     '',
@@ -36,7 +37,7 @@ try {
     `- Repaired: ${result.repaired}`,
     `- New findings: ${result.findingsOpened}`,
     `- Open high-severity findings: ${result.highSeverityOpen}`,
-    ...(result.error ? [`- Detail: ${result.error}`] : []),
+    ...(error ? [`- Detail: ${error}`] : []),
     '',
   ].join('\n');
 
@@ -46,10 +47,10 @@ try {
 
   process.stdout.write(summary);
   if (result.status !== 'ok') {
-    process.stderr.write(`::error::Reconciliation run ${result.runId} finished with status ${result.status}. ${result.error || 'Inspect the run summary and application logs.'}\n`);
+    process.stderr.write(`::error::Reconciliation run ${result.runId} finished with status ${result.status}. ${error || 'Inspect the run summary and application logs.'}\n`);
     process.exitCode = 1;
   } else if (result.highSeverityOpen > 0) {
-    process.stdout.write(`::warning::${result.highSeverityOpen} high-severity reconciliation finding(s) remain open. Review the admin reconciliation findings for run ${result.runId}.\n`);
+    process.stdout.write(`::warning::${result.highSeverityOpen} high-severity reconciliation finding(s) remain open. Review the admin reconciliation findings; run ${result.runId} completed successfully.\n`);
   }
 } catch (error) {
   process.stderr.write(`::error::${error instanceof Error ? error.message : 'Could not read reconciliation summary.'}\n`);
