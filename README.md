@@ -1,169 +1,198 @@
 <div align="center">
 
-<img src="./ShopNiro-new-round-128.png" alt="ShopNiro" width="88" />
+<img src="./.github/assets/readme/shopniro-logo.png" alt="ShopNiro" width="88" />
 
 # ShopNiro
 
 **Shop smart. Ship fast.**
 
-A multi-vendor marketplace built for Bangladesh: discover products, pay with local options, and follow deliveries while approved sellers manage their stores.
+A multi-vendor marketplace for Bangladesh, connecting shoppers, sellers,
+admins, and delivery riders in one order journey.
 
 [![CI](https://github.com/Kairo-2081/ShopNiro/actions/workflows/ci.yml/badge.svg)](https://github.com/Kairo-2081/ShopNiro/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 
-<br />
+[Live marketplace](https://shopniro.onrender.com/) ·
+[Android APK](https://github.com/Kairo-2081/ShopNiro/releases/latest/download/ShopNiro.apk) ·
+[API docs](./docs/api.md) ·
+[Deployment guide](./README-DEPLOY.md)
 
-[Live marketplace](https://shopniro.onrender.com/) · [API docs](./docs/api.md) · [Deployment guide](./README-DEPLOY.md) · [Issues](https://github.com/Kairo-2081/ShopNiro/issues)
-
-<br />
-
-<img src="./.github/assets/readme/shopniro-home.jpg" alt="ShopNiro home page with links for shoppers, sellers, and riders around a delivery-route globe" width="900" />
+<img src="./.github/assets/readme/shopniro-home.jpg" alt="ShopNiro landing page with a delivery-route globe and entry points for the marketplace, sellers, and riders" width="900" />
 
 </div>
 
-ShopNiro brings the parts of online shopping that are often treated separately—seller approval, local payments, order updates, and last-mile delivery—into one marketplace. Customers can shop from multiple sellers, sellers can manage their own listings and orders, and admins oversee marketplace operations.
+**On this page:** [Try it](#try-it) · [Product tour](#product-tour) ·
+[How it works](#how-it-works) · [Engineering](#engineering) ·
+[Get started](#get-started) · [Project status](#project-status-and-next-steps)
 
-## One marketplace, four roles
+ShopNiro brings product discovery, seller approval, local payment options,
+order updates, and last-mile delivery into one marketplace. Customers can shop
+from multiple sellers; approved sellers manage their stores; admins oversee
+marketplace operations; and riders update assigned deliveries.
 
-**For shoppers**
+## Try it
 
-- Browse approved listings, search and sort products, and check prices and stock before ordering.
-- Pay using cash on delivery or an available online payment method, including bKash and SSLCOMMERZ.
-- Follow order and delivery updates, contact support, and leave product reviews.
-- Agree to the Terms of Service and Privacy Policy when creating an account; consent is recorded with its policy version and timestamp.
-- Request a personal-data export or account deletion.
+| Role | What you can try |
+| --- | --- |
+| Customer | Browse the public catalog without signing in. An account is required to place an order. |
+| Seller | Apply through seller signup. An admin must approve the application before the store can operate. |
+| Rider | Apply through the rider portal. An admin must approve the application before delivery work is available. |
+| Admin | Public admin signup is disabled; admin access is not shared. |
 
-**For sellers**
+No shared seller or rider demo accounts are published. The public deployment
+is not documented as a sandbox, so do not submit payment details there. Local
+development and CI use a payment simulator that does not contact a real gateway.
 
-- Apply to sell; an admin reviews the application before the store can operate.
-- Manage products, inventory, customer orders, and store information.
-- Review earnings and request payouts under the [payout policy](./docs/payouts.md).
+## Product tour
 
-**For riders**
-
-- Apply to deliver and manage assigned deliveries after approval.
-- Record delivery progress, cash-on-delivery collection, and wallet activity.
-
-**For admins**
-
-- Review seller and rider applications.
-- Manage marketplace operations, categories, payments, refunds, and seller payouts.
-- Create admin accounts from an existing admin account; public admin signup is disabled.
-
-## A shopping journey
-
-1. A shopper finds an in-stock product from an approved seller and adds it to the cart.
-2. At checkout, the shopper confirms the order and selects an available payment method.
-3. The seller processes the order and updates its status.
-4. The shopper follows delivery updates and can review the product after it arrives.
-
-## Inside ShopNiro
+The images below are real captures of the public interface. The registration
+capture shows all three account choices together; the other two signup captures
+are intentionally omitted.
 
 <div align="center">
 
 <table>
 <tr>
 <td width="50%" valign="top">
-<img src="./.github/assets/readme/shopniro-marketplace.jpg" alt="ShopNiro marketplace with catalog search, sorting, stock filters, and customer navigation" width="100%" />
-<p><b>Find something worth bringing home.</b> Search the catalog, compare listings, and check stock.</p>
+<img src="./.github/assets/readme/shopniro-marketplace.jpg" alt="Marketplace catalog with search, sorting, stock filters, and customer navigation" width="100%" />
+<p><b>Browse the catalog.</b> Search listings, compare prices, and check stock before ordering.</p>
 </td>
 <td width="50%" valign="top">
-<img src="./.github/assets/readme/shopniro-marketplace-current.jpg" alt="ShopNiro marketplace with product rankings, best sellers, and category trends" width="100%" />
-<p><b>Catch the latest trends.</b> Marketplace charts bring best sellers, top-rated products, and new arrivals together.</p>
-</td>
-</tr>
-<tr>
-<td width="50%" valign="top">
-<img src="./.github/assets/readme/shopniro-product-detail.jpg" alt="ShopNiro product details showing a Bengali listing, price, verified seller, and seller-provided policies" width="100%" />
-<p><b>Know what you are ordering.</b> Product pages bring listing details, seller information, and policies into one view.</p>
-</td>
-<td width="50%" valign="top">
-<img src="./.github/assets/readme/shopniro-sign-up.jpg" alt="ShopNiro customer account creation with customer, seller, and rider account types and policy consent" width="100%" />
-<p><b>Start as a shopper.</b> Customer registration includes clear account choices and policy consent.</p>
+<img src="./.github/assets/readme/shopniro-marketplace-current.jpg" alt="Marketplace charts showing best sellers, top-rated products, and new arrivals" width="100%" />
+<p><b>Explore what is selling.</b> Product rankings and category trends bring popular listings into view.</p>
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
-<img src="./.github/assets/readme/shopniro-seller-signup.jpg" alt="ShopNiro account creation form with Merchant (Seller) selected" width="100%" />
-<p><b>Open a seller account.</b> Seller registration starts in the same guided account flow.</p>
+<img src="./.github/assets/readme/shopniro-product-detail.jpg" alt="Product detail with a Bengali listing, price, verified seller, and seller-provided policies" width="100%" />
+<p><b>Review the details.</b> Product pages show listing information, seller details, and policies.</p>
 </td>
 <td width="50%" valign="top">
-<img src="./.github/assets/readme/shopniro-rider-signup.jpg" alt="ShopNiro account creation form with Rider delivery selected" width="100%" />
-<p><b>Join the delivery team.</b> Riders can choose their own account path at signup.</p>
+<img src="./.github/assets/readme/shopniro-sign-up.jpg" alt="Account creation screen with customer, merchant seller, and rider role choices" width="100%" />
+<p><b>Choose an account type.</b> Customer, seller, and rider registration start in the same flow.</p>
 </td>
 </tr>
 </table>
 
+<p>
+<img src="./.github/assets/readme/shopniro-mobile-phone.png" alt="ShopNiro public landing page displayed in a phone frame at a 390-pixel mobile viewport" width="250" />
+</p>
+<p><b>Mobile storefront.</b> Captured from the public site at a narrow viewport; the Android wrapper uses the app's web interface.</p>
+
 </div>
 
-## Built for local commerce
+Authenticated seller, admin, assistant, checkout, tracking, and rider screens
+are not pictured yet. They need to be captured from seeded staging data, not
+production customer accounts.
 
-- **Payments:** cash on delivery and supported online payment integrations.
-- **Seller trust:** seller applications are reviewed before their products can be listed.
-- **Delivery:** customers can follow order progress, and riders have role-specific delivery workflows.
-- **AI assistance:** a Groq-powered assistant helps shoppers discover products.
-- **Support:** support requests are stored in PostgreSQL, with optional email notification.
-- **Privacy controls:** customers can request their data and account deletion. Order, payment, and consent records may need to be retained; automated retention cleanup remains disabled pending legal and accounting review.
+## How it works
 
-> **Policy review:** Legal copy, business disclosures, and retention decisions are provisional and still need qualified Bangladesh legal and accounting review. See the [legal review checklist](./docs/legal-review.md).
+1. A customer finds an in-stock product from an approved seller and adds it to
+   the cart.
+2. At checkout, the customer confirms the order and selects an available
+   payment method.
+3. The seller processes the order and updates its status.
+4. The customer follows delivery updates; an assigned rider records delivery
+   progress and cash-on-delivery collection.
 
-## Architecture
+The browser journey is exercised in
+[`e2e/marketplace-flow.spec.ts`](./e2e/marketplace-flow.spec.ts).
 
-```mermaid
-flowchart LR
-    U[Customer / Seller / Rider / Admin] --> W[React web app]
-    W -->|HTTPS and HttpOnly session cookie| A[Express API]
-    A --> D[(PostgreSQL)]
-    A --> S[Supabase Storage]
-    A --> P[bKash / SSLCOMMERZ]
-    A --> G[Groq AI]
-    A --> E[Resend email]
-    J[GitHub Actions / Vercel schedules] -->|Cron secret| A
-```
+## Evidence from CI
 
-## Technology
+| Measure | Result |
+| --- | --- |
+| Node test-runner cases | 271 in the [12 Nov 2026 CI run](https://github.com/Kairo-2081/ShopNiro/actions/runs/43311782295) |
+| Lighthouse accessibility | 100/100 on the mobile accessibility audit in that CI run |
+| Database migrations | 12 numbered PostgreSQL migrations |
+
+The Playwright accessibility suite also runs axe checks; axe reports rule
+violations rather than a single score. Payment benchmark instructions are in
+[`docs/benchmarks.md`](./docs/benchmarks.md). They use a stub gateway and local
+PostgreSQL, so their latency numbers are not production measurements.
+
+## Engineering
+
+### Technology
 
 | Layer | Technology |
 | --- | --- |
 | Web app | React, Vite, TypeScript |
 | API | Node.js, Express, TypeScript |
 | Database | PostgreSQL |
-| File storage | Supabase Storage (private seller documents; product images) |
+| File storage | Supabase Storage for product images and private seller documents |
 | Authentication | App-issued JWT in an HttpOnly cookie; server-side session revocation |
 | Payments | bKash, SSLCOMMERZ, and cash on delivery |
-| AI | Groq API |
-| Email | Resend (optional) |
-| Testing | Node.js test runner, Playwright, axe, Lighthouse |
+| AI | Groq API for product discovery assistance |
+| Testing | Node.js test runner, Playwright, axe, and Lighthouse |
+| Mobile / desktop | Capacitor for Android; Electron for desktop |
+| Hosting | Render for the Express API; Vercel can host the static frontend |
 | CI | GitHub Actions with PostgreSQL 16 |
-| Scheduling and hosting | Render, Vercel, and GitHub Actions |
-| Mobile / desktop | Capacitor (Android), Electron |
 
-## Engineering decisions
+### Decisions and trade-offs
 
-- **Revocable sessions.** Session tokens stay in an HttpOnly cookie, and each token ID is persisted in `auth_sessions` so logout can revoke it before expiry.
-- **Deny-by-default API.** Requests require authentication unless the method and path are explicitly listed in [`publicRoutes.ts`](./server/middleware/publicRoutes.ts). Route-policy tests protect this boundary; public cron endpoints still check their own shared secret.
-- **Idempotent payment handling.** Payment initialization reuses pending payments, gateway callbacks validate transaction details, and database transactions protect finalization. Duplicate payments enter the refund flow rather than creating duplicate paid orders. See [payment and refund flows](./docs/flows.md).
-- **Private seller documents.** Seller verification files use a private Supabase Storage bucket and signed access. The service-role key stays on the server.
-- **Scheduled work outside the web process.** GitHub Actions and Vercel call protected cron endpoints. Hosted schedules can be delayed; use a host-provided scheduler if a job needs tighter timing.
-- **Retention is deliberate.** Data export and account-deletion requests are supported, but some commerce records may need to remain. Cleanup is not automated until retention requirements are reviewed.
+- **Revocable cookie sessions.** Session tokens stay in an HttpOnly cookie, and
+  token IDs are persisted so logout can revoke them before expiry. Production
+  cross-site cookies require `SameSite=None`; cookie-authenticated writes
+  therefore also require an allowed `Origin` or `Referer`. Frontend origins
+  must stay in sync with the API allowlist.
+- **Deny-by-default API.** Only explicitly listed method/path pairs are public,
+  which reduces accidental exposure. Adding a public route requires updating
+  the allowlist and its policy tests.
+- **Idempotent payment handling.** Pending payments are reused and finalization
+  is transactional, protecting against callback retries and duplicate orders.
+  The cost is extra database coordination; duplicate successful payments still
+  need a refund workflow.
+- **Private seller documents.** Verification files use signed access through a
+  private storage bucket. This protects documents but makes seller review
+  depend on the storage provider being available.
+- **External scheduled jobs.** GitHub Actions calls protected cron endpoints
+  outside the web process. This keeps jobs independent of server
+  uptime, but hosted schedules can slip; handlers must tolerate delayed and
+  repeated calls.
+- **Data export and deletion.** Customers can request either, while payment,
+  order, and consent records may need to be retained. Automated cleanup remains
+  off until legal and accounting requirements are confirmed.
+
+### Architecture
+
+```mermaid
+flowchart LR
+    U[Customer / Seller / Rider / Admin] --> W[React web app]
+    W -->|HTTPS and HttpOnly session cookie| A[Render Express API]
+    A --> D[(PostgreSQL)]
+    A --> S[Supabase Storage]
+    A --> P[bKash / SSLCOMMERZ]
+    A --> G[Groq AI]
+    A --> E[Resend email]
+    J[GitHub Actions schedules] -->|Cron secret| A
+```
 
 ## Get started
 
-### Prerequisites
+### Requirements
 
-- Node.js 22 (the version used in CI)
-- PostgreSQL 16 and a database reserved for local development
+- Node.js 22
+- Docker Desktop with Compose, or PostgreSQL 16 already running locally
 
-### Install and configure
+### Install
 
 ```sh
 git clone https://github.com/Kairo-2081/ShopNiro.git
 cd ShopNiro
 npm ci
-cp .env.example .env
 ```
 
-In PowerShell, use `Copy-Item .env.example .env`. Set `NODE_ENV=development`, point `DATABASE_URL` to your local database, and configure a unique `JWT_SECRET` of at least 32 characters. Generate one with:
+To start a local PostgreSQL 16 database with Docker Compose:
+
+```sh
+docker compose up -d db
+```
+
+Copy `.env.example` to `.env` (`Copy-Item .env.example .env` in PowerShell).
+The example is preconfigured for the local Compose database. Set
+`NODE_ENV=development` and replace `JWT_SECRET` with a unique random value of
+at least 32 characters. Generate one with:
 
 ```sh
 node -e "console.log(require('node:crypto').randomBytes(64).toString('hex'))"
@@ -176,11 +205,16 @@ npm run migrate
 npm run dev
 ```
 
-The development server starts at `http://localhost:3000` by default. To seed a fresh development database, set `SEED_ON_START=true` and provide unique `SHOPNIRO_SEED_ADMIN_PASSWORD`, `SHOPNIRO_SEED_SELLER_PASSWORD`, and `SHOPNIRO_SEED_CUSTOMER_PASSWORD` values (at least 16 characters each). Seeding is disabled by default and must never be enabled in production.
+The app starts at `http://localhost:3000` by default. To seed a fresh
+development database, set `SEED_ON_START=true` and provide unique
+`SHOPNIRO_SEED_ADMIN_PASSWORD`, `SHOPNIRO_SEED_SELLER_PASSWORD`, and
+`SHOPNIRO_SEED_CUSTOMER_PASSWORD` values (at least 16 characters each).
+Seeding is disabled by default and must never be enabled in production.
 
-Never commit `.env` or use development credentials in production. Do not point tests at production or shared customer data.
+Never commit `.env` or use development credentials in production. Do not point
+tests at production or shared customer data.
 
-### Common environment variables
+### Environment variables
 
 | Variable(s) | When needed | Purpose |
 | --- | --- | --- |
@@ -189,19 +223,23 @@ Never commit `.env` or use development credentials in production. Do not point t
 | `JWT_SECRET` | Always | Signs session tokens; minimum 32 characters. |
 | `CRON_SECRET` | Production and scheduled jobs | Authorizes protected scheduler requests. |
 | `SSLCOMMERZ_STORE_ID`, `SSLCOMMERZ_STORE_PASSWORD`, `SSLCOMMERZ_IPN_TOKEN` | Production online payments | Gateway credentials and callback verification. |
-| `SSLCOMMERZ_IS_SANDBOX` | Production online payments | Must be `false` when using live credentials. |
+| `SSLCOMMERZ_IS_SANDBOX` | Production online payments | Must be `false` with live credentials. |
 | `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` | Storage features | Server-side storage access; never expose the service-role key to the browser. |
 | `GROQ_API_KEY` | AI features | Enables the AI assistant and AI-assisted tools. |
 | `RESEND_API_KEY`, `SHOPNIRO_FROM_EMAIL`, `SHOPNIRO_PUBLIC_URL` | Email delivery | Enables welcome and password-recovery emails; configure a verified sender. |
 | `SHOPNIRO_SUPPORT_EMAIL` | Optional | Support-request notification recipient. |
 | `VITE_API_URL` | Separate frontend hosting | API origin used by the browser build. |
-| `ONLINE_PAYMENTS_ENABLED` | Optional | Set to `false` to disable new online payment sessions while keeping COD available. |
+| `ONLINE_PAYMENTS_ENABLED` | Optional | Set to `false` to disable new online payment sessions while keeping cash on delivery available. |
 
-This is a summary, not the complete configuration. See [`.env.example`](./.env.example) and the [deployment guide](./README-DEPLOY.md). The payment simulator is restricted to development and test environments.
+This is a summary, not the complete configuration. See
+[`.env.example`](./.env.example) and the
+[deployment guide](./README-DEPLOY.md). The payment simulator is restricted to
+development and test environments.
 
-## Tests
+### Tests
 
-Use an isolated, disposable PostgreSQL database. Apply migrations before running database-backed tests.
+Use an isolated, disposable PostgreSQL database and apply migrations before
+running database-backed tests.
 
 ```sh
 npm test
@@ -211,17 +249,23 @@ npm run e2e
 npm run test:a11y -- --project=desktop
 ```
 
-CI provisions a temporary PostgreSQL 16 database and runs validation, browser, and accessibility checks. Browser tests use the built-in payment simulator, not a real gateway. Payment latency and idempotency benchmarks are available with `npm run bench:payments`; see [docs/benchmarks.md](./docs/benchmarks.md).
+CI provisions a temporary PostgreSQL 16 database and runs validation, browser,
+and accessibility checks. Browser tests use the built-in payment simulator,
+not a real gateway. Payment latency and idempotency benchmarks are available
+with `npm run bench:payments`; see [`docs/benchmarks.md`](./docs/benchmarks.md).
 
-## Scheduled jobs
+### Scheduled jobs
 
-- GitHub Actions calls `/api/cron/expire-orders` and `/api/cron/refunds` every five minutes.
-- A separate nightly GitHub Actions workflow calls `/api/cron/reconcile-payments`.
-- Vercel calls `/api/riders/payroll/settle` daily.
+- GitHub Actions calls `/api/cron/expire-orders` and `/api/cron/refunds` every
+  five minutes and `/api/riders/payroll/settle` daily.
+- A separate nightly GitHub Actions workflow calls
+  `/api/cron/reconcile-payments`.
 
-Configure the GitHub Actions repository secrets `APP_URL` (the API origin) and `CRON_SECRET`. Scheduler runs may be delayed, so use a host-provided scheduler when timing is important.
+Configure the GitHub Actions secrets `APP_URL` (the API origin) and
+`CRON_SECRET`. Hosted scheduler runs may be delayed; use a host-provided
+scheduler when timing is important.
 
-## Project guides
+### Project guides
 
 - [API routes](./docs/api.md)
 - [Database design](./docs/database-design.md) and [ER diagram](./docs/erd.md)
@@ -231,7 +275,7 @@ Configure the GitHub Actions repository secrets `APP_URL` (the API origin) and `
 - [Legal review and retention checklist](./docs/legal-review.md)
 - [Operational runbooks](./docs/runbooks/README.md)
 
-## Project layout
+### Project layout
 
 ```text
 src/                  React frontend
@@ -244,6 +288,28 @@ android/              Capacitor Android project
 electron/              Desktop application wrapper
 scripts/               Migrations, checks, and maintenance utilities
 ```
+
+## Project status and next steps
+
+- **Legal review:** Legal copy, business disclosures, and retention decisions
+  are provisional and still need qualified Bangladesh legal and accounting
+  review. See the [legal review checklist](./docs/legal-review.md).
+- **Evidence to add:** Capture seller orders and wallet, admin approvals, an
+  assistant response to a real query, checkout options, order tracking, and
+  rider delivery from seeded staging data. Record a 60–90 second order
+  walkthrough from that same safe environment.
+- **Demo access:** Publish customer, seller, and rider demo accounts only after
+  the owner provisions and verifies them. Never publish admin credentials.
+- **Operations:** Verify the staging and production payment modes and complete
+  the independent deployment/rollback rehearsal in the
+  [deployment guide](./docs/deployment-rehearsal.md).
+
+### AI-tool use
+
+AI coding tools were used for implementation and documentation assistance.
+Generated suggestions were reviewed and tested; the project maintainers remain
+responsible for understanding and explaining the authentication, payment, and
+data-handling code.
 
 ## License
 
