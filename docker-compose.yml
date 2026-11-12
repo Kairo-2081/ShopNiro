@@ -1,0 +1,19 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: shopniro
+      POSTGRES_USER: shopniro
+      POSTGRES_PASSWORD: shopniro_local
+    ports:
+      - "127.0.0.1:54329:5432"
+    volumes:
+      - shopniro_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U shopniro -d shopniro"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  shopniro_postgres:
