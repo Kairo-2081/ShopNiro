@@ -76,7 +76,7 @@ function oauthReturnUrl(
   error?: string,
   signupRole?: 'seller' | 'rider',
 ): string {
-  const configuredOrigin = process.env.SHOPNIRO_PUBLIC_URL || process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL || process.env.APP_URL ||
+  const configuredOrigin = process.env.FRONTEND_URL || process.env.SHOPNIRO_PUBLIC_URL || process.env.VERCEL_PROJECT_PRODUCTION_URL || process.env.VERCEL_URL || process.env.APP_URL ||
     (process.env.NODE_ENV === 'production' ? 'https://shopniro.onrender.com' : undefined);
   const origin = configuredOrigin
     ? (configuredOrigin.includes('://') ? configuredOrigin : `https://${configuredOrigin}`)
