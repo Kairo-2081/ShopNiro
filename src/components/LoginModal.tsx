@@ -6,6 +6,7 @@ import { OAuthProviderButtons } from './OAuthProviderButtons';
 import { useFocusTrap } from '../hooks/useFocusTrap';
 import { PolicyLinks } from './legal/PolicyLinks';
 import { useEscapeKey } from '../hooks/useEscapeKey';
+import { useLocale } from '../lib/i18n';
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -28,6 +29,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   initialRole = 'customer',
   initialPasswordResetToken = null,
 }) => {
+  const { t } = useLocale();
   useEscapeKey(onClose, isOpen);
   const [activeTab, setActiveTab] = useState<'login' | 'register'>(initialTab);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
@@ -52,6 +54,12 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const dialogRef = useFocusTrap<HTMLDivElement>(isOpen);
+  const localizedNoticeMessage = noticeMessage?.startsWith('Account created successfully.')
+    ? t('accountCreatedNotice')
+    : noticeMessage;
+  const localizedError = error?.includes('No registered account')
+    ? t('accountNotRegistered')
+    : error;
 
   React.useEffect(() => {
     if (isOpen) {
@@ -77,7 +85,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!loginUsername.trim() || !loginPassword.trim()) {
-      setError('Please provide both Username/Email and Password.');
+      setError(t('enterCredentials'));
       return;
     }
 
@@ -94,11 +102,11 @@ export const LoginModal: React.FC<LoginModalProps> = ({
         setError(null);
         onClose();
       } else {
-        setError('Invalid username or password. Please check your credentials.');
+        setError(t('invalidCredentials'));
       }
     } catch (err: any) {
       console.error('Login error:', err);
-      setError(err.message || 'Invalid username or password. Please check your credentials.');
+      setError(err.message || t('invalidCredentials'));
     } finally {
       setIsSubmitting(false);
     }
@@ -107,12 +115,12 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!regIdentifier.trim() || regPassword.length < 8) {
-      setError('Enter a username or email address and a password of at least 8 characters.');
+      setError(t('enterUsernamePassword'));
       return;
     }
 
     if (!acceptedTerms) {
-      setError('Please accept the Terms of Service and Privacy Policy to create an account.');
+      setError(t('acceptTermsForAccount'));
       return;
     }
 
@@ -129,7 +137,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       onClose();
     } catch (err: any) {
       console.error('Registration error:', err);
-      setError(err.message || 'Could not create your account. Please try another username or email.');
+      setError(err.message || t('couldNotCreateAccount'));
     } finally {
       setIsSubmitting(false);
     }
@@ -141,11 +149,11 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     setSuccessMessage(null);
     setIsSubmitting(true);
     try {
-      const result = await api.requestPasswordReset(recoveryEmail.trim());
-      setSuccessMessage(result.message);
+      await api.requestPasswordReset(recoveryEmail.trim());
+      setSuccessMessage(t('recoveryEmailSent'));
     } catch (err: any) {
       console.error('Password recovery request failed:', err);
-      setError(err.message || 'Could not request a password reset. Please try again later.');
+      setError(err.message || t('couldNotRequestReset'));
     } finally {
       setIsSubmitting(false);
     }
@@ -154,11 +162,11 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   const handlePasswordResetSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword.length < 8 || newPassword.length > 128) {
-      setError('Password must be between 8 and 128 characters.');
+      setError(t('passwordLengthRule'));
       return;
     }
     if (newPassword !== confirmNewPassword) {
-      setError('The passwords do not match.');
+      setError(t('passwordsDoNotMatch'));
       return;
     }
     if (!passwordResetToken) return;
@@ -167,16 +175,16 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     setSuccessMessage(null);
     setIsSubmitting(true);
     try {
-      const result = await api.resetPassword(passwordResetToken, newPassword);
+      await api.resetPassword(passwordResetToken, newPassword);
       setPasswordResetToken(null);
       setNewPassword('');
       setConfirmNewPassword('');
       setLoginPassword('');
       setActiveTab('login');
-      setSuccessMessage(result.message);
+      setSuccessMessage(t('passwordResetSuccess'));
     } catch (err: any) {
       console.error('Password reset failed:', err);
-      setError(err.message || 'Could not reset your password. Request a new reset link and try again.');
+      setError(err.message || t('couldNotResetPassword'));
     } finally {
       setIsSubmitting(false);
     }
@@ -196,26 +204,26 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             <div>
               <h3 id="login-modal-title" className="text-base font-black text-surface-900 dark:text-white">
                 {passwordResetToken
-                  ? 'Choose a New Password'
+                  ? t('chooseNewPassword')
                   : isForgotPassword
-                    ? 'Forgot Your Password?'
-                    : activeTab === 'login' ? 'Marketplace Login' : 'Create an Account'}
+                    ? t('forgotYourPassword')
+                    : activeTab === 'login' ? t('marketplaceLogin') : t('createAccountTitle')}
               </h3>
               <p className="text-xs text-surface-500 dark:text-surface-400">
                 {passwordResetToken
-                  ? 'Choose a new password for your ShopNiro account'
+                  ? t('securePasswordForAccount')
                   : isForgotPassword
-                    ? 'We will email a secure link if an account matches'
+                    ? t('secureResetEmailNote')
                     : activeTab === 'login'
-                      ? 'Sign in with your verified Username & Password'
-                      : 'Register a new Customer or Seller profile'}
+                      ? t('verifiedUsernamePassword')
+                      : t('registerCustomerSellerProfile')}
               </p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close sign in"
+            aria-label={t('closeSignIn')}
             className="p-1.5 rounded-full text-surface-400 hover:text-surface-700 dark:hover:text-surface-200 hover:bg-surface-200/60 dark:hover:bg-surface-800 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5]"
           >
             <X className="w-5 h-5" />
@@ -237,7 +245,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             }`}
           >
             <LogIn className="w-4 h-4" />
-            <span>Sign In</span>
+            <span>{t('signIn')}</span>
           </button>
           <button
             type="button"
@@ -252,24 +260,24 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             }`}
           >
             <UserPlus className="w-4 h-4" />
-            <span>Create Account</span>
+            <span>{t('createAccountAction')}</span>
           </button>
         </div>}
 
         {/* Body content */}
         <div className="p-6 overflow-y-auto space-y-4 text-xs flex-1">
-          {noticeMessage && !error && (
+          {localizedNoticeMessage && !error && (
             <div className="p-3 bg-warning-50 dark:bg-warning-950/40 border border-warning-200 dark:border-warning-800 text-warning-800 dark:text-warning-200 rounded-2xl flex items-start gap-2.5">
               <ShieldAlert className="w-4 h-4 shrink-0 text-warning-600 dark:text-warning-400 mt-0.5" />
-              <span className="font-medium">{noticeMessage}</span>
+              <span className="font-medium">{localizedNoticeMessage}</span>
             </div>
           )}
 
-          {error && (
+          {localizedError && (
             <div className="p-3 bg-danger-50 dark:bg-danger-950/50 border border-danger-200 dark:border-danger-900 text-danger-700 dark:text-danger-300 rounded-2xl flex items-start gap-2.5">
               <ShieldAlert className="w-4 h-4 shrink-0 text-danger-600 dark:text-danger-400 mt-0.5" />
               <div className="space-y-1">
-                <span className="font-semibold block">{error}</span>
+                <span className="font-semibold block">{localizedError}</span>
                 {activeTab === 'login' && error.includes('No registered account') && (
                   <button
                     type="button"
@@ -280,7 +288,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                     }}
                     className="text-xs text-brand-600 dark:text-brand-400 hover:underline font-bold inline-flex items-center gap-1 mt-1 cursor-pointer"
                   >
-                    Click here to create this account now &rarr;
+                    {t('clickToCreateAccount')} &rarr;
                   </button>
                 )}
               </div>
@@ -298,7 +306,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
           {passwordResetToken ? (
             <form onSubmit={handlePasswordResetSubmit} className="space-y-4">
               <div>
-                <label htmlFor="reset-new-password" className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">New password</label>
+                <label htmlFor="reset-new-password" className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">{t('newPassword')}</label>
                 <input
                   id="reset-new-password"
                   type="password"
@@ -312,7 +320,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                 />
               </div>
               <div>
-                <label htmlFor="reset-confirm-password" className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">Confirm new password</label>
+                <label htmlFor="reset-confirm-password" className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">{t('confirmNewPassword')}</label>
                 <input
                   id="reset-confirm-password"
                   type="password"
@@ -325,10 +333,10 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   className="w-full p-2.5 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl text-surface-900 dark:text-white focus:ring-2 focus:ring-brand-500 focus:outline-none"
                 />
               </div>
-              <p className="text-surface-500 dark:text-surface-400">Use at least 8 characters. This link can only be used once and expires in 30 minutes.</p>
+              <p className="text-surface-500 dark:text-surface-400">{t('resetLinkDetails')}</p>
               <button type="submit" disabled={isSubmitting} className="w-full flex items-center justify-center gap-2 px-6 py-2.5 bg-brand-600 hover:bg-brand-500 text-white font-bold rounded-full disabled:opacity-50">
                 <Lock className="w-4 h-4" />
-                {isSubmitting ? 'Updating password...' : 'Change Password'}
+                {isSubmitting ? t('updatingPassword') : t('changePassword')}
               </button>
               <button
                 type="button"
@@ -340,14 +348,14 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                 }}
                 className="w-full text-xs text-brand-600 dark:text-brand-400 hover:underline font-semibold"
               >
-                Request a new reset link
+                {t('requestNewResetLink')}
               </button>
             </form>
           ) : isForgotPassword ? (
             <form onSubmit={handleForgotPasswordSubmit} className="space-y-4">
-              <p className="text-surface-600 dark:text-surface-300">Enter the email address on your account. For privacy, we show the same confirmation whether or not an account matches.</p>
+              <p className="text-surface-600 dark:text-surface-300">{t('resetPrivacyNote')}</p>
               <div>
-                <label htmlFor="recovery-email" className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">Account email</label>
+                <label htmlFor="recovery-email" className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">{t('accountEmail')}</label>
                 <input
                   id="recovery-email"
                   type="email"
@@ -361,11 +369,11 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               </div>
               <button type="submit" disabled={isSubmitting} className="w-full flex items-center justify-center gap-2 px-6 py-2.5 bg-brand-600 hover:bg-brand-500 text-white font-bold rounded-full disabled:opacity-50">
                 <Mail className="w-4 h-4" />
-                {isSubmitting ? 'Sending...' : 'Send Recovery Email'}
+                {isSubmitting ? t('sending') : t('sendRecoveryEmail')}
               </button>
               <button type="button" onClick={() => { setIsForgotPassword(false); setError(null); setSuccessMessage(null); }} className="w-full flex items-center justify-center gap-2 text-xs text-brand-600 dark:text-brand-400 hover:underline font-semibold">
                 <ArrowLeft className="w-4 h-4" />
-                Back to sign in
+                {t('backToSignIn')}
               </button>
             </form>
           ) : activeTab === 'login' ? (
@@ -373,14 +381,14 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               {/* Username or Email */}
               <div>
                 <label className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">
-                  Username or Email *
+                  {t('usernameOrEmail')} *
                 </label>
                 <div className="relative">
                   <input
                     type="text"
                     required
                     autoFocus
-                    placeholder="Enter username or email"
+                    placeholder={t('enterUsernameOrEmail')}
                     value={loginUsername}
                     onChange={(e) => setLoginUsername(e.target.value)}
                     className="w-full p-2.5 pl-9 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500 focus:ring-2 focus:ring-brand-500 focus:outline-none"
@@ -392,13 +400,13 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               {/* Password */}
               <div>
                 <label className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">
-                  Password *
+                  {t('passwordLabel')} *
                 </label>
                 <div className="relative">
                   <input
                     type={showLoginPassword ? 'text' : 'password'}
                     required
-                    placeholder="Enter account password"
+                    placeholder={t('enterAccountPassword')}
                     value={loginPassword}
                     onChange={(e) => setLoginPassword(e.target.value)}
                     className="w-full p-2.5 pl-9 pr-10 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500 focus:ring-2 focus:ring-brand-500 focus:outline-none"
@@ -407,7 +415,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowLoginPassword(!showLoginPassword)}
-                    aria-label={showLoginPassword ? "Hide password" : "Show password"}
+                    aria-label={showLoginPassword ? t('hidePassword') : t('showPassword')}
                     aria-pressed={showLoginPassword}
                     className="absolute right-3 top-3 text-surface-500 hover:text-surface-600 dark:text-surface-400 dark:hover:text-surface-300 cursor-pointer"
                   >
@@ -425,7 +433,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   }}
                   className="text-xs text-brand-600 dark:text-brand-400 hover:underline font-semibold cursor-pointer"
                 >
-                  Need an account? Sign up
+                  {t('needAccount')}
                 </button>
 
                 <div className="flex items-center gap-3">
@@ -439,7 +447,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                     }}
                     className="text-xs text-brand-600 dark:text-brand-400 hover:underline font-semibold cursor-pointer"
                   >
-                    Forgot password?
+                    {t('forgotPassword')}
                   </button>
                   <button
                     type="submit"
@@ -447,7 +455,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                     className="flex items-center gap-1.5 px-6 py-2.5 bg-brand-600 hover:bg-brand-500 text-white font-bold rounded-full shadow-md shadow-brand-600/30 disabled:opacity-50 transition-colors cursor-pointer"
                   >
                     <LogIn className="w-4 h-4" />
-                    {isSubmitting ? 'Authenticating...' : 'Sign In'}
+                    {isSubmitting ? t('authenticating') : t('signIn')}
                   </button>
                 </div>
               </div>
@@ -460,7 +468,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               {/* Role Picker */}
               <div>
                 <label className="block text-surface-700 dark:text-surface-300 font-semibold mb-1.5">
-                  Account Type *
+                  {t('chooseAccountType')} *
                 </label>
                 <div className="grid grid-cols-3 gap-2">
                   <button
@@ -474,8 +482,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   >
                     <User className="w-4 h-4" />
                     <div>
-                      <div className="text-xs font-semibold">Customer (Buyer)</div>
-                      <div className="text-micro text-surface-400">Shop &amp; track orders</div>
+                      <div className="text-xs font-semibold">{t('customerBuyer')}</div>
+                      <div className="text-micro text-surface-400">{t('shopAndTrackOrders')}</div>
                     </div>
                   </button>
 
@@ -490,8 +498,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   >
                     <Store className="w-4 h-4" />
                     <div>
-                      <div className="text-xs font-semibold">Merchant (Seller)</div>
-                      <div className="text-micro text-surface-400">Sell products</div>
+                      <div className="text-xs font-semibold">{t('merchantSeller')}</div>
+                      <div className="text-micro text-surface-400">{t('sellProducts')}</div>
                     </div>
                   </button>
                   <button
@@ -505,8 +513,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   >
                     <Truck className="w-4 h-4" />
                     <div>
-                      <div className="text-xs font-semibold">Rider</div>
-                      <div className="text-micro text-surface-400">Delivery</div>
+                      <div className="text-xs font-semibold">{t('rider')}</div>
+                      <div className="text-micro text-surface-400">{t('delivery')}</div>
                     </div>
                   </button>
                 </div>
@@ -514,14 +522,14 @@ export const LoginModal: React.FC<LoginModalProps> = ({
 
               <div>
                 <label className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">
-                  Username or email address
+                  {t('usernameOrEmail')}
                 </label>
                 <div className="relative">
                   <input
                     type="text"
                     required
                     autoComplete="username"
-                    placeholder="Choose a username or enter your email"
+                    placeholder={t('chooseUsernameEmail')}
                     value={regIdentifier}
                     onChange={(e) => setRegIdentifier(e.target.value)}
                     className="w-full p-2.5 pl-8 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500 focus:ring-2 focus:ring-brand-500 focus:outline-none"
@@ -531,7 +539,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               </div>
               <div>
                 <label className="block text-surface-700 dark:text-surface-300 font-semibold mb-1">
-                  Password
+                  {t('passwordLabel')}
                 </label>
                 <div className="relative">
                   <input
@@ -539,7 +547,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                     required
                     minLength={8}
                     autoComplete="new-password"
-                    placeholder="At least 8 characters"
+                    placeholder={t('atLeast8Characters')}
                     value={regPassword}
                     onChange={(e) => setRegPassword(e.target.value)}
                     className="w-full p-2.5 pl-8 pr-9 bg-surface-50 dark:bg-[#181F2A] border border-surface-200 dark:border-surface-700 rounded-xl text-surface-900 dark:text-white placeholder-surface-400 dark:placeholder-surface-500 focus:ring-2 focus:ring-brand-500 focus:outline-none"
@@ -548,7 +556,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowRegPassword(!showRegPassword)}
-                    aria-label={showRegPassword ? "Hide password" : "Show password"}
+                    aria-label={showRegPassword ? t('hidePassword') : t('showPassword')}
                     aria-pressed={showRegPassword}
                     className="absolute right-2.5 top-3 text-surface-500 hover:text-surface-600 dark:text-surface-400 dark:hover:text-surface-300 cursor-pointer"
                   >
@@ -556,7 +564,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   </button>
                 </div>
                 <p className="text-micro text-surface-400 mt-1">
-                  You will use this password every time you log in.
+                  {t('usePasswordEveryLogin')}
                 </p>
               </div>
 
@@ -568,7 +576,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   className="mt-0.5 h-3.5 w-3.5 shrink-0 cursor-pointer"
                 />
                 <span>
-                  I am 18 or older and I agree to the <PolicyLinks ids={['terms', 'privacy']} />.
+                  {t('ageAndTermsConsent')} <PolicyLinks ids={['terms', 'privacy']} />.
                 </span>
               </label>
 
@@ -584,7 +592,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   }}
                   className="text-xs text-brand-600 dark:text-brand-400 hover:underline font-semibold cursor-pointer"
                 >
-                  Already registered? Sign In
+                  {t('alreadyRegisteredSignIn')}
                 </button>
 
                 <button
@@ -593,7 +601,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                   className="flex items-center gap-1.5 px-6 py-2.5 bg-brand-600 hover:bg-brand-500 text-white font-bold rounded-full shadow-md shadow-brand-600/30 disabled:opacity-50 transition-colors cursor-pointer"
                 >
                   <UserPlus className="w-4 h-4" />
-                  {isSubmitting ? 'Creating Account...' : 'Register & Sign In'}
+                  {isSubmitting ? t('creatingAccount') : t('registerAndSignIn')}
                 </button>
               </div>
             </form>

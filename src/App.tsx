@@ -1,5 +1,6 @@
 import React from 'react';
-import { POLICIES } from './components/legal/policies';
+import { POLICY_NAV } from './components/legal/policyNav';
+import { useLocale } from './lib/i18n';
 import {
   UserRole,
   Customer,
@@ -74,6 +75,7 @@ const scrollViewportToTop = () => {
 };
 
 export default function App() {
+  const { t } = useLocale();
   // Navigation & View Mode
   const [viewMode, setViewMode] = React.useState<'landing' | 'app'>('landing');
 
@@ -998,12 +1000,12 @@ export default function App() {
   // Get active user entity
   const marketplaceStats: MarketplaceStat[] = [
     {
-      label: 'Live listings',
+      label: t('liveListings'),
       value: products.filter((product) => product.Product_Status?.toLowerCase() !== 'deactivated').length,
     },
-    { label: 'Categories', value: categories.length },
+    { label: t('categoriesTitle'), value: categories.length },
     {
-      label: 'Approved sellers',
+      label: t('approvedSellers'),
       value: sellers.filter((seller) => !seller.Status || seller.Status.toLowerCase() === 'approved').length,
     },
   ];
@@ -1527,9 +1529,9 @@ export default function App() {
           <div className="text-micro text-surface-600 dark:text-surface-400 font-mono text-center md:text-right">
             <span>© {new Date().getFullYear()} ShopNiro • Smart commerce network</span>
             <nav aria-label="Policies" className="mt-1 flex flex-wrap justify-center gap-x-3 md:justify-end">
-              {POLICIES.map((policy) => (
+              {POLICY_NAV.map((policy) => (
                 <a key={policy.id} href={policy.path} className="hover:text-brand-500 dark:hover:text-brand-400">
-                  {policy.title}
+                  {t(policy.titleKey)}
                 </a>
               ))}
             </nav>

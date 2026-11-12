@@ -13,7 +13,7 @@ for (const theme of ['dark', 'light'] as const) {
     await expect(page.locator('html')).toHaveClass(theme === 'dark' ? /dark/ : /^(?!.*dark).*$/);
     await openCheckout(page);
 
-    await page.getByText('Cash on Delivery (COD)').click();
+    await page.getByText(/Cash on Delivery \(COD\)/i).click();
     await page.getByRole('checkbox').check();
     const confirm = page.getByTestId('checkout-submit');
     await expect(confirm).toBeVisible();

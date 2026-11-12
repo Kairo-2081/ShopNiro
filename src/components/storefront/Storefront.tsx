@@ -274,7 +274,7 @@ export const Storefront: React.FC<StorefrontProps> = ({
                   setSortBy('featured');
                 }}
                 className="luxury-control min-h-9 px-3 rounded-full text-surface-600 hover:text-[#555541] dark:text-surface-400 dark:hover:text-[#d0c8a5] hover:bg-[#d0c8a5]/15 dark:hover:bg-[#a99b72]/15 font-medium cursor-pointer"
-                title="Reset all filters"
+                title={t('resetAllFilters')}
               >
                 {t('reset')}
               </button>
@@ -335,7 +335,7 @@ export const Storefront: React.FC<StorefrontProps> = ({
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-xs font-bold text-surface-900 dark:text-white">{bundle.Name}</p>
                         <p className="truncate text-micro text-surface-500 dark:text-surface-400">{bundleProducts.map((product) => product.Name).join(' + ')}</p>
-                        <p className="text-micro font-semibold text-success-700 dark:text-success-300">{bundle.Discount_Percent}% off together · {formatCurrency(bundlePrice)}</p>
+                        <p className="text-micro font-semibold text-success-700 dark:text-success-300">{t('bundleDiscountTogether', { percent: bundle.Discount_Percent })} · {formatCurrency(bundlePrice)}</p>
                       </div>
                       {firstProduct && <button type="button" onClick={() => onSelectProduct(firstProduct)} className="shrink-0 text-micro font-bold text-brand-700 hover:underline dark:text-brand-300">{t('viewProduct')}</button>}
                     </article>
@@ -366,7 +366,7 @@ export const Storefront: React.FC<StorefrontProps> = ({
         </div>
       )}
       {isLoading ? (
-        <div role="status" aria-label="Loading products" aria-busy="true" className="grid auto-rows-fr grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div role="status" aria-label={t('loadingProducts')} aria-busy="true" className="grid auto-rows-fr grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {Array.from({ length: 8 }, (_, index) => (
             <div key={index} className="premium-card flex h-full min-w-0 flex-col overflow-hidden rounded-xl">
               <div className="premium-skeleton aspect-[4/5] w-full" />
@@ -384,7 +384,7 @@ export const Storefront: React.FC<StorefrontProps> = ({
         </div>
       ) : filteredProducts.length === 0 && loadError ? (
         <div role="alert" className="space-y-4 rounded-3xl border border-danger-300 bg-danger-50 p-8 text-center text-danger-800 dark:border-danger-900 dark:bg-danger-950/40 dark:text-danger-200">
-          <h3 className="text-lg font-bold">Marketplace products are unavailable</h3>
+          <h3 className="text-lg font-bold">{t('marketplaceUnavailable')}</h3>
           <p className="text-sm">{loadError}</p>
           {onRetryProducts && <button type="button" onClick={onRetryProducts} className="min-h-11 rounded-full bg-danger-700 px-5 font-bold text-white">{t('retry')}</button>}
         </div>
@@ -432,7 +432,7 @@ export const Storefront: React.FC<StorefrontProps> = ({
       {!isLoading && filteredProducts.length > 0 && hasMoreProducts && onLoadMoreProducts && (
         <div className="flex justify-center">
           <button type="button" onClick={onLoadMoreProducts} disabled={isLoadingMoreProducts} className="luxury-control premium-button rounded-full px-5 py-2.5 text-xs font-bold text-white disabled:opacity-60">
-            {isLoadingMoreProducts ? 'Loading products…' : 'Load more products'}
+            {isLoadingMoreProducts ? `${t('loadingProducts')}…` : t('loadMoreProducts')}
           </button>
         </div>
       )}
