@@ -1,0 +1,137 @@
+name: Roll back Render service
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Environment to roll back
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+        default: staging
+      deploy_id:
+        description: Previous known-good Render deploy ID from the service's deploy history
+        required: true
+        type: string
+      confirm:
+        description: Select ROLLBACK to authorize the code rollback
+        required: true
+        type: choice
+        options:
+          - CANCEL
+          - ROLLBACK
+        default: CANCEL
+
+permissions:
+  contents: read
+
+concurrency:
+  group: render-rollback-${{ inputs.target }}
+  cancel-in-progress: false
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.target }}
+    timeout-minutes: 20
+    env:
+      API_URL: ${{ vars.API_URL }}
+      RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+      RENDER_SERVICE_ID: ${{ vars.RENDER_SERVICE_ID }}
+      TARGET_DEPLOY_ID: ${{ inputs.deploy_id }}
+
+    steps:
+      - name: Validate explicit rollback request and service configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          target="${{ inputs.target }}"
+          if [[ "$GITHUB_REF" != "refs/heads/$target" ]]; then
+            echo "::error::Run this workflow from the '$target' branch when targeting '$target'."
+            exit 1
+          fi
+          if [[ "${{ inputs.confirm }}" != "ROLLBACK" ]]; then
+            echo "::error::Select ROLLBACK to confirm this operation."
+            exit 1
+          fi
+          if [[ -z "$RENDER_API_KEY" || -z "$RENDER_SERVICE_ID" || -z "$API_URL" ]]; then
+            echo "::error::Set RENDER_API_KEY, RENDER_SERVICE_ID, and API_URL in the selected GitHub Environment."
+            exit 1
+          fi
+          if [[ ! "$TARGET_DEPLOY_ID" =~ ^[A-Za-z0-9_-]+$ ]]; then
+            echo "::error::deploy_id contains invalid characters."
+            exit 1
+          fi
+          service="$(curl -fsS -H "Authorization: Bearer $RENDER_API_KEY" \
+            "https://api.render.com/v1/services/$RENDER_SERVICE_ID")"
+          if [[ "$(jq -r '.type // empty' <<< "$service")" != "web_service" ]]; then
+            echo "::error::RENDER_SERVICE_ID must identify the Render API web service."
+            exit 1
+          fi
+          if [[ "$(jq -r '.branch // empty' <<< "$service")" != "$target" ]]; then
+            echo "::error::The selected Render service must deploy the '$target' branch."
+            exit 1
+          fi
+          auto_deploy="$(jq -r '.autoDeployTrigger // empty' <<< "$service")"
+          legacy_auto_deploy="$(jq -r '.autoDeploy // empty' <<< "$service")"
+          if [[ "$auto_deploy" != "off" && "$legacy_auto_deploy" != "no" ]]; then
+            echo "::error::Disable Render autodeploys so a new commit cannot immediately undo this rollback."
+            exit 1
+          fi
+          deploy="$(curl -fsS -H "Authorization: Bearer $RENDER_API_KEY" \
+            "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys/$TARGET_DEPLOY_ID")"
+          if [[ "$(jq -r '.id // empty' <<< "$deploy")" != "$TARGET_DEPLOY_ID" ]]; then
+            echo "::error::The requested deploy was not found for this service."
+            exit 1
+          fi
+          current_deploys="$(curl -fsS -H "Authorization: Bearer $RENDER_API_KEY" \
+            "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys?limit=20")"
+          current_live="$(jq -r '[.[] | select(.deploy.status == "live")][0].deploy.id // empty' <<< "$current_deploys")"
+          if [[ "$current_live" == "$TARGET_DEPLOY_ID" ]]; then
+            echo "::error::The requested deploy is already live; select a previous known-good deploy."
+            exit 1
+          fi
+
+      - name: Roll back code and verify readiness
+        shell: bash
+        run: |
+          set -euo pipefail
+          response="$(curl -fsS -X POST \
+            -H "Authorization: Bearer $RENDER_API_KEY" \
+            -H "Content-Type: application/json" \
+            -d "$(jq -nc --arg id "$TARGET_DEPLOY_ID" '{deployId:$id}')" \
+            "https://api.render.com/v1/services/$RENDER_SERVICE_ID/rollback")"
+          rollback_id="$(jq -r '.id // empty' <<< "$response")"
+          if [[ -z "$rollback_id" ]]; then
+            echo "::error::Render did not return a rollback deploy ID."
+            exit 1
+          fi
+          state=""
+          for attempt in $(seq 1 90); do
+            response="$(curl -fsS -H "Authorization: Bearer $RENDER_API_KEY" \
+              "https://api.render.com/v1/services/$RENDER_SERVICE_ID/deploys/$rollback_id")"
+            state="$(jq -r '.status' <<< "$response")"
+            case "$state" in
+              live) break ;;
+              build_failed|update_failed|canceled|pre_deploy_failed|deactivated)
+                echo "::error::Rollback ended in state $state."
+                exit 1
+                ;;
+            esac
+            sleep 10
+          done
+          if [[ "$state" != "live" ]]; then
+            echo "::error::Rollback did not become live within fifteen minutes."
+            exit 1
+          fi
+          for attempt in $(seq 1 12); do
+            if curl -fsS --max-time 10 "$API_URL/api/ready" | jq -e '.ok == true' >/dev/null; then
+              echo "Rollback deploy $rollback_id is live and readiness is healthy."
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::Rollback is live but readiness did not recover. Keep the incident open."
+          exit 1
