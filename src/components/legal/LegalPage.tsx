@@ -1,20 +1,30 @@
 import React from 'react';
 import { BUSINESS } from './business';
-import { POLICIES, type Policy } from './policies';
+import { POLICIES, policyByPath, type Policy } from './policies';
+import { POLICY_TRANSLATIONS } from './policyTranslations';
+import { Languages } from 'lucide-react';
+import { useLocale } from '../../lib/i18n';
 
 interface LegalPageProps {
-  policy: Policy;
+  policy?: Policy;
 }
 
 /** Standalone, public policy page. Rendered by main.tsx for /terms, /privacy, /refunds and /delivery. */
-export const LegalPage: React.FC<LegalPageProps> = ({ policy }) => {
+export const LegalPage: React.FC<LegalPageProps> = ({ policy: propPolicy }) => {
+  const policy = propPolicy ?? (typeof window !== 'undefined' ? policyByPath(window.location.pathname) : undefined) ?? POLICIES[0];
+  const { t, locale, setLocale } = useLocale();
+  const localizedPolicy = locale === 'bn' ? POLICY_TRANSLATIONS[policy.id] : policy;
+  const updatedAt = locale === 'bn'
+    ? new Date(BUSINESS.lastUpdated).toLocaleDateString('bn-BD', { day: 'numeric', month: 'long', year: 'numeric' })
+    : BUSINESS.lastUpdated;
+
   React.useEffect(() => {
     const previous = document.title;
-    document.title = `${policy.title} | ${BUSINESS.name}`;
+    document.title = `${localizedPolicy.title} | ${BUSINESS.name}`;
     return () => {
       document.title = previous;
     };
-  }, [policy]);
+  }, [localizedPolicy]);
 
   return (
     <div className="min-h-screen bg-surface-50 text-surface-800 dark:bg-[#0C1014] dark:text-surface-200">
@@ -23,7 +33,7 @@ export const LegalPage: React.FC<LegalPageProps> = ({ policy }) => {
           <a href="/" className="text-lg font-extrabold tracking-tight text-surface-900 dark:text-white">
             {BUSINESS.name}
           </a>
-          <nav aria-label="Policies" className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+          <nav aria-label={t('policies')} className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
             {POLICIES.map((item) => (
               <a
                 key={item.id}
@@ -35,10 +45,20 @@ export const LegalPage: React.FC<LegalPageProps> = ({ policy }) => {
                     : 'text-surface-600 hover:text-brand-600 dark:text-surface-400 dark:hover:text-brand-400'
                 }
               >
-                {item.title}
+                {locale === 'bn' ? POLICY_TRANSLATIONS[item.id].title : item.title}
               </a>
             ))}
           </nav>
+          <button
+            type="button"
+            onClick={() => setLocale(locale === 'en' ? 'bn' : 'en')}
+            aria-label={t('changeLanguage')}
+            title={t('changeLanguage')}
+            className="inline-flex min-h-10 items-center gap-2 rounded-full border border-surface-200 px-3 text-xs font-bold text-surface-700 transition-colors hover:bg-surface-50 dark:border-surface-700 dark:text-surface-200 dark:hover:bg-surface-800"
+          >
+            <Languages aria-hidden="true" className="h-4 w-4" />
+            {locale === 'en' ? 'বাংলা' : 'English'}
+          </button>
         </div>
       </header>
 
@@ -48,16 +68,21 @@ export const LegalPage: React.FC<LegalPageProps> = ({ policy }) => {
             role="note"
             className="mb-6 rounded-lg border border-warning-300 bg-warning-50 px-3 py-2 text-xs text-warning-900 dark:border-warning-700 dark:bg-warning-950 dark:text-warning-200"
           >
-            This policy is a working draft and is awaiting legal review.
+            {t('draftAwaitingLegalReview')}
           </p>
         )}
-        <h1 className="text-3xl font-black tracking-tight text-surface-900 dark:text-white">{policy.title}</h1>
+        {locale === 'bn' && (
+          <p role="note" className="mb-4 rounded-lg border border-surface-200 bg-white px-3 py-2 text-xs text-surface-600 dark:border-surface-700 dark:bg-[#11161C] dark:text-surface-300">
+            {t('unofficialPolicyTranslation')}
+          </p>
+        )}
+        <h1 className="text-3xl font-black tracking-tight text-surface-900 dark:text-white">{localizedPolicy.title}</h1>
         <p className="mt-1 text-sm text-surface-500 dark:text-surface-400">
-          {policy.summary} Last updated {BUSINESS.lastUpdated}.
+          {localizedPolicy.summary} {t('lastUpdated')} {updatedAt}.
         </p>
 
         <div className="mt-8 space-y-7">
-          {policy.sections.map((section) => (
+          {localizedPolicy.sections.map((section) => (
             <section key={section.heading}>
               <h2 className="text-lg font-bold text-surface-900 dark:text-white">{section.heading}</h2>
               {section.paragraphs?.map((text) => (
@@ -78,7 +103,7 @@ export const LegalPage: React.FC<LegalPageProps> = ({ policy }) => {
       </main>
 
       <footer className="border-t border-surface-200 px-4 py-6 text-center text-xs text-surface-500 dark:border-surface-800 dark:text-surface-400">
-        © {new Date().getFullYear()} {BUSINESS.name} · {BUSINESS.address} · {BUSINESS.supportEmail}
+        © {new Date().getFullYear()} {BUSINESS.name} · {locale === 'bn' ? BUSINESS.addressBn : BUSINESS.address} · {BUSINESS.supportEmail}
       </footer>
     </div>
   );

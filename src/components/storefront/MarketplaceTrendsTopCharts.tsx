@@ -21,7 +21,7 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
   onAddToCart,
   allProducts = [],
 }) => {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const [activeTab, setActiveTab] = useState<'trends' | 'top-rated' | 'new-arrivals'>('trends');
   const [trending, setTrending] = useState<TrendingProduct[]>([]);
   const [topRated, setTopRated] = useState<TopRatedProduct[]>([]);
@@ -186,7 +186,7 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
                         {formatCurrency(Number(item.price))}
                       </span>
                       <span className="block text-micro text-surface-500 dark:text-surface-400">
-                        {item.available_stock <= 0 ? 'Stock Out' : `Stock: ${item.available_stock}`}
+                        {item.available_stock <= 0 ? t('stockOut') : t('stockCount', { count: item.available_stock })}
                       </span>
                     </div>
 
@@ -195,11 +195,11 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
                         type="button"
                         disabled={item.available_stock <= 0 || Number(fullProd.Stock) <= 0 || fullProd.Product_Status !== 'active'}
                         onClick={() => onAddToCart(fullProd, 1)}
-                        aria-label={item.available_stock <= 0 || Number(fullProd.Stock) <= 0 ? `${item.product_name}: Out of stock` : `${t('addToCart')}: ${item.product_name}`}
+                        aria-label={item.available_stock <= 0 || Number(fullProd.Stock) <= 0 ? `${item.product_name}: ${t('outOfStock')}` : `${t('addToCart')}: ${item.product_name}`}
                         className="p-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white transition-all shadow-xs cursor-pointer disabled:bg-surface-200 disabled:text-brand-900 disabled:cursor-not-allowed dark:disabled:bg-surface-800 dark:disabled:text-brand-200"
-                        title={item.available_stock <= 0 || Number(fullProd.Stock) <= 0 ? 'Out of stock' : 'Add to cart'}
+                        title={item.available_stock <= 0 || Number(fullProd.Stock) <= 0 ? t('outOfStock') : t('addToCart')}
                       >
-                        {item.available_stock <= 0 || Number(fullProd.Stock) <= 0 ? 'Out' : <ShoppingBag className="w-3.5 h-3.5" />}
+                        {item.available_stock <= 0 || Number(fullProd.Stock) <= 0 ? t('out') : <ShoppingBag className="w-3.5 h-3.5" />}
                       </button>
                     )}
                   </div>
@@ -214,9 +214,9 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
       {activeTab === 'top-rated' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between text-xs text-surface-500 dark:text-surface-400">
-            <span>Products with 3+ reviews and an average rating of 4.0 or higher</span>
+            <span>{t('productsWithReviews')}</span>
             <span className="font-mono text-warning-500 font-bold">
-              {topRated.length} of 3 Products
+              {t('productsCount', { count: topRated.length })}
             </span>
           </div>
 
@@ -230,10 +230,10 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
                 >
                   <div className="flex items-center justify-between mb-2">
                     <span className="px-2 py-0.5 rounded-lg bg-warning-500/10 text-warning-600 dark:text-warning-400 text-micro font-black font-mono">
-                      ★ {item.average_rating} RATING
+                      ★ {item.average_rating} {t('ratingLabel')}
                     </span>
                     <span className="text-micro text-surface-500 dark:text-surface-400 font-semibold">
-                      {item.total_reviews} reviews
+                      {item.total_reviews} {t('reviews')}
                     </span>
                   </div>
 
@@ -270,27 +270,27 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
                         type="button"
                         disabled={Number(fullProd.Stock) <= 0 || fullProd.Product_Status !== 'active'}
                         onClick={() => onAddToCart(fullProd, 1)}
-                        aria-label={Number(fullProd.Stock) <= 0 ? `${item.product_name}: Out of stock` : `${t('addToCart')}: ${item.product_name}`}
+                        aria-label={Number(fullProd.Stock) <= 0 ? `${item.product_name}: ${t('outOfStock')}` : `${t('addToCart')}: ${item.product_name}`}
                         className="p-2 rounded-xl bg-warning-500 hover:bg-warning-400 text-white transition-all shadow-xs cursor-pointer disabled:bg-surface-200 disabled:text-brand-900 disabled:cursor-not-allowed dark:disabled:bg-surface-800 dark:disabled:text-brand-200"
-                        title={Number(fullProd.Stock) <= 0 ? 'Out of stock' : 'Add to cart'}
+                        title={Number(fullProd.Stock) <= 0 ? t('outOfStock') : t('addToCart')}
                       >
-                        {Number(fullProd.Stock) <= 0 ? 'Out' : <ShoppingBag className="w-3.5 h-3.5" />}
+                        {Number(fullProd.Stock) <= 0 ? t('out') : <ShoppingBag className="w-3.5 h-3.5" />}
                       </button>
                     )}
                   </div>
                 </div>
               );
             })}
-          </div> : <p className="py-8 text-center text-sm text-surface-500 dark:text-surface-400">No products meet the 4.0 rating and 3-review minimum yet.</p>}
+          </div> : <p className="py-8 text-center text-sm text-surface-500 dark:text-surface-400">          {t('noTopRatedProducts')}</p>}
         </div>
       )}
 
       {activeTab === 'new-arrivals' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between text-xs text-surface-500 dark:text-surface-400">
-            <span>Recently added active products</span>
+            <span>{t('recentlyAddedActiveProducts')}</span>
             <span className="font-mono text-brand-600 dark:text-brand-400 font-bold">
-              {newArrivals.length} Latest Listings
+              {newArrivals.length} {t('latestListings')}
             </span>
           </div>
 
@@ -303,12 +303,12 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
                 >
                   <div className="flex items-center justify-between mb-2">
                     <span className="px-2 py-0.5 rounded-lg bg-brand-500/10 text-brand-600 dark:text-brand-400 text-micro font-black font-mono">
-                      #{idx + 1} NEW ARRIVAL
+                      #{idx + 1} {t('newArrival')}
                     </span>
                     <span className="text-micro text-surface-500 dark:text-surface-400 font-semibold">
                       {product.Created_At && !Number.isNaN(Date.parse(product.Created_At))
-                        ? new Date(product.Created_At).toLocaleDateString()
-                        : 'Recently added'}
+                        ? new Date(product.Created_At).toLocaleDateString(locale === 'bn' ? 'bn-BD' : 'en-BD')
+                        : t('recentlyAdded')}
                     </span>
                   </div>
 
@@ -335,7 +335,7 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
                         {formatCurrency(Number(product.Price))}
                       </span>
                       <span className="block text-micro text-surface-500 dark:text-surface-400">
-                        {Number(product.Stock) <= 0 ? 'Stock Out' : `Stock: ${product.Stock}`}
+                        {Number(product.Stock) <= 0 ? t('stockOut') : t('stockCount', { count: product.Stock })}
                       </span>
                     </div>
 
@@ -344,11 +344,11 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
                         type="button"
                         disabled={Number(product.Stock) <= 0}
                         onClick={() => onAddToCart(product, 1)}
-                        aria-label={Number(product.Stock) <= 0 ? `${product.Name}: Out of stock` : `${t('addToCart')}: ${product.Name}`}
+                        aria-label={Number(product.Stock) <= 0 ? `${product.Name}: ${t('outOfStock')}` : `${t('addToCart')}: ${product.Name}`}
                         className="p-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white transition-all shadow-xs cursor-pointer disabled:bg-surface-200 disabled:text-brand-900 disabled:cursor-not-allowed dark:disabled:bg-surface-800 dark:disabled:text-brand-200"
-                        title={Number(product.Stock) <= 0 ? 'Out of stock' : 'Add to cart'}
+                        title={Number(product.Stock) <= 0 ? t('outOfStock') : t('addToCart')}
                       >
-                        {Number(product.Stock) <= 0 ? 'Out' : <ShoppingBag className="w-3.5 h-3.5" />}
+                        {Number(product.Stock) <= 0 ? t('out') : <ShoppingBag className="w-3.5 h-3.5" />}
                       </button>
                     )}
                   </div>
@@ -357,7 +357,7 @@ export const MarketplaceTrendsTopCharts: React.FC<MarketplaceTrendsTopChartsProp
             </div>
           ) : (
             <p className="py-8 text-center text-sm text-surface-500 dark:text-surface-400">
-              No new products are available yet.
+              {t('noNewProducts')}
             </p>
           )}
         </div>

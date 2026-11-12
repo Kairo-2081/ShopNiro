@@ -15,7 +15,7 @@ const systemMutationPaths = new Set([
 const isSystemMutation = (path: string) =>
   systemMutationPaths.has(path)
   || /^\/api\/payment\/sslcommerz\/(success|fail|cancel|ipn)$/.test(path)
-  || /^\/api\/cron\/(expire-orders|refunds)$/.test(path);
+  || /^\/api\/cron\/(expire-orders|refunds|reconcile-payments)$/.test(path);
 
 function isOwnProfileEdit(req: AuthRequest, path: string): boolean {
   const user = req.user;

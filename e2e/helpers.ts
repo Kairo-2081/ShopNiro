@@ -26,8 +26,9 @@ export async function openStorefront(page: Page) {
 export async function selectWorkspaceNavigationItem(page: Page, name: string | RegExp) {
   const navigation = page.getByRole('navigation', { name: 'Workspace navigation' });
   const activeDesktopItem = page.locator('aside nav[aria-label="Workspace navigation"] button[aria-current="page"]');
+  const label = caseInsensitiveName(name);
   if ((page.viewportSize()?.width ?? Number.POSITIVE_INFINITY) >= 768) {
-    const item = navigation.getByRole('button', { name });
+    const item = navigation.getByRole('button', { name: label });
     await item.click();
     await expect(activeDesktopItem).toHaveCount(1);
     return;
@@ -37,9 +38,16 @@ export async function selectWorkspaceNavigationItem(page: Page, name: string | R
   await expect(trigger).toBeVisible();
   await trigger.click();
   const drawer = page.getByRole('dialog', { name: 'Navigation menu' });
-  await drawer.getByRole('button', { name }).click();
+  await drawer.getByRole('button', { name: label }).click();
   await expect(drawer).toHaveCount(0);
   await expect(activeDesktopItem).toHaveCount(1);
+}
+
+export function caseInsensitiveName(name: string | RegExp): RegExp {
+  if (typeof name !== 'string') {
+    return new RegExp(name.source, name.flags.includes('i') ? name.flags : `${name.flags}i`);
+  }
+  return new RegExp(name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
 }
 
 export async function addToCart(page: Page, productId: string) {
