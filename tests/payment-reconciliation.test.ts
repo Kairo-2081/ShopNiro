@@ -726,9 +726,10 @@ dbTest('an unexpected failure is logged and stored on the run, not swallowed', a
     const run = await query<{ error: string }>('SELECT error FROM payment_reconciliation_runs WHERE id = $1', [summary.runId]);
     assert.match(run.rows[0].error, /inspect the application log/i);
     assert.doesNotMatch(run.rows[0].error, /TypeError: boom/);
-    const loggedError = logged.flatMap((args) => args).find((value) => value instanceof TypeError);
-    assert.ok(loggedError instanceof TypeError, 'the cause should reach the server log');
-    assert.equal(loggedError.message, 'boom');
+    const loggedDetails = logged[0]?.[1];
+    assert.ok(loggedDetails && typeof loggedDetails === 'object' && 'error' in loggedDetails);
+    assert.ok(loggedDetails.error instanceof TypeError, 'the cause should reach the server log');
+    assert.equal(loggedDetails.error.message, 'boom');
     await query('DELETE FROM payment_reconciliation_findings WHERE run_id = $1', [summary.runId]);
     await query('DELETE FROM payment_reconciliation_runs WHERE id = $1', [summary.runId]);
   } finally {
