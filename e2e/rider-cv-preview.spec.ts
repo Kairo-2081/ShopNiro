@@ -36,7 +36,7 @@ async function mockCv(page: Page, body: Buffer) {
 async function openRiderDetails(page: Page) {
   await page.goto('/');
   await page.getByRole('button', { name: 'Profile', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'View my CV' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'View CV', exact: true })).toBeVisible();
 }
 
 test.describe('rider CV preview', () => {
@@ -51,7 +51,7 @@ test.describe('rider CV preview', () => {
     // The point of loading it lazily: opening the rider screens costs no pdf.js download.
     expect(pdfJsRequests, 'pdf.js must not load with the rider dashboard').toEqual([]);
 
-    await page.getByRole('button', { name: 'View my CV' }).click();
+    await page.getByRole('button', { name: 'View CV', exact: true }).click();
     const preview = page.getByRole('dialog', { name: 'My CV' });
     await expect(preview).toBeVisible();
     await expect.poll(() => pdfJsRequests.length, { message: 'pdf.js should load once the CV is opened' }).toBeGreaterThan(0);
@@ -75,7 +75,7 @@ test.describe('rider CV preview', () => {
   test('says so when the file is not a readable PDF', async ({ page }) => {
     await mockCv(page, Buffer.from('this is not a pdf'));
     await openRiderDetails(page);
-    await page.getByRole('button', { name: 'View my CV' }).click();
+    await page.getByRole('button', { name: 'View CV', exact: true }).click();
     await expect(page.getByRole('dialog', { name: 'My CV' }).getByRole('alert')).toHaveText('Could not render this CV.', { timeout: 20_000 });
   });
 });
