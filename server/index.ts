@@ -7,10 +7,19 @@ import { app } from './app.ts';
 import { isFingerprintedAsset } from './services/assetCache.ts';
 import { seedDatabaseIfEmpty } from './db/seed.ts';
 import { startRefundProcessor } from './routes/payment.routes.ts';
+import { assertRuntimeConfiguration } from './config/runtimeAssertions.ts';
 
 const PORT = Number(process.env.PORT) || 3000;
 
 async function startServer() {
+  try {
+    assertRuntimeConfiguration();
+  } catch (error) {
+    console.error('Runtime configuration is invalid; server was not started:', error);
+    process.exitCode = 1;
+    return;
+  }
+
   try {
     if (process.env.SEED_ON_START === 'true' && process.env.NODE_ENV !== 'production') {
       await seedDatabaseIfEmpty();
