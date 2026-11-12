@@ -35,7 +35,7 @@ async function mockCv(page: Page, body: Buffer) {
 
 async function openRiderDetails(page: Page) {
   await page.goto('/');
-  await page.getByRole('button', { name: 'My details' }).first().click();
+  await page.getByRole('button', { name: 'Profile', exact: true }).click();
   await expect(page.getByRole('button', { name: 'View my CV' })).toBeVisible();
 }
 
