@@ -505,6 +505,8 @@ dbTest('marks a gateway outage partial and continues checking other payments', a
   try {
     const summary = await run(gateway);
     assert.equal(summary.status, 'partial');
+    assert.match(summary.error ?? '', /inspect the application log/i);
+    assert.doesNotMatch(summary.error ?? '', /simulated gateway outage/i);
     assert.ok(summary.checked >= 2);
   } finally {
     await cleanup(fixture);
@@ -715,15 +717,19 @@ dbTest('an unexpected failure is logged and stored on the run, not swallowed', a
   await createPayment(fixture, { status: 'PENDING' });
   const gateway = new FakeGateway();
   gateway.queryTransactionByTranId = async () => { throw new TypeError('boom'); };
-  const logged: string[] = [];
+  const logged: unknown[][] = [];
   const originalError = console.error;
-  console.error = (...args: unknown[]) => { logged.push(args.map(String).join(' ')); };
+  console.error = (...args: unknown[]) => { logged.push(args); };
   try {
     const summary = await runPaymentReconciliation({ gateway, sleep: async () => undefined });
     assert.equal(summary.status, 'failed');
     const run = await query<{ error: string }>('SELECT error FROM payment_reconciliation_runs WHERE id = $1', [summary.runId]);
-    assert.match(run.rows[0].error, /TypeError: boom/);
-    assert.ok(logged.some((line) => line.includes('TypeError: boom')), 'the cause should reach the server log');
+    assert.match(run.rows[0].error, /inspect the application log/i);
+    assert.doesNotMatch(run.rows[0].error, /TypeError: boom/);
+    const loggedDetails = logged[0]?.[1];
+    assert.ok(loggedDetails && typeof loggedDetails === 'object' && 'error' in loggedDetails);
+    assert.ok(loggedDetails.error instanceof TypeError, 'the cause should reach the server log');
+    assert.equal(loggedDetails.error.message, 'boom');
     await query('DELETE FROM payment_reconciliation_findings WHERE run_id = $1', [summary.runId]);
     await query('DELETE FROM payment_reconciliation_runs WHERE id = $1', [summary.runId]);
   } finally {
