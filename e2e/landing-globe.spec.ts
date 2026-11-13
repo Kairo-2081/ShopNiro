@@ -14,6 +14,8 @@ test('the landing globe stays still, ignores dragging, and only brightens its ro
     await page.goto('/');
     const globe = page.locator('canvas');
     await expect(globe).toBeVisible();
+    // The first draw waits for an idle moment and then fades the picture in, so wait for it before reading pixels.
+    await expect(globe).toHaveCSS('opacity', '1');
     const frame = () => globe.evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL());
 
     // The page has a slow backdrop drift on the body, which is not part of the globe. Everything between the globe and the

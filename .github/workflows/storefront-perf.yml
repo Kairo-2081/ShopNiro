@@ -1,0 +1,110 @@
+name: Storefront performance
+
+# Times the first product card on an emulated mid-range phone (mobile 4G, CPU four times slower) from a cold cache, for a
+# guest and for a returning customer, against a production build. It is not a pull-request check: shared runners vary too
+# much for a three-second budget to be a fair gate on every push. It runs weekly and on demand, uploads the numbers, and
+# only fails the run when "enforce" is set, so a trend can be watched without a red badge for noise.
+on:
+  workflow_dispatch:
+    inputs:
+      runs:
+        description: Runs per scenario (the slowest run counts against the budget too)
+        default: "9"
+      budget_ms:
+        description: Budget in milliseconds for both the median and the slowest run
+        default: "3000"
+      enforce:
+        description: Fail the run when the budget is missed
+        type: boolean
+        default: false
+  schedule:
+    - cron: "17 3 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  storefront-load:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: shopniro_perf_test
+          POSTGRES_USER: shopniro_test
+          POSTGRES_PASSWORD: shopniro_test_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U shopniro_test -d shopniro_perf_test"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      DATABASE_URL: postgresql://shopniro_test:shopniro_test_password@127.0.0.1:5432/shopniro_perf_test
+      # The browser app calls whatever origin it was built with, so build it for the HTTP/2 front the script starts.
+      VITE_API_URL: https://127.0.0.1:3443
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prepare the test database
+        run: |
+          NODE_ENV=test npm run migrate
+          NODE_ENV=test npx tsx scripts/seed-test-database.mts
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Build for production
+        run: NODE_ENV=production npm run build
+
+      - name: Measure
+        env:
+          RUNS: ${{ inputs.runs || '9' }}
+          BUDGET_MS: ${{ inputs.budget_ms || '3000' }}
+          ENFORCE: ${{ inputs.enforce && 'true' || 'false' }}
+        run: |
+          export NODE_ENV=production PORT=3200 APP_URL=https://127.0.0.1:3443 CORS_ORIGINS=https://127.0.0.1:3443
+          export JWT_SECRET="$(head -c 24 /dev/urandom | base64)$(head -c 24 /dev/urandom | base64)"
+          export SSLCOMMERZ_IPN_TOKEN=perf-placeholder-token-0000000000 SSLCOMMERZ_STORE_ID=perfstore SSLCOMMERZ_STORE_PASSWORD=perfpass
+          export CRON_SECRET=perf-placeholder-cron-secret-000000 SSLCOMMERZ_IS_SANDBOX=true
+          # The server refuses to start in a deployed mode without these. A throwaway staging-style run is the honest label.
+          export SHOPNIRO_ENV=staging FRONTEND_URL=https://127.0.0.1:3443 PAYMENT_MODE=sandbox-demo
+          node dist/server.cjs > server.log 2>&1 &
+          for _ in $(seq 1 30); do curl -fs http://127.0.0.1:3200/api/ready > /dev/null && break; sleep 1; done
+          status=0
+          node scripts/measure-storefront-load.mjs --url http://127.0.0.1:3200 --h2-port 3443 \
+            --runs "$RUNS" --budget-ms "$BUDGET_MS" > storefront-perf.json || status=$?
+          {
+            echo '### First product card on emulated mobile 4G (4x slower CPU)'
+            echo
+            echo '| Scenario | Median | Slowest | Fastest | Transferred |'
+            echo '| --- | --- | --- | --- | --- |'
+            node -e "const r=require('./storefront-perf.json');for(const [k,v] of Object.entries(r.scenarios))console.log('| '+k+' | '+(v.medianMs/1000).toFixed(2)+' s | '+(v.worstMs/1000).toFixed(2)+' s | '+(v.bestMs/1000).toFixed(2)+' s | '+v.medianTransferredKb+' kB |')"
+            echo
+            echo "Budget: $((BUDGET_MS / 1000)) s for the median and the slowest run. Within budget: $(node -e "console.log(require('./storefront-perf.json').withinBudget)")"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$status" -ne 0 ] && [ "$ENFORCE" = "true" ]; then exit "$status"; fi
+
+      - name: Upload the numbers
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: storefront-perf
+          path: |
+            storefront-perf.json
+            server.log
+          retention-days: 30
