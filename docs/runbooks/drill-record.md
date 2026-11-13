@@ -25,7 +25,7 @@ Environment:      staging  (never production for a drill)
 Performed by:     (role only here; the name goes in the restricted inventory)
 Wrote the code?:  yes / no   (an independent run needs "no")
 Started at:       
-Mitigation live:  (time /api/payments/methods or the equivalent showed the change)
+Mitigation live:  (time `/api/payment/methods` showed cash on delivery only)
 Restored at:      
 Total time:       
 Steps that were unclear or wrong:
