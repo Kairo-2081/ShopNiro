@@ -92,6 +92,7 @@ test('public and role-specific pages have no critical or serious axe violations'
 
   const scanPage = async (page: import('@playwright/test').Page, label: string) => {
     const scanTheme = async (theme: string) => {
+      await settleThemeTransition(page);
       const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
       const violations = results.violations
         .filter((violation) => violation.impact === 'critical' || violation.impact === 'serious')
