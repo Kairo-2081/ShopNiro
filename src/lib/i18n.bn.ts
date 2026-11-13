@@ -474,6 +474,7 @@ export const bengaliMessages: Record<MessageKey, string> = {
     acceptTermsToRegister: 'অ্যাকাউন্ট তৈরি করতে সেবার শর্তাবলি ও গোপনীয়তা নীতিতে সম্মতি দিন।',
     createCustomerAccountFailed: 'গ্রাহক অ্যাকাউন্ট তৈরি করা যায়নি।',
     closeSignIn: 'সাইন-ইন বন্ধ করুন',
+    skipToContent: 'মূল বিষয়বস্তুতে যান',
     createAccountAction: 'অ্যাকাউন্ট তৈরি করুন',
     clickToCreateAccount: 'এখনই এই অ্যাকাউন্ট তৈরি করতে এখানে ক্লিক করুন',
     newPassword: 'নতুন পাসওয়ার্ড',
