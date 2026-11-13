@@ -4,6 +4,7 @@ import { shopNiroLogoSmall } from '../lib/branding';
 import { MarketplaceClosing, MarketplaceStat } from './MarketplaceClosing';
 import { ShoppingBag, SlidersHorizontal, User, Truck, ArrowRight, Sparkles, Users, Store, ShieldCheck, Compass, Tag, Radio, Package, Plus, Sun, Moon, Shield, BadgeCheck } from 'lucide-react';
 import { useLocale } from '../lib/i18n';
+import { MAIN_CONTENT_ID } from './SkipLink';
 
 const OrbitGlobe = React.lazy(() => import('./landing/OrbitGlobe').then((module) => ({ default: module.OrbitGlobe })));
 
@@ -45,7 +46,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   return (
     <div className="min-h-screen text-surface-100 font-sans pb-28 transition-colors duration-200 selection:bg-[#80734f] selection:text-white">
       {/* Centered Mobile/Responsive Container matching the reference design */}
-      <main className="max-w-md sm:max-w-xl md:max-w-7xl mx-auto px-4 sm:px-6 md:px-8 pt-3 md:pt-5 pb-8 md:pb-12 space-y-6 md:space-y-8">
+      <main id={MAIN_CONTENT_ID} tabIndex={-1} className="focus:outline-none max-w-md sm:max-w-xl md:max-w-7xl mx-auto px-4 sm:px-6 md:px-8 pt-3 md:pt-5 pb-8 md:pb-12 space-y-6 md:space-y-8">
         
         {/* 1. Header / Navbar */}
         <header className="flex items-center justify-between gap-3 md:gap-4 py-2.5 rounded-full md:rounded-2xl border border-[#d0c8a5]/15 bg-[#10100f]/75 backdrop-blur-xl px-3 sm:px-4 shadow-[0_12px_32px_rgba(6,6,4,0.24)]">

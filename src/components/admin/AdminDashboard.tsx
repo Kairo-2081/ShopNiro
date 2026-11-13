@@ -431,10 +431,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <span className="rounded-full border border-surface-300 px-2.5 py-1 text-micro font-bold uppercase dark:border-surface-700">{request.Status.replace('_', ' ')}</span>
                   </div>
                   <div className="grid gap-3 border-t border-surface-200 pt-3 dark:border-surface-800 sm:grid-cols-[170px_1fr_auto]">
-                    <select value={supportStatuses[request.Request_ID] || request.Status} onChange={(event) => setSupportStatuses((current) => ({ ...current, [request.Request_ID]: event.target.value as SupportRequest['Status'] }))} className="rounded-lg border border-surface-300 bg-white px-3 py-2 text-xs dark:border-surface-700 dark:bg-[#181F2A]">
+                    <select aria-label={t('supportRequestStatus')} value={supportStatuses[request.Request_ID] || request.Status} onChange={(event) => setSupportStatuses((current) => ({ ...current, [request.Request_ID]: event.target.value as SupportRequest['Status'] }))} className="rounded-lg border border-surface-300 bg-white px-3 py-2 text-xs dark:border-surface-700 dark:bg-[#181F2A]">
                       <option value="open">{t('openStatus')}</option><option value="in_progress">{t('inProgressStatus')}</option><option value="resolved">{t('resolvedStatus')}</option>
                     </select>
-                    <input value={supportNotes[request.Request_ID] || ''} onChange={(event) => setSupportNotes((current) => ({ ...current, [request.Request_ID]: event.target.value }))} maxLength={2000} placeholder={t('internalResolutionNote')} className="min-w-0 rounded-lg border border-surface-300 bg-white px-3 py-2 text-xs dark:border-surface-700 dark:bg-[#181F2A]" />
+                    <input aria-label={t('internalResolutionNote')} value={supportNotes[request.Request_ID] || ''} onChange={(event) => setSupportNotes((current) => ({ ...current, [request.Request_ID]: event.target.value }))} maxLength={2000} placeholder={t('internalResolutionNote')} className="min-w-0 rounded-lg border border-surface-300 bg-white px-3 py-2 text-xs dark:border-surface-700 dark:bg-[#181F2A]" />
                     <button type="button" disabled={savingSupportId === request.Request_ID} onClick={() => void updateSupportRequest(request)} className="rounded-lg bg-success-700 px-4 py-2 text-xs font-bold text-white disabled:opacity-50">{savingSupportId === request.Request_ID ? t('saving') : t('save')}</button>
                   </div>
                 </article>
