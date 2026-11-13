@@ -924,6 +924,7 @@ const messages = {
     stockInventoryCol: 'Stock Inventory',
     voucherCol: 'Voucher',
     statusCol: 'Status',
+    supportRequestStatus: 'Support request status',
     actionsCol: 'Actions',
     restockAction: 'Restock',
     noVoucher: 'No voucher',
