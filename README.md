@@ -257,6 +257,9 @@ CI provisions a temporary PostgreSQL 16 database and runs validation, browser,
 and accessibility checks. Browser tests use the built-in payment simulator,
 not a real gateway. Payment latency and idempotency benchmarks are available
 with `npm run bench:payments`; see [`docs/benchmarks.md`](./docs/benchmarks.md).
+The storefront's load time on an emulated mid-range phone is measured with
+`npm run perf:storefront` and profiled with `npm run perf:profile`; see
+[`docs/performance.md`](./docs/performance.md).
 
 ### Scheduled jobs
 

@@ -3,6 +3,7 @@ import { drawGlobe, GLOBE_FRAME } from './globe/drawGlobe';
 import { DESTINATION_HUBS, GLOBE_VIEW, HOME_HUB } from './globe/network';
 import { project } from './globe/projection';
 import { useLocale } from '../../lib/i18n';
+import { runWhenIdle } from '../../lib/idleTask';
 
 interface OrbitGlobeProps {
   /** Called when someone asks to trace the delivery routes. */
@@ -24,6 +25,7 @@ export const OrbitGlobe: React.FC<OrbitGlobeProps> = ({ onGreet }) => {
   const { t } = useLocale();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isTracing, setIsTracing] = useState(false);
+  const hasDrawn = useRef(false);
 
   const description = t('globeNetworkDescription', {
     home: HOME_HUB.name,
@@ -31,17 +33,29 @@ export const OrbitGlobe: React.FC<OrbitGlobeProps> = ({ onGreet }) => {
   });
 
   // Draw the globe. It is a still picture: it is drawn again only to call out the routes, never on a timer.
+  // The first draw waits for an idle moment: on a slow phone it holds the main thread long enough to delay the Explore
+  // button and everything after it, and a visitor who taps through at once never needed it. Redrawing for the routes
+  // answers a tap, so that one happens straight away.
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
-    if (!canvas || !ctx) return;
-    // Draw in CSS pixels but back the canvas with real device pixels, so dots and lines stay sharp on dense screens.
-    // The picture can be shown up to 1.4 times its drawn size on wide screens, so back it with extra pixels to keep it sharp.
-    const pixelRatio = Math.min((window.devicePixelRatio || 1) * 1.5, 4);
-    canvas.width = Math.round(GLOBE_FRAME.width * pixelRatio);
-    canvas.height = Math.round(GLOBE_FRAME.height * pixelRatio);
-    ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-    drawGlobe(ctx, GLOBE_FRAME, { emphasis: isTracing ? 1 : 0 });
+    if (!canvas || !ctx) return undefined;
+    const draw = () => {
+      // Draw in CSS pixels but back the canvas with real device pixels, so dots and lines stay sharp on dense screens.
+      // The picture can be shown up to 1.4 times its drawn size on wide screens, so back it with extra pixels to keep it sharp.
+      const pixelRatio = Math.min((window.devicePixelRatio || 1) * 1.5, 4);
+      canvas.width = Math.round(GLOBE_FRAME.width * pixelRatio);
+      canvas.height = Math.round(GLOBE_FRAME.height * pixelRatio);
+      ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+      drawGlobe(ctx, GLOBE_FRAME, { emphasis: isTracing ? 1 : 0 });
+      hasDrawn.current = true;
+      canvas.style.opacity = '1';
+    };
+    if (hasDrawn.current) {
+      draw();
+      return undefined;
+    }
+    return runWhenIdle(draw);
   }, [isTracing]);
 
   useEffect(() => {
@@ -63,7 +77,8 @@ export const OrbitGlobe: React.FC<OrbitGlobeProps> = ({ onGreet }) => {
           aria-hidden="true"
           width={GLOBE_FRAME.width}
           height={GLOBE_FRAME.height}
-          className="block h-full w-full"
+          className="block h-full w-full motion-safe:transition-opacity motion-safe:duration-300"
+          style={{ opacity: 0 }}
         />
         {/* A slow ping on the home hub says the network is live. It is a plain fade, and stops under reduced motion. */}
         <span
