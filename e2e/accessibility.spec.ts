@@ -278,6 +278,9 @@ test('reduced motion stops the orbit globe animation without hiding its content'
     const globe = page.locator('canvas');
     console.log('Waiting for the orbit globe canvas.');
     await expect(globe).toBeVisible();
+    // The globe is drawn at an idle moment (up to 700 ms after load) and fades in only once it has been drawn, so
+    // an earlier read would compare the blank canvas with the finished picture and mistake that for motion.
+    await expect(globe).toHaveCSS('opacity', '1');
     const initialFrame = await globe.evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL());
     await page.waitForTimeout(150);
     const settledFrame = await globe.evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL());
