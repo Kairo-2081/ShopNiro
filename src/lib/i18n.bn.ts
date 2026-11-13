@@ -475,6 +475,7 @@ export const bengaliMessages: Record<MessageKey, string> = {
     createCustomerAccountFailed: 'গ্রাহক অ্যাকাউন্ট তৈরি করা যায়নি।',
     closeSignIn: 'সাইন-ইন বন্ধ করুন',
     skipToContent: 'মূল বিষয়বস্তুতে যান',
+    supportRequestStatus: 'সহায়তা অনুরোধের অবস্থা',
     createAccountAction: 'অ্যাকাউন্ট তৈরি করুন',
     clickToCreateAccount: 'এখনই এই অ্যাকাউন্ট তৈরি করতে এখানে ক্লিক করুন',
     newPassword: 'নতুন পাসওয়ার্ড',
