@@ -3,6 +3,7 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import { AppErrorBoundary } from './components/AppErrorBoundary.tsx';
 import { NetworkStatusBanner } from './components/NetworkStatusBanner.tsx';
+import { SkipLink } from './components/SkipLink.tsx';
 import { LocaleProvider } from './lib/i18n.tsx';
 import './index.css';
 
@@ -47,6 +48,7 @@ createRoot(document.getElementById('root')!).render(
     <NetworkStatusBanner />
     <AppErrorBoundary>
       <LocaleProvider>
+        <SkipLink />
         {isPolicy ? (
           <React.Suspense fallback={<div className="flex min-h-screen items-center justify-center text-sm text-surface-500">Loading...</div>}>
             <LegalPage />

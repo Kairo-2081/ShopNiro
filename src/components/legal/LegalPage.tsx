@@ -4,6 +4,7 @@ import { POLICIES, policyByPath, type Policy } from './policies';
 import { POLICY_TRANSLATIONS } from './policyTranslations';
 import { Languages } from 'lucide-react';
 import { useLocale } from '../../lib/i18n';
+import { MAIN_CONTENT_ID } from '../SkipLink';
 
 interface LegalPageProps {
   policy?: Policy;
@@ -62,7 +63,7 @@ export const LegalPage: React.FC<LegalPageProps> = ({ policy: propPolicy }) => {
         </div>
       </header>
 
-      <main className="mx-auto max-w-3xl px-4 py-8">
+      <main id={MAIN_CONTENT_ID} tabIndex={-1} className="mx-auto max-w-3xl px-4 py-8 focus:outline-none">
         {BUSINESS.showDraftBanner && (
           <p
             role="note"
