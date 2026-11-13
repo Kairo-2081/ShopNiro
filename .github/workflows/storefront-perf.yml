@@ -80,7 +80,9 @@ jobs:
           export NODE_ENV=production PORT=3200 APP_URL=https://127.0.0.1:3443 CORS_ORIGINS=https://127.0.0.1:3443
           export JWT_SECRET="$(head -c 24 /dev/urandom | base64)$(head -c 24 /dev/urandom | base64)"
           export SSLCOMMERZ_IPN_TOKEN=perf-placeholder-token-0000000000 SSLCOMMERZ_STORE_ID=perfstore SSLCOMMERZ_STORE_PASSWORD=perfpass
-          export CRON_SECRET=perf-placeholder-cron-secret-000000 SSLCOMMERZ_IS_SANDBOX=false
+          export CRON_SECRET=perf-placeholder-cron-secret-000000 SSLCOMMERZ_IS_SANDBOX=true
+          # The server refuses to start in a deployed mode without these. A throwaway staging-style run is the honest label.
+          export SHOPNIRO_ENV=staging FRONTEND_URL=https://127.0.0.1:3443 PAYMENT_MODE=sandbox-demo
           node dist/server.cjs > server.log 2>&1 &
           for _ in $(seq 1 30); do curl -fs http://127.0.0.1:3200/api/ready > /dev/null && break; sleep 1; done
           status=0
