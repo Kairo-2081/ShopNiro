@@ -4,7 +4,7 @@
 
 ## What the customer can do themselves
 
-- **Export:** a signed-in customer downloads their own data from their account (`GET /api/customers/me/export`). It returns their profile, address and consent timestamps for their account while it is not deleted.
+- **Export:** a signed-in customer downloads their own data from their account (`GET /api/customers/me/export`). It returns the account profile and address, and their orders, payments, refunds, cancellation requests, reviews, cart, wishlist, support requests and policy consents, for an account that has not been deleted.
 - **Delete:** a signed-in customer deletes their own account (`POST /api/customers/me/deletion`) after typing the email address on the account to confirm. Their name, phone, saved addresses and marketing consent are cleared, their login and any social sign-in links are removed, their sessions, cart, wishlist and reviews are deleted, and the email is replaced with a placeholder. Their support messages are redacted. Order and payment records are kept with the address and phone details removed, because fulfilment, accounting, refunds and disputes need them.
 - **Marketing consent:** consent is recorded with a timestamp, and deletion clears it.
 
