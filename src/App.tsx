@@ -33,6 +33,7 @@ import { ChatFloatingTrigger } from './components/chat/ChatFloatingTrigger';
 import { rememberFocusTarget } from './hooks/useFocusTrap';
 import { AlertCircle, CheckCircle2, Info, Radio, X } from 'lucide-react';
 import type { PaymentResultStatus } from './components/payment/PaymentResultModal';
+import { MAIN_CONTENT_ID } from './components/SkipLink';
 
 type ToastTone = 'success' | 'error' | 'info';
 
@@ -1197,7 +1198,7 @@ export default function App() {
       />
       <div className="flex min-w-0 flex-1 flex-col">
       {/* Main Content Area */}
-      <main className="app-panel mx-auto w-full max-w-7xl flex-1 animate-fade-up px-3 pb-24 pt-4 sm:px-6 lg:px-8 lg:pt-6">
+      <main id={MAIN_CONTENT_ID} tabIndex={-1} className="app-panel focus:outline-none mx-auto w-full max-w-7xl flex-1 animate-fade-up px-3 pb-24 pt-4 sm:px-6 lg:px-8 lg:pt-6">
         <React.Suspense fallback={<div className="flex min-h-[40vh] items-center justify-center text-sm text-surface-900 dark:text-surface-200">Loading marketplace...</div>}>
         {/* Authentication Notice Banner if set */}
         {isLoggedIn && !profileComplete && (
