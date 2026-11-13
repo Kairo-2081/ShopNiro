@@ -55,6 +55,7 @@ first row is from 7 runs and a different commit (the last one before the perform
 | Before the performance work (`bfaabc8`) | 6.48 / 7.00 | 5.97 / 6.59 | 757 kB |
 | `main` before this change (`43fd38f`), two runs | 3.36 / 3.80 and 3.36 / 3.84 | 3.10 / 3.78 and 3.08 / 3.32 | 243 kB |
 | With this change, two runs | 2.97 / 3.76 and 3.29 / 3.45 | 2.68 / 3.06 and 2.70 / 3.15 | 238-241 kB |
+| After rebasing on the latest `main` (`e5cc5d2`), 9 runs | 2.92 / 3.31 | 2.72 / 2.79 | 225 / 220 kB |
 
 What that does and does not say:
 
@@ -64,8 +65,19 @@ What that does and does not say:
   comparison, because the landing page and its globe are no longer drawn before the storefront.
 - The guest gain is **within run-to-run noise** (the two comparisons gave 0.4 s and 0.07 s at the median). The idle
   callback for the globe fires while the page waits for the network, so a guest who taps straight away still pays for it.
-- The 3 s budget is **not met** by the slowest run for either visitor, and the guest median is borderline. These are lab
-  numbers on a laptop with throttling, not measurements of real visitors.
+- On the last run (9 runs, one session) a returning customer is **inside the budget** at both the median (2.72 s) and the
+  slowest run (2.79 s). A guest is not: the median is 2.92 s but the slowest run is 3.31 s, so the budget is still
+  **not met** for guests. Earlier sessions gave the returning customer a slowest run of 3.06 s and 3.15 s, so one clean
+  session does not prove it is safe. These are lab numbers on a laptop with throttling, not measurements of real visitors.
+
+## What the profile shows
+
+One cold guest run with `npm run perf:profile` (HTTP/1.1, so read it for proportions): the first card at 2.8 to 3.4 s, and
+the sampled self time was React's own code (`vendor-react`, 333 ms), the app's entry bundle (123 ms) and browser-native
+work (350 ms, much of it Playwright polling for the card). The app's page components (`Storefront`, `OrbitGlobe`) added
+less than 15 ms between them. The long frames sit inside React's click handler, the one that follows the tap on
+"Explore Marketplace" (113 ms, 106 ms and 109 ms of script each, throttled). In other words there is no single slow
+function left to fix: the cost is React committing the screen change in a few large steps on a slow processor.
 
 ## What is left
 
