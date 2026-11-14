@@ -1,6 +1,6 @@
 # Launch checks
 
-Four things move launch readiness more than any more code. Each needs a person to do something once and write down what
+Five things move launch readiness more than any more code. Each needs a person to do something once and write down what
 they saw. **Every row below is open until a named person completes it.** Do not fill in a result you did not observe, and
 keep names and service identifiers in the restricted internal operator inventory, not in this public repository.
 
@@ -12,6 +12,7 @@ keep names and service identifiers in the restricted internal operator inventory
 | 2 | Speed on a real mid-range Android phone over mobile data | One phone, mobile data, 30 minutes | [Real-device check](real-device-check.md) | **Not done** |
 | 3 | Screen-reader pass of sign in, find a product, cart and checkout | One person with TalkBack, VoiceOver or NVDA, 30 minutes | [Screen-reader checklist](screen-reader-checklist.md) | **Not done** |
 | 4 | One controlled live payment and its refund | The owner's decision, a second person, a card of their own | [First live payment](first-live-payment.md) | **Not done** |
+| 5 | Render instance type: staging and production are on the free plan (allowed on purpose) | The owner reading free instance hours in Render, and a cold-start timing | [Render instance type](render-instance-type.md) | **Open risk** |
 
 ## Order
 
