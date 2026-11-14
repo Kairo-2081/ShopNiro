@@ -5,6 +5,7 @@ import path from 'node:path';
 import { createServer as createViteServer } from 'vite';
 import { app } from './app.ts';
 import { isFingerprintedAsset } from './services/assetCache.ts';
+import { servePrecompressed } from './middleware/precompressed.ts';
 import { seedDatabaseIfEmpty } from './db/seed.ts';
 import { startRefundProcessor } from './routes/payment.routes.ts';
 import { assertRuntimeConfiguration } from './config/runtimeAssertions.ts';
@@ -45,8 +46,11 @@ async function startServer() {
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), 'dist');
+    app.use(servePrecompressed(distPath));
     app.use(express.static(distPath, {
-      setHeaders: (response, filePath) => {
+      setHeaders: (response, servedPath) => {
+        // A Brotli copy (app.js.br) follows the same caching rules as the file it stands in for.
+        const filePath = servedPath.endsWith('.br') ? servedPath.slice(0, -3) : servedPath;
         const isHtml = filePath.endsWith('.html');
         const isHashedAsset = isFingerprintedAsset(filePath);
         response.setHeader(
