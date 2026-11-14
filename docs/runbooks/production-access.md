@@ -34,7 +34,7 @@ Complete this from the live service dashboards; repository membership alone is n
 - [ ] Review the Render team/member list and service-level permissions. Remove unknown or departed accounts and require individual accounts with MFA.
 - [ ] Assign two different people to the primary and backup roles in the restricted inventory. Have each independently sign in and confirm they can edit the production service environment. Do not change a production value as part of this access check.
 - [ ] Confirm runtime credentials are in the Render service's Environment store and inspect names only. Confirm GitHub contains only the workflow secrets it needs.
-- [ ] Restrict the GitHub `production` environment to deployments from `main` and add a required reviewer. Verify the protection rules are active.
+- [ ] Create the `production` branch, restrict the GitHub `production` environment to deployments from that branch (the deploy and rollback workflows run only from a branch named after the target) and add a required reviewer. Verify the protection rules are active. Steps: [Production gates](../launch-checks/production-gates.md).
 - [ ] Have an operator who did not write the payment switch follow [Gateway error practice drill](gateway-error-drill.md) against staging and record the wall-clock result.
 
 ## Required access controls
