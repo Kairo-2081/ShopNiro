@@ -5,6 +5,12 @@ import { brotliCompressSync, constants } from 'node:zlib';
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
+// The Android app ships dist inside the APK and reads the plain files, so the copies would only add weight there.
+if (process.env.SKIP_PRECOMPRESS === '1') {
+  console.log('precompress: skipped (SKIP_PRECOMPRESS=1)');
+  process.exit(0);
+}
+
 const root = path.join(process.cwd(), 'dist');
 const compressible = /\.(js|mjs|css|html|svg|json|webmanifest|txt|xml)$/;
 // Smaller than this and the saving is not worth a second file or a second round of header bytes.
