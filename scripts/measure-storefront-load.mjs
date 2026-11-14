@@ -156,7 +156,8 @@ async function oneRun(browser, scenario, returningState) {
 }
 
 const front = h2Port ? await startH2Front(h2Port, upstreamURL) : null;
-const browser = await chromium.launch();
+// PERF_CHROMIUM_PATH points at an already installed browser, for a machine where the one Playwright expects is missing.
+const browser = await chromium.launch(process.env.PERF_CHROMIUM_PATH ? { executablePath: process.env.PERF_CHROMIUM_PATH } : {});
 const report = { baseURL, protocol: h2Port ? 'h2' : 'http/1.1', runs, budgetMs, profile: PROFILE, scenarios: {} };
 let failed = false;
 try {

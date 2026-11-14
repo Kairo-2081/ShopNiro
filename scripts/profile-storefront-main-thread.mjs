@@ -20,7 +20,8 @@ const baseURL = option('base-url', upstream);
 const top = Number(option('top', '15'));
 const productName = option('product', 'E2E Linen Blanket');
 
-const browser = await chromium.launch();
+// PERF_CHROMIUM_PATH points at an already installed browser, for a machine where the one Playwright expects is missing.
+const browser = await chromium.launch(process.env.PERF_CHROMIUM_PATH ? { executablePath: process.env.PERF_CHROMIUM_PATH } : {});
 const context = await browser.newContext({ ...devices['Pixel 5'], baseURL, ignoreHTTPSErrors: true });
 const page = await context.newPage();
 const cdp = await context.newCDPSession(page);
