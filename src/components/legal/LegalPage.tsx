@@ -53,7 +53,7 @@ export const LegalPage: React.FC<LegalPageProps> = ({ policy: propPolicy }) => {
           <button
             type="button"
             onClick={() => setLocale(locale === 'en' ? 'bn' : 'en')}
-            aria-label={t('changeLanguage')}
+            aria-label={`${locale === 'en' ? 'বাংলা' : 'English'} (${t('changeLanguage')})`}
             title={t('changeLanguage')}
             className="inline-flex min-h-10 items-center gap-2 rounded-full border border-surface-200 px-3 text-xs font-bold text-surface-700 transition-colors hover:bg-surface-50 dark:border-surface-700 dark:text-surface-200 dark:hover:bg-surface-800"
           >
