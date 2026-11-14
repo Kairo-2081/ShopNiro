@@ -114,10 +114,35 @@ less than 15 ms between them. The long frames sit inside React's click handler, 
 "Explore Marketplace" (113 ms, 106 ms and 109 ms of script each, throttled). In other words there is no single slow
 function left to fix: the cost is React committing the screen change in a few large steps on a slow processor.
 
+### Brotli at build time and a transition on data arrival, 15 runs each, in-page, same session
+
+Median / slowest, in milliseconds. `main` here is the merge of the head-start PR, built and measured in the same session
+as the two changes, so the comparison is like for like (these are not the numbers in the table above, which are from an
+earlier session).
+
+| Build | Guest | Returning customer | Transferred |
+| --- | --- | --- | --- |
+| `main` | 1946 / 2181 | 2286 / 2644 | 224 / 220 kB |
+| Brotli copies written at build time (quality 11) | 1834 / 2001 | 2117 / 2624 | 199 / 196 kB |
+| Same, plus the catalogue update in a transition (dropped) | 2444 / 2910 | 2384 / 2813 | 199 / 196 kB |
+
+- The server already answered Brotli browsers with Brotli, through the `compression` middleware, but at quality 4 on every
+  request. Writing the copies once at build time at quality 11 makes the large chunks 14 to 16 percent smaller
+  (`vendor-react` 69.8 kB to 59.8 kB) and costs no request-time CPU. The gain is about 0.1 to 0.17 s at the median and
+  25 kB fewer bytes; the returning customer's slowest run did not move.
+- Wrapping the catalogue update in `startTransition` made both scenarios slower by 0.4 to 0.6 s, because it also defers the
+  render of the first card. It was reverted.
+- Fewer entry bytes: the first load is now about 128 kB with Brotli (React 60, the app entry 26, the stylesheet 19, the
+  English dictionary 16, icons 7). Every heavy screen is already lazy. The one large piece left is the English dictionary
+  (52 kB raw), which would need splitting by screen, a bigger and riskier change that was not made.
+- The build-time check counts first-load JavaScript and CSS at **149 of 150 kB gzipped**, so the next feature that adds to
+  the entry will fail the build. That is a limit on `main`, not a result of this change.
+
 ## What is left
 
 Most of the remaining time is the phone's processor: React's own code is about 400 ms of self time and the app's entry
 bundle about 125 ms, and a 289 ms long frame lands when the data arrives on the landing page. Tried and not done: the
-54 kB logo already loads at low priority after the first card, so it does not sit on the path. Not tried yet: Brotli
-precompression (the server uses gzip), wrapping the data-arrival state updates in a transition, and fewer entry bytes. The next candidates are to render less of the landing page before the guest has asked for it, to split
-the storefront's first render so the first row of cards paints before the rest, and to check the numbers on a real phone.
+54 kB logo already loads at low priority after the first card, so it does not sit on the path; the transition above made
+it worse. The next candidates are to render less of the landing page before the guest has asked for it, to split the
+storefront's first render so the first row of cards paints before the rest (not as a transition: see above), to split the
+English dictionary by screen, and to check the numbers on a real phone.
