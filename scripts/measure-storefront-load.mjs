@@ -32,6 +32,14 @@ const baseURL = h2Port ? `https://127.0.0.1:${h2Port}` : upstreamURL;
 const runs = Number(option('runs', '7'));
 const budgetMs = Number(option('budget-ms', '3000'));
 const productName = option('product', 'E2E Linen Blanket');
+// How the guest's tap and the first card are timed:
+//   click    Playwright finds the button, waits until it is stable and can receive the tap, clicks, then polls for the
+//            card. On the throttled processor those waits are slow while the page is busy, so this is a strict upper bound
+//            that includes the test tool's own time. It is the original method and stays the default.
+//   in-page  the page itself taps the button the moment it exists and stamps the time the card appears, so nothing of the
+//            tool runs on the throttled thread. Times are from the start of navigation.
+const method = option('method', 'click');
+if (!['click', 'in-page'].includes(method)) throw new Error(`--method must be click or in-page, not ${method}`);
 // The seeded customer from e2e/seed.ts. The script signs in once through the real login API, so it works against any
 // production build whatever secret it was started with.
 const customerLogin = { email: option('customer', 'e2e-customer'), password: option('password', 'E2e-password-1!'), role: 'customer' };
@@ -99,29 +107,57 @@ async function oneRun(browser, scenario, returningState) {
     }).observe({ type: 'largest-contentful-paint', buffered: true });
   });
 
+  if (method === 'in-page') {
+    await page.addInitScript(({ name, guest }) => {
+      window.__marks = {};
+      const mark = (key) => { if (window.__marks[key] === undefined) window.__marks[key] = performance.now(); };
+      const check = () => {
+        if (guest && window.__marks.tap === undefined) {
+          const button = [...document.querySelectorAll('button')].find((candidate) => /Explore Marketplace/i.test(candidate.textContent || ''));
+          if (button) { mark('button'); mark('tap'); button.click(); }
+        }
+        if ((!guest || window.__marks.tap !== undefined) && (document.body?.innerText || '').includes(name)) mark('product');
+      };
+      new MutationObserver(check).observe(document, { childList: true, subtree: true, characterData: true });
+    }, { name: productName, guest: scenario === 'guest' });
+  }
+
   const started = performance.now();
   await page.goto('/', { waitUntil: 'commit' });
-  if (scenario === 'guest') {
-    await page.getByRole('button', { name: 'Explore Marketplace' }).click();
+  let elapsed;
+  let tapMs = 0;
+  if (method === 'in-page') {
+    try {
+      await page.waitForFunction(() => window.__marks && window.__marks.product !== undefined, null, { timeout: 60_000, polling: 250 });
+    } catch (error) {
+      throw new Error(`${scenario}: "${productName}" never appeared (page text starts: ${(await page.evaluate(() => document.body.innerText).catch(() => '')).slice(0, 160).replace(/\s+/g, ' ')}): ${error.message.split('\n')[0]}`);
+    }
+    const marks = await page.evaluate(() => window.__marks);
+    elapsed = marks.product;
+    tapMs = Math.round(marks.tap ?? 0);
+  } else {
+    if (scenario === 'guest') {
+      await page.getByRole('button', { name: 'Explore Marketplace' }).click();
+    }
+    try {
+      await page.getByText(productName, { exact: false }).first().waitFor({ state: 'visible', timeout: 60_000 });
+    } catch (error) {
+      throw new Error(`${scenario}: "${productName}" never appeared (page text starts: ${(await page.evaluate(() => document.body.innerText).catch(() => '')).slice(0, 160).replace(/\s+/g, ' ')}): ${error.message.split('\n')[0]}`);
+    }
+    elapsed = performance.now() - started;
   }
-  try {
-    await page.getByText(productName, { exact: false }).first().waitFor({ state: 'visible', timeout: 60_000 });
-  } catch (error) {
-    throw new Error(`${scenario}: "${productName}" never appeared (page text starts: ${(await page.evaluate(() => document.body.innerText).catch(() => '')).slice(0, 160).replace(/\s+/g, ' ')}): ${error.message.split('\n')[0]}`);
-  }
-  const elapsed = performance.now() - started;
   const lcp = await page.evaluate(() => window.__lcp).catch(() => 0);
   // The page keeps calling the API for a moment after the first product shows. Let those finish so they are counted.
   await sleep(1500);
   await context.close();
   if (rateLimited > 0) throw new Error(`${scenario}: the server answered ${rateLimited} API call(s) with 429, so this run measured an error page. Wait a minute and run again.`);
-  return { elapsedMs: Math.round(elapsed), lcpMs: Math.round(lcp), transferredKb: Math.round(transferred / 1024), apiCalls, wallMs: Math.round(performance.now() - started) };
+  return { elapsedMs: Math.round(elapsed), tapMs, lcpMs: Math.round(lcp), transferredKb: Math.round(transferred / 1024), apiCalls, wallMs: Math.round(performance.now() - started) };
 }
 
 const front = h2Port ? await startH2Front(h2Port, upstreamURL) : null;
 // PERF_CHROMIUM_PATH points at an already installed browser, for a machine where the one Playwright expects is missing.
 const browser = await chromium.launch(process.env.PERF_CHROMIUM_PATH ? { executablePath: process.env.PERF_CHROMIUM_PATH } : {});
-const report = { baseURL, protocol: h2Port ? 'h2' : 'http/1.1', runs, budgetMs, profile: PROFILE, scenarios: {} };
+const report = { baseURL, protocol: h2Port ? 'h2' : 'http/1.1', method, runs, budgetMs, profile: PROFILE, scenarios: {} };
 let failed = false;
 try {
   const returningState = await signedInState();
@@ -142,6 +178,7 @@ try {
       medianMs: Math.round(median(times)),
       worstMs: Math.max(...times),
       bestMs: Math.min(...times),
+      medianTapMs: Math.round(median(results.map((r) => r.tapMs))),
       medianLcpMs: Math.round(median(results.map((r) => r.lcpMs))),
       medianTransferredKb: Math.round(median(results.map((r) => r.transferredKb))),
       runsMs: times,
