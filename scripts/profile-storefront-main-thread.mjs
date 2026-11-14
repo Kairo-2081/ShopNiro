@@ -9,6 +9,7 @@
 // Use a production build (see measure-storefront-load.mjs for how to serve one behind an HTTP/2 front). Sampling a dev
 // server would profile unbundled React and say nothing about what a visitor runs.
 import { chromium, devices } from '@playwright/test';
+import { startH2Front } from './lib/h2-front.mjs';
 
 const args = process.argv.slice(2);
 const option = (name, fallback) => {
@@ -16,11 +17,16 @@ const option = (name, fallback) => {
   return at >= 0 && args[at + 1] ? args[at + 1] : fallback;
 };
 const upstream = option('url', 'http://127.0.0.1:3200').replace(/\/$/, '');
-const baseURL = option('base-url', upstream);
+const h2Port = Number(option('h2-port', '0'));
+const baseURL = h2Port ? `https://127.0.0.1:${h2Port}` : option('base-url', upstream);
 const top = Number(option('top', '15'));
 const productName = option('product', 'E2E Linen Blanket');
 
-const browser = await chromium.launch();
+// With --h2-port the app is reached through the same self-signed HTTP/2 front the timing script uses, so the profile shows
+// the page as Render serves it. The app must have been built and started for that origin (see measure-storefront-load.mjs).
+const front = h2Port ? await startH2Front(h2Port, upstream) : null;
+// PERF_CHROMIUM_PATH points at an already installed browser, for a machine where the one Playwright expects is missing.
+const browser = await chromium.launch(process.env.PERF_CHROMIUM_PATH ? { executablePath: process.env.PERF_CHROMIUM_PATH } : {});
 const context = await browser.newContext({ ...devices['Pixel 5'], baseURL, ignoreHTTPSErrors: true });
 const page = await context.newPage();
 const cdp = await context.newCDPSession(page);
@@ -91,3 +97,5 @@ console.log(JSON.stringify({
   selfTimeByFunctionMs: rank(self),
 }, null, 2));
 await browser.close();
+front?.close();
+process.exit(0);
