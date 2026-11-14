@@ -224,6 +224,9 @@ tests at production or shared customer data.
 | --- | --- | --- |
 | `NODE_ENV` | Always | Set explicitly to `development`, `test`, or `production`. |
 | `DATABASE_URL` | Always | PostgreSQL connection for the API. |
+| `SHOPNIRO_ENV` | Deployed services | `staging` or `production`; a deployed server will not start without it. |
+| `PAYMENT_MODE` | Staging | `sandbox-demo` on staging; production must not use it. |
+| `FRONTEND_URL` or `SHOPNIRO_PUBLIC_URL` | Deployed services | An HTTPS origin with no path or trailing slash. |
 | `JWT_SECRET` | Always | Signs session tokens; minimum 32 characters. |
 | `CRON_SECRET` | Production and scheduled jobs | Authorizes protected scheduler requests. |
 | `SSLCOMMERZ_STORE_ID`, `SSLCOMMERZ_STORE_PASSWORD`, `SSLCOMMERZ_IPN_TOKEN` | Production online payments | Gateway credentials and callback verification. |
@@ -236,8 +239,9 @@ tests at production or shared customer data.
 | `ONLINE_PAYMENTS_ENABLED` | Optional | Set to `false` to disable new online payment sessions while keeping cash on delivery available. |
 
 This is a summary, not the complete configuration. See
-[`.env.example`](./.env.example) and the
-[deployment guide](./README-DEPLOY.md). The payment simulator is restricted to
+[`.env.example`](./.env.example), the
+[deployment guide](./README-DEPLOY.md) and the
+[Render settings checklist](./docs/render-service-settings.md). The payment simulator is restricted to
 development and test environments.
 
 ### Tests
