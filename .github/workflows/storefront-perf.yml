@@ -20,8 +20,8 @@ on:
       gate_method:
         description: Which timing method "enforce" fails on (click includes Playwright's own polling, in-page times the page)
         type: choice
-        options: [click, in-page]
-        default: click
+        options: [in-page, click]
+        default: in-page
   schedule:
     - cron: "17 3 * * 1"
 
@@ -81,7 +81,7 @@ jobs:
           RUNS: ${{ inputs.runs || '9' }}
           BUDGET_MS: ${{ inputs.budget_ms || '3000' }}
           ENFORCE: ${{ inputs.enforce && 'true' || 'false' }}
-          GATE_METHOD: ${{ inputs.gate_method || 'click' }}
+          GATE_METHOD: ${{ inputs.gate_method || 'in-page' }}
         run: |
           export NODE_ENV=production PORT=3200 APP_URL=https://127.0.0.1:3443 CORS_ORIGINS=https://127.0.0.1:3443
           export JWT_SECRET="$(head -c 24 /dev/urandom | base64)$(head -c 24 /dev/urandom | base64)"
@@ -109,8 +109,7 @@ jobs:
             echo
             echo "Budget: $((BUDGET_MS / 1000)) s for the median and the slowest run. Within budget: click $(node -e "console.log(require('./storefront-perf.json').withinBudget)"), in-page $(node -e "console.log(require('./storefront-perf-in-page.json').withinBudget)"). Enforcement uses: $GATE_METHOD."
           } >> "$GITHUB_STEP_SUMMARY"
-          status=$click_status
-          if [ "$GATE_METHOD" = "in-page" ]; then status=$page_status; fi
+          if [ "$GATE_METHOD" = "click" ]; then status=$click_status; else status=$page_status; fi
           if [ "$status" -ne 0 ] && [ "$ENFORCE" = "true" ]; then exit "$status"; fi
 
       - name: Upload the numbers
