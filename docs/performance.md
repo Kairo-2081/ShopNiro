@@ -27,7 +27,10 @@ Two ways to time the tap. `--method click` (the default) is Playwright's `click(
 Playwright's own actionability checks, which run on the throttled main thread and cost a guest about 0.8 s that no visitor
 pays. `--method in-page` stamps `performance.now()` marks from inside the page (button present, tap, card present) and
 taps the moment the button exists, so it measures the page and not the harness. Report both; treat `click` as the upper
-bound. Which one gates the budget is a decision for the owner, not for this document.
+bound. **The budget gate uses `in-page`** (the weekly workflow's `gate_method` input defaults to it; pick `click` for a
+stricter run). The reason is that `click` mostly measures the test tool's own overhead on the throttled processor. The
+risk is that `in-page` is too optimistic, which is why `click` is still reported every week and why a check on a real
+phone is still owed.
 
 Why the HTTP/2 front: Render serves the site over HTTP/2, where twenty small requests share one connection. A plain Node
 server speaks HTTP/1.1, where the browser queues requests beyond six connections, which makes a page look about 0.3 s
@@ -136,7 +139,9 @@ earlier session).
   English dictionary 16, icons 7). Every heavy screen is already lazy. The one large piece left is the English dictionary
   (52 kB raw), which would need splitting by screen, a bigger and riskier change that was not made.
 - The build-time check counts first-load JavaScript and CSS at **149 of 150 kB gzipped**, so the next feature that adds to
-  the entry will fail the build. That is a limit on `main`, not a result of this change.
+  the entry will fail the build. That is a limit on `main`, not a result of this change. **The 150 kB limit stays.** A
+  change that trips it has to justify its bytes or cut an equal amount (the English dictionary split is the obvious
+  candidate); raise the limit only on purpose, accepting a slower first page.
 
 ## What is left
 
