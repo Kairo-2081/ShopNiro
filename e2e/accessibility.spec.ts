@@ -92,6 +92,7 @@ test('public and role-specific pages have no critical or serious axe violations'
 
   const scanPage = async (page: import('@playwright/test').Page, label: string) => {
     const scanTheme = async (theme: string) => {
+      await settleThemeTransition(page);
       const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
       const violations = results.violations
         .filter((violation) => violation.impact === 'critical' || violation.impact === 'serious')
@@ -278,6 +279,8 @@ test('reduced motion stops the orbit globe animation without hiding its content'
     const globe = page.locator('canvas');
     console.log('Waiting for the orbit globe canvas.');
     await expect(globe).toBeVisible();
+    // The globe is drawn at an idle moment (up to 700 ms after load) and fades in only once it has been drawn, so
+    // an earlier read would compare the blank canvas with the finished picture and mistake that for motion.
     await expect(globe).toHaveCSS('opacity', '1');
     const initialFrame = await globe.evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL());
     await page.waitForTimeout(150);
