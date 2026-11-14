@@ -23,6 +23,12 @@ VITE_API_URL=https://127.0.0.1:3443 NODE_ENV=production npm run build
 npm run perf:storefront -- --url http://127.0.0.1:3200 --h2-port 3443 --runs 9
 ```
 
+Two ways to time the tap. `--method click` (the default) is Playwright's `click()` and a wait for the card, so it includes
+Playwright's own actionability checks, which run on the throttled main thread and cost a guest about 0.8 s that no visitor
+pays. `--method in-page` stamps `performance.now()` marks from inside the page (button present, tap, card present) and
+taps the moment the button exists, so it measures the page and not the harness. Report both; treat `click` as the upper
+bound. Which one gates the budget is a decision for the owner, not for this document.
+
 Why the HTTP/2 front: Render serves the site over HTTP/2, where twenty small requests share one connection. A plain Node
 server speaks HTTP/1.1, where the browser queues requests beyond six connections, which makes a page look about 0.3 s
 slower than it is in production. `--h2-port` puts a self-signed HTTP/2 server in front of the app, and gives every run its
@@ -43,7 +49,8 @@ them) and the CPU profiler's self time grouped by bundle file and function. Buil
 origin you pass to the script, or the page will call the production API and never show a product.
 
 The profile's own sampling slows the page, and Playwright's polling for the product shows up as native `check` time, so
-read it for proportions, not absolute milliseconds.
+read it for proportions, not absolute milliseconds. Pass `--h2-port 3443` to run it behind the same HTTP/2 front as the
+measurement. Set `PERF_CHROMIUM_PATH` to use a Chromium build other than the one Playwright expects.
 
 ## Where it stands
 
@@ -70,6 +77,34 @@ What that does and does not say:
   **not met** for guests. Earlier sessions gave the returning customer a slowest run of 3.06 s and 3.15 s, so one clean
   session does not prove it is safe. These are lab numbers on a laptop with throttling, not measurements of real visitors.
 
+### Head start (this change), 15 runs each, Chromium 1248 behind the HTTP/2 front, same session
+
+Median / slowest, in milliseconds.
+
+| Build | Method | Guest | Returning customer | Transferred |
+| --- | --- | --- | --- | --- |
+| `main` (`e54a15f`) | click | 2802 / 3038 | 2473 / 2815 | 226 / 221 kB |
+| `main` (`e54a15f`) | in-page | 2069 / 2451 | 2553 / 2700 | 224 / 221 kB |
+| Head start | in-page | 1996 / 2091 | 2372 / 2493 | 224 / 221 kB |
+| Head start + one shared `/api/auth/me` | in-page | 1886 / 2062 | 2273 / 2408 | 224 / 220 kB |
+| Head start + one shared `/api/auth/me` | click | 2872 / 3112 | 2502 / 2673 | 226 / 220 kB |
+
+What that says, and what it does not:
+
+- By the in-page method, which times the page, both a guest and a returning customer are **inside the budget at the median
+  and at the slowest run**, with about 0.9 s of headroom for a guest and 0.6 s for a returning customer.
+- By the click method the guest is **still over** at the slowest run (3.11 s) and the median did not move (2.80 to
+  2.87 s is noise). The click method's guest figure is dominated by Playwright's polling on the throttled thread, which the
+  change cannot remove. If the budget is gated on `click`, it is not met for guests.
+- Why the head start helps: a guest trace showed the entry code running by about 1.1 s but the public requests only
+  starting at about 1.74 s, from an effect after the landing page rendered. They now start when the entry code runs, so
+  the data is in by the time the guest taps. A tap after the data is in takes about 0.3 s to the first card, against about
+  0.7 s for a tap that has to wait for it.
+- The sign-in check used to be sent twice at once on every load, by the head start's request and by the page-validation
+  effect. The two now share one request.
+- All of it is a laptop with throttling, one session, not real visitors. Two runs from different sessions have differed
+  by 0.1 to 0.4 s before, so treat gaps under that as noise.
+
 ## What the profile shows
 
 One cold guest run with `npm run perf:profile` (HTTP/1.1, so read it for proportions): the first card at 2.8 to 3.4 s, and
@@ -81,7 +116,8 @@ function left to fix: the cost is React committing the screen change in a few la
 
 ## What is left
 
-Most of the remaining time is the phone's processor: in a guest trace the products' data arrives by about 1.1 s but the
-first card is not drawn until about 2.8 s, and React rendering of the landing and storefront trees dominates the main
-thread in between. The next candidates are to render less of the landing page before the guest has asked for it, to split
+Most of the remaining time is the phone's processor: React's own code is about 400 ms of self time and the app's entry
+bundle about 125 ms, and a 289 ms long frame lands when the data arrives on the landing page. Tried and not done: the
+54 kB logo already loads at low priority after the first card, so it does not sit on the path. Not tried yet: Brotli
+precompression (the server uses gzip), wrapping the data-arrival state updates in a transition, and fewer entry bytes. The next candidates are to render less of the landing page before the guest has asked for it, to split
 the storefront's first render so the first row of cards paints before the rest, and to check the numbers on a real phone.

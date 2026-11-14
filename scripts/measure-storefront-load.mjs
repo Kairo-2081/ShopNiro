@@ -19,12 +19,7 @@
 // down, 750 kbps up, a CPU four times slower than this machine. The budget applies to the median AND the slowest run,
 // so one lucky run cannot pass and one unlucky run cannot hide.
 import { chromium, devices, request } from '@playwright/test';
-import { createSecureServer } from 'node:http2';
-import { request as httpRequest } from 'node:http';
-import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
+import { startH2Front } from './lib/h2-front.mjs';
 
 const args = process.argv.slice(2);
 const option = (name, fallback) => {
@@ -37,6 +32,14 @@ const baseURL = h2Port ? `https://127.0.0.1:${h2Port}` : upstreamURL;
 const runs = Number(option('runs', '7'));
 const budgetMs = Number(option('budget-ms', '3000'));
 const productName = option('product', 'E2E Linen Blanket');
+// How the guest's tap and the first card are timed:
+//   click    Playwright finds the button, waits until it is stable and can receive the tap, clicks, then polls for the
+//            card. On the throttled processor those waits are slow while the page is busy, so this is a strict upper bound
+//            that includes the test tool's own time. It is the original method and stays the default.
+//   in-page  the page itself taps the button the moment it exists and stamps the time the card appears, so nothing of the
+//            tool runs on the throttled thread. Times are from the start of navigation.
+const method = option('method', 'click');
+if (!['click', 'in-page'].includes(method)) throw new Error(`--method must be click or in-page, not ${method}`);
 // The seeded customer from e2e/seed.ts. The script signs in once through the real login API, so it works against any
 // production build whatever secret it was started with.
 const customerLogin = { email: option('customer', 'e2e-customer'), password: option('password', 'E2e-password-1!'), role: 'customer' };
@@ -53,38 +56,6 @@ const PROFILE = {
   uploadThroughput: (750 * 1024) / 8,
   cpuSlowdown: 4,
 };
-
-// A self-signed HTTP/2 front that forwards every request to the HTTP/1.1 app, like the edge in front of Render.
-function startH2Front(port, target) {
-  const dir = mkdtempSync(path.join(tmpdir(), 'shopniro-h2-'));
-  const key = path.join(dir, 'key.pem');
-  const cert = path.join(dir, 'cert.pem');
-  execFileSync('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-keyout', key, '-out', cert, '-days', '1',
-    '-subj', '/CN=127.0.0.1', '-addext', 'subjectAltName=IP:127.0.0.1'], { stdio: 'ignore' });
-  const upstream = new URL(target);
-  const hopByHop = new Set(['connection', 'keep-alive', 'transfer-encoding', 'upgrade', 'proxy-connection']);
-  const server = createSecureServer({ key: readFileSync(key), cert: readFileSync(cert), allowHTTP1: true });
-  server.on('request', (req, res) => {
-    const headers = {};
-    for (const [name, value] of Object.entries(req.headers)) if (!name.startsWith(':') && !hopByHop.has(name)) headers[name] = value;
-    headers.host = req.headers[':authority'] || req.headers.host || `127.0.0.1:${port}`;
-    headers['x-forwarded-proto'] = 'https';
-    // Each run is a separate visitor. The app trusts one proxy hop (as it does behind Render), so a fresh forwarded
-    // address per run gives each its own rate-limit bucket, as real visitors have, instead of sharing one.
-    const run = Number(headers['x-measure-run'] ?? 0);
-    delete headers['x-measure-run'];
-    headers['x-forwarded-for'] = `10.77.${(run >> 8) & 255}.${run & 255}`;
-    const forward = httpRequest({ host: upstream.hostname, port: upstream.port, method: req.method, path: req.url, headers }, (reply) => {
-      const out = {};
-      for (const [name, value] of Object.entries(reply.headers)) if (!hopByHop.has(name)) out[name] = value;
-      res.writeHead(reply.statusCode ?? 502, out);
-      reply.pipe(res);
-    });
-    forward.on('error', () => { if (!res.headersSent) res.writeHead(502); res.end(); });
-    req.pipe(forward);
-  });
-  return new Promise((resolve) => server.listen(port, '127.0.0.1', () => resolve(server)));
-}
 
 const median = (values) => {
   const sorted = [...values].sort((a, b) => a - b);
@@ -136,28 +107,57 @@ async function oneRun(browser, scenario, returningState) {
     }).observe({ type: 'largest-contentful-paint', buffered: true });
   });
 
+  if (method === 'in-page') {
+    await page.addInitScript(({ name, guest }) => {
+      window.__marks = {};
+      const mark = (key) => { if (window.__marks[key] === undefined) window.__marks[key] = performance.now(); };
+      const check = () => {
+        if (guest && window.__marks.tap === undefined) {
+          const button = [...document.querySelectorAll('button')].find((candidate) => /Explore Marketplace/i.test(candidate.textContent || ''));
+          if (button) { mark('button'); mark('tap'); button.click(); }
+        }
+        if ((!guest || window.__marks.tap !== undefined) && (document.body?.innerText || '').includes(name)) mark('product');
+      };
+      new MutationObserver(check).observe(document, { childList: true, subtree: true, characterData: true });
+    }, { name: productName, guest: scenario === 'guest' });
+  }
+
   const started = performance.now();
   await page.goto('/', { waitUntil: 'commit' });
-  if (scenario === 'guest') {
-    await page.getByRole('button', { name: 'Explore Marketplace' }).click();
+  let elapsed;
+  let tapMs = 0;
+  if (method === 'in-page') {
+    try {
+      await page.waitForFunction(() => window.__marks && window.__marks.product !== undefined, null, { timeout: 60_000, polling: 250 });
+    } catch (error) {
+      throw new Error(`${scenario}: "${productName}" never appeared (page text starts: ${(await page.evaluate(() => document.body.innerText).catch(() => '')).slice(0, 160).replace(/\s+/g, ' ')}): ${error.message.split('\n')[0]}`);
+    }
+    const marks = await page.evaluate(() => window.__marks);
+    elapsed = marks.product;
+    tapMs = Math.round(marks.tap ?? 0);
+  } else {
+    if (scenario === 'guest') {
+      await page.getByRole('button', { name: 'Explore Marketplace' }).click();
+    }
+    try {
+      await page.getByText(productName, { exact: false }).first().waitFor({ state: 'visible', timeout: 60_000 });
+    } catch (error) {
+      throw new Error(`${scenario}: "${productName}" never appeared (page text starts: ${(await page.evaluate(() => document.body.innerText).catch(() => '')).slice(0, 160).replace(/\s+/g, ' ')}): ${error.message.split('\n')[0]}`);
+    }
+    elapsed = performance.now() - started;
   }
-  try {
-    await page.getByText(productName, { exact: false }).first().waitFor({ state: 'visible', timeout: 60_000 });
-  } catch (error) {
-    throw new Error(`${scenario}: "${productName}" never appeared (page text starts: ${(await page.evaluate(() => document.body.innerText).catch(() => '')).slice(0, 160).replace(/\s+/g, ' ')}): ${error.message.split('\n')[0]}`);
-  }
-  const elapsed = performance.now() - started;
   const lcp = await page.evaluate(() => window.__lcp).catch(() => 0);
   // The page keeps calling the API for a moment after the first product shows. Let those finish so they are counted.
   await sleep(1500);
   await context.close();
   if (rateLimited > 0) throw new Error(`${scenario}: the server answered ${rateLimited} API call(s) with 429, so this run measured an error page. Wait a minute and run again.`);
-  return { elapsedMs: Math.round(elapsed), lcpMs: Math.round(lcp), transferredKb: Math.round(transferred / 1024), apiCalls, wallMs: Math.round(performance.now() - started) };
+  return { elapsedMs: Math.round(elapsed), tapMs, lcpMs: Math.round(lcp), transferredKb: Math.round(transferred / 1024), apiCalls, wallMs: Math.round(performance.now() - started) };
 }
 
 const front = h2Port ? await startH2Front(h2Port, upstreamURL) : null;
-const browser = await chromium.launch();
-const report = { baseURL, protocol: h2Port ? 'h2' : 'http/1.1', runs, budgetMs, profile: PROFILE, scenarios: {} };
+// PERF_CHROMIUM_PATH points at an already installed browser, for a machine where the one Playwright expects is missing.
+const browser = await chromium.launch(process.env.PERF_CHROMIUM_PATH ? { executablePath: process.env.PERF_CHROMIUM_PATH } : {});
+const report = { baseURL, protocol: h2Port ? 'h2' : 'http/1.1', method, runs, budgetMs, profile: PROFILE, scenarios: {} };
 let failed = false;
 try {
   const returningState = await signedInState();
@@ -178,6 +178,7 @@ try {
       medianMs: Math.round(median(times)),
       worstMs: Math.max(...times),
       bestMs: Math.min(...times),
+      medianTapMs: Math.round(median(results.map((r) => r.tapMs))),
       medianLcpMs: Math.round(median(results.map((r) => r.lcpMs))),
       medianTransferredKb: Math.round(median(results.map((r) => r.transferredKb))),
       runsMs: times,

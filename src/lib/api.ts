@@ -97,6 +97,9 @@ function isPublicEndpoint(url: string, method: string = 'GET'): boolean {
   return false;
 }
 
+type AuthCheck = { authenticated: boolean; user?: any; role?: UserRole; entity?: any; profileComplete?: boolean; profileMissingFields?: string[] };
+let pendingAuthCheck: Promise<AuthCheck> | null = null;
+
 async function fetchJson<T>(url: string, options?: RequestInit, handleAuthErrors = true): Promise<T> {
   const method = (options?.method || 'GET').toUpperCase();
   const isPublic = isPublicEndpoint(url, method);
@@ -552,7 +555,9 @@ export const api = {
   // Validate Authentication for Page Navigation & HTTP Gatekeeping
   validateAuth: async (options?: { throwOnNetworkError?: boolean }): Promise<{ authenticated: boolean; user?: any; role?: UserRole; entity?: any; profileComplete?: boolean; profileMissingFields?: string[] }> => {
     try {
-      const res = await fetchJson<{ authenticated: boolean; user?: any; role?: UserRole; entity?: any; profileComplete?: boolean; profileMissingFields?: string[] }>('/api/auth/me', undefined, false);
+      // Callers that ask while the same check is still travelling share it instead of repeating it.
+      pendingAuthCheck ??= fetchJson<AuthCheck>('/api/auth/me', undefined, false).finally(() => { pendingAuthCheck = null; });
+      const res = await pendingAuthCheck;
       hasValidatedSession = res.authenticated;
       return res;
     } catch (error) {
