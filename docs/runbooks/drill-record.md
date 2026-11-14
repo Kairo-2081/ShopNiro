@@ -11,8 +11,10 @@ Some items cannot be closed by writing code or documents. They need a person wit
 | Online payments switched off and back on, timed on Render | Someone who did not write the switch, on **staging**, with a stopwatch | **Not verified** |
 | Staging deploy and rollback rehearsed end to end | The same independent person | **Not verified** |
 | The age private key that opens backups is held by a named person and a restore has been rehearsed | The key holder, a new empty database | **Not verified** |
-| GitHub `production` Environment has a required reviewer and is limited to `main` | A repository owner | **Not verified** |
+| A `production` branch exists, and the GitHub `production` Environment has a required reviewer and allows only that branch | A repository owner ([steps](../launch-checks/production-gates.md)) | **Not verified** |
 | A runbook followed through by someone who did not write the code | Any operator | **Not verified** |
+
+The launch-day checks (a real phone, a screen reader, the first live payment) are tracked separately in [Launch checks](../launch-checks/README.md).
 
 ## How to record a drill
 
