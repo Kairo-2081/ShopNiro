@@ -17,6 +17,11 @@ on:
         description: Fail the run when the budget is missed
         type: boolean
         default: false
+      gate_method:
+        description: Which timing method "enforce" fails on (click includes Playwright's own polling, in-page times the page)
+        type: choice
+        options: [click, in-page]
+        default: click
   schedule:
     - cron: "17 3 * * 1"
 
@@ -76,6 +81,7 @@ jobs:
           RUNS: ${{ inputs.runs || '9' }}
           BUDGET_MS: ${{ inputs.budget_ms || '3000' }}
           ENFORCE: ${{ inputs.enforce && 'true' || 'false' }}
+          GATE_METHOD: ${{ inputs.gate_method || 'click' }}
         run: |
           export NODE_ENV=production PORT=3200 APP_URL=https://127.0.0.1:3443 CORS_ORIGINS=https://127.0.0.1:3443
           export JWT_SECRET="$(head -c 24 /dev/urandom | base64)$(head -c 24 /dev/urandom | base64)"
@@ -85,18 +91,26 @@ jobs:
           export SHOPNIRO_ENV=staging FRONTEND_URL=https://127.0.0.1:3443 PAYMENT_MODE=sandbox-demo
           node dist/server.cjs > server.log 2>&1 &
           for _ in $(seq 1 30); do curl -fs http://127.0.0.1:3200/api/ready > /dev/null && break; sleep 1; done
-          status=0
-          node scripts/measure-storefront-load.mjs --url http://127.0.0.1:3200 --h2-port 3443 \
-            --runs "$RUNS" --budget-ms "$BUDGET_MS" > storefront-perf.json || status=$?
+          # Both methods run: "click" is Playwright's click and includes its own polling on the throttled thread (an upper
+          # bound), "in-page" times the page from inside it. The summary shows both; only GATE_METHOD can fail the run.
+          click_status=0; page_status=0
+          node scripts/measure-storefront-load.mjs --url http://127.0.0.1:3200 --h2-port 3443 --method click \
+            --runs "$RUNS" --budget-ms "$BUDGET_MS" > storefront-perf.json || click_status=$?
+          node scripts/measure-storefront-load.mjs --url http://127.0.0.1:3200 --h2-port 3443 --method in-page \
+            --runs "$RUNS" --budget-ms "$BUDGET_MS" > storefront-perf-in-page.json || page_status=$?
           {
             echo '### First product card on emulated mobile 4G (4x slower CPU)'
             echo
-            echo '| Scenario | Median | Slowest | Fastest | Transferred |'
-            echo '| --- | --- | --- | --- | --- |'
-            node -e "const r=require('./storefront-perf.json');for(const [k,v] of Object.entries(r.scenarios))console.log('| '+k+' | '+(v.medianMs/1000).toFixed(2)+' s | '+(v.worstMs/1000).toFixed(2)+' s | '+(v.bestMs/1000).toFixed(2)+' s | '+v.medianTransferredKb+' kB |')"
+            echo '| Method | Scenario | Median | Slowest | Fastest | Transferred |'
+            echo '| --- | --- | --- | --- | --- | --- |'
+            for f in storefront-perf.json storefront-perf-in-page.json; do
+              node -e "const r=require('./$f');for(const [k,v] of Object.entries(r.scenarios))console.log('| '+r.method+' | '+k+' | '+(v.medianMs/1000).toFixed(2)+' s | '+(v.worstMs/1000).toFixed(2)+' s | '+(v.bestMs/1000).toFixed(2)+' s | '+v.medianTransferredKb+' kB |')"
+            done
             echo
-            echo "Budget: $((BUDGET_MS / 1000)) s for the median and the slowest run. Within budget: $(node -e "console.log(require('./storefront-perf.json').withinBudget)")"
+            echo "Budget: $((BUDGET_MS / 1000)) s for the median and the slowest run. Within budget: click $(node -e "console.log(require('./storefront-perf.json').withinBudget)"), in-page $(node -e "console.log(require('./storefront-perf-in-page.json').withinBudget)"). Enforcement uses: $GATE_METHOD."
           } >> "$GITHUB_STEP_SUMMARY"
+          status=$click_status
+          if [ "$GATE_METHOD" = "in-page" ]; then status=$page_status; fi
           if [ "$status" -ne 0 ] && [ "$ENFORCE" = "true" ]; then exit "$status"; fi
 
       - name: Upload the numbers
@@ -106,5 +120,6 @@ jobs:
           name: storefront-perf
           path: |
             storefront-perf.json
+            storefront-perf-in-page.json
             server.log
           retention-days: 30
