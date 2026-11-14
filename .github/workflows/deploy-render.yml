@@ -77,6 +77,11 @@ jobs:
             echo "::error::API_URL must be an HTTPS origin without a trailing slash."
             exit 1
           fi
+          # Catch a mistyped Render service id here with a message, not later as a bare curl exit code 3 ("malformed URL").
+          if [[ ! "$RENDER_SERVICE_ID" =~ ^srv-[A-Za-z0-9]+$ ]]; then
+            echo "::error::RENDER_SERVICE_ID must be exactly 'srv-' followed by letters and digits, with no spaces, newline, slash or URL around it. Re-enter the variable in the '$target' Environment."
+            exit 1
+          fi
           runs="$(curl -fsS -H "Authorization: Bearer $GH_TOKEN" \
             -H "Accept: application/vnd.github+json" \
             "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$GITHUB_SHA&status=completed&per_page=50")"
