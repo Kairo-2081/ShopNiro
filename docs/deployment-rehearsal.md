@@ -41,7 +41,7 @@ Vercel is configured as a **static frontend only**. Configure its build-time `VI
 
 An operator other than the person who implemented the release/rollback workflow must perform this drill, with an observer:
 
-1. Verify the dashboard shows the staging Render service, paid instance, `/api/ready` health check, disabled auto-deploys, and staging-only database and sandbox gateway credentials. Stop if any identity is ambiguous.
+1. Verify the dashboard shows the staging Render service, instance type (a free instance is allowed and shows a warning on every deploy run; see [Render instance type](launch-checks/render-instance-type.md)), `/api/ready` health check, disabled auto-deploys, and staging-only database and sandbox gateway credentials. Stop if any identity is ambiguous.
 2. Verify the commit on `staging` has a successful CI push run. Confirm `MIGRATE_DATABASE_URL`, `RENDER_SERVICE_ID`, `RENDER_API_KEY`, and `API_URL` are configured in the GitHub `staging` Environment.
 3. Record the current live Render deploy ID as the known-good rollback target.
 4. Dispatch **Deploy Render service** from the `staging` branch with target `staging`:
