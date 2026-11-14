@@ -77,6 +77,11 @@ jobs:
             echo "::error::API_URL must be an HTTPS origin without a trailing slash."
             exit 1
           fi
+          # Catch a mistyped Render service id here with a message, not later as a bare curl exit code 3 ("malformed URL").
+          if [[ ! "$RENDER_SERVICE_ID" =~ ^srv-[A-Za-z0-9]+$ ]]; then
+            echo "::error::RENDER_SERVICE_ID must be exactly 'srv-' followed by letters and digits, with no spaces, newline, slash or URL around it. Re-enter the variable in the '$target' Environment."
+            exit 1
+          fi
           runs="$(curl -fsS -H "Authorization: Bearer $GH_TOKEN" \
             -H "Accept: application/vnd.github+json" \
             "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/workflows/ci.yml/runs?head_sha=$GITHUB_SHA&status=completed&per_page=50")"
@@ -103,9 +108,13 @@ jobs:
             exit 1
           fi
           plan="$(jq -r '.serviceDetails.plan // empty' <<< "$service")"
-          if [[ -z "$plan" || "$plan" == "free" ]]; then
-            echo "::error::The Render API service must use a paid instance; refusing to deploy to an unverified/free plan."
+          if [[ -z "$plan" ]]; then
+            echo "::error::Could not read the Render service's instance type; refusing to deploy to an unverified plan."
             exit 1
+          fi
+          if [[ "$plan" == "free" ]]; then
+            # The owner chose to allow free instances. It still passes loudly, so the trade-off is on every run's page.
+            echo "::warning::The '$target' Render service is on the free plan. It sleeps when idle, restarts on every deploy, has a small CPU and memory share, and free instance hours are shared across the workspace, so a service kept awake all month can be suspended once the hours run out. Moving production to a paid instance before taking real payments is recommended."
           fi
           auto_deploy="$(jq -r '.autoDeployTrigger // empty' <<< "$service")"
           legacy_auto_deploy="$(jq -r '.autoDeploy // empty' <<< "$service")"
