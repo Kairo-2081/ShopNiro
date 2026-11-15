@@ -156,6 +156,31 @@ the captures had no internet for map tiles.
 </tr>
 </table>
 
+#### Seller
+
+<table>
+<tr>
+<td width="50%" valign="top">
+<img src="./.github/assets/readme/app-seller-new-product.jpg" alt="Create New Product Listing dialog with title, category, price, stock, voucher code and product images" width="100%" />
+<p><b>List a product.</b> Title, category, price, stock, an optional voucher and up to seven pictures.</p>
+</td>
+<td width="50%" valign="top">
+<img src="./.github/assets/readme/app-seller-catalog.jpg" alt="Seller catalogue for Banani Craft House with an Approved badge, totals and a product table with stock and status" width="100%" />
+<p><b>Run the catalogue.</b> An approved store sees its listings, stock and status, and totals for revenue and orders.</p>
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+<img src="./.github/assets/readme/app-seller-fulfillment.jpg" alt="Fulfillment orders list with a cash-on-delivery order and a fulfilment status selector set to Shipped" width="100%" />
+<p><b>Fulfil orders.</b> Each order shows its items and destination; the seller moves it to Shipped and tracking starts.</p>
+</td>
+<td width="50%" valign="top">
+<img src="./.github/assets/readme/app-seller-analytics.jpg" alt="Sales analytics with net sales, units sold, average order value, monthly sales bars and top products" width="100%" />
+<p><b>Read the numbers.</b> Net sales, units, average order value, monthly sales and top products.</p>
+</td>
+</tr>
+</table>
+
 ## How it works
 
 1. A customer finds an in-stock product from an approved seller and adds it to
