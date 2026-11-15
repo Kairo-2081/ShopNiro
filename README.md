@@ -691,10 +691,12 @@ electron/             Desktop application wrapper
 - **Legal review:** Legal copy, business disclosures, and retention decisions
   are provisional and still need qualified Bangladesh legal and accounting
   review. See the [legal review checklist](./docs/legal-review.md).
-- **Evidence to add:** Capture seller orders and wallet, admin approvals, an
-  assistant response to a real query, checkout options, order tracking, and
-  rider delivery from seeded staging data. Record a 60–90 second order
-  walkthrough from that same safe environment.
+- **Evidence still missing:** the screens above are sample data from a local
+  database. Still to add: a capture of the AI assistant answering a real query,
+  and a 60–90 second order walkthrough recorded from staging.
+- **Before real money moves:** a real-phone check of the storefront, a
+  screen-reader pass, and one controlled low-value live payment with a refund.
+  The checklists are in [`docs/launch-checks`](./docs/launch-checks/README.md).
 - **Demo access:** Publish customer, seller, and rider demo accounts only after
   the owner provisions and verifies them. Never publish admin credentials.
 - **Operations:** Verify the staging and production payment modes and complete
