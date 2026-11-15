@@ -743,7 +743,7 @@ export const bengaliMessages: Record<MessageKey, string> = {
     faqDeliveryCodeQuestion: 'ডেলিভারি নিশ্চিতকরণ কীভাবে কাজ করে?',
     faqDeliveryCodeAnswer: 'রাইডার ছয়-অঙ্কের কোড বললে ক্রেতা সেটি লিখে অর্ডার গ্রহণ নিশ্চিত করেন।',
     faqCancelReturnQuestion: 'আমি কি অর্ডার বাতিল বা ফেরত দিতে পারব?',
-    faqCancelReturnAnswer: 'বর্তমান নীতি ও প্রক্রিয়া দেখতে রিটার্ন ও ডেলিভারি নীতি দেখুন।',
+    faqCancelReturnAnswer: 'সর্বশেষ নিয়ম ও প্রক্রিয়া জানতে বর্তমান রিটার্ন এবং ডেলিভারি নীতি দেখুন।',
     faqBecomeSellerQuestion: 'আমি কীভাবে বিক্রেতা হব?',
     faqBecomeSellerAnswer: 'বিক্রেতা হিসেবে আবেদন করুন এবং আপনার প্রথম পণ্য তালিকাভুক্ত করতে প্রশাসক যাচাইয়ের জন্য অপেক্ষা করুন।',
     faqBecomeRiderQuestion: 'আমি কীভাবে রাইডার হব?',
