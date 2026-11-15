@@ -11,6 +11,10 @@ admins, and delivery riders in one order journey.
 
 [![CI](https://github.com/Kairo-2081/ShopNiro/actions/workflows/ci.yml/badge.svg)](https://github.com/Kairo-2081/ShopNiro/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
+![TypeScript](https://img.shields.io/badge/TypeScript-React%20%2B%20Express-3178c6?logo=typescript&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169e1?logo=postgresql&logoColor=white)
+![Tests](https://img.shields.io/badge/tests-Node%20%7C%20Playwright%20%7C%20axe-brightgreen)
+![Payments](https://img.shields.io/badge/payments-sandbox%20until%20launch-orange)
 
 [Live marketplace](https://shopniro.onrender.com/) ·
 [Android APK](https://github.com/Kairo-2081/ShopNiro/releases/latest/download/ShopNiro.apk) ·
@@ -21,9 +25,15 @@ admins, and delivery riders in one order journey.
 
 </div>
 
-**On this page:** [Try it](#try-it) · [Product tour](#product-tour) ·
-[How it works](#how-it-works) · [Engineering](#engineering) ·
-[Get started](#get-started) · [Project status](#project-status-and-next-steps)
+<div align="center">
+
+[Product tour](#product-tour) · [How an order moves](#how-an-order-moves) ·
+[Payments and money](#payments-and-money) · [Data model](#data-model) ·
+[Architecture](#architecture) · [Performance](#performance) ·
+[Quality](#quality-and-safety) · [Get started](#get-started) ·
+[Status](#project-status-and-next-steps)
+
+</div>
 
 ShopNiro brings product discovery, seller approval, local payment options,
 order updates, and last-mile delivery into one marketplace. Customers can shop
