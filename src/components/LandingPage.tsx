@@ -156,7 +156,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   {theme === 'dark' ? <Sun className="h-4 w-4 text-warning-400" /> : <Moon className="h-4 w-4 text-brand-400" />}
                 </button>
               )}
-              <button type="button" onClick={onOpenLogin} className="hidden rounded-full border border-[#d0c8a5]/25 bg-white/5 px-4 py-2 text-xs font-semibold text-surface-100 transition-colors hover:bg-white/10 sm:inline-flex cursor-pointer">
+              <button
+                type="button"
+                onClick={onOpenLogin}
+                aria-label={t('signInOrManageAccounts')}
+                title={t('signInOrManageAccounts')}
+                className="hidden rounded-full border border-[#d0c8a5]/25 bg-white/5 px-4 py-2 text-xs font-semibold text-surface-100 transition-colors hover:bg-white/10 sm:inline-flex cursor-pointer"
+              >
                 {t('logIn')}
               </button>
               <button type="button" onClick={onOpenSellerSignup} className="rounded-full bg-brand-600 px-4 py-2 text-xs font-semibold text-white shadow-[0_12px_25px_rgba(91,79,41,0.35)] transition-transform hover:-translate-y-0.5 hover:bg-brand-500 cursor-pointer sm:text-sm">
