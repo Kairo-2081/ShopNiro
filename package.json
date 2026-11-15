@@ -10,7 +10,7 @@
     "build": "vite build && esbuild server/index.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs && node scripts/precompress-dist.mjs",
     "start": "node dist/server.cjs",
     "preview": "vite preview",
-    "test": "cross-env NODE_ENV=test node --import tsx --test tests/**/*.test.ts",
+    "test": "cross-env NODE_ENV=test node scripts/run-tests.mjs",
     "test:ci": "npm test",
     "e2e": "cross-env SKIP_ACCESSIBILITY_SUITE=true playwright test",
     "test:a11y": "playwright test e2e/accessibility.spec.ts",
