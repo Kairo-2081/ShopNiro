@@ -22,6 +22,8 @@ import { api } from './lib/api';
 import { getProfileCompletion } from './lib/profileCompletion';
 import { shopNiroLogoSmall } from './lib/branding';
 import { prefetchWhenIdle } from './lib/idlePrefetch';
+import { loadStorefront } from './lib/storefrontChunk';
+import { STORE_PRODUCT_PAGE_SIZE, takeStorefrontHeadStart } from './lib/storefrontHeadStart';
 import { forgetSignedIn, hasSignedInHint, rememberSignedIn } from './lib/signedInHint';
 import { LandingPage } from './components/LandingPage';
 import { MarketplaceClosing, MarketplaceStat } from './components/MarketplaceClosing';
@@ -45,7 +47,6 @@ interface AppToast {
 
 // One loader for the storefront screen, shared by React.lazy and the early fetches below, so whichever asks first starts
 // the download and the others reuse the same module.
-const loadStorefront = () => import('./components/storefront/Storefront');
 const Storefront = React.lazy(() => loadStorefront().then((module) => ({ default: module.Storefront })));
 const MarketplaceTrendsTopCharts = React.lazy(() => import('./components/storefront/MarketplaceTrendsTopCharts').then((module) => ({ default: module.MarketplaceTrendsTopCharts })));
 const ProductDetailModal = React.lazy(() => import('./components/storefront/ProductDetailModal').then((module) => ({ default: module.ProductDetailModal })));
@@ -65,7 +66,6 @@ const AdminSignupModal = React.lazy(() => import('./components/admin/AdminSignup
 const LoginModal = React.lazy(() => import('./components/LoginModal').then((module) => ({ default: module.LoginModal })));
 const GeminiChatbot = React.lazy(() => import('./components/chat/GeminiChatbot').then((module) => ({ default: module.GeminiChatbot })));
 const RiderSignupModal = React.lazy(() => import('./components/rider/RiderSignupModal').then((module) => ({ default: module.RiderSignupModal })));
-const STORE_PRODUCT_PAGE_SIZE = 24;
 
 const scrollViewportToTop = () => {
   const options: ScrollToOptions = { top: 0, behavior: 'smooth' };
@@ -393,30 +393,32 @@ export default function App() {
       // The sign-in check does not depend on the public data, so start it with the public requests instead of after them.
       // On a slow connection that removes one whole round trip from the first load. It never rejects (a failed check
       // resolves as signed out), so it is safe to leave unawaited until the storefront data is in.
-      const authRequest = api.validateAuth();
+      // On the very first load the entry code has already started these requests (see storefrontHeadStart); take them.
+      const headStart = takeStorefrontHeadStart();
+      const authRequest = headStart?.auth ?? api.validateAuth();
       // A returning customer lands on the storefront as soon as the sign-in check answers, and its code used to be
       // requested only then, so the screen waited for that download too. Start it with the data requests instead.
       // The idle prefetch above cannot do this: it is cancelled when the sign-in check switches the view to the app.
       void loadStorefront().catch(() => {});
       // Public storefront data (categories, products, reviews, approved sellers)
       const [cats, sels, productPage, revs] = await Promise.all([
-        api.getCategories().catch((err) => {
+        (headStart?.categories ?? api.getCategories()).catch((err) => {
           console.error('Error fetching categories:', err);
           storefrontFailures.push('categories');
           return [];
         }),
-        api.getSellers().catch((err) => {
+        (headStart?.sellers ?? api.getSellers()).catch((err) => {
           console.error('Error fetching sellers:', err);
           storefrontFailures.push('sellers');
           return [];
         }),
-        api.getProductsPage({ limit: STORE_PRODUCT_PAGE_SIZE, offset: 0 }).catch((err) => {
+        (headStart?.products ?? api.getProductsPage({ limit: STORE_PRODUCT_PAGE_SIZE, offset: 0 })).catch((err) => {
           console.error('Error fetching products:', err);
           storefrontFailures.push('products');
           setProductsLoadError(err instanceof Error ? err.message : 'Could not load products.');
           return { items: [], hasMore: false };
         }),
-        api.getReviews().catch((err) => {
+        (headStart?.reviews ?? api.getReviews()).catch((err) => {
           console.error('Error fetching reviews:', err);
           storefrontFailures.push('reviews');
           return [];

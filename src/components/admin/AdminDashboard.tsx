@@ -219,8 +219,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     0
   );
   const totalOrderVolume = orders.reduce((sum, order) => sum + order.Subtotal + order.Shipping_Fee, 0);
-  const avgSentiment =
-    reviews.length > 0 ? reviews.reduce((sum, r) => sum + r.Rating, 0) / reviews.length : 4.9;
+  // With no reviews there is no average: show that, instead of an invented score.
+  const avgSentiment = reviews.length > 0 ? reviews.reduce((sum, r) => sum + r.Rating, 0) / reviews.length : null;
 
   const filteredSellers = sellers.filter((s) => {
     if (sellerStatusFilter !== 'all' && s.Status !== sellerStatusFilter) return false;
@@ -239,7 +239,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     { title: 'Total Market Value', value: formatCurrency(totalMarketValue), sub: 'Current catalog stock value', accent: 'from-[#a99b72] to-[#d0c8a5]' },
     { title: 'Active Merchants', value: approvedSellers.length.toLocaleString(), sub: `Pending: ${pendingSellers.length} | Suspended: ${suspendedSellers.length}`, accent: 'from-success-500 to-teal-400' },
     { title: 'Order Throughput', value: `${orders.length.toLocaleString()} Orders`, sub: 'Live Fulfillment Synced', accent: 'from-[#77775a] to-[#a99b72]' },
-    { title: 'Review Sentiment', value: `${avgSentiment.toFixed(2)} / 5.0`, sub: `Based on ${reviews.length} reviews`, accent: 'from-warning-400 to-warning-500' },
+    { title: 'Review Sentiment', value: avgSentiment === null ? 'No reviews yet' : `${avgSentiment.toFixed(2)} / 5.0`, sub: `Based on ${reviews.length} ${reviews.length === 1 ? 'review' : 'reviews'}`, accent: 'from-warning-400 to-warning-500' },
   ];
 
   // Approving a seller needs the verification checklist, so every Approve button opens the review panel with the
