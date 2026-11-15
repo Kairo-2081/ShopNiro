@@ -109,5 +109,10 @@
         "portable"
       ]
     }
+  },
+  "overrides": {
+    "minimatch": "^11.0.0",
+    "glob": "^11.0.0",
+    "qs": "^6.16.0"
   }
 }
