@@ -417,18 +417,24 @@ been tested yet**. Method, raw tables, profile and what is left:
 [`docs/performance.md`](./docs/performance.md). Re-run it with
 `npm run perf:storefront`.
 
-## Evidence from CI
+## Quality and safety
 
-| Measure | Result |
+| Area | What is in place |
 | --- | --- |
-| Node test-runner cases | 271 in the [12 Nov 2026 CI run](https://github.com/Kairo-2081/ShopNiro/actions/runs/43311782295) |
-| Lighthouse accessibility | 100/100 on the mobile accessibility audit in that CI run |
-| Database migrations | 12 numbered PostgreSQL migrations |
+| **Tests** | 271 Node test-runner cases in the [12 Nov 2026 CI run](https://github.com/Kairo-2081/ShopNiro/actions/runs/43311782295) (more have been added since), 45 test files, and 18 Playwright browser specs, including the full order journey |
+| **Accessibility** | Lighthouse accessibility 100/100 on the mobile audit in that CI run, plus Playwright axe checks (axe reports rule violations, not a score). A screen-reader pass is still to do |
+| **API access** | Deny-by-default: only listed method and path pairs are public, and policy tests fail when one is added without the allowlist |
+| **Sessions** | App-issued JWT in an HttpOnly cookie, revocable on logout |
+| **Seller documents** | Kept in a private bucket and opened with signed links |
+| **CI checks** | Type-check, tests, bundle-size budget, `npm audit` at high severity and a secret scan on every push |
+| **Safe deploys** | Dispatch-only workflow, a database-target guard, a readiness check with automatic rollback, and a required reviewer for production |
+| **Refusing bad config** | A deployed server will not start with missing secrets, a plain-HTTP frontend URL, the payment simulator on, or sandbox payments in production |
+| **Schema safety** | Numbered, roll-forward-only migrations; a daily watch compares the live schema with one built from the migrations; nightly backups |
+| **Money safety** | Idempotent payment callbacks, an append-only ledger and a nightly reconciliation with the gateway |
 
-The Playwright accessibility suite also runs axe checks; axe reports rule
-violations rather than a single score. Payment benchmark instructions are in
-[`docs/benchmarks.md`](./docs/benchmarks.md). They use a stub gateway and local
-PostgreSQL, so their latency numbers are not production measurements.
+Payment benchmark instructions are in [`docs/benchmarks.md`](./docs/benchmarks.md).
+They use a stub gateway and local PostgreSQL, so their latency numbers are not
+production measurements.
 
 ## Engineering
 
