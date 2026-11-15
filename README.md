@@ -115,9 +115,46 @@ role selector; it does not show sign-in, checkout, payment, or rider delivery.
 
 </div>
 
-Authenticated seller, admin, assistant, checkout, tracking, and rider screens
-are not pictured yet. They need to be captured from seeded staging data, not
-production customer accounts.
+### Inside each workspace
+
+These screens are the real interface running on sample data: a throwaway local
+database seeded by the same story the browser tests run (a seller is approved,
+lists a product, a customer buys it with cash on delivery, the seller ships it,
+a rider delivers it). Names and product pictures are invented. Nothing comes
+from a production account, and [`npm run readme:screens`](./scripts/capture-readme-screens.mts)
+regenerates every image. The map panels are blank because the machine that took
+the captures had no internet for map tiles.
+
+#### Customer
+
+<table>
+<tr>
+<td width="50%" valign="top">
+<img src="./.github/assets/readme/app-customer-storefront.jpg" alt="Customer storefront catalogue with product cards showing price and an Add to Cart button" width="100%" />
+<p><b>Shop the catalogue.</b> Products from several sellers in one grid, each with its price and an add-to-cart button.</p>
+</td>
+<td width="50%" valign="top">
+<img src="./.github/assets/readme/app-customer-checkout.jpg" alt="Checkout dialog with SSLCOMMERZ, bKash and cash on delivery options, a voucher field, itemised totals and policy consent" width="100%" />
+<p><b>Check out.</b> Pick cash on delivery or an online method, apply a voucher, see the itemised total, and accept the policies before placing the order.</p>
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+<img src="./.github/assets/readme/app-customer-order-placed.jpg" alt="Order placed confirmation showing the order number and total with a View order button" width="100%" />
+<p><b>Get a confirmation.</b> The order number and total appear immediately, with a shortcut to the order.</p>
+</td>
+<td width="50%" valign="top">
+<img src="./.github/assets/readme/app-customer-orders-confirm.jpg" alt="Live delivery tracking with delivery milestones, the rider and a box to enter the rider's delivery code" width="100%" />
+<p><b>Follow the delivery.</b> Milestones, the rider and, at the door, a box for the code the rider reads out.</p>
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top">
+<img src="./.github/assets/readme/app-customer-delivered.jpg" alt="A delivered, paid cash-on-delivery order with a delivery review form" width="100%" />
+<p><b>Close the loop.</b> Entering the code marks the order delivered and paid, and opens a rating form for the delivery.</p>
+</td>
+</tr>
+</table>
 
 ## How it works
 
