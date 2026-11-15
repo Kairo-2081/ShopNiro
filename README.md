@@ -667,15 +667,23 @@ The storefront's load time on an emulated mid-range phone is measured with
 ### Project layout
 
 ```text
-src/                  React frontend
-server/               Express API, middleware, and route handlers
-db/migrations/        Numbered PostgreSQL migrations
-docs/                 API, architecture, policies, and operational guides
-e2e/                  Playwright browser tests
-tests/                Unit, integration, and route-policy tests
+src/
+  components/         React UI, split by role: admin/ seller/ rider/ customer/
+                      storefront/ tracking/ payment/ support/ chat/ landing/ legal/
+  lib/                API client, i18n (English and Bangla), shared helpers
+server/
+  routes/             20 *.routes.ts modules, mounted in index.ts
+  middleware/         auth, CSP, compression, validation, the public-route allowlist
+  services/           payments, gateway, reconciliation, email, storage
+  config/             runtime assertions that refuse unsafe configuration
+db/migrations/        12 numbered, roll-forward-only PostgreSQL migrations
+e2e/                  Playwright browser tests and the order-journey story
+tests/                Node test-runner unit and database integration tests
+scripts/              migrations, schema and drift checks, perf tools, doc generators
+docs/                 API, data model, flows, performance, launch checks, runbooks
+.github/workflows/    CI, deploy, rollback, migrate, backup, reconcile, scheduled jobs
 android/              Capacitor Android project
-electron/              Desktop application wrapper
-scripts/               Migrations, checks, and maintenance utilities
+electron/             Desktop application wrapper
 ```
 
 ## Project status and next steps
