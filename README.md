@@ -634,6 +634,23 @@ The storefront's load time on an emulated mid-range phone is measured with
 `npm run perf:storefront` and profiled with `npm run perf:profile`; see
 [`docs/performance.md`](./docs/performance.md).
 
+### Useful commands
+
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Starts the API and the web app with live reload |
+| `npm run build` / `npm start` | Builds the app, then serves the production build |
+| `npm run lint` | Type-checks the whole project (`tsc --noEmit`) |
+| `npm test` | Runs the Node test suite against `DATABASE_URL`; the two payment database files run first, one at a time |
+| `npm run e2e` | Runs the Playwright browser tests |
+| `npm run test:a11y` | Runs the axe accessibility suite |
+| `npm run migrate` / `migrate:status` | Applies numbered migrations / shows which are applied |
+| `npm run migrate:drift` | Compares a database with the one the migrations would build |
+| `npm run perf:storefront` / `perf:profile` | Measures and profiles the storefront's load time on an emulated phone |
+| `npm run bench:payments` | Payment latency and idempotency benchmark against a stub gateway |
+| `npm run docs:schema` | Regenerates [`docs/schema.md`](./docs/schema.md) from a migrated database |
+| `npm run readme:screens` | Regenerates the interface screenshots in this README from a throwaway local database |
+
 ### Project guides
 
 - [API routes](./docs/api.md)
