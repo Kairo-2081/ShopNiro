@@ -153,7 +153,13 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-[#12161D] w-full max-w-2xl rounded-3xl shadow-2xl border border-brand-100 dark:border-brand-500/20 overflow-hidden max-h-[90vh] flex flex-col my-6">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="seller-registration-title"
+        tabIndex={-1}
+        className="bg-white dark:bg-[#12161D] w-full max-w-2xl rounded-3xl shadow-2xl border border-brand-100 dark:border-brand-500/20 overflow-hidden max-h-[90vh] flex flex-col my-6"
+      >
         {/* Header */}
         <div className="px-6 py-4 border-b border-brand-100 dark:border-surface-800/80 bg-success-50/50 dark:bg-success-950/20 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -161,7 +167,7 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
               <Store className="w-5 h-5" />
             </div>
             <div>
-              <h2 className="font-bold text-surface-900 dark:text-white text-base">
+              <h2 id="seller-registration-title" className="font-bold text-surface-900 dark:text-white text-base">
                 {t('applyMerchantPartner')}
               </h2>
               <p className="text-xs text-surface-500 dark:text-surface-400">{t('joinVerifiedMerchantNetwork')}</p>
@@ -170,6 +176,8 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
           <button
             onClick={onClose}
             type="button"
+            aria-label={t('close')}
+            title={t('close')}
             className="p-2 rounded-full text-surface-400 hover:text-surface-700 dark:hover:text-surface-200 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
@@ -256,6 +264,8 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? t('hidePassword') : t('showPassword')}
+                  title={showPassword ? t('hidePassword') : t('showPassword')}
                   className="absolute right-2.5 top-3 text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 cursor-pointer"
                 >
                   {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
