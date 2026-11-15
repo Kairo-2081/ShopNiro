@@ -49,6 +49,7 @@ async function sampleData() {
     await c.query(`UPDATE riders SET name = 'Sample Rider' WHERE id = $1`, [E2E.rider.id]);
     await c.query(`UPDATE users SET email = 'owner@banani-craft.example' WHERE id = $1`, [E2E.newSeller.id]);
     await c.query(`UPDATE users SET email = 'customer@sample.example' WHERE id = $1`, [E2E.customer.id]);
+    await c.query(`UPDATE users SET username = 'banani-craft' WHERE id = $1`, [E2E.newSeller.id]);
     await c.query(`UPDATE users SET email = 'owner@dhaka-home.example' WHERE id = $1`, [E2E.seller.id]);
   });
 }
