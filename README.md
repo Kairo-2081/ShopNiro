@@ -651,15 +651,18 @@ The storefront's load time on an emulated mid-range phone is measured with
 | `npm run docs:schema` | Regenerates [`docs/schema.md`](./docs/schema.md) from a migrated database |
 | `npm run readme:screens` | Regenerates the interface screenshots in this README from a throwaway local database |
 
-### Project guides
+### Documentation map
 
-- [API routes](./docs/api.md)
-- [Database design](./docs/database-design.md) and [ER diagram](./docs/erd.md)
-- [Operational flows](./docs/flows.md)
-- [Seller and rider payouts](./docs/payouts.md)
-- [Deployment guide](./README-DEPLOY.md)
-- [Legal review and retention checklist](./docs/legal-review.md)
-- [Operational runbooks](./docs/runbooks/README.md)
+| If you want to… | Read |
+| --- | --- |
+| Call or extend the API | [`docs/api.md`](./docs/api.md) |
+| Understand the data | [`docs/database-design.md`](./docs/database-design.md), [`docs/erd.md`](./docs/erd.md) and the generated [`docs/schema.md`](./docs/schema.md) |
+| See how payments, refunds and payouts run | [`docs/flows.md`](./docs/flows.md) and [`docs/payouts.md`](./docs/payouts.md) |
+| Check performance and payment benchmarks | [`docs/performance.md`](./docs/performance.md), [`docs/benchmarks.md`](./docs/benchmarks.md) |
+| Deploy to staging or production | [`README-DEPLOY.md`](./README-DEPLOY.md), the [Render settings checklist](./docs/render-service-settings.md) and the [rehearsal record](./docs/deployment-rehearsal.md) |
+| Run an operational task | [Runbooks](./docs/runbooks/README.md) |
+| Know what must be true before launch | [Launch checks](./docs/launch-checks/README.md) |
+| See the open legal questions | [`docs/legal-review.md`](./docs/legal-review.md) |
 
 ### Project layout
 
