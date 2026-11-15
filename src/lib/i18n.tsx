@@ -746,7 +746,7 @@ const messages = {
     faqDeliveryCodeQuestion: 'How does delivery confirmation work?',
     faqDeliveryCodeAnswer: 'The rider reads a six-digit code, and the customer enters it to confirm the order was received.',
     faqCancelReturnQuestion: 'Can I cancel or return an order?',
-    faqCancelReturnAnswer: 'Review the return and cancellation policy for the current rules and process. ',
+    faqCancelReturnAnswer: 'Review the current return and cancellation policy for the latest process and rules.',
     faqBecomeSellerQuestion: 'How do I become a seller?',
     faqBecomeSellerAnswer: 'Apply as a seller and wait for admin review before listing your first product.',
     faqBecomeRiderQuestion: 'How do I become a rider?',
