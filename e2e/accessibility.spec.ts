@@ -293,7 +293,7 @@ test('reduced motion stops the orbit globe animation without hiding its content'
     await page.waitForTimeout(150);
     const settledFrame = await globe.evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL());
     expect(settledFrame).toBe(initialFrame);
-    expect(await page.locator('.animate-fade-up').first().evaluate((element) => getComputedStyle(element).animationName)).toBe('none');
+    expect(await page.locator('canvas + span[aria-hidden="true"]').evaluate((element) => getComputedStyle(element).animationName)).toBe('none');
   } finally {
     await context.close();
   }
