@@ -242,18 +242,54 @@ the captures had no internet for map tiles.
 </tr>
 </table>
 
-## How it works
+## How an order moves
 
-1. A customer finds an in-stock product from an approved seller and adds it to
-   the cart.
-2. At checkout, the customer confirms the order and selects an available
-   payment method.
-3. The seller processes the order and updates its status.
-4. The customer follows delivery updates; an assigned rider records delivery
-   progress and cash-on-delivery collection.
+One order touches all four roles. This is the path the browser test
+[`e2e/marketplace-flow.spec.ts`](./e2e/marketplace-flow.spec.ts) walks end to end.
 
-The browser journey is exercised in
-[`e2e/marketplace-flow.spec.ts`](./e2e/marketplace-flow.spec.ts).
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Seller
+    actor Admin
+    actor Customer
+    actor Rider
+    participant API as ShopNiro API
+
+    Seller->>API: Apply with identity, documents and payout account
+    Admin->>API: Review the checklist and approve the seller
+    Seller->>API: List a product with price and stock
+    Customer->>API: Add to cart, check out (COD or online)
+    API-->>Seller: Fulfilment created, status processing
+    Seller->>API: Mark the fulfilment shipped
+    Rider->>API: Claim the delivery, mark it on the way
+    API-->>Rider: Delivery code and cash amount to collect
+    Rider->>API: Confirm received, cash on delivery is recorded
+    Rider-->>Customer: Reads out the delivery code
+    Customer->>API: Enters the code, confirms delivery
+    API-->>Seller: Wallet entry for the sale
+    Customer->>API: Rates the delivery
+```
+
+### Statuses
+
+Every status below is a value the database accepts (a `CHECK` constraint), so a
+typo cannot invent a new one. The route handlers decide which moves are allowed.
+
+| Thing | Statuses, in the usual order | Notes |
+| --- | --- | --- |
+| Seller account | `pending` → `approved` · `rejected` · `suspended` | Only approved sellers can list products |
+| Rider account | `pending` → `approved` · `rejected` · `suspended` | Only approved riders can claim deliveries |
+| Order | `placed` → `processing` → `shipped` → `delivered` · `cancelled` | An order can span several sellers |
+| Seller fulfilment | `processing` → `shipped` → `delivered` · `cancelled` | One per seller in an order |
+| Rider delivery | `pending` → `accepted` → `on_the_way` → `delivered` · `cancelled` | Confirmed with the delivery code |
+| Payment | `PENDING` → `VALIDATED` → `REFUNDED` · `EXPIRED` | Online payments only |
+| Order payment status | `pending` · `paid` · `refunded` · `expired` | Shown to customers and admins |
+| Refund | `requested` → `initiating` → `submitted` → `completed` · `failed` | Sent to the gateway by a scheduled job |
+| Cancellation request | `pending` → `approved` · `rejected` | Customer asks, an admin decides |
+| Product | `active` · `inactive` · `deactivated` | |
+| Seller payout / rider withdrawal | `requested`/`pending` → `paid` · `rejected` | Settled by an admin |
+| Support request | `open` → `in_progress` → `resolved` | |
 
 ## Evidence from CI
 
