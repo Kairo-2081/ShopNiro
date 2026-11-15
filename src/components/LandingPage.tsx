@@ -1,10 +1,16 @@
-import React, { useState } from 'react';
+import React, { useMemo } from 'react';
 import { Customer, Seller, Admin } from '../types';
 import { shopNiroLogoSmall } from '../lib/branding';
 import { MarketplaceClosing, MarketplaceStat } from './MarketplaceClosing';
-import { ShoppingBag, SlidersHorizontal, User, Truck, ArrowRight, Sparkles, Users, Store, ShieldCheck, Compass, Tag, Radio, Package, Plus, Sun, Moon, Shield, BadgeCheck } from 'lucide-react';
+import { ArrowRight, BadgeCheck, Check, ChevronDown, CreditCard, MapPinned, Moon, PackageCheck, ShieldCheck, ShoppingBag, Sun } from 'lucide-react';
 import { useLocale } from '../lib/i18n';
 import { MAIN_CONTENT_ID } from './SkipLink';
+import { PolicyLinks } from './legal/PolicyLinks';
+import { BUSINESS } from './legal/business';
+import adminSellerReview from '../assets/landing/app-admin-seller-review.jpg';
+import customerCheckout from '../assets/landing/app-customer-checkout.jpg';
+import shipmentTracking from '../assets/landing/app-customer-orders-confirm.jpg';
+import riderActive from '../assets/landing/app-rider-active.jpg';
 
 const OrbitGlobe = React.lazy(() => import('./landing/OrbitGlobe').then((module) => ({ default: module.OrbitGlobe })));
 
@@ -26,11 +32,8 @@ interface LandingPageProps {
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({
-  customers,
   sellers,
   stats,
-  admin,
-  dbStatus,
   onOpenLogin,
   onEnterAsGuest,
   onOpenCustomerSignup,
@@ -40,633 +43,386 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   theme = 'dark',
   onToggleTheme,
 }) => {
-  const { t } = useLocale();
-  const [activeNavTab, setActiveNavTab] = useState<'store' | 'orders' | 'vouchers' | 'hub'>('store');
+  const { t, locale } = useLocale();
+
+  const approvedSellers = useMemo(
+    () =>
+      sellers
+        .filter((seller) => seller.Status === 'approved')
+        .sort((a, b) => a.Name.localeCompare(b.Name, undefined, { sensitivity: 'base' }))
+        .slice(0, 8),
+    [sellers],
+  );
+
+  const featureBlocks = [
+    {
+      eyebrow: t('approvedSellersOnlyEyebrow'),
+      title: t('approvedSellersOnlyTitle'),
+      description: t('approvedSellersOnlyCopy'),
+      bullets: [t('approvedSellersOnlyBullet1'), t('approvedSellersOnlyBullet2'), t('approvedSellersOnlyBullet3')],
+      image: adminSellerReview,
+      alt: t('approvedSellersOnlyAlt'),
+      caption: t('screensShowSampleData'),
+      flip: false,
+    },
+    {
+      eyebrow: t('checkoutClearEyebrow'),
+      title: t('checkoutClearTitle'),
+      description: t('checkoutClearCopy'),
+      bullets: [t('checkoutClearBullet1'), t('checkoutClearBullet2'), t('checkoutClearBullet3')],
+      image: customerCheckout,
+      alt: t('checkoutClearAlt'),
+      flip: true,
+    },
+    {
+      eyebrow: t('trackingEyebrow'),
+      title: t('trackingTitle'),
+      description: t('trackingCopy'),
+      bullets: [t('trackingBullet1'), t('trackingBullet2'), t('trackingBullet3')],
+      image: shipmentTracking,
+      alt: t('trackingAlt'),
+      flip: false,
+    },
+    {
+      eyebrow: t('deliveryCodeEyebrow'),
+      title: t('deliveryCodeTitle'),
+      description: t('deliveryCodeCopy'),
+      bullets: [t('deliveryCodeBullet1'), t('deliveryCodeBullet2'), t('deliveryCodeBullet3')],
+      image: riderActive,
+      alt: t('deliveryCodeAlt'),
+      flip: true,
+    },
+  ];
+
+  const shopCardData = [
+    { icon: CreditCard, title: t('trustPayYourWay'), text: t('trustPayYourWayCopy') },
+    { icon: PackageCheck, title: t('trustServerSideTotals'), text: t('trustServerSideTotalsCopy') },
+    { icon: MapPinned, title: t('trustDeliveryCode'), text: t('trustDeliveryCodeCopy') },
+    { icon: ShieldCheck, title: t('trustYourData'), text: <><span>{t('trustYourDataCopy')}</span> <PolicyLinks ids={['privacy']} className="font-semibold text-brand-300 underline" /></> },
+  ];
+
+  const faqItems = [
+    { q: t('faqFreeQuestion'), a: t('faqFreeAnswer') },
+    { q: t('faqHowPayQuestion'), a: t('faqHowPayAnswer') },
+    { q: t('faqSellerGenuineQuestion'), a: t('faqSellerGenuineAnswer') },
+    { q: t('faqDeliveryCodeQuestion'), a: t('faqDeliveryCodeAnswer') },
+    { q: t('faqCancelReturnQuestion'), a: <><span>{t('faqCancelReturnAnswer')}</span> <PolicyLinks ids={['refunds', 'delivery']} className="font-semibold text-brand-300 underline" /></> },
+    { q: t('faqBecomeSellerQuestion'), a: t('faqBecomeSellerAnswer') },
+    { q: t('faqBecomeRiderQuestion'), a: t('faqBecomeRiderAnswer') },
+    { q: t('faqDataSafeQuestion'), a: <><span>{t('faqDataSafeAnswer')}</span> <PolicyLinks ids={['privacy']} className="font-semibold text-brand-300 underline" /></> },
+  ];
+
+  const currentYear = new Date().getFullYear();
 
   return (
-    <div className="min-h-screen text-surface-100 font-sans pb-28 transition-colors duration-200 selection:bg-[#80734f] selection:text-white">
-      {/* Centered Mobile/Responsive Container matching the reference design */}
-      <main id={MAIN_CONTENT_ID} tabIndex={-1} className="focus:outline-none max-w-md sm:max-w-xl md:max-w-7xl mx-auto px-4 sm:px-6 md:px-8 pt-3 md:pt-5 pb-8 md:pb-12 space-y-6 md:space-y-8">
-        
-        {/* 1. Header / Navbar */}
-        <header className="flex items-center justify-between gap-3 md:gap-4 py-2.5 rounded-full md:rounded-2xl border border-[#d0c8a5]/15 bg-[#10100f]/75 backdrop-blur-xl px-3 sm:px-4 shadow-[0_12px_32px_rgba(6,6,4,0.24)]">
-          {/* Brand Logo & Name */}
-          <div className="flex items-center gap-2.5">
-            <img
-              src={shopNiroLogoSmall}
-              alt="ShopNiro"
-              className="w-10 h-10 rounded-full object-cover border border-brand-100 dark:border-surface-700 shadow-md shadow-brand-600/20"
-            />
-            <div>
-              <h1 className="font-display text-xl font-normal text-white leading-none">
-                ShopNiro
-              </h1>
+    <div className="min-h-screen bg-[#090c10] text-surface-100 transition-colors duration-200 selection:bg-[#80734f] selection:text-white dark:text-surface-100">
+      <main id={MAIN_CONTENT_ID} tabIndex={-1} className="focus:outline-none mx-auto max-w-7xl px-4 pb-10 pt-3 sm:px-6 md:px-8 md:pt-5">
+        <header className="sticky top-0 z-30 mb-6 rounded-full border border-[#d0c8a5]/15 bg-[#10100f]/75 px-3 py-2 shadow-[0_12px_32px_rgba(6,6,4,0.24)] backdrop-blur-xl md:rounded-2xl">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <img src={shopNiroLogoSmall} alt="ShopNiro" className="h-10 w-10 rounded-full border border-brand-100 object-cover shadow-md shadow-brand-600/20 dark:border-surface-700" />
+              <p className="font-display text-xl font-normal leading-none text-white">ShopNiro</p>
             </div>
-          </div>
 
-          <nav className="hidden md:flex items-center gap-1 lg:gap-2" aria-label="Main navigation">
-            <button
-              type="button"
-              onClick={onEnterAsGuest}
-              className="px-2 lg:px-4 py-2 rounded-full text-xs lg:text-sm font-semibold text-surface-200 hover:bg-white/8 hover:text-white transition-colors cursor-pointer"
-            >
-              {t('browseCatalog')}
-            </button>
-            <button
-              type="button"
-              onClick={onOpenSellerSignup}
-              className="px-2 lg:px-4 py-2 rounded-full text-xs lg:text-sm font-semibold text-surface-200 hover:bg-white/8 hover:text-white transition-colors cursor-pointer"
-            >
-              {t('sellOnShopNiro')}
-            </button>
-            {onOpenRiderSignup && (
-              <button
-                type="button"
-                onClick={onOpenRiderSignup}
-                className="px-2 lg:px-4 py-2 rounded-full text-xs lg:text-sm font-semibold text-success-200 hover:bg-success-400/10 hover:text-white transition-colors cursor-pointer"
-              >
-                {t('riderPortal')}
+            <nav className="hidden items-center gap-1 md:flex lg:gap-2" aria-label="Main navigation">
+              <a href="#features" className="rounded-full px-2 py-2 text-xs font-semibold text-surface-200 transition-colors hover:bg-white/8 hover:text-white lg:px-4 lg:text-sm">{t('featuresNav')}</a>
+              <a href="#how-it-works" className="rounded-full px-2 py-2 text-xs font-semibold text-surface-200 transition-colors hover:bg-white/8 hover:text-white lg:px-4 lg:text-sm">{t('howItWorksNav')}</a>
+              <a href="#sellers" className="rounded-full px-2 py-2 text-xs font-semibold text-surface-200 transition-colors hover:bg-white/8 hover:text-white lg:px-4 lg:text-sm">{t('sellersNav')}</a>
+              <a href="#faq" className="rounded-full px-2 py-2 text-xs font-semibold text-surface-200 transition-colors hover:bg-white/8 hover:text-white lg:px-4 lg:text-sm">{t('faqNav')}</a>
+            </nav>
+
+            <div className="flex items-center gap-2.5">
+              {onToggleTheme && (
+                <button
+                  type="button"
+                  onClick={onToggleTheme}
+                  aria-label={theme === 'dark' ? t('changeThemeToLight') : t('changeThemeToDark')}
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-surface-700 bg-[#161C24] text-surface-300 transition-colors hover:bg-surface-800 cursor-pointer"
+                  title={theme === 'dark' ? t('changeThemeToLight') : t('changeThemeToDark')}
+                >
+                  {theme === 'dark' ? <Sun className="h-4 w-4 text-warning-400" /> : <Moon className="h-4 w-4 text-brand-400" />}
+                </button>
+              )}
+              <button type="button" onClick={onOpenLogin} className="hidden rounded-full border border-[#d0c8a5]/25 bg-white/5 px-4 py-2 text-xs font-semibold text-surface-100 transition-colors hover:bg-white/10 sm:inline-flex cursor-pointer">
+                {t('logIn')}
               </button>
-            )}
-          </nav>
-
-          {/* Right Controls: Filter Catalog & Profile Avatar */}
-          <div className="flex items-center gap-2.5">
-            {/* Theme Toggle if available */}
-            {onToggleTheme && (
-              <button
-                type="button"
-                onClick={onToggleTheme}
-                aria-label={theme === 'dark' ? t('changeThemeToLight') : t('changeThemeToDark')}
-                className="w-9 h-9 rounded-full bg-[#161C24] border border-surface-800 text-surface-300 flex items-center justify-center hover:bg-surface-800 transition-colors shadow-2xs cursor-pointer md:hidden"
-                title={theme === 'dark' ? t('changeThemeToLight') : t('changeThemeToDark')}
-              >
-                {theme === 'dark' ? <Sun className="w-4 h-4 text-warning-400" /> : <Moon className="w-4 h-4 text-brand-400" />}
+              <button type="button" onClick={onOpenSellerSignup} className="rounded-full bg-brand-600 px-4 py-2 text-xs font-semibold text-white shadow-[0_12px_25px_rgba(91,79,41,0.35)] transition-transform hover:-translate-y-0.5 hover:bg-brand-500 cursor-pointer sm:text-sm">
+                {t('startSelling')}
               </button>
-            )}
-
-            {/* Filter / Sliders Button */}
-            <button
-              type="button"
-              onClick={onEnterAsGuest}
-              aria-label={t('filterCatalog')}
-              className="w-9 h-9 rounded-full bg-[#161C24] border border-surface-800 text-surface-300 flex items-center justify-center hover:bg-surface-800 transition-colors shadow-2xs cursor-pointer"
-              title={t('filterCatalog')}
-            >
-              <SlidersHorizontal className="w-4 h-4" />
-            </button>
-
-            {/* User Profile Avatar (launches login modal) */}
-            <button
-              type="button"
-              onClick={onOpenLogin}
-              aria-label={t('signInOrManageAccounts')}
-              className="w-10 h-10 rounded-full bg-[linear-gradient(135deg,#d0c8a5,#a99b72,#77775a)] text-white flex items-center justify-center shadow-[0_10px_25px_rgba(86,80,57,0.35)] hover:brightness-110 transition-all cursor-pointer"
-              title={t('signInAccounts')}
-            >
-              <User className="w-5 h-5" />
-            </button>
+            </div>
           </div>
         </header>
 
-        {/* 2. Hero Section */}
-        <section className="w-full md:max-w-5xl md:mx-auto rounded-[28px] p-6 sm:p-8 md:px-12 md:py-12 shadow-[0_35px_90px_rgba(3,3,2,0.42)] border border-[#d0c8a5]/20 text-center space-y-4 md:space-y-5 relative overflow-hidden bg-[radial-gradient(circle_at_50%_18%,rgba(208,200,165,0.2),transparent_16%),radial-gradient(circle_at_50%_100%,rgba(119,119,90,0.48),transparent_36%),linear-gradient(135deg,#77775a_0%,#514c38_24%,#292820_52%,#11110f_100%)] hero-parallax">
-          {/* Atmospheric background glow */}
-          <div className="absolute -top-20 left-1/2 -translate-x-1/2 w-72 h-72 bg-white/10 rounded-full blur-3xl pointer-events-none hero-glow" />
+        <section id="hero" aria-labelledby="hero-heading" className="relative overflow-hidden rounded-[28px] border border-[#d0c8a5]/20 bg-[radial-gradient(circle_at_50%_18%,rgba(208,200,165,0.2),transparent_16%),radial-gradient(circle_at_50%_100%,rgba(119,119,90,0.48),transparent_36%),linear-gradient(135deg,#77775a_0%,#514c38_24%,#292820_52%,#11110f_100%)] p-6 shadow-[0_35px_90px_rgba(3,3,2,0.42)] md:px-12 md:py-12">
+          <div className="absolute -top-20 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-white/10 blur-3xl" aria-hidden="true" />
+          <div className="grid items-center gap-8 lg:grid-cols-[1.05fr_0.95fr]">
+            <div className="relative z-10 text-left">
+              <span className="inline-flex rounded-full border border-[#d0c8a5]/25 bg-white/6 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-100 md:text-[11px]">
+                {t('bangladeshMarketplaceApprovedSellers')}
+              </span>
+              <h1 id="hero-heading" className="mt-4 max-w-xl text-4xl font-medium leading-[0.92] tracking-[-0.04em] text-white sm:text-5xl md:text-[4.2rem]">
+                {t('shopSmartShipFast')}
+              </h1>
+              <p className="mt-4 max-w-lg text-sm leading-relaxed text-surface-300 md:text-base">
+                {t('heroSubtitle')}
+              </p>
 
-          <h2 className="text-[2.1rem] sm:text-[3rem] md:text-[4.2rem] font-normal text-white leading-[0.92] tracking-[-0.04em] max-w-5xl mx-auto">
-            {t('shopSmartShipFast')}
+              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+                <button type="button" onClick={onEnterAsGuest} className="inline-flex items-center justify-center gap-2 rounded-full bg-brand-600 px-5 py-3 text-sm font-semibold text-white shadow-[0_14px_30px_rgba(52,40,20,0.3)] transition-transform hover:-translate-y-0.5 hover:bg-brand-500 cursor-pointer">
+                  <ShoppingBag className="h-4 w-4" />
+                  {t('browseProducts')}
+                </button>
+                <button type="button" onClick={onOpenSellerSignup} className="inline-flex items-center justify-center gap-2 rounded-full border border-[#d0c8a5]/25 bg-white/8 px-5 py-3 text-sm font-semibold text-surface-100 transition-colors hover:bg-white/12 cursor-pointer">
+                  {t('startSelling')}
+                  <ArrowRight className="h-4 w-4" />
+                </button>
+              </div>
+
+              <p className="mt-4 text-sm text-surface-200">{t('heroReassurance')}</p>
+            </div>
+
+            <div className="relative z-10">
+              <div className="relative mx-auto w-full max-w-[560px]">
+                <div className="absolute -left-4 top-7 rounded-full border border-[#d0c8a5]/20 bg-[#141922]/80 px-3 py-1 text-[11px] font-semibold text-surface-100 shadow-xl backdrop-blur md:-left-8">{t('shopProducts')}</div>
+                <div className="absolute -right-2 bottom-10 rounded-full border border-[#d0c8a5]/20 bg-[#141922]/80 px-3 py-1 text-[11px] font-semibold text-surface-100 shadow-xl backdrop-blur md:-right-8">{t('approvedSellers')}</div>
+                <div className="flex justify-center rounded-[28px] border border-[#d0c8a5]/12 bg-[#0d1115]/40 p-3 shadow-[0_20px_60px_rgba(0,0,0,0.25)] backdrop-blur-sm">
+                  <React.Suspense fallback={<div aria-hidden="true" className="h-[284px] w-full max-w-[420px] md:h-[374px]" />}>
+                    <OrbitGlobe />
+                  </React.Suspense>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="payment-strip" aria-labelledby="payment-strip-title" className="py-12 md:py-20">
+          <h2 id="payment-strip-title" className="mb-6 text-center text-sm font-semibold uppercase tracking-[0.18em] text-brand-200 md:text-base">
+            {t('payYourWayTitle')}
           </h2>
-
-          {/* Subtitle tailored to ShopNiro Marketplace */}
-          <p className="text-surface-300 text-xs sm:text-sm md:text-base max-w-2xl mx-auto leading-relaxed">
-            {t('heroSubtitle')}
-          </p>
-
-          {/* 3D Interactive Marketplace Globe */}
-          <div className="py-1 md:py-2 relative hero-orbit-wrap">
-            <div className="floating-badge floating-badge-left">{t('shopProducts')}</div>
-            <div className="floating-badge floating-badge-right">{t('sellerApproved')}</div>
-            <React.Suspense fallback={<div aria-hidden="true" className="h-[284px] md:h-[374px]" />}>
-              <OrbitGlobe />
-            </React.Suspense>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            {[t('cashOnDelivery'), t('onlinePaymentText'), t('riderDelivery'), t('orderTracking'), t('deliveryCodeConfirmation'), t('productReviews')].map((item) => (
+              <div key={item} className="inline-flex items-center gap-2 rounded-full border border-[#d0c8a5]/15 bg-[#11161d]/70 px-4 py-2 text-sm text-surface-200">
+                <BadgeCheck className="h-4 w-4 text-brand-300" />
+                <span>{item}</span>
+              </div>
+            ))}
           </div>
+        </section>
 
-          {/* Hero CTA Buttons */}
-          <div className="flex items-center justify-center gap-3 pt-1 max-w-xl mx-auto w-full">
-            {/* Say Hello / Browse Button */}
-            <button
-              type="button"
-              onClick={onEnterAsGuest}
-              className="luxury-control flex-1 min-h-12 py-3 px-5 rounded-full premium-button text-white text-xs sm:text-sm shadow-[0_14px_30px_rgba(52,40,20,0.3)] cursor-pointer hover:-translate-y-0.5"
-            >
-              <Sparkles className="w-4 h-4 text-warning-300" />
-              <span>{t('exploreMarketplace')}</span>
-            </button>
-
-            {/* Explore ↗ Button */}
-            <button
-              type="button"
-              onClick={onOpenLogin}
-              className="luxury-control flex-1 min-h-12 py-3 px-5 rounded-full bg-white/7 hover:bg-white/12 text-surface-100 border border-[#d0c8a5]/25 text-xs sm:text-sm shadow-[0_12px_25px_rgba(0,0,0,0.18)] cursor-pointer"
-            >
-              <span>{t('signIn')}</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
-
-          {onOpenRiderSignup && (
-            <button
-              type="button"
-              onClick={onOpenRiderSignup}
-              className="luxury-control mx-auto min-h-10 w-full max-w-xl justify-center rounded-full border border-success-300/30 bg-success-500/10 px-4 py-2 text-xs font-semibold text-success-100 hover:bg-success-500/20 sm:text-sm"
-            >
-              <Truck className="h-4 w-4" />
-              <span>{t('deliveryRiderApplications')}</span>
-            </button>
-          )}
-
-          <div className="brand-marquee mt-2 md:mt-3">
-            <div className="brand-track">
-              {[
-                { name: 'ShopNiro', accent: 'bg-[#d0c8a5]/15 text-[#f7f3e6]' },
-                { name: t('approvedSellers'), accent: 'bg-brand-500/10 text-brand-200' },
-                { name: t('orderUpdatesBadge'), accent: 'bg-success-500/10 text-success-200' },
-                { name: t('secureCheckout'), accent: 'bg-violet-500/10 text-violet-200' },
-                { name: t('customerReviews'), accent: 'bg-warning-500/10 text-warning-200' },
-                { name: 'ShopNiro', accent: 'bg-[#d0c8a5]/15 text-[#f7f3e6]' },
-                { name: t('approvedSellers'), accent: 'bg-brand-500/10 text-brand-200' },
-                { name: t('orderUpdatesBadge'), accent: 'bg-success-500/10 text-success-200' },
-                { name: t('orderTrackingFeature'), accent: 'bg-violet-500/10 text-violet-200' },
-              ].map((item, index) => (
-                <div key={`${item.name}-${index}`} className={`brand-chip ${item.accent}`}>
+        {approvedSellers.length >= 3 && (
+          <section id="sellers" aria-labelledby="sellers-heading" className="py-12 md:py-20">
+            <div className="mb-6 text-center">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-300">{t('sellersSectionEyebrow')}</p>
+              <h2 id="sellers-heading" className="mt-2 text-3xl font-medium tracking-[-0.04em] text-white md:text-4xl">{t('sellersAlreadyOnShopNiro')}</h2>
+              <p className="mt-3 text-sm text-surface-300">{t('sellersReviewedBeforeListing')}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+              {approvedSellers.map((seller) => (
+                <button
+                  key={seller.Seller_ID}
+                  type="button"
+                  onClick={onEnterAsGuest}
+                  className="flex items-center gap-3 rounded-2xl border border-surface-700 bg-[#10161e]/75 p-4 text-left transition-colors hover:border-brand-500/60 hover:bg-[#121b26] cursor-pointer"
+                >
                   <img
-                    src={shopNiroLogoSmall}
+                    src={seller.Logo || shopNiroLogoSmall}
                     alt=""
-                    aria-hidden="true"
-                    className="brand-logo logo-float"
+                    loading="lazy"
+                    decoding="async"
+                    className="h-12 w-12 rounded-xl object-cover"
+                    onError={(event) => {
+                      const target = event.currentTarget as HTMLImageElement;
+                      target.style.display = 'none';
+                      const fallback = document.createElement('div');
+                      fallback.className = 'flex h-12 w-12 items-center justify-center rounded-xl bg-brand-600/20 text-sm font-bold text-brand-200';
+                      fallback.textContent = seller.Name.charAt(0).toUpperCase();
+                      target.parentElement?.appendChild(fallback);
+                    }}
                   />
-                  <span>{item.name}</span>
-                </div>
+                  <span className="truncate text-sm font-semibold text-white">{seller.Name}</span>
+                </button>
               ))}
             </div>
+          </section>
+        )}
+
+        <section id="how-it-works" aria-labelledby="how-it-works-heading" className="py-12 md:py-20">
+          <div className="mb-8 text-center">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-300">{t('simpleSteps')}</p>
+            <h2 id="how-it-works-heading" className="mt-2 text-3xl font-medium tracking-[-0.04em] text-white md:text-4xl">{t('howShopNiroWorks')}</h2>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            {[t('step1Title'), t('step2Title'), t('step3Title')].map((title, index) => (
+              <div key={title} className="rounded-2xl border border-surface-700 bg-[#10161e]/75 p-5 shadow-xl">
+                <div className="mb-5 flex items-center gap-3">
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white ${index === 0 ? 'bg-brand-600' : index === 1 ? 'bg-teal-600' : 'bg-warning-600'}`}>
+                    {index + 1}
+                  </div>
+                  <span className="text-lg font-semibold text-white">{title}</span>
+                </div>
+                <p className="text-sm leading-relaxed text-surface-300">
+                  {index === 0 ? t('step1Desc') : index === 1 ? t('step2Desc') : t('step3Desc')}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-8 flex flex-col items-center justify-between gap-4 rounded-2xl border border-brand-500/20 bg-gradient-to-r from-[#111a1b] to-[#1a1d15] px-5 py-4 text-center md:flex-row md:text-left">
+            <p className="text-base text-surface-100">{t('sellerBandText')}</p>
+            <button type="button" onClick={onOpenSellerSignup} className="inline-flex items-center gap-2 rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-500 cursor-pointer">
+              {t('applyAsSeller')}
+              <ArrowRight className="h-4 w-4" />
+            </button>
           </div>
         </section>
 
-        {/* Shopper, seller, and admin entry points */}
-        <section className="space-y-4 pt-1 animate-fade-up">
-          {/* Header Badges */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-success-950/60 border border-success-800/60 text-success-300 text-micro font-bold">
-              <span className="w-1.5 h-1.5 rounded-full bg-success-500"></span>
-              {t('shoppersSellersAdmins')}
-            </span>
+        <section id="features" aria-labelledby="features-heading" className="py-12 md:py-20">
+          <div className="mb-8 text-center">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-300">{t('featuresHeadingEyebrow')}</p>
+            <h2 id="features-heading" className="mt-2 text-3xl font-medium tracking-[-0.04em] text-white md:text-4xl">{t('featuresHeading')}</h2>
           </div>
 
-          <div>
-            <span className="text-micro font-extrabold tracking-widest text-brand-400 uppercase block">
-              {t('marketplaceTitle')}
-            </span>
-            <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight mt-0.5">
-              {t('onePlaceToShop')}
-            </h3>
-            <p className="text-xs text-surface-400 mt-1 leading-relaxed">
-              {t('browseOrManage')}
-            </p>
-          </div>
+          <div className="space-y-8">
+            {featureBlocks.map((feature) => (
+              <article key={feature.title} className="grid gap-6 lg:grid-cols-2 lg:items-center">
+                <div className={feature.flip ? 'lg:order-2' : ''}>
+                  <div className="mb-3 inline-flex rounded-full border border-brand-500/20 bg-brand-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-200">{feature.eyebrow}</div>
+                  <h3 className="text-2xl font-medium tracking-[-0.04em] text-white md:text-3xl">{feature.title}</h3>
+                  <p className="mt-4 max-w-xl text-base leading-relaxed text-surface-300">{feature.description}</p>
+                  <ul className="mt-5 space-y-3">
+                    {feature.bullets.map((bullet) => (
+                      <li key={bullet} className="flex items-start gap-3 text-sm text-surface-100">
+                        <span className="mt-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-brand-600/20 text-brand-200">
+                          <Check className="h-3.5 w-3.5" />
+                        </span>
+                        <span>{bullet}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {/* Portal Card 1: Customer Hub */}
-          <div className="premium-card premium-card-dark product-tilt rounded-2xl p-5 lg:p-6 space-y-3 flex flex-col lg:min-h-[370px]">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-brand-600 text-white flex items-center justify-center shadow-md shadow-brand-600/40">
-                  <User className="w-5 h-5" />
+                <div className={feature.flip ? 'lg:order-1' : ''}>
+                  <div className="overflow-hidden rounded-[24px] border border-surface-700 bg-[#0e1218] p-3 shadow-[0_16px_40px_rgba(0,0,0,0.25)]">
+                    <div className="mb-3 flex items-center gap-2 px-1">
+                      <span className="h-2.5 w-2.5 rounded-full bg-[#ff6a6a]" />
+                      <span className="h-2.5 w-2.5 rounded-full bg-[#f6c65b]" />
+                      <span className="h-2.5 w-2.5 rounded-full bg-[#56d66d]" />
+                    </div>
+                    <img
+                      src={feature.image}
+                      alt={feature.alt}
+                      width={1200}
+                      height={800}
+                      loading="lazy"
+                      decoding="async"
+                      className="h-auto w-full rounded-xl border border-surface-700 object-cover"
+                    />
+                  </div>
+                  {feature.caption && <p className="mt-3 text-center text-xs text-surface-400">{feature.caption}</p>}
                 </div>
-                <div>
-                  <h4 className="font-bold text-base text-white leading-tight">
-                    {t('shoppingAccount')}
-                  </h4>
-                  <p className="text-micro text-surface-300 mt-0.5">
-                    {t('cartOrdersDelivery')}
-                  </p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section aria-labelledby="trust-title" className="py-12 md:py-20">
+          <h2 id="trust-title" className="mb-8 text-center text-3xl font-medium tracking-[-0.04em] text-white md:text-4xl">{t('trustTitle')}</h2>
+          <div className="grid gap-4 md:grid-cols-4">
+            {shopCardData.map(({ icon: Icon, title, text }) => (
+              <div key={title} className="rounded-2xl border border-surface-700 bg-[#10161e]/75 p-4 text-center shadow-lg">
+                <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-brand-600/10 text-brand-300">
+                  <Icon className="h-5 w-5" />
                 </div>
+                <h3 className="text-sm font-semibold text-white">{title}</h3>
+                <p className="mt-2 text-xs leading-relaxed text-surface-300">{text}</p>
               </div>
+            ))}
+          </div>
+        </section>
 
-              <span className="px-2.5 py-0.5 rounded-full bg-brand-900/80 text-brand-300 text-micro font-semibold border border-brand-800/40">
-                {t('forShoppers')}
-              </span>
-            </div>
+        <section id="faq" aria-labelledby="faq-heading" className="py-12 md:py-20">
+          <div className="mb-8 text-center">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-300">{t('faqEyebrow')}</p>
+            <h2 id="faq-heading" className="mt-2 text-3xl font-medium tracking-[-0.04em] text-white md:text-4xl">{t('faqHeading')}</h2>
+          </div>
 
-            <p className="text-xs text-surface-300 leading-relaxed">
-              {t('shopperDescription')}
-            </p>
+          <div className="space-y-3">
+            {faqItems.map((item, index) => (
+              <details key={item.q} open={index === 0} className="rounded-2xl border border-surface-700 bg-[#10161e]/75 p-4 text-left">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-left text-base font-semibold text-white">
+                  <span>{item.q}</span>
+                  <ChevronDown className="h-4 w-4 text-brand-300" />
+                </summary>
+                <div className="mt-3 pt-3 text-sm leading-relaxed text-surface-300">{item.a}</div>
+              </details>
+            ))}
+          </div>
+        </section>
 
-            {/* Launch Customer Portal Button */}
-            <button
-              type="button"
-              onClick={onOpenLogin}
-              className="luxury-control w-full py-3 px-4 rounded-xl premium-button text-white text-xs shadow-md cursor-pointer"
-            >
-              <ShoppingBag className="w-4 h-4" />
-              <span>{t('signInToShop')}</span>
-            </button>
-
-            {/* Bottom link: Create Personal Account */}
-            <div className="text-center pt-1">
-              <button
-                type="button"
-                onClick={onOpenCustomerSignup || onOpenLogin}
-                className="text-xs font-semibold text-surface-400 hover:text-brand-300 transition-colors cursor-pointer"
-              >
-                {t('newToShopNiro')} <strong className="text-brand-400 ml-1">{t('createAnAccount')}</strong>
+        <section aria-labelledby="closing-cta-heading" className="py-12 md:py-20">
+          <div className="rounded-[28px] bg-brand-800 px-6 py-8 text-center shadow-2xl md:px-10 md:py-10">
+            <h2 id="closing-cta-heading" className="text-3xl font-medium tracking-[-0.04em] text-white md:text-4xl">{t('closingCtaHeading')}</h2>
+            <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+              <button type="button" onClick={onEnterAsGuest} className="rounded-full bg-white px-5 py-3 text-sm font-semibold text-brand-900 transition-colors hover:bg-brand-50 cursor-pointer">
+                {t('browseProducts')}
+              </button>
+              <button type="button" onClick={onOpenSellerSignup} className="rounded-full border border-white/25 bg-transparent px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-white/8 cursor-pointer">
+                {t('startSelling')}
               </button>
             </div>
+            <p className="mt-4 text-sm text-brand-100">{t('closingCtaNote')}</p>
           </div>
-
-          {/* Portal Card 2: Merchant Studio */}
-          <div className="premium-card premium-card-dark rounded-2xl p-5 lg:p-6 space-y-3 flex flex-col lg:min-h-[370px]">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-success-600 text-white flex items-center justify-center shadow-md shadow-success-600/40">
-                  <Store className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-base text-white leading-tight">
-                    {t('sellerDashboardTitle')}
-                  </h4>
-                  <p className="text-micro text-surface-300 mt-0.5">
-                    {t('productsStockOrders')}
-                  </p>
-                </div>
-              </div>
-
-              <span className="px-2.5 py-0.5 rounded-full bg-success-900/80 text-success-300 text-micro font-semibold border border-success-800/40">
-                {t('forSellers')}
-              </span>
-            </div>
-
-            <p className="text-xs text-surface-300 leading-relaxed">
-              {t('sellerDescription')}
-            </p>
-
-            {/* Enter Merchant Studio Button */}
-            <button
-              type="button"
-              onClick={onOpenLogin}
-              className="luxury-control w-full py-3 px-4 rounded-xl premium-button text-white text-xs shadow-md cursor-pointer"
-            >
-              <Store className="w-4 h-4" />
-              <span>{t('sellerSignIn')}</span>
-            </button>
-
-            {/* Bottom link: Register as Brand Partner */}
-            <div className="text-center pt-1">
-              <button
-                type="button"
-                onClick={onOpenSellerSignup}
-                className="text-xs font-semibold text-surface-400 hover:text-success-300 transition-colors cursor-pointer"
-              >
-                {t('wantToSell')} <strong className="text-success-400 ml-1">{t('createSellerAccount')}</strong>
-              </button>
-            </div>
-          </div>
-
-          {/* Portal Card 3: Admin Governance */}
-          <div className="premium-card premium-card-dark rounded-2xl p-5 lg:p-6 space-y-3 flex flex-col lg:min-h-[370px]">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-brand-600 text-white flex items-center justify-center shadow-md shadow-brand-600/40">
-                  <ShieldCheck className="w-5 h-5" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-base text-white leading-tight">
-                    {t('adminTools')}
-                  </h4>
-                  <p className="text-micro text-surface-300 mt-0.5">
-                    {t('sellerApprovalsCategories')}
-                  </p>
-                </div>
-              </div>
-
-              <span className="px-2.5 py-0.5 rounded-full bg-brand-900/80 text-brand-300 text-micro font-semibold border border-brand-800/40">
-                {t('forAdmins')}
-              </span>
-            </div>
-
-            <p className="text-xs text-surface-300 leading-relaxed">
-              {t('adminDescription')}
-            </p>
-
-            {/* Admin Access Button */}
-            <button
-              type="button"
-              onClick={onOpenLogin}
-              className="luxury-control w-full py-3 px-4 rounded-xl premium-button text-white text-xs shadow-md cursor-pointer"
-            >
-              <ShieldCheck className="w-4 h-4" />
-              <span>{t('adminSignIn')}</span>
-            </button>
-
-            {/* Biometrics badge */}
-            <div className="flex items-center justify-between text-micro pt-1 text-brand-300 font-medium">
-              <span>{t('forShopNiroAdmins')}</span>
-              <span className="font-bold tracking-wider uppercase text-brand-400">{t('adminAccountRequired')}</span>
-            </div>
-          </div>
-
-          </div>
-
-          {/* Universal Unified Sign-In Banner */}
-          <div
-            onClick={onOpenLogin}
-            className="p-3.5 rounded-2xl bg-[#12161D] border border-surface-800 flex items-center justify-between hover:border-brand-500 transition-colors shadow-2xs cursor-pointer group"
-          >
-            <div className="flex items-center gap-2.5">
-              <Users className="w-4 h-4 text-brand-400" />
-              <span className="text-xs font-semibold text-surface-200">
-                {t('alreadyHaveAccount')}
-              </span>
-            </div>
-            <div className="flex items-center gap-1 text-xs font-bold text-brand-300 group-hover:translate-x-0.5 transition-transform">
-              <span>{t('signIn')}</span>
-              <span>➔</span>
-            </div>
+          <div className="mt-8">
+            <MarketplaceClosing stats={stats} />
           </div>
         </section>
-
-        {/* What you can do on ShopNiro */}
-        <section className="space-y-3 pt-2">
-          <div>
-            <span className="text-micro font-extrabold tracking-widest text-brand-400 uppercase block">
-              {t('onShopNiro')}
-            </span>
-            <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight mt-0.5">
-              {t('theBasicsOnePlace')}
-            </h3>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {/* Feature 1: Seller approval */}
-          <div className="p-4 rounded-2xl bg-[#12161D] border border-surface-800 shadow-xl flex items-start gap-3.5">
-            <div className="w-10 h-10 rounded-2xl bg-brand-950 text-brand-400 flex items-center justify-center shrink-0 border border-brand-900/50">
-              <BadgeCheck className="w-5 h-5" />
-            </div>
-            <div className="flex-1 space-y-1">
-              <div className="flex items-center justify-between">
-                <h4 className="font-bold text-sm text-white">
-                  {t('sellerApprovalFeature')}
-                </h4>
-                <span className="px-2 py-0.5 rounded-full bg-brand-950 text-brand-300 text-micro font-semibold border border-brand-800/40">
-                  {t('reviewedBeforeListing')}
-                </span>
-              </div>
-              <p className="text-xs text-surface-400 leading-relaxed">
-                {t('sellerApprovalDesc')}
-              </p>
-            </div>
-          </div>
-
-          {/* Feature 2: Order tracking */}
-          <div className="p-4 rounded-2xl bg-[#12161D] border border-surface-800 shadow-xl flex items-start gap-3.5">
-            <div className="w-10 h-10 rounded-2xl bg-brand-950 text-brand-400 flex items-center justify-center shrink-0 border border-brand-900/50">
-              <Compass className="w-5 h-5" />
-            </div>
-            <div className="flex-1 space-y-1">
-              <div className="flex items-center justify-between">
-                <h4 className="font-bold text-sm text-white">
-                  {t('orderTrackingFeature')}
-                </h4>
-                <span className="px-2 py-0.5 rounded-full bg-brand-950 text-brand-300 text-micro font-semibold border border-brand-800/40">
-                  {t('orderUpdatesBadge')}
-                </span>
-              </div>
-              <p className="text-xs text-surface-400 leading-relaxed">
-                {t('orderTrackingDesc')}
-              </p>
-            </div>
-          </div>
-
-          {/* Feature 3: Order details */}
-          <div className="p-4 rounded-2xl bg-[#12161D] border border-surface-800 shadow-xl flex items-start gap-3.5">
-            <div className="w-10 h-10 rounded-2xl bg-warning-950 text-warning-400 flex items-center justify-center shrink-0 border border-warning-900/50">
-              <Shield className="w-5 h-5" />
-            </div>
-            <div className="flex-1 space-y-1">
-              <div className="flex items-center justify-between">
-                <h4 className="font-bold text-sm text-white">
-                  {t('orderDetailsFeature')}
-                </h4>
-                <span className="px-2 py-0.5 rounded-full bg-warning-950 text-warning-300 text-micro font-semibold border border-warning-800/40">
-                  {t('inYourAccount')}
-                </span>
-              </div>
-              <p className="text-xs text-surface-400 leading-relaxed">
-                {t('orderDetailsDesc')}
-              </p>
-            </div>
-          </div>
-          </div>
-        </section>
-
-        {/* 7. EFFORTLESS FLOW: How ShopNiro works */}
-        <section className="space-y-3 pt-2">
-          <div>
-            <span className="text-micro font-extrabold tracking-widest text-brand-400 uppercase block">
-              {t('simpleSteps')}
-            </span>
-            <h3 className="text-xl sm:text-2xl font-black text-white tracking-tight mt-0.5">
-              {t('howShopNiroWorks')}
-            </h3>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {/* Step 1 */}
-          <div className="p-4 lg:p-5 rounded-2xl bg-[#12161D] border border-surface-800 shadow-xl flex items-start gap-3.5 lg:min-h-40">
-            <div className="w-8 h-8 rounded-full bg-brand-600 text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-md shadow-brand-600/40">
-              1
-            </div>
-            <div>
-              <h4 className="font-bold text-sm text-white">
-                {t('step1Title')}
-              </h4>
-              <p className="text-xs text-surface-400 mt-1 leading-relaxed">
-                {t('step1Desc')}
-              </p>
-            </div>
-          </div>
-
-          {/* Step 2 */}
-          <div className="p-4 lg:p-5 rounded-2xl bg-[#12161D] border border-surface-800 shadow-xl flex items-start gap-3.5 lg:min-h-40">
-            <div className="w-8 h-8 rounded-full bg-teal-600 text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-md shadow-teal-600/40">
-              2
-            </div>
-            <div>
-              <h4 className="font-bold text-sm text-white">
-                {t('step2Title')}
-              </h4>
-              <p className="text-xs text-surface-400 mt-1 leading-relaxed">
-                {t('step2Desc')}
-              </p>
-            </div>
-          </div>
-
-          {/* Step 3 */}
-          <div className="p-4 lg:p-5 rounded-2xl bg-[#12161D] border border-surface-800 shadow-xl flex items-start gap-3.5 lg:min-h-40">
-            <div className="w-8 h-8 rounded-full bg-warning-600 text-white font-bold text-sm flex items-center justify-center shrink-0 shadow-md shadow-warning-600/40">
-              3
-            </div>
-            <div>
-              <h4 className="font-bold text-sm text-white">
-                {t('step3Title')}
-              </h4>
-              <p className="text-xs text-surface-400 mt-1 leading-relaxed">
-                {t('step3Desc')}
-              </p>
-            </div>
-          </div>
-          </div>
-        </section>
-
-        {/* Premium brand ribbon below the main landing flow */}
-        <section className="space-y-3 pt-1 animate-fade-up">
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-micro font-extrabold tracking-widest text-brand-400 uppercase block">
-              {t('shopNiroFeatures')}
-            </span>
-          </div>
-
-          <div className="brand-marquee">
-            <div className="brand-track">
-              {[
-                t('allProducts'), t('sellerApprovalFeature'), t('orderTrackingFeature'), t('customerReviews'), t('allProducts'), t('sellerApprovalFeature'), t('orderTrackingFeature'), t('customerReviews')
-              ].map((brand, index) => (
-                <div key={`${brand}-${index}`} className="brand-chip bg-white/5 text-surface-200">
-                  <span className="w-2 h-2 rounded-full bg-gradient-to-r from-brand-400 to-success-400 inline-block shadow-[0_0_18px_rgba(96,165,250,0.7)]" />
-                  <span>{brand}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Browse the current catalog */}
-        <section className="rounded-3xl p-6 sm:p-7 bg-brand-800 text-white text-center space-y-3.5 shadow-2xl relative overflow-hidden animate-fade-up">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 border border-white/25 text-white text-micro font-semibold tracking-wide">
-            <Tag className="w-3 h-3 text-brand-200" />
-            <span>{t('marketplaceTitle')}</span>
-          </div>
-
-          <h3 className="text-2xl sm:text-3xl font-extrabold tracking-tight">
-            {t('findSomethingYouLove')}
-          </h3>
-
-          <p className="text-brand-100 text-xs sm:text-sm max-w-sm mx-auto leading-relaxed">
-            {t('browseCurrentListings')}
-          </p>
-
-          <div className="pt-2">
-            <button
-              type="button"
-              onClick={onEnterAsGuest}
-              className="w-full py-3.5 px-6 rounded-full bg-white hover:bg-brand-50 text-brand-900 font-bold text-sm shadow-lg transition-all cursor-pointer transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
-            >
-              <span>{t('browseProducts')}</span>
-              <span>➔</span>
-            </button>
-          </div>
-
-          <p className="text-micro text-brand-100">
-            {t('seeWhatsAvailable')}
-          </p>
-        </section>
-
-        <MarketplaceClosing stats={stats} />
       </main>
 
-      {/* 10. Bottom Mobile Navigation Bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-[#0C1014]/95 backdrop-blur-md border-t border-surface-800/90 py-2.5 px-6 shadow-2xl md:hidden">
-        <div className="max-w-md mx-auto flex items-center justify-between relative">
-          {/* Store / Radar */}
-          <button
-            type="button"
-            onClick={() => {
-              setActiveNavTab('store');
-              onEnterAsGuest();
-            }}
-            className={`flex flex-col items-center gap-1 cursor-pointer transition-colors ${
-              activeNavTab === 'store'
-                ? 'text-brand-400 font-bold'
-                : 'text-surface-500 hover:text-surface-300'
-            }`}
-          >
-            <Radio className="w-5 h-5" />
-            <span className="text-micro">{t('radar')}</span>
-          </button>
-
-          {/* Parcels */}
-          <button
-            type="button"
-            onClick={() => {
-              setActiveNavTab('orders');
-              onEnterAsGuest();
-            }}
-            className={`flex flex-col items-center gap-1 cursor-pointer transition-colors ${
-              activeNavTab === 'orders'
-                ? 'text-brand-400 font-bold'
-                : 'text-surface-500 hover:text-surface-300'
-            }`}
-          >
-            <Package className="w-5 h-5" />
-            <span className="text-micro">{t('parcels')}</span>
-          </button>
-
-          {/* Elevated Action Button in Center (+) */}
-          <button
-            type="button"
-            onClick={onEnterAsGuest}
-            aria-label={t('browseCatalogAndShop')}
-            className="w-12 h-12 -mt-6 rounded-full bg-brand-600 text-white flex items-center justify-center shadow-lg shadow-brand-600/50 hover:bg-brand-500 transition-all cursor-pointer transform hover:scale-105"
-            title={t('browseCatalogAndShop')}
-          >
-            <Plus className="w-6 h-6 stroke-[2.5]" />
-          </button>
-
-          {/* Routes */}
-          <button
-            type="button"
-            onClick={() => {
-              setActiveNavTab('vouchers');
-              onEnterAsGuest();
-            }}
-            className={`flex flex-col items-center gap-1 cursor-pointer transition-colors ${
-              activeNavTab === 'vouchers'
-                ? 'text-brand-400 font-bold'
-                : 'text-surface-500 hover:text-surface-300'
-            }`}
-          >
-            <Compass className="w-5 h-5" />
-            <span className="text-micro">{t('routes')}</span>
-          </button>
-
-          {/* Hub */}
-          <button
-            type="button"
-            onClick={() => {
-              setActiveNavTab('hub');
-              onOpenLogin();
-            }}
-            className={`flex flex-col items-center gap-1 cursor-pointer transition-colors ${
-              activeNavTab === 'hub'
-                ? 'text-brand-400 font-bold'
-                : 'text-surface-500 hover:text-surface-300'
-            }`}
-          >
-            <Users className="w-5 h-5" />
-            <span className="text-micro">{t('hub')}</span>
-          </button>
+      <footer className="border-t border-surface-800 bg-[#0a0d12] text-surface-300">
+        <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 md:grid-cols-4 md:px-8">
+          <div>
+            <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-200">{t('footerProduct')}</h3>
+            <ul className="mt-4 space-y-3 text-sm">
+              <li><button type="button" onClick={onEnterAsGuest} className="cursor-pointer text-surface-300 hover:text-white">{t('browseProducts')}</button></li>
+              <li><a href="#how-it-works" className="hover:text-white">{t('howItWorksNav')}</a></li>
+              <li><a href="#faq" className="hover:text-white">{t('faqNav')}</a></li>
+            </ul>
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-200">{t('footerSellAndDeliver')}</h3>
+            <ul className="mt-4 space-y-3 text-sm">
+              <li><button type="button" onClick={onOpenSellerSignup} className="cursor-pointer text-surface-300 hover:text-white">{t('startSelling')}</button></li>
+              {onOpenRiderSignup && (
+                <li><button type="button" onClick={onOpenRiderSignup} className="cursor-pointer text-surface-300 hover:text-white">{t('becomeRider')}</button></li>
+              )}
+            </ul>
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-200">{t('footerAccount')}</h3>
+            <ul className="mt-4 space-y-3 text-sm">
+              <li><button type="button" onClick={onOpenLogin} className="cursor-pointer text-surface-300 hover:text-white">{t('logIn')}</button></li>
+              <li><button type="button" onClick={onOpenCustomerSignup || onOpenLogin} className="cursor-pointer text-surface-300 hover:text-white">{t('createAnAccount')}</button></li>
+            </ul>
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-200">{t('footerLegal')}</h3>
+            <div className="mt-4 text-sm text-surface-300">
+              <PolicyLinks ids={['terms', 'privacy', 'refunds', 'delivery']} className="text-brand-300 underline hover:text-brand-200" />
+            </div>
+          </div>
         </div>
-      </div>
+        <div className="border-t border-surface-800 text-center text-sm text-surface-400">
+          <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 py-4 sm:flex-row sm:px-6 md:px-8">
+            <p>© {currentYear} {BUSINESS.name}. {locale === 'bn' ? t('madeInBangladesh') : t('madeInBangladesh')}</p>
+            {onOpenAdminSignup && (
+              <button type="button" onClick={onOpenAdminSignup} className="text-xs text-surface-500 transition-colors hover:text-brand-200 cursor-pointer">
+                {t('adminSignIn')}
+              </button>
+            )}
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };
