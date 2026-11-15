@@ -113,6 +113,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   ];
 
   const currentYear = new Date().getFullYear();
+  const navItems = [
+    { href: '#features', label: t('featuresNav') },
+    { href: '#how-it-works', label: t('howItWorksNav') },
+    { href: '#sellers', label: t('sellersNav') },
+    { href: '#faq', label: t('faqNav') },
+  ];
+
+  const howItWorksSteps = [
+    { title: t('step1Title'), text: t('step1Desc'), tone: 'bg-brand-600' },
+    { title: t('step2Title'), text: t('step2Desc'), tone: 'bg-teal-600' },
+    { title: t('step3Title'), text: t('step3Desc'), tone: 'bg-warning-600' },
+  ];
 
   return (
     <div className="min-h-screen bg-[#090c10] text-surface-100 transition-colors duration-200 selection:bg-[#80734f] selection:text-white dark:text-surface-100">
@@ -125,10 +137,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             </div>
 
             <nav className="hidden items-center gap-1 md:flex lg:gap-2" aria-label="Main navigation">
-              <a href="#features" className="rounded-full px-2 py-2 text-xs font-semibold text-surface-200 transition-colors hover:bg-white/8 hover:text-white lg:px-4 lg:text-sm">{t('featuresNav')}</a>
-              <a href="#how-it-works" className="rounded-full px-2 py-2 text-xs font-semibold text-surface-200 transition-colors hover:bg-white/8 hover:text-white lg:px-4 lg:text-sm">{t('howItWorksNav')}</a>
-              <a href="#sellers" className="rounded-full px-2 py-2 text-xs font-semibold text-surface-200 transition-colors hover:bg-white/8 hover:text-white lg:px-4 lg:text-sm">{t('sellersNav')}</a>
-              <a href="#faq" className="rounded-full px-2 py-2 text-xs font-semibold text-surface-200 transition-colors hover:bg-white/8 hover:text-white lg:px-4 lg:text-sm">{t('faqNav')}</a>
+              {navItems.map((item) => (
+                <a key={item.href} href={item.href} className="rounded-full px-2 py-2 text-xs font-semibold text-surface-200 transition-colors hover:bg-white/8 hover:text-white lg:px-4 lg:text-sm">
+                  {item.label}
+                </a>
+              ))}
             </nav>
 
             <div className="flex items-center gap-2.5">
@@ -253,17 +266,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
-            {[t('step1Title'), t('step2Title'), t('step3Title')].map((title, index) => (
-              <div key={title} className="rounded-2xl border border-surface-700 bg-[#10161e]/75 p-5 shadow-xl">
+            {howItWorksSteps.map((step, index) => (
+              <div key={step.title} className="rounded-2xl border border-surface-700 bg-[#10161e]/75 p-5 shadow-xl">
                 <div className="mb-5 flex items-center gap-3">
-                  <div className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white ${index === 0 ? 'bg-brand-600' : index === 1 ? 'bg-teal-600' : 'bg-warning-600'}`}>
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white ${step.tone}`}>
                     {index + 1}
                   </div>
-                  <span className="text-lg font-semibold text-white">{title}</span>
+                  <span className="text-lg font-semibold text-white">{step.title}</span>
                 </div>
-                <p className="text-sm leading-relaxed text-surface-300">
-                  {index === 0 ? t('step1Desc') : index === 1 ? t('step2Desc') : t('step3Desc')}
-                </p>
+                <p className="text-sm leading-relaxed text-surface-300">{step.text}</p>
               </div>
             ))}
           </div>
