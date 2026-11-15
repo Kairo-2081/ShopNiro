@@ -453,6 +453,37 @@ flowchart LR
     J[GitHub Actions schedules] -->|Cron secret| A
 ```
 
+### Delivery pipeline
+
+```mermaid
+flowchart LR
+    PR[Pull request] --> CI
+    subgraph CI [CI on every push]
+        V[validate<br/>lint, tests, build,<br/>bundle budget, audit,<br/>secret scan]
+        E[e2e<br/>Playwright]
+        A[accessibility<br/>axe, Lighthouse]
+    end
+    CI --> M[Merge to main]
+    M --> D
+    subgraph D [Deploy workflow, one environment at a time]
+        P[Preflight<br/>CI green for this commit,<br/>Render settings,<br/>a live deploy to roll back to] --> G[Database guard<br/>right project?]
+        G --> MIG[Run migrations]
+        MIG --> R[Render deploy]
+        R --> S[Readiness smoke test<br/>/api/ready]
+        S -->|fails| RB[Roll back]
+    end
+    D --> ST[(Staging)]
+    D -->|required reviewer approves| PR2[(Production)]
+```
+
+Deploys are dispatched from the branch named after the target (`staging` or
+`production`), never run on their own, and the production environment waits for
+a reviewer. The database guard compares the project reference inside the
+connection string with the one configured for that environment, and refuses to
+migrate if they differ, so a staging secret pasted into production fails before
+anything changes. The service settings each environment needs are listed in the
+[Render settings checklist](./docs/render-service-settings.md).
+
 ## Get started
 
 ### Requirements
