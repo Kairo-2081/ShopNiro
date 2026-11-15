@@ -383,6 +383,40 @@ Every table and column, drawn per domain, is in
 `npm run docs:schema`). The reasoning behind the design is in
 [`docs/database-design.md`](./docs/database-design.md).
 
+## Performance
+
+The budget: on a mid-range phone on mobile 4G, the **first product card is on
+screen in under 3 seconds**, for a guest who taps "Explore Marketplace" and for
+a returning customer, and both the median and the slowest run have to fit.
+
+<p align="center">
+<img src="./.github/assets/readme/perf-first-card.png" alt="Bar chart of guest time to first product card: 6.48 s median and 7.00 s slowest before the work; 2.87 and 3.11 s after with click timing; 1.89 and 2.06 s after with in-page timing; the 3 second budget is marked" width="760" />
+</p>
+
+| | Before | After |
+| --- | --- | --- |
+| Guest, first product card (median / slowest) | 6.48 / 7.00 s | 2.87 / 3.11 s (click timing) · 1.89 / 2.06 s (in-page timing) |
+| Returning customer (median / slowest) | 5.97 / 6.59 s | 2.50 / 2.67 s (click timing) |
+| Data transferred | 757 kB | 199 kB with build-time Brotli (was 224 kB) |
+| First-load JavaScript and CSS, gzipped | | 149 of 150 kB, checked on every build |
+
+**Where it stands against the budget:** by in-page timing every guest and returning run fits. By click timing the slowest guest run, 3.11 s, is just over 3 s.
+
+The latest round added three things: starting the catalogue request before the
+page's code has finished loading, sharing one session check between callers,
+and compressing the build once at maximum Brotli level instead of per request.
+One idea, rendering the catalogue update inside a transition, made it slower
+and was dropped.
+
+**Read the numbers with care.** They are the median and slowest of 7 to 15
+runs on one laptop in one session, using Chromium to emulate a Pixel 5 (150 ms
+round trip, 1.6 Mbps, a processor four times slower) from a cold cache. "Click
+timing" includes about a second of test-tool overhead; "in-page timing" does
+not. It is a controlled lab measure, not real visitors, and **no real phone has
+been tested yet**. Method, raw tables, profile and what is left:
+[`docs/performance.md`](./docs/performance.md). Re-run it with
+`npm run perf:storefront`.
+
 ## Evidence from CI
 
 | Measure | Result |
