@@ -332,6 +332,57 @@ Step-by-step diagrams for the payment, refund and payout flows are in
 [`docs/flows.md`](./docs/flows.md); the payout policy is in
 [`docs/payouts.md`](./docs/payouts.md).
 
+## Data model
+
+40 tables and 55 foreign keys across six domains. This is the core of it: who
+owns what, and how an order fans out into fulfilments, deliveries, payments and
+refunds.
+
+```mermaid
+erDiagram
+    customers ||--o{ orders : places
+    customers ||--o{ cart : has
+    customers ||--o{ reviews : writes
+    customers ||--o{ customer_wishlist : saves
+    categories ||--o{ products : groups
+    sellers ||--o{ products : lists
+    sellers ||--o{ seller_documents : uploads
+    sellers ||--o{ seller_fulfillments : ships
+    sellers ||--o{ seller_wallet_entries : earns
+    sellers ||--o{ seller_payouts : requests
+    orders ||--o{ order_items : contains
+    products o|--o{ order_items : "sold as"
+    orders ||--o{ seller_fulfillments : "split into"
+    seller_fulfillments ||--o| rider_deliveries : "delivery record"
+    riders o|--o{ rider_deliveries : takes
+    riders ||--o{ rider_wallet_entries : earns
+    rider_deliveries ||--o{ rider_reviews : receives
+    orders ||--o{ payments : "order_id"
+    payments o|--o{ refunds : "refunded by"
+    orders ||--o{ refunds : has
+```
+
+| Domain | Tables | What it holds |
+| --- | --- | --- |
+| Identity and access | `users`, `customers`, `sellers`, `riders`, `admins`, `auth_sessions`, … | Who can sign in, as what, and their sessions and consents |
+| Catalogue and discovery | `categories`, `products`, `seller_bundles`, `cart`, `customer_wishlist`, `reviews` | What can be bought and what customers keep or say about it |
+| Orders and payments | `orders`, `order_items`, `payments`, `refunds`, `order_cancellation_requests`, `payment_reconciliation_*` | A checkout through to a paid, refunded or cancelled order |
+| Fulfilment and delivery | `seller_fulfillments`, `rider_deliveries`, `rider_reviews`, `rider_monthly_scores` | One part per seller, each delivered by a rider |
+| Wallets and payouts | `seller_wallet_entries`, `seller_payouts`, `rider_wallet_entries`, `rider_withdrawals` | Append-only earnings ledgers and what settles them |
+| Verification and operations | `seller_documents`, `*_verification_documents`, `application_review_audit`, `support_requests`, `schema_migrations` | Approval evidence, review trails and support |
+
+Design choices worth knowing:
+
+- **Order items keep a snapshot** of the product and seller as they were at checkout, so later edits do not rewrite history.
+- **`checkout_idempotency`** stores each checkout's key and request hash, so a retried request returns the original order instead of creating another.
+- **Audit tables** (`order_status_audit`, `seller_status_audit`, `application_review_audit`) record status changes and review decisions with timestamps.
+- **The schema never changes at startup.** Changes are numbered, roll-forward-only migrations, applied by a guarded workflow.
+
+Every table and column, drawn per domain, is in
+[`docs/schema.md`](./docs/schema.md) (generated from the migrated database with
+`npm run docs:schema`). The reasoning behind the design is in
+[`docs/database-design.md`](./docs/database-design.md).
+
 ## Evidence from CI
 
 | Measure | Result |
