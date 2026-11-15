@@ -80,7 +80,7 @@ test('product loading cards keep equal reserved heights', async ({ page }) => {
 
   await page.goto('/');
   // Guests start on the landing page; the skeleton shows once they enter the storefront while products are still loading.
-  await page.getByRole('button', { name: /Browse catalog|Filter Catalog/ }).first().click();
+  await page.getByRole('button', { name: 'Browse products' }).click();
   const skeletonGrid = page.getByRole('status', { name: 'Loading products' });
   await expect(skeletonGrid).toBeVisible();
   const cardHeights = await skeletonGrid.locator(':scope > div').evaluateAll((cards) =>

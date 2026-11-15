@@ -163,7 +163,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 title={t('signInOrManageAccounts')}
                 className="hidden rounded-full border border-[#d0c8a5]/25 bg-white/5 px-4 py-2 text-xs font-semibold text-surface-100 transition-colors hover:bg-white/10 sm:inline-flex cursor-pointer"
               >
-                {t('logIn')}
+                {t('signIn')}
               </button>
               <button type="button" onClick={onOpenSellerSignup} className="rounded-full bg-brand-600 px-4 py-2 text-xs font-semibold text-white shadow-[0_12px_25px_rgba(91,79,41,0.35)] transition-transform hover:-translate-y-0.5 hover:bg-brand-500 cursor-pointer sm:text-sm">
                 {t('startSelling')}
@@ -418,7 +418,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <div>
             <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-200">{t('footerAccount')}</h3>
             <ul className="mt-4 space-y-3 text-sm">
-              <li><button type="button" onClick={onOpenLogin} className="cursor-pointer text-surface-300 hover:text-white">{t('logIn')}</button></li>
+              <li><button type="button" onClick={onOpenLogin} className="cursor-pointer text-surface-300 hover:text-white">{t('signIn')}</button></li>
               <li><button type="button" onClick={onOpenCustomerSignup || onOpenLogin} className="cursor-pointer text-surface-300 hover:text-white">{t('createAnAccount')}</button></li>
             </ul>
           </div>
@@ -433,7 +433,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 py-4 sm:flex-row sm:px-6 md:px-8">
             <p>© {currentYear} {BUSINESS.name}. {locale === 'bn' ? t('madeInBangladesh') : t('madeInBangladesh')}</p>
             {onOpenAdminSignup && (
-              <button type="button" onClick={onOpenAdminSignup} className="text-xs text-surface-500 transition-colors hover:text-brand-200 cursor-pointer">
+              <button type="button" onClick={onOpenAdminSignup} className="text-xs text-surface-300 transition-colors hover:text-brand-200 cursor-pointer">
                 {t('adminSignIn')}
               </button>
             )}
