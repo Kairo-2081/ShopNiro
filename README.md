@@ -291,6 +291,47 @@ typo cannot invent a new one. The route handlers decide which moves are allowed.
 | Seller payout / rider withdrawal | `requested`/`pending` → `paid` · `rejected` | Settled by an admin |
 | Support request | `open` → `in_progress` → `resolved` | |
 
+## Payments and money
+
+> **Status:** payments run in sandbox mode on staging and in the payment
+> simulator locally. Live payments are switched on only at launch, after a
+> controlled low-value test; see
+> [`docs/launch-checks`](./docs/launch-checks/README.md).
+
+| Method | How it works |
+| --- | --- |
+| **Cash on delivery** | The rider collects the amount at the door and records it; the order closes when the customer enters the rider's delivery code. |
+| **Online (bKash, mobile wallets, cards)** | Hosted checkout through SSLCOMMERZ. The server computes the amount from the order, never from the browser, and marks the order paid only after the gateway validates the transaction. |
+| **Refunds** | A customer requests cancellation of a paid order, an admin approves it, a queued refund is sent to the gateway by a scheduled job, and the job polls until the gateway reports it completed or failed. |
+| **Duplicate payments** | If the same order is paid twice, the extra payment is queued for refund automatically. |
+
+```mermaid
+flowchart TD
+    A([Customer pays]) --> B{Method}
+    B -->|Cash on delivery| C[Rider collects cash<br/>and records it]
+    B -->|Online| D[Gateway validates<br/>the transaction]
+    C --> E[Customer confirms<br/>with the delivery code]
+    D --> E
+    E --> F[Seller credited:<br/>item subtotal minus 15% commission]
+    E --> G[Shipping fee stays<br/>with the platform]
+    F --> H[Held for 7 days]
+    H --> I[Available to withdraw]
+    I --> J[Seller requests a payout]
+    J --> K[Admin verifies the payout account,<br/>pays and records the external reference]
+    F -. refund after delivery .-> L[Negative ledger entry,<br/>earlier rows are never edited]
+```
+
+| Rule | Why it matters |
+| --- | --- |
+| Wallet balances come from **append-only ledger entries** | History can always be replayed and audited; a refund adds a row instead of rewriting one |
+| Every payout and cash remittance **references its source** and is idempotent | A retried request cannot pay twice |
+| **Idempotent, transactional** payment callbacks | Gateway retries cannot create duplicate orders |
+| A **nightly reconciliation** compares payments with the gateway | Mismatches become findings an admin acknowledges |
+
+Step-by-step diagrams for the payment, refund and payout flows are in
+[`docs/flows.md`](./docs/flows.md); the payout policy is in
+[`docs/payouts.md`](./docs/payouts.md).
+
 ## Evidence from CI
 
 | Measure | Result |
