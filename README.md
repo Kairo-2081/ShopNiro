@@ -40,6 +40,26 @@ order updates, and last-mile delivery into one marketplace. Customers can shop
 from multiple sellers; approved sellers manage their stores; admins oversee
 marketplace operations; and riders update assigned deliveries.
 
+## At a glance
+
+| | |
+| --- | --- |
+| **Four roles, one order journey** | Customers, sellers, riders and admins each get their own workspace on the same data. |
+| **Where it runs** | Web app, Android app (Capacitor) and a desktop wrapper (Electron), in English and Bangla. |
+| **Local payments** | Cash on delivery, bKash and SSLCOMMERZ, with refunds and a nightly reconciliation against the gateway. |
+| **Trust built in** | Sellers and riders are approved by an admin before they can operate; a delivery is confirmed with a code the rider reads out and the customer enters. |
+| **Data** | 40 PostgreSQL tables and 55 foreign keys, kept by 12 numbered migrations; every migration rolls forward only. |
+| **Verified** | 20 API route modules, a Node test suite, Playwright browser tests, axe and Lighthouse accessibility checks. |
+
+## Who does what
+
+| Role | Gets | Needs approval? |
+| --- | --- | --- |
+| **Customer** | Catalogue search and charts, cart and checkout, live order tracking, reviews, wishlist, support requests | No, but an account is required to order |
+| **Seller** | Product catalogue, fulfilment orders, sales analytics, customer reviews, deals and bundles, cash-on-delivery remittances | Yes, an admin reviews identity, documents and payout account |
+| **Rider** | Available deliveries to claim, an on-the-way status, a delivery code to give the customer, cash-on-delivery collection, wallet and withdrawals | Yes, an admin approves the application |
+| **Admin** | Governance overview, marketplace metrics, merchant approvals, categories, rider hiring, product moderation, online payments, order cancellations, support inbox | Not self-service: public admin signup is disabled |
+
 ## Try it
 
 | Role | What you can try |
