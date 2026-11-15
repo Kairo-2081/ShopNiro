@@ -484,6 +484,23 @@ migrate if they differ, so a staging secret pasted into production fails before
 anything changes. The service settings each environment needs are listed in the
 [Render settings checklist](./docs/render-service-settings.md).
 
+### Scheduled jobs
+
+| Job | When (UTC) | What it does |
+| --- | --- | --- |
+| Expire orders and send refunds | Every 5 minutes | `/api/cron/expire-orders` expires unpaid online orders; `/api/cron/refunds` sends queued refunds to the gateway and polls them |
+| Settle rider payroll | Daily, 00:00 | `/api/riders/payroll/settle` |
+| Payment reconciliation | Daily, 20:00 | Compares payments with the gateway and records findings |
+| Database backup | Daily, 20:00 | Backs up the database |
+| Production schema watch | Daily, 03:17 | Compares the live schema with one built from the migration files |
+| Storefront performance | Mondays, 03:17 | Measures first-product-card time on an emulated phone |
+
+GitHub Actions calls the protected endpoints with a shared secret, outside the
+web process, so jobs do not depend on the server being up. Hosted schedules can
+run late, so every handler tolerates delayed and repeated calls. Configure the
+secrets `APP_URL` (the API origin) and `CRON_SECRET`; use a host-provided
+scheduler when timing matters.
+
 ## Get started
 
 ### Requirements
@@ -576,17 +593,6 @@ with `npm run bench:payments`; see [`docs/benchmarks.md`](./docs/benchmarks.md).
 The storefront's load time on an emulated mid-range phone is measured with
 `npm run perf:storefront` and profiled with `npm run perf:profile`; see
 [`docs/performance.md`](./docs/performance.md).
-
-### Scheduled jobs
-
-- GitHub Actions calls `/api/cron/expire-orders` and `/api/cron/refunds` every
-  five minutes and `/api/riders/payroll/settle` daily.
-- A separate nightly GitHub Actions workflow calls
-  `/api/cron/reconcile-payments`.
-
-Configure the GitHub Actions secrets `APP_URL` (the API origin) and
-`CRON_SECRET`. Hosted scheduler runs may be delayed; use a host-provided
-scheduler when timing is important.
 
 ### Project guides
 
