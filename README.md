@@ -202,6 +202,31 @@ the captures had no internet for map tiles.
 </tr>
 </table>
 
+#### Admin
+
+<table>
+<tr>
+<td width="50%" valign="top">
+<img src="./.github/assets/readme/app-admin-overview.jpg" alt="Platform admin governance console with market value, active merchants, order throughput and a seller approval table" width="100%" />
+<p><b>See the marketplace.</b> Pending applications, key totals and the seller approval queue on one screen.</p>
+</td>
+<td width="50%" valign="top">
+<img src="./.github/assets/readme/app-admin-seller-review.jpg" alt="Seller application dialog with a verification checklist for identity, documents and payout account, and Approve, Reject and Suspend buttons" width="100%" />
+<p><b>Approve with a checklist.</b> Identity, documents and payout account are ticked off before a seller can be approved.</p>
+</td>
+</tr>
+<tr>
+<td width="50%" valign="top">
+<img src="./.github/assets/readme/app-admin-metrics.jpg" alt="Marketplace metrics with top rated products, top trends and latest added products" width="100%" />
+<p><b>Track performance.</b> Top-rated products, best sellers and new listings, with tabs for vendors and riders.</p>
+</td>
+<td width="50%" valign="top">
+<img src="./.github/assets/readme/app-admin-payments.jpg" alt="Online payments page with gateway status, transaction ledger and seller payout requests" width="100%" />
+<p><b>Watch the money.</b> Gateway status, an online-payment ledger and seller payout requests.</p>
+</td>
+</tr>
+</table>
+
 ## How it works
 
 1. A customer finds an in-stock product from an approved seller and adds it to
