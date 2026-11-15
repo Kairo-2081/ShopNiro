@@ -4,6 +4,8 @@ import { AccountLocationPicker } from '../AccountLocationPicker';
 import { PolicyLinks } from '../legal/PolicyLinks';
 import { X, UserPlus, Send, Lock, Eye, EyeOff, User, Mail, Phone, MapPin } from 'lucide-react';
 import { useLocale } from '../../lib/i18n';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface CustomerSignupModalProps {
   isOpen: boolean;
@@ -19,6 +21,8 @@ export const CustomerSignupModal: React.FC<CustomerSignupModalProps> = ({
   onSuccessRegistered,
 }) => {
   const { t } = useLocale();
+  useEscapeKey(onClose, isOpen);
+  const dialogRef = useFocusTrap<HTMLDivElement>(isOpen);
   const [username, setUsername] = useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -82,6 +86,7 @@ export const CustomerSignupModal: React.FC<CustomerSignupModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-4 animate-in fade-in duration-200">
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="customer-registration-title"

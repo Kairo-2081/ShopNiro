@@ -5,6 +5,8 @@ import { AccountLocationPicker } from '../AccountLocationPicker';
 import { OAuthProviderButtons } from '../OAuthProviderButtons';
 import { X, Store, Send, MapPin, Lock, Eye, EyeOff, User, Mail, Phone, Image, Sparkles } from 'lucide-react';
 import { useLocale } from '../../lib/i18n';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface SellerSignupModalProps {
   isOpen: boolean;
@@ -27,6 +29,8 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
   onSuccessRegistered,
 }) => {
   const { t } = useLocale();
+  useEscapeKey(onClose, isOpen);
+  const dialogRef = useFocusTrap<HTMLDivElement>(isOpen);
   const [username, setUsername] = useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -154,6 +158,7 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="seller-registration-title"

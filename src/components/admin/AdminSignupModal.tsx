@@ -3,6 +3,8 @@ import { Admin, Address } from '../../types';
 import { AccountLocationPicker } from '../AccountLocationPicker';
 import { X, ShieldPlus, Send, Eye, EyeOff, Lock, User, Mail, Phone, MapPin } from 'lucide-react';
 import { useLocale } from '../../lib/i18n';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface AdminSignupModalProps {
   isOpen: boolean;
@@ -18,6 +20,8 @@ export const AdminSignupModal: React.FC<AdminSignupModalProps> = ({
   onSuccessRegistered,
 }) => {
   const { t } = useLocale();
+  useEscapeKey(onClose, isOpen);
+  const dialogRef = useFocusTrap<HTMLDivElement>(isOpen);
   const [username, setUsername] = useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -83,6 +87,7 @@ export const AdminSignupModal: React.FC<AdminSignupModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-4 overflow-y-auto animate-in fade-in duration-200">
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="admin-registration-title"
