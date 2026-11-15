@@ -5,6 +5,7 @@ import { AppErrorBoundary } from './components/AppErrorBoundary.tsx';
 import { NetworkStatusBanner } from './components/NetworkStatusBanner.tsx';
 import { SkipLink } from './components/SkipLink.tsx';
 import { LocaleProvider } from './lib/i18n.tsx';
+import { beginStorefrontHeadStart } from './lib/storefrontHeadStart.ts';
 import './index.css';
 
 const LegalPage = React.lazy(() =>
@@ -41,6 +42,8 @@ if (typeof window !== 'undefined') {
 // Public policy pages (/terms, /privacy, /refunds, /delivery) render without the app shell or any API call.
 const policyPaths = ['/terms', '/privacy', '/refunds', '/delivery'];
 const isPolicy = typeof window !== 'undefined' && policyPaths.includes(window.location.pathname);
+// The first screen asks for the same public data every time, so start those requests now, before anything has rendered.
+if (typeof window !== 'undefined' && !isPolicy) beginStorefrontHeadStart();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

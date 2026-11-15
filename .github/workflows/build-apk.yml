@@ -31,6 +31,8 @@ jobs:
 
       - name: Build Web Assets
         run: npm run build
+        env:
+          SKIP_PRECOMPRESS: "1"
 
       - name: Sync Capacitor Android
         run: npx cap sync android

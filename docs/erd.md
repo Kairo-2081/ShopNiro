@@ -19,9 +19,11 @@ erDiagram
     riders o|--o{ rider_deliveries : takes
     riders ||--o{ rider_wallet_entries : earns
     rider_deliveries ||--o{ rider_reviews : receives
-    orders ||..o{ payments : "application reference; no foreign key"
+    orders ||--o{ payments : "order_id"
     payments o|--o{ refunds : "refunded by"
     orders ||--o{ refunds : has
 ```
 
-`payments.order_id` is intentionally not a foreign key. A delivery references one fulfillment through a unique, non-null `fulfillment_id`, so each fulfillment has at most one delivery record. Wallet and payout rows reference their owning seller or rider; the diagram omits non-FK reference IDs.
+`payments.order_id` is a foreign key to `orders` (`ON DELETE RESTRICT`), so an order that has payments cannot be deleted; the baseline migration adds it with the other payment constraints, and a database whose old rows violated it keeps it `NOT VALID` until they are fixed. A delivery references one fulfillment through a unique, non-null `fulfillment_id`, so each fulfillment has at most one delivery record. Wallet and payout rows reference their owning seller or rider; the diagram omits non-FK reference IDs.
+
+For every table, column and foreign key, grouped by domain, see [schema.md](schema.md), which is generated from the migrated schema.
