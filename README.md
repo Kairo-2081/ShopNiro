@@ -181,6 +181,27 @@ the captures had no internet for map tiles.
 </tr>
 </table>
 
+#### Rider
+
+<table>
+<tr>
+<td width="50%" valign="top">
+<img src="./.github/assets/readme/app-rider-available.jpg" alt="Rider operations page listing a nearby pending shipment with a Claim delivery button" width="100%" />
+<p><b>Claim a delivery.</b> Pending pickups within 20 km are listed nearest first; the rider claims one.</p>
+</td>
+<td width="50%" valign="top">
+<img src="./.github/assets/readme/app-rider-active.jpg" alt="Active delivery with an On the way status, a delivery code to tell the customer and a Confirm received button for the cash amount" width="100%" />
+<p><b>Deliver it.</b> On the way, the rider sees the delivery code to read out and the cash to collect.</p>
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top">
+<img src="./.github/assets/readme/app-rider-cash-recorded.jpg" alt="Delivery with the message COD collection recorded, waiting for the customer to confirm receipt" width="100%" />
+<p><b>Record the cash.</b> Cash on delivery is recorded; the order closes when the customer enters the code.</p>
+</td>
+</tr>
+</table>
+
 ## How it works
 
 1. A customer finds an in-stock product from an approved seller and adds it to
