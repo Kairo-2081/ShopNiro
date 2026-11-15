@@ -227,6 +227,21 @@ the captures had no internet for map tiles.
 </tr>
 </table>
 
+#### On a phone
+
+<table>
+<tr>
+<td width="50%" align="center" valign="top">
+<img src="./.github/assets/readme/app-phone-storefront.jpg" alt="Storefront on a 390-pixel-wide phone" width="280" />
+<p><b>Same app, narrow screen.</b> The storefront at 390 × 844.</p>
+</td>
+<td width="50%" align="center" valign="top">
+<img src="./.github/assets/readme/app-phone-catalog.jpg" alt="Catalogue product card on a 390-pixel-wide phone" width="280" />
+<p><b>Product cards.</b> One column, with price, stock and add to cart.</p>
+</td>
+</tr>
+</table>
+
 ## How it works
 
 1. A customer finds an in-stock product from an approved seller and adds it to
