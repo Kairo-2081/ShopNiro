@@ -149,7 +149,7 @@ test('public and role-specific pages have no critical or serious axe violations'
   try {
     await blockNonLocalTraffic(publicPage);
     await publicPage.goto('/');
-    // The globe is a lazy chunk. On a cold dev server the page can still be painting when the scan starts, so wait for it.
+    // The map is a lazy chunk. On a cold dev server the page can still be painting when the scan starts, so wait for it.
     await publicPage.locator('canvas').waitFor();
     await publicPage.waitForLoadState('networkidle').catch(() => undefined);
     await scanPage(publicPage, 'Public marketplace');
@@ -287,7 +287,7 @@ test('cart drawer traps focus, closes with Escape, and restores focus to its tri
   }
 });
 
-test('reduced motion stops the orbit globe animation without hiding its content', async ({ browser, baseURL }, testInfo) => {
+test('reduced motion stops the map animation without hiding its content', async ({ browser, baseURL }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop', 'The motion preference check runs once per CI workflow.');
   const context = await browser.newContext({ baseURL, storageState: guestStorageState, reducedMotion: 'reduce' });
   const page = await context.newPage();
@@ -295,15 +295,15 @@ test('reduced motion stops the orbit globe animation without hiding its content'
     await blockNonLocalTraffic(page);
     console.log('Opening the marketplace with reduced motion enabled.');
     await page.goto('/');
-    const globe = page.locator('canvas');
-    console.log('Waiting for the orbit globe canvas.');
-    await expect(globe).toBeVisible();
-    // The globe is drawn at an idle moment (up to 700 ms after load) and fades in only once it has been drawn, so
+    const map = page.locator('canvas');
+    console.log('Waiting for the map canvas.');
+    await expect(map).toBeVisible();
+    // The map is drawn at an idle moment (up to 700 ms after load) and fades in only once it has been drawn, so
     // an earlier read would compare the blank canvas with the finished picture and mistake that for motion.
-    await expect(globe).toHaveCSS('opacity', '1');
-    const initialFrame = await globe.evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL());
+    await expect(map).toHaveCSS('opacity', '1');
+    const initialFrame = await map.evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL());
     await page.waitForTimeout(150);
-    const settledFrame = await globe.evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL());
+    const settledFrame = await map.evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL());
     expect(settledFrame).toBe(initialFrame);
     expect(await page.locator('canvas + span[aria-hidden="true"]').evaluate((element) => getComputedStyle(element).animationName)).toBe('none');
   } finally {
