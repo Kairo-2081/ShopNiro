@@ -27,7 +27,11 @@ const assertKeyboardReachability = async (page: import('@playwright/test').Page,
   const expected = await page.evaluate(() => {
     const selector = 'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])';
     return Array.from(document.querySelectorAll<HTMLElement>(selector))
-      .filter((element) => element.tabIndex >= 0 && getComputedStyle(element).visibility !== 'hidden' && element.getClientRects().length > 0 && !element.closest('[inert]'))
+      .filter((element) => {
+        const closedDetails = element.closest('details:not([open])');
+        const visibleInDetails = !closedDetails || (element.tagName === 'SUMMARY' && element.parentElement === closedDetails);
+        return element.tabIndex >= 0 && getComputedStyle(element).visibility !== 'hidden' && element.getClientRects().length > 0 && !element.closest('[inert]') && visibleInDetails;
+      })
       .map((element) => ({
         label: element.getAttribute('aria-label') || (element.innerText ?? element.textContent ?? '').trim().replace(/\s+/g, ' ') || element.title || `${element.tagName.toLowerCase()} control`,
         html: element.outerHTML.slice(0, 240),
@@ -52,7 +56,11 @@ const assertKeyboardReachability = async (page: import('@playwright/test').Page,
         const element = document.activeElement as HTMLElement | null;
         const selector = 'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"]):not([data-a11y-focus-anchor])';
         const controls = Array.from(document.querySelectorAll<HTMLElement>(selector))
-          .filter((candidate) => candidate.tabIndex >= 0 && getComputedStyle(candidate).visibility !== 'hidden' && candidate.getClientRects().length > 0 && !candidate.closest('[inert]'));
+          .filter((candidate) => {
+            const closedDetails = candidate.closest('details:not([open])');
+            const visibleInDetails = !closedDetails || (candidate.tagName === 'SUMMARY' && candidate.parentElement === closedDetails);
+            return candidate.tabIndex >= 0 && getComputedStyle(candidate).visibility !== 'hidden' && candidate.getClientRects().length > 0 && !candidate.closest('[inert]') && visibleInDetails;
+          });
         const label = element && (element.getAttribute('aria-label') || (element.innerText ?? element.textContent ?? '').trim().replace(/\s+/g, ' ') || element.title || `${element.tagName.toLowerCase()} control`);
         return {
           index: element ? controls.indexOf(element) : -1,
