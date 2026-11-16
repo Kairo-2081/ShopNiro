@@ -39,7 +39,7 @@ test('a stale hint without a session falls back to the landing page and is clear
   try {
     await blockNonLocalTraffic(page);
     await page.goto('/');
-    await expect(page.getByRole('button', { name: 'Explore Marketplace' })).toBeVisible();
+    await expect(page.locator('#hero').getByRole('button', { name: 'Browse products' })).toBeVisible();
     await expect.poll(() => page.evaluate((key) => window.localStorage.getItem(key), HINT_KEY)).toBeNull();
   } finally {
     await context.close();

@@ -241,7 +241,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             className={`py-2 rounded-full transition-all flex items-center justify-center gap-2 cursor-pointer ${
               activeTab === 'login'
                 ? 'bg-brand-600 text-white shadow-xs font-bold'
-                : 'text-surface-500 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white'
+                : 'text-surface-700 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white'
             }`}
           >
             <LogIn className="w-4 h-4" />
@@ -256,7 +256,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             className={`py-2 rounded-full transition-all flex items-center justify-center gap-2 cursor-pointer ${
               activeTab === 'register'
                 ? 'bg-brand-600 text-white shadow-xs font-bold'
-                : 'text-surface-500 dark:text-surface-400 hover:text-surface-900 dark:hover:text-white'
+                : 'text-surface-700 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white'
             }`}
           >
             <UserPlus className="w-4 h-4" />
