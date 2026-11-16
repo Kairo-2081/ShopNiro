@@ -2,7 +2,7 @@ import React from 'react';
 import { BUSINESS } from './business';
 import { POLICIES, policyByPath, type Policy } from './policies';
 import { POLICY_TRANSLATIONS } from './policyTranslations';
-import { Languages } from 'lucide-react';
+import { LanguageToggle, ThemeToggle } from '../PreferenceControls';
 import { useLocale } from '../../lib/i18n';
 import { MAIN_CONTENT_ID } from '../SkipLink';
 
@@ -13,7 +13,7 @@ interface LegalPageProps {
 /** Standalone, public policy page. Rendered by main.tsx for /terms, /privacy, /refunds and /delivery. */
 export const LegalPage: React.FC<LegalPageProps> = ({ policy: propPolicy }) => {
   const policy = propPolicy ?? (typeof window !== 'undefined' ? policyByPath(window.location.pathname) : undefined) ?? POLICIES[0];
-  const { t, locale, setLocale } = useLocale();
+  const { t, locale } = useLocale();
   const localizedPolicy = locale === 'bn' ? POLICY_TRANSLATIONS[policy.id] : policy;
   const updatedAt = locale === 'bn'
     ? new Date(BUSINESS.lastUpdated).toLocaleDateString('bn-BD', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -50,16 +50,10 @@ export const LegalPage: React.FC<LegalPageProps> = ({ policy: propPolicy }) => {
               </a>
             ))}
           </nav>
-          <button
-            type="button"
-            onClick={() => setLocale(locale === 'en' ? 'bn' : 'en')}
-            aria-label={`${locale === 'en' ? 'বাংলা' : 'English'} (${t('changeLanguage')})`}
-            title={t('changeLanguage')}
-            className="inline-flex min-h-10 items-center gap-2 rounded-full border border-surface-200 px-3 text-xs font-bold text-surface-700 transition-colors hover:bg-surface-50 dark:border-surface-700 dark:text-surface-200 dark:hover:bg-surface-800"
-          >
-            <Languages aria-hidden="true" className="h-4 w-4" />
-            {locale === 'en' ? 'বাংলা' : 'English'}
-          </button>
+          <div className="flex items-center gap-2">
+            <LanguageToggle />
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 
