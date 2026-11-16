@@ -2,7 +2,7 @@ import React from 'react';
 import { ArrowRight, ShoppingBag } from 'lucide-react';
 import { useLocale } from '../../lib/i18n';
 
-const OrbitGlobe = React.lazy(() => import('./OrbitGlobe').then((module) => ({ default: module.OrbitGlobe })));
+const BangladeshMap = React.lazy(() => import('./map/BangladeshMap').then((module) => ({ default: module.BangladeshMap })));
 
 export const LandingHero: React.FC<{ onEnterAsGuest: () => void; onOpenSellerSignup: () => void }> = ({ onEnterAsGuest, onOpenSellerSignup }) => {
   const { t } = useLocale();
@@ -41,8 +41,8 @@ export const LandingHero: React.FC<{ onEnterAsGuest: () => void; onOpenSellerSig
             <div className="absolute -left-2 top-7 z-20 rounded-full border border-[#d0c8a5]/20 bg-[#141922]/80 px-3 py-1 text-[11px] font-semibold text-surface-100 shadow-xl backdrop-blur md:-left-6">{t('shopProducts')}</div>
             <div className="absolute -right-2 bottom-16 z-20 rounded-full border border-[#d0c8a5]/20 bg-[#141922]/80 px-3 py-1 text-[11px] font-semibold text-surface-100 shadow-xl backdrop-blur md:-right-6">{t('approvedSellers')}</div>
             <div className="flex justify-center rounded-[28px] border border-[#d0c8a5]/12 bg-[#0d1115]/40 p-3 shadow-[0_20px_60px_rgba(0,0,0,0.25)] backdrop-blur-sm">
-              <React.Suspense fallback={<div aria-hidden="true" className="h-[284px] w-full max-w-[420px] md:h-[374px]" />}>
-                <OrbitGlobe />
+              <React.Suspense fallback={<div aria-hidden="true" className="h-[344px] w-full max-w-[420px] md:h-[452px]" />}>
+                <BangladeshMap />
               </React.Suspense>
             </div>
           </div>
