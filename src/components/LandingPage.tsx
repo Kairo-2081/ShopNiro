@@ -127,18 +127,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   ];
 
   return (
-    <div className="min-h-screen bg-[#090c10] text-surface-100 transition-colors duration-200 selection:bg-[#80734f] selection:text-white dark:text-surface-100">
+    <div className="min-h-screen text-surface-900 transition-colors duration-200 selection:bg-[#80734f] selection:text-white dark:text-surface-100">
       <main id={MAIN_CONTENT_ID} tabIndex={-1} className="focus:outline-none mx-auto max-w-7xl px-4 pb-10 pt-3 sm:px-6 md:px-8 md:pt-5">
-        <header className="sticky top-0 z-30 mb-6 rounded-full border border-[#d0c8a5]/15 bg-[#10100f]/75 px-3 py-2 shadow-[0_12px_32px_rgba(6,6,4,0.24)] backdrop-blur-xl md:rounded-2xl">
+        <header className="sticky top-0 z-30 mb-6 rounded-full border border-[#d0c8a5]/15 bg-white/80 dark:bg-[#10100f]/75 px-3 py-2 shadow-[0_12px_32px_rgba(6,6,4,0.24)] backdrop-blur-xl md:rounded-2xl">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
               <img src={shopNiroLogoSmall} alt="ShopNiro" className="h-10 w-10 rounded-full border border-brand-100 object-cover shadow-md shadow-brand-600/20 dark:border-surface-700" />
-              <p className="font-display text-xl font-normal leading-none text-white">ShopNiro</p>
+              <p className="font-display text-xl font-normal leading-none text-surface-900 dark:text-white">ShopNiro</p>
             </div>
 
             <nav className="hidden items-center gap-1 md:flex lg:gap-2" aria-label="Main navigation">
               {navItems.map((item) => (
-                <a key={item.href} href={item.href} className="rounded-full px-2 py-2 text-xs font-semibold text-surface-200 transition-colors hover:bg-white/8 hover:text-white lg:px-4 lg:text-sm">
+                <a key={item.href} href={item.href} className="rounded-full px-2 py-2 text-xs font-semibold text-surface-700 dark:text-surface-200 transition-colors hover:bg-black/5 hover:text-surface-900 dark:hover:bg-white/8 dark:hover:text-surface-900 dark:hover:text-white lg:px-4 lg:text-sm">
                   {item.label}
                 </a>
               ))}
@@ -150,7 +150,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   type="button"
                   onClick={onToggleTheme}
                   aria-label={theme === 'dark' ? t('changeThemeToLight') : t('changeThemeToDark')}
-                  className="flex h-9 w-9 items-center justify-center rounded-full border border-surface-700 bg-[#161C24] text-surface-300 transition-colors hover:bg-surface-800 cursor-pointer"
+                  className="flex h-9 w-9 items-center justify-center rounded-full border border-surface-200 dark:border-surface-700 bg-white dark:bg-[#161C24] text-surface-600 dark:text-surface-300 transition-colors hover:bg-surface-800 cursor-pointer"
                   title={theme === 'dark' ? t('changeThemeToLight') : t('changeThemeToDark')}
                 >
                   {theme === 'dark' ? <Sun className="h-4 w-4 text-warning-400" /> : <Moon className="h-4 w-4 text-brand-400" />}
@@ -161,11 +161,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 onClick={onOpenLogin}
                 aria-label={t('signInOrManageAccounts')}
                 title={t('signInOrManageAccounts')}
-                className="hidden rounded-full border border-[#d0c8a5]/25 bg-white/5 px-4 py-2 text-xs font-semibold text-surface-100 transition-colors hover:bg-white/10 sm:inline-flex cursor-pointer"
+                className="hidden rounded-full border border-[#d0c8a5]/25 bg-black/5 dark:bg-white/5 px-4 py-2 text-xs font-semibold text-surface-800 dark:text-surface-100 transition-colors hover:bg-white/10 sm:inline-flex cursor-pointer"
               >
                 {t('signIn')}
               </button>
-              <button type="button" onClick={onOpenSellerSignup} className="rounded-full bg-brand-600 px-4 py-2 text-xs font-semibold text-white shadow-[0_12px_25px_rgba(91,79,41,0.35)] transition-transform hover:-translate-y-0.5 hover:bg-brand-500 cursor-pointer sm:text-sm">
+              <button type="button" onClick={onOpenSellerSignup} className="rounded-full bg-brand-600 px-4 py-2 text-xs font-semibold text-surface-900 dark:text-white shadow-[0_12px_25px_rgba(91,79,41,0.35)] transition-transform hover:-translate-y-0.5 hover:bg-brand-500 cursor-pointer sm:text-sm">
                 {t('startSelling')}
               </button>
             </div>
@@ -215,13 +215,13 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </section>
 
         <section id="payment-strip" aria-labelledby="payment-strip-title" className="py-12 md:py-20">
-          <h2 id="payment-strip-title" className="mb-6 text-center text-sm font-semibold uppercase tracking-[0.18em] text-brand-200 md:text-base">
+          <h2 id="payment-strip-title" className="mb-6 text-center text-sm font-semibold uppercase tracking-[0.18em] text-brand-800 dark:text-brand-200 md:text-base">
             {t('payYourWayTitle')}
           </h2>
           <div className="flex flex-wrap items-center justify-center gap-3">
             {[t('cashOnDelivery'), t('onlinePaymentText'), t('riderDelivery'), t('orderTracking'), t('deliveryCodeConfirmation'), t('productReviews')].map((item) => (
-              <div key={item} className="inline-flex items-center gap-2 rounded-full border border-[#d0c8a5]/15 bg-[#11161d]/70 px-4 py-2 text-sm text-surface-200">
-                <BadgeCheck className="h-4 w-4 text-brand-300" />
+              <div key={item} className="inline-flex items-center gap-2 rounded-full border border-[#d0c8a5]/15 bg-white/70 dark:bg-[#11161d]/70 px-4 py-2 text-sm text-surface-700 dark:text-surface-200">
+                <BadgeCheck className="h-4 w-4 text-brand-700 dark:text-brand-300" />
                 <span>{item}</span>
               </div>
             ))}
@@ -231,9 +231,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         {approvedSellers.length >= 3 && (
           <section id="sellers" aria-labelledby="sellers-heading" className="py-12 md:py-20">
             <div className="mb-6 text-center">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-300">{t('sellersSectionEyebrow')}</p>
-              <h2 id="sellers-heading" className="mt-2 text-3xl font-medium tracking-[-0.04em] text-white md:text-4xl">{t('sellersAlreadyOnShopNiro')}</h2>
-              <p className="mt-3 text-sm text-surface-300">{t('sellersReviewedBeforeListing')}</p>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-700 dark:text-brand-300">{t('sellersSectionEyebrow')}</p>
+              <h2 id="sellers-heading" className="mt-2 text-3xl font-medium tracking-[-0.04em] text-surface-900 dark:text-white md:text-4xl">{t('sellersAlreadyOnShopNiro')}</h2>
+              <p className="mt-3 text-sm text-surface-600 dark:text-surface-300">{t('sellersReviewedBeforeListing')}</p>
             </div>
             <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
               {approvedSellers.map((seller) => (
@@ -241,7 +241,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   key={seller.Seller_ID}
                   type="button"
                   onClick={onEnterAsGuest}
-                  className="flex items-center gap-3 rounded-2xl border border-surface-700 bg-[#10161e]/75 p-4 text-left transition-colors hover:border-brand-500/60 hover:bg-[#121b26] cursor-pointer"
+                  className="flex items-center gap-3 rounded-2xl border border-surface-200 dark:border-surface-700 bg-white/75 dark:bg-[#10161e]/75 p-4 text-left transition-colors hover:border-brand-500/60 hover:bg-white dark:hover:bg-[#121b26] cursor-pointer"
                 >
                   <img
                     src={seller.Logo || shopNiroLogoSmall}
@@ -253,12 +253,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       const target = event.currentTarget as HTMLImageElement;
                       target.style.display = 'none';
                       const fallback = document.createElement('div');
-                      fallback.className = 'flex h-12 w-12 items-center justify-center rounded-xl bg-brand-600/20 text-sm font-bold text-brand-200';
+                      fallback.className = 'flex h-12 w-12 items-center justify-center rounded-xl bg-brand-600/20 text-sm font-bold text-brand-800 dark:text-brand-200';
                       fallback.textContent = seller.Name.charAt(0).toUpperCase();
                       target.parentElement?.appendChild(fallback);
                     }}
                   />
-                  <span className="truncate text-sm font-semibold text-white">{seller.Name}</span>
+                  <span className="truncate text-sm font-semibold text-surface-900 dark:text-white">{seller.Name}</span>
                 </button>
               ))}
             </div>
@@ -267,27 +267,27 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
         <section id="how-it-works" aria-labelledby="how-it-works-heading" className="py-12 md:py-20">
           <div className="mb-8 text-center">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-300">{t('simpleSteps')}</p>
-            <h2 id="how-it-works-heading" className="mt-2 text-3xl font-medium tracking-[-0.04em] text-white md:text-4xl">{t('howShopNiroWorks')}</h2>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-700 dark:text-brand-300">{t('simpleSteps')}</p>
+            <h2 id="how-it-works-heading" className="mt-2 text-3xl font-medium tracking-[-0.04em] text-surface-900 dark:text-white md:text-4xl">{t('howShopNiroWorks')}</h2>
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
             {howItWorksSteps.map((step, index) => (
-              <div key={step.title} className="rounded-2xl border border-surface-700 bg-[#10161e]/75 p-5 shadow-xl">
+              <div key={step.title} className="rounded-2xl border border-surface-200 dark:border-surface-700 bg-white/75 dark:bg-[#10161e]/75 p-5 shadow-xl">
                 <div className="mb-5 flex items-center gap-3">
-                  <div className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white ${step.tone}`}>
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-surface-900 dark:text-white ${step.tone}`}>
                     {index + 1}
                   </div>
-                  <span className="text-lg font-semibold text-white">{step.title}</span>
+                  <span className="text-lg font-semibold text-surface-900 dark:text-white">{step.title}</span>
                 </div>
-                <p className="text-sm leading-relaxed text-surface-300">{step.text}</p>
+                <p className="text-sm leading-relaxed text-surface-600 dark:text-surface-300">{step.text}</p>
               </div>
             ))}
           </div>
 
-          <div className="mt-8 flex flex-col items-center justify-between gap-4 rounded-2xl border border-brand-500/20 bg-gradient-to-r from-[#111a1b] to-[#1a1d15] px-5 py-4 text-center md:flex-row md:text-left">
-            <p className="text-base text-surface-100">{t('sellerBandText')}</p>
-            <button type="button" onClick={onOpenSellerSignup} className="inline-flex items-center gap-2 rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-500 cursor-pointer">
+          <div className="mt-8 flex flex-col items-center justify-between gap-4 rounded-2xl border border-brand-500/20 bg-gradient-to-r from-white/80 to-brand-50/70 dark:from-[#111a1b] dark:to-[#1a1d15] px-5 py-4 text-center md:flex-row md:text-left">
+            <p className="text-base text-surface-800 dark:text-surface-100">{t('sellerBandText')}</p>
+            <button type="button" onClick={onOpenSellerSignup} className="inline-flex items-center gap-2 rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-surface-900 dark:text-white transition-colors hover:bg-brand-500 cursor-pointer">
               {t('applyAsSeller')}
               <ArrowRight className="h-4 w-4" />
             </button>
@@ -296,21 +296,21 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
         <section id="features" aria-labelledby="features-heading" className="py-12 md:py-20">
           <div className="mb-8 text-center">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-300">{t('featuresHeadingEyebrow')}</p>
-            <h2 id="features-heading" className="mt-2 text-3xl font-medium tracking-[-0.04em] text-white md:text-4xl">{t('featuresHeading')}</h2>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-700 dark:text-brand-300">{t('featuresHeadingEyebrow')}</p>
+            <h2 id="features-heading" className="mt-2 text-3xl font-medium tracking-[-0.04em] text-surface-900 dark:text-white md:text-4xl">{t('featuresHeading')}</h2>
           </div>
 
           <div className="space-y-8">
             {featureBlocks.map((feature) => (
               <article key={feature.title} className="grid gap-6 lg:grid-cols-2 lg:items-center">
                 <div className={feature.flip ? 'lg:order-2' : ''}>
-                  <div className="mb-3 inline-flex rounded-full border border-brand-500/20 bg-brand-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-200">{feature.eyebrow}</div>
-                  <h3 className="text-2xl font-medium tracking-[-0.04em] text-white md:text-3xl">{feature.title}</h3>
-                  <p className="mt-4 max-w-xl text-base leading-relaxed text-surface-300">{feature.description}</p>
+                  <div className="mb-3 inline-flex rounded-full border border-brand-500/20 bg-brand-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-800 dark:text-brand-200">{feature.eyebrow}</div>
+                  <h3 className="text-2xl font-medium tracking-[-0.04em] text-surface-900 dark:text-white md:text-3xl">{feature.title}</h3>
+                  <p className="mt-4 max-w-xl text-base leading-relaxed text-surface-600 dark:text-surface-300">{feature.description}</p>
                   <ul className="mt-5 space-y-3">
                     {feature.bullets.map((bullet) => (
-                      <li key={bullet} className="flex items-start gap-3 text-sm text-surface-100">
-                        <span className="mt-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-brand-600/20 text-brand-200">
+                      <li key={bullet} className="flex items-start gap-3 text-sm text-surface-800 dark:text-surface-100">
+                        <span className="mt-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-brand-600/20 text-brand-800 dark:text-brand-200">
                           <Check className="h-3.5 w-3.5" />
                         </span>
                         <span>{bullet}</span>
@@ -320,7 +320,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 </div>
 
                 <div className={feature.flip ? 'lg:order-1' : ''}>
-                  <div className="overflow-hidden rounded-[24px] border border-surface-700 bg-[#0e1218] p-3 shadow-[0_16px_40px_rgba(0,0,0,0.25)]">
+                  <div className="overflow-hidden rounded-[24px] border border-surface-200 dark:border-surface-700 bg-white/80 dark:bg-[#0e1218] p-3 shadow-[0_16px_40px_rgba(0,0,0,0.25)]">
                     <div className="mb-3 flex items-center gap-2 px-1">
                       <span className="h-2.5 w-2.5 rounded-full bg-[#ff6a6a]" />
                       <span className="h-2.5 w-2.5 rounded-full bg-[#f6c65b]" />
@@ -333,10 +333,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                       height={800}
                       loading="lazy"
                       decoding="async"
-                      className="h-auto w-full rounded-xl border border-surface-700 object-cover"
+                      className="h-auto w-full rounded-xl border border-surface-200 dark:border-surface-700 object-cover"
                     />
                   </div>
-                  {feature.caption && <p className="mt-3 text-center text-xs text-surface-400">{feature.caption}</p>}
+                  {feature.caption && <p className="mt-3 text-center text-xs text-surface-500 dark:text-surface-400">{feature.caption}</p>}
                 </div>
               </article>
             ))}
@@ -344,15 +344,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </section>
 
         <section aria-labelledby="trust-title" className="py-12 md:py-20">
-          <h2 id="trust-title" className="mb-8 text-center text-3xl font-medium tracking-[-0.04em] text-white md:text-4xl">{t('trustTitle')}</h2>
+          <h2 id="trust-title" className="mb-8 text-center text-3xl font-medium tracking-[-0.04em] text-surface-900 dark:text-white md:text-4xl">{t('trustTitle')}</h2>
           <div className="grid gap-4 md:grid-cols-4">
             {shopCardData.map(({ icon: Icon, title, text }) => (
-              <div key={title} className="rounded-2xl border border-surface-700 bg-[#10161e]/75 p-4 text-center shadow-lg">
-                <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-brand-600/10 text-brand-300">
+              <div key={title} className="rounded-2xl border border-surface-200 dark:border-surface-700 bg-white/75 dark:bg-[#10161e]/75 p-4 text-center shadow-lg">
+                <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-brand-600/10 text-brand-700 dark:text-brand-300">
                   <Icon className="h-5 w-5" />
                 </div>
-                <h3 className="text-sm font-semibold text-white">{title}</h3>
-                <p className="mt-2 text-xs leading-relaxed text-surface-300">{text}</p>
+                <h3 className="text-sm font-semibold text-surface-900 dark:text-white">{title}</h3>
+                <p className="mt-2 text-xs leading-relaxed text-surface-600 dark:text-surface-300">{text}</p>
               </div>
             ))}
           </div>
@@ -360,18 +360,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
         <section id="faq" aria-labelledby="faq-heading" className="py-12 md:py-20">
           <div className="mb-8 text-center">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-300">{t('faqEyebrow')}</p>
-            <h2 id="faq-heading" className="mt-2 text-3xl font-medium tracking-[-0.04em] text-white md:text-4xl">{t('faqHeading')}</h2>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-700 dark:text-brand-300">{t('faqEyebrow')}</p>
+            <h2 id="faq-heading" className="mt-2 text-3xl font-medium tracking-[-0.04em] text-surface-900 dark:text-white md:text-4xl">{t('faqHeading')}</h2>
           </div>
 
           <div className="space-y-3">
             {faqItems.map((item, index) => (
-              <details key={item.q} open={index === 0} className="rounded-2xl border border-surface-700 bg-[#10161e]/75 p-4 text-left">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-left text-base font-semibold text-white">
+              <details key={item.q} open={index === 0} className="rounded-2xl border border-surface-200 dark:border-surface-700 bg-white/75 dark:bg-[#10161e]/75 p-4 text-left">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-left text-base font-semibold text-surface-900 dark:text-white">
                   <span>{item.q}</span>
-                  <ChevronDown className="h-4 w-4 text-brand-300" />
+                  <ChevronDown className="h-4 w-4 text-brand-700 dark:text-brand-300" />
                 </summary>
-                <div className="mt-3 pt-3 text-sm leading-relaxed text-surface-300">{item.a}</div>
+                <div className="mt-3 pt-3 text-sm leading-relaxed text-surface-600 dark:text-surface-300">{item.a}</div>
               </details>
             ))}
           </div>
@@ -396,44 +396,44 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </section>
       </main>
 
-      <footer className="border-t border-surface-800 bg-[#0a0d12] text-surface-300">
+      <footer className="border-t border-surface-200 dark:border-surface-800 bg-white/60 dark:bg-[#0a0d12] text-surface-600 dark:text-surface-300">
         <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 md:grid-cols-4 md:px-8">
           <div>
-            <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-200">{t('footerProduct')}</h3>
+            <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-800 dark:text-brand-200">{t('footerProduct')}</h3>
             <ul className="mt-4 space-y-3 text-sm">
-              <li><button type="button" onClick={onEnterAsGuest} className="cursor-pointer text-surface-300 hover:text-white">{t('browseProducts')}</button></li>
-              <li><a href="#how-it-works" className="hover:text-white">{t('howItWorksNav')}</a></li>
-              <li><a href="#faq" className="hover:text-white">{t('faqNav')}</a></li>
+              <li><button type="button" onClick={onEnterAsGuest} className="cursor-pointer text-surface-600 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white">{t('browseProducts')}</button></li>
+              <li><a href="#how-it-works" className="hover:text-surface-900 dark:hover:text-white">{t('howItWorksNav')}</a></li>
+              <li><a href="#faq" className="hover:text-surface-900 dark:hover:text-white">{t('faqNav')}</a></li>
             </ul>
           </div>
           <div>
-            <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-200">{t('footerSellAndDeliver')}</h3>
+            <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-800 dark:text-brand-200">{t('footerSellAndDeliver')}</h3>
             <ul className="mt-4 space-y-3 text-sm">
-              <li><button type="button" onClick={onOpenSellerSignup} className="cursor-pointer text-surface-300 hover:text-white">{t('startSelling')}</button></li>
+              <li><button type="button" onClick={onOpenSellerSignup} className="cursor-pointer text-surface-600 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white">{t('startSelling')}</button></li>
               {onOpenRiderSignup && (
-                <li><button type="button" onClick={onOpenRiderSignup} className="cursor-pointer text-surface-300 hover:text-white">{t('becomeRider')}</button></li>
+                <li><button type="button" onClick={onOpenRiderSignup} className="cursor-pointer text-surface-600 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white">{t('becomeRider')}</button></li>
               )}
             </ul>
           </div>
           <div>
-            <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-200">{t('footerAccount')}</h3>
+            <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-800 dark:text-brand-200">{t('footerAccount')}</h3>
             <ul className="mt-4 space-y-3 text-sm">
-              <li><button type="button" onClick={onOpenLogin} className="cursor-pointer text-surface-300 hover:text-white">{t('signIn')}</button></li>
-              <li><button type="button" onClick={onOpenCustomerSignup || onOpenLogin} className="cursor-pointer text-surface-300 hover:text-white">{t('createAnAccount')}</button></li>
+              <li><button type="button" onClick={onOpenLogin} className="cursor-pointer text-surface-600 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white">{t('signIn')}</button></li>
+              <li><button type="button" onClick={onOpenCustomerSignup || onOpenLogin} className="cursor-pointer text-surface-600 dark:text-surface-300 hover:text-surface-900 dark:hover:text-white">{t('createAnAccount')}</button></li>
             </ul>
           </div>
           <div>
-            <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-200">{t('footerLegal')}</h3>
-            <div className="mt-4 text-sm text-surface-300">
-              <PolicyLinks ids={['terms', 'privacy', 'refunds', 'delivery']} className="text-brand-300 underline hover:text-brand-200" />
+            <h3 className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-800 dark:text-brand-200">{t('footerLegal')}</h3>
+            <div className="mt-4 text-sm text-surface-600 dark:text-surface-300">
+              <PolicyLinks ids={['terms', 'privacy', 'refunds', 'delivery']} className="text-brand-700 dark:text-brand-300 underline hover:text-brand-800 dark:hover:text-brand-200" />
             </div>
           </div>
         </div>
-        <div className="border-t border-surface-800 text-center text-sm text-surface-400">
+        <div className="border-t border-surface-200 dark:border-surface-800 text-center text-sm text-surface-500 dark:text-surface-400">
           <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 py-4 sm:flex-row sm:px-6 md:px-8">
             <p>© {currentYear} {BUSINESS.name}. {locale === 'bn' ? t('madeInBangladesh') : t('madeInBangladesh')}</p>
             {onOpenAdminSignup && (
-              <button type="button" onClick={onOpenAdminSignup} className="text-xs text-surface-300 transition-colors hover:text-brand-200 cursor-pointer">
+              <button type="button" onClick={onOpenAdminSignup} className="text-xs text-surface-600 dark:text-surface-300 transition-colors hover:text-brand-800 dark:hover:text-brand-200 cursor-pointer">
                 {t('adminSignIn')}
               </button>
             )}
