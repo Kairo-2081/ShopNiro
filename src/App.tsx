@@ -104,29 +104,6 @@ export default function App() {
   const [selectedAdmin, setSelectedAdmin] = React.useState<Admin | null>(null);
   const [selectedRider, setSelectedRider] = React.useState<Rider | null>(null);
 
-  // Theme State ('dark' | 'light')
-  const [theme, setTheme] = React.useState<'dark' | 'light'>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('marketpulse_theme');
-      if (saved === 'light' || saved === 'dark') return saved;
-    }
-    return 'dark';
-  });
-
-  React.useEffect(() => {
-    const root = document.documentElement;
-    if (theme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
-    localStorage.setItem('marketpulse_theme', theme);
-  }, [theme]);
-
-  const toggleTheme = React.useCallback(() => {
-    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
-  }, []);
-
   // Core Entity States (Directly from Raw SQL Database)
   const [categories, setCategories] = React.useState<Category[]>([]);
   const [sellers, setSellers] = React.useState<Seller[]>([]);
@@ -1063,8 +1040,6 @@ export default function App() {
           onOpenSellerSignup={() => openSignup('seller')}
           onOpenRiderSignup={() => openSignup('rider')}
           onOpenAdminSignup={() => setIsAdminRegistrationOpen(true)}
-          theme={theme}
-          onToggleTheme={toggleTheme}
         />
 
         {isCustomerRegistrationOpen && (
@@ -1173,8 +1148,6 @@ export default function App() {
         onLogout={handleLogout}
         onOpenNavigation={() => setIsNavigationOpen(true)}
         isNavigationOpen={isNavigationOpen}
-        theme={theme}
-        onToggleTheme={toggleTheme}
         onOpenChat={() => setIsChatOpen(true)}
       />
 

@@ -4,15 +4,13 @@ import { shopNiroLogoSmall } from '../lib/branding';
 import {
   ShoppingCart,
   User,
-  Sun,
-  Moon,
   LogIn,
   LogOut,
   Sparkles,
-  Languages,
   Menu,
 } from 'lucide-react';
 import { useLocale } from '../lib/i18n';
+import { LanguageToggle, ThemeToggle } from './PreferenceControls';
 
 interface NavbarProps {
   isLoggedIn: boolean;
@@ -28,8 +26,6 @@ interface NavbarProps {
   onLogout: () => void;
   onOpenNavigation: () => void;
   isNavigationOpen: boolean;
-  theme?: 'dark' | 'light';
-  onToggleTheme?: () => void;
   onOpenChat?: () => void;
 }
 
@@ -46,11 +42,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   onLogout,
   onOpenNavigation,
   isNavigationOpen,
-  theme = 'dark',
-  onToggleTheme,
   onOpenChat,
 }) => {
-  const { t, locale, setLocale } = useLocale();
+  const { t } = useLocale();
   const [isAccountMenuOpen, setIsAccountMenuOpen] = React.useState(false);
   const accountMenuRef = React.useRef<HTMLDivElement>(null);
   const accountButtonRef = React.useRef<HTMLButtonElement>(null);
@@ -123,30 +117,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             )}
 
-            {(!isLoggedIn || currentRole === 'customer') && (
-              <button
-                type="button"
-                onClick={() => setLocale(locale === 'en' ? 'bn' : 'en')}
-                className="luxury-control min-h-11 gap-1.5 rounded-full border border-surface-200 bg-white px-3 text-xs font-semibold text-surface-800 hover:bg-surface-50 dark:border-surface-700 dark:bg-[#161C24] dark:text-surface-200 dark:hover:bg-surface-800"
-                aria-label={`${t('language')}: ${locale === 'en' ? t('switchToBangla') : t('switchToEnglish')}`}
-                title={t('changeLanguage')}
-              >
-                <Languages aria-hidden="true" className="h-4 w-4" />
-                <span>{t('language')}</span>
-              </button>
-            )}
-
-            {onToggleTheme && (
-              <button
-                type="button"
-                onClick={onToggleTheme}
-                className="luxury-control h-11 w-11 min-h-11 rounded-full border border-surface-200 bg-surface-100 text-surface-700 hover:bg-surface-200 dark:border-surface-800 dark:bg-[#161C24] dark:text-surface-300 dark:hover:bg-surface-800"
-                aria-label={theme === 'dark' ? t('changeThemeToLight') : t('changeThemeToDark')}
-                title={theme === 'dark' ? t('changeThemeToLight') : t('changeThemeToDark')}
-              >
-                {theme === 'dark' ? <Sun aria-hidden="true" className="h-4 w-4 text-warning-400" /> : <Moon aria-hidden="true" className="h-4 w-4 text-brand-600" />}
-              </button>
-            )}
+            <LanguageToggle />
+            <ThemeToggle />
 
             {(!isLoggedIn || currentRole === 'customer') && (
               <button
