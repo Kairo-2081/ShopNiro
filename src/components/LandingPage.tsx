@@ -31,6 +31,19 @@ interface LandingPageProps {
   onToggleTheme?: () => void;
 }
 
+// A seller's logo, or the first letter of their name when the picture is missing or fails to load.
+const SellerLogo: React.FC<{ logo?: string; name: string }> = ({ logo, name }) => {
+  const [failed, setFailed] = React.useState(false);
+  if (!logo || failed) {
+    return (
+      <span aria-hidden="true" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-600/20 text-sm font-bold text-brand-800 dark:text-brand-200">
+        {name.charAt(0).toUpperCase()}
+      </span>
+    );
+  }
+  return <img src={logo} alt="" loading="lazy" decoding="async" width={48} height={48} className="h-12 w-12 shrink-0 rounded-xl object-cover" onError={() => setFailed(true)} />;
+};
+
 export const LandingPage: React.FC<LandingPageProps> = ({
   sellers,
   stats,
@@ -242,21 +255,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                   onClick={onEnterAsGuest}
                   className="flex items-center gap-3 rounded-2xl border border-surface-200 dark:border-surface-700 bg-white/75 dark:bg-[#10161e]/75 p-4 text-left transition-colors hover:border-brand-500/60 hover:bg-white dark:hover:bg-[#121b26] cursor-pointer"
                 >
-                  <img
-                    src={seller.Logo || shopNiroLogoSmall}
-                    alt=""
-                    loading="lazy"
-                    decoding="async"
-                    className="h-12 w-12 rounded-xl object-cover"
-                    onError={(event) => {
-                      const target = event.currentTarget as HTMLImageElement;
-                      target.style.display = 'none';
-                      const fallback = document.createElement('div');
-                      fallback.className = 'flex h-12 w-12 items-center justify-center rounded-xl bg-brand-600/20 text-sm font-bold text-brand-800 dark:text-brand-200';
-                      fallback.textContent = seller.Name.charAt(0).toUpperCase();
-                      target.parentElement?.appendChild(fallback);
-                    }}
-                  />
+                  <SellerLogo logo={seller.Logo} name={seller.Name} />
                   <span className="truncate text-sm font-semibold text-surface-900 dark:text-white">{seller.Name}</span>
                 </button>
               ))}
