@@ -33,7 +33,7 @@ const assertKeyboardReachability = async (page: import('@playwright/test').Page,
   expect(expected.length, `${label} has keyboard-accessible controls`).toBeGreaterThan(0);
   await page.evaluate(() => {
     const anchor = document.createElement('span');
-    anchor.tabIndex = -1;
+    anchor.tabIndex = 0;
     anchor.setAttribute('aria-hidden', 'true');
     anchor.dataset.a11yFocusAnchor = 'true';
     anchor.style.cssText = 'position:fixed;width:0;height:0;overflow:hidden;outline:none';
@@ -47,7 +47,7 @@ const assertKeyboardReachability = async (page: import('@playwright/test').Page,
       await page.keyboard.press('Tab');
       const focus = await page.evaluate(() => {
         const element = document.activeElement as HTMLElement | null;
-        const selector = 'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])';
+        const selector = 'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"]):not([data-a11y-focus-anchor])';
         const controls = Array.from(document.querySelectorAll<HTMLElement>(selector))
           .filter((candidate) => candidate.tabIndex >= 0 && getComputedStyle(candidate).visibility !== 'hidden' && candidate.getClientRects().length > 0 && !candidate.closest('[inert]'));
         const label = element && (element.getAttribute('aria-label') || (element.innerText ?? element.textContent ?? '').trim().replace(/\s+/g, ' ') || element.title || `${element.tagName.toLowerCase()} control`);
@@ -61,7 +61,8 @@ const assertKeyboardReachability = async (page: import('@playwright/test').Page,
           boxShadow: element ? getComputedStyle(element).boxShadow : 'none',
         };
       });
-      if (focus.index >= 0) visited.add(focus.index);
+      if (focus.index < 0) break;
+      visited.add(focus.index);
       const hasIndicator = (
         (focus.outline !== 'none' && focus.outlineWidth !== '0px') ||
         focus.boxShadow !== 'none'
