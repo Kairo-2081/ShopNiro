@@ -5,6 +5,7 @@ import { AppErrorBoundary } from './components/AppErrorBoundary.tsx';
 import { NetworkStatusBanner } from './components/NetworkStatusBanner.tsx';
 import { SkipLink } from './components/SkipLink.tsx';
 import { LocaleProvider } from './lib/i18n.tsx';
+import { ThemeProvider } from './lib/theme.tsx';
 import { beginStorefrontHeadStart } from './lib/storefrontHeadStart.ts';
 import './index.css';
 
@@ -51,6 +52,7 @@ createRoot(document.getElementById('root')!).render(
     <NetworkStatusBanner />
     <AppErrorBoundary>
       <LocaleProvider>
+        <ThemeProvider>
         <SkipLink />
         {isPolicy ? (
           <React.Suspense fallback={<div className="flex min-h-screen items-center justify-center text-sm text-surface-500">Loading...</div>}>
@@ -59,6 +61,7 @@ createRoot(document.getElementById('root')!).render(
         ) : (
           <App />
         )}
+        </ThemeProvider>
       </LocaleProvider>
     </AppErrorBoundary>
   </StrictMode>,

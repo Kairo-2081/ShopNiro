@@ -1,9 +1,9 @@
 import React from 'react';
-import { Moon, Sun } from 'lucide-react';
+import { LanguageToggle, ThemeToggle } from '../PreferenceControls';
 import { shopNiroLogoSmall } from '../../lib/branding';
 import { useLocale } from '../../lib/i18n';
 
-export const LandingHeader: React.FC<{ theme: 'dark' | 'light'; onToggleTheme: (() => void) | undefined; onOpenLogin: () => void; onOpenSellerSignup: () => void }> = ({ theme, onToggleTheme, onOpenLogin, onOpenSellerSignup }) => {
+export const LandingHeader: React.FC<{ onOpenLogin: () => void; onOpenSellerSignup: () => void }> = ({ onOpenLogin, onOpenSellerSignup }) => {
   const { t } = useLocale();
 
   const navItems = [
@@ -30,17 +30,8 @@ export const LandingHeader: React.FC<{ theme: 'dark' | 'light'; onToggleTheme: (
         </nav>
 
         <div className="flex items-center gap-2.5">
-          {onToggleTheme && (
-            <button
-              type="button"
-              onClick={onToggleTheme}
-              aria-label={theme === 'dark' ? t('changeThemeToLight') : t('changeThemeToDark')}
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-surface-200 dark:border-surface-700 bg-white dark:bg-[#161C24] text-surface-600 dark:text-surface-300 transition-colors hover:bg-surface-800 cursor-pointer"
-              title={theme === 'dark' ? t('changeThemeToLight') : t('changeThemeToDark')}
-            >
-              {theme === 'dark' ? <Sun className="h-4 w-4 text-warning-400" /> : <Moon className="h-4 w-4 text-brand-400" />}
-            </button>
-          )}
+          <LanguageToggle iconOnlyOnPhones className="!min-h-9 !px-2.5 sm:!px-3" />
+          <ThemeToggle className="!h-9 !w-9 !min-h-9" />
           <button
             type="button"
             onClick={onOpenLogin}
@@ -50,7 +41,7 @@ export const LandingHeader: React.FC<{ theme: 'dark' | 'light'; onToggleTheme: (
           >
             {t('signIn')}
           </button>
-          <button type="button" onClick={onOpenSellerSignup} className="rounded-full bg-brand-600 px-4 py-2 text-xs font-semibold text-white shadow-[0_12px_25px_rgba(91,79,41,0.35)] transition-transform hover:-translate-y-0.5 hover:bg-brand-500 cursor-pointer sm:text-sm">
+          <button type="button" onClick={onOpenSellerSignup} className="whitespace-nowrap rounded-full bg-brand-600 px-3 py-2 text-xs font-semibold text-white shadow-[0_12px_25px_rgba(91,79,41,0.35)] transition-transform hover:-translate-y-0.5 hover:bg-brand-500 cursor-pointer sm:px-4 sm:text-sm">
             {t('startSelling')}
           </button>
         </div>
