@@ -1,11 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { drawGlobe, GLOBE_FRAME } from './globe/drawGlobe';
-import { DESTINATION_HUBS, GLOBE_VIEW, HOME_HUB } from './globe/network';
-import { project } from './globe/projection';
-import { useLocale } from '../../lib/i18n';
-import { runWhenIdle } from '../../lib/idleTask';
+import { drawMap } from './drawMap';
+import { CITIES, HOME_CITY_ID, cityById } from './network';
+import { MAP_FRAME, project } from './projection';
+import { useLocale } from '../../../lib/i18n';
+import { runWhenIdle } from '../../../lib/idleTask';
 
-interface OrbitGlobeProps {
+interface BangladeshMapProps {
   /** Called when someone asks to trace the delivery routes. */
   onGreet?: () => void;
 }
@@ -14,40 +14,39 @@ const TRACE_MS = 3200;
 
 // Dhaka's position on the canvas as a share of its width and height, for the pulse ring laid over it.
 const HOME_POINT = (() => {
-  const p = project(HOME_HUB.lon, HOME_HUB.lat, GLOBE_VIEW);
-  return {
-    left: `${((GLOBE_FRAME.cx + p.x * GLOBE_FRAME.radius) / GLOBE_FRAME.width) * 100}%`,
-    top: `${((GLOBE_FRAME.cy - p.y * GLOBE_FRAME.radius) / GLOBE_FRAME.height) * 100}%`,
-  };
+  const home = cityById(HOME_CITY_ID);
+  const p = project(home.lon, home.lat);
+  return { left: `${(p.x / MAP_FRAME.width) * 100}%`, top: `${(p.y / MAP_FRAME.height) * 100}%` };
 })();
 
-export const OrbitGlobe: React.FC<OrbitGlobeProps> = ({ onGreet }) => {
-  const { t } = useLocale();
+export const BangladeshMap: React.FC<BangladeshMapProps> = ({ onGreet }) => {
+  const { t, locale } = useLocale();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isTracing, setIsTracing] = useState(false);
   const hasDrawn = useRef(false);
 
-  const description = t('globeNetworkDescription', {
-    home: HOME_HUB.name,
-    destinations: DESTINATION_HUBS.map((hub) => hub.name).join(', '),
+  const names = (locale === 'bn' ? CITIES.map((city) => city.nameBn) : CITIES.map((city) => city.name)).join(', ');
+  const description = t('mapNetworkDescription', {
+    home: locale === 'bn' ? cityById(HOME_CITY_ID).nameBn : cityById(HOME_CITY_ID).name,
+    cities: names,
   });
 
-  // Draw the globe. It is a still picture: it is drawn again only to call out the routes, never on a timer.
-  // The first draw waits for an idle moment: on a slow phone it holds the main thread long enough to delay the Explore
-  // button and everything after it, and a visitor who taps through at once never needed it. Redrawing for the routes
-  // answers a tap, so that one happens straight away.
+  // Draw the map. It is a still picture: it is drawn again only to call out the routes or to change the language of the
+  // names, never on a timer. The first draw waits for an idle moment: on a slow phone it holds the main thread long enough
+  // to delay the Explore button and everything after it, and a visitor who taps through at once never needed it.
+  // Redrawing for a tap or a language change answers the visitor, so that happens straight away.
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
     if (!canvas || !ctx) return undefined;
     const draw = () => {
       // Draw in CSS pixels but back the canvas with real device pixels, so dots and lines stay sharp on dense screens.
-      // The picture can be shown up to 1.4 times its drawn size on wide screens, so back it with extra pixels to keep it sharp.
+      // The picture can be shown up to 1.3 times its drawn size on wide screens, so back it with extra pixels.
       const pixelRatio = Math.min((window.devicePixelRatio || 1) * 1.5, 4);
-      canvas.width = Math.round(GLOBE_FRAME.width * pixelRatio);
-      canvas.height = Math.round(GLOBE_FRAME.height * pixelRatio);
+      canvas.width = Math.round(MAP_FRAME.width * pixelRatio);
+      canvas.height = Math.round(MAP_FRAME.height * pixelRatio);
       ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-      drawGlobe(ctx, GLOBE_FRAME, { emphasis: isTracing ? 1 : 0 });
+      drawMap(ctx, MAP_FRAME, { emphasis: isTracing ? 1 : 0, locale: locale === 'bn' ? 'bn' : 'en' });
       hasDrawn.current = true;
       canvas.style.opacity = '1';
     };
@@ -56,7 +55,7 @@ export const OrbitGlobe: React.FC<OrbitGlobeProps> = ({ onGreet }) => {
       return undefined;
     }
     return runWhenIdle(draw);
-  }, [isTracing]);
+  }, [isTracing, locale]);
 
   useEffect(() => {
     if (!isTracing) return undefined;
@@ -70,17 +69,17 @@ export const OrbitGlobe: React.FC<OrbitGlobeProps> = ({ onGreet }) => {
   };
 
   return (
-    <div className="relative flex h-[284px] select-none md:h-[374px] flex-col items-center justify-center py-2">
-      <div className="relative w-[320px] max-w-full md:w-[440px]" style={{ aspectRatio: `${GLOBE_FRAME.width} / ${GLOBE_FRAME.height}` }}>
+    <div className="relative flex h-[344px] select-none flex-col items-center justify-center py-2 md:h-[452px]">
+      <div className="relative w-[320px] max-w-full md:w-[440px]" style={{ aspectRatio: `${MAP_FRAME.width} / ${MAP_FRAME.height}` }}>
         <canvas
           ref={canvasRef}
           aria-hidden="true"
-          width={GLOBE_FRAME.width}
-          height={GLOBE_FRAME.height}
+          width={MAP_FRAME.width}
+          height={MAP_FRAME.height}
           className="block h-full w-full motion-safe:transition-opacity motion-safe:duration-300"
           style={{ opacity: 0 }}
         />
-        {/* A slow ping on the home hub says the network is live. It is a plain fade, and stops under reduced motion. */}
+        {/* A slow ping on the capital says the network is live. It is a plain fade, and stops under reduced motion. */}
         <span
           aria-hidden="true"
           className="pointer-events-none absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border border-[#f6efd2]/70 motion-safe:animate-ping"

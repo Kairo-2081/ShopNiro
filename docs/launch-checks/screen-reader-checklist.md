@@ -24,7 +24,7 @@ heard something misleading, or needed to look. Write what you heard on a fail.
 - [ ] The first focus stop is a **Skip to content** link, and activating it jumps to the main content.
 - [ ] Headings give a sensible outline (move heading to heading).
 - [ ] The language is announced correctly; switching to Bangla changes the voice.
-- [ ] The decorative orbit globe is skipped or described briefly, not read as noise.
+- [ ] The decorative Bangladesh map is skipped or described briefly (one sentence naming the cities), not read as noise.
 
 ## 2. Sign in
 

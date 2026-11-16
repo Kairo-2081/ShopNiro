@@ -1218,5 +1218,5 @@ export const englishMessages = {
     categoryNamePlaceholder: 'e.g. Eco-Hardware or Audio & Studio',
     traceDeliveryRoutes: 'Trace the delivery routes',
     deliveryRoutesHighlighted: 'Delivery routes highlighted.',
-    globeNetworkDescription: 'A still globe centred on South Asia with delivery routes running from {home} to {destinations}.',
+    mapNetworkDescription: 'A still map of Bangladesh with delivery routes linking {cities}. {home} is connected to every other city.',
 } as const;
