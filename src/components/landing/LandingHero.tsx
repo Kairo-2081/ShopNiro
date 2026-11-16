@@ -40,7 +40,7 @@ export const LandingHero: React.FC<{ onEnterAsGuest: () => void; onOpenSellerSig
           <div className="relative mx-auto w-full max-w-[560px]">
             <div className="absolute -left-2 top-7 z-20 rounded-full border border-[#d0c8a5]/20 bg-[#141922]/80 px-3 py-1 text-[11px] font-semibold text-surface-100 shadow-xl backdrop-blur md:-left-6">{t('shopProducts')}</div>
             <div className="absolute -right-2 bottom-16 z-20 rounded-full border border-[#d0c8a5]/20 bg-[#141922]/80 px-3 py-1 text-[11px] font-semibold text-surface-100 shadow-xl backdrop-blur md:-right-6">{t('approvedSellers')}</div>
-            <div className="flex justify-center rounded-[28px] border border-[#d0c8a5]/12 bg-[#0d1115]/40 p-3 shadow-[0_20px_60px_rgba(0,0,0,0.25)] backdrop-blur-sm">
+            <div className="flex justify-center">
               <React.Suspense fallback={<div aria-hidden="true" className="h-[344px] w-full max-w-[420px] md:h-[452px]" />}>
                 <BangladeshMap />
               </React.Suspense>
