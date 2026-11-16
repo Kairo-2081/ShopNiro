@@ -72,9 +72,9 @@ What that does and does not say:
 - The earlier performance work (compressed responses, a 4.9 MB animation as WebP, a 352 kB logo as 19 kB, deferred
   count-ups, idle prefetching) took the page from about 6 s to about 3.3 s. That is the large, clear gain.
 - This change makes a returning customer about **0.4 s faster** at the median, the same in both orders of a back-to-back
-  comparison, because the landing page and its globe are no longer drawn before the storefront.
+  comparison, because the landing page and its map are no longer drawn before the storefront.
 - The guest gain is **within run-to-run noise** (the two comparisons gave 0.4 s and 0.07 s at the median). The idle
-  callback for the globe fires while the page waits for the network, so a guest who taps straight away still pays for it.
+  callback for the map fires while the page waits for the network, so a guest who taps straight away still pays for it.
 - On the last run (9 runs, one session) a returning customer is **inside the budget** at both the median (2.72 s) and the
   slowest run (2.79 s). A guest is not: the median is 2.92 s but the slowest run is 3.31 s, so the budget is still
   **not met** for guests. Earlier sessions gave the returning customer a slowest run of 3.06 s and 3.15 s, so one clean
@@ -112,7 +112,7 @@ What that says, and what it does not:
 
 One cold guest run with `npm run perf:profile` (HTTP/1.1, so read it for proportions): the first card at 2.8 to 3.4 s, and
 the sampled self time was React's own code (`vendor-react`, 333 ms), the app's entry bundle (123 ms) and browser-native
-work (350 ms, much of it Playwright polling for the card). The app's page components (`Storefront`, `OrbitGlobe`) added
+work (350 ms, much of it Playwright polling for the card). The app's page components (`Storefront`, `BangladeshMap`) added
 less than 15 ms between them. The long frames sit inside React's click handler, the one that follows the tap on
 "Explore Marketplace" (113 ms, 106 ms and 109 ms of script each, throttled). In other words there is no single slow
 function left to fix: the cost is React committing the screen change in a few large steps on a slow processor.
