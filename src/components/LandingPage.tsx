@@ -214,7 +214,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
         </section>
 
-        <section id="payment-strip" aria-labelledby="payment-strip-title" className="py-12 md:py-20">
+        <section id="payment-strip" aria-labelledby="payment-strip-title" className="scroll-mt-24 py-12 md:py-20">
           <h2 id="payment-strip-title" className="mb-6 text-center text-sm font-semibold uppercase tracking-[0.18em] text-brand-800 dark:text-brand-200 md:text-base">
             {t('payYourWayTitle')}
           </h2>
@@ -229,7 +229,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </section>
 
         {approvedSellers.length >= 3 && (
-          <section id="sellers" aria-labelledby="sellers-heading" className="py-12 md:py-20">
+          <section id="sellers" aria-labelledby="sellers-heading" className="scroll-mt-24 py-12 md:py-20">
             <div className="mb-6 text-center">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-700 dark:text-brand-300">{t('sellersSectionEyebrow')}</p>
               <h2 id="sellers-heading" className="mt-2 text-3xl font-medium tracking-[-0.04em] text-surface-900 dark:text-white md:text-4xl">{t('sellersAlreadyOnShopNiro')}</h2>
@@ -265,7 +265,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </section>
         )}
 
-        <section id="how-it-works" aria-labelledby="how-it-works-heading" className="py-12 md:py-20">
+        <section id="how-it-works" aria-labelledby="how-it-works-heading" className="scroll-mt-24 py-12 md:py-20">
           <div className="mb-8 text-center">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-700 dark:text-brand-300">{t('simpleSteps')}</p>
             <h2 id="how-it-works-heading" className="mt-2 text-3xl font-medium tracking-[-0.04em] text-surface-900 dark:text-white md:text-4xl">{t('howShopNiroWorks')}</h2>
@@ -294,7 +294,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
         </section>
 
-        <section id="features" aria-labelledby="features-heading" className="py-12 md:py-20">
+        <section id="features" aria-labelledby="features-heading" className="scroll-mt-24 py-12 md:py-20">
           <div className="mb-8 text-center">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-700 dark:text-brand-300">{t('featuresHeadingEyebrow')}</p>
             <h2 id="features-heading" className="mt-2 text-3xl font-medium tracking-[-0.04em] text-surface-900 dark:text-white md:text-4xl">{t('featuresHeading')}</h2>
@@ -358,7 +358,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           </div>
         </section>
 
-        <section id="faq" aria-labelledby="faq-heading" className="py-12 md:py-20">
+        <section id="faq" aria-labelledby="faq-heading" className="scroll-mt-24 py-12 md:py-20">
           <div className="mb-8 text-center">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-700 dark:text-brand-300">{t('faqEyebrow')}</p>
             <h2 id="faq-heading" className="mt-2 text-3xl font-medium tracking-[-0.04em] text-surface-900 dark:text-white md:text-4xl">{t('faqHeading')}</h2>
@@ -366,12 +366,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
           <div className="space-y-3">
             {faqItems.map((item, index) => (
-              <details key={item.q} open={index === 0} className="rounded-2xl border border-surface-200 dark:border-surface-700 bg-white/75 dark:bg-[#10161e]/75 p-4 text-left">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-left text-base font-semibold text-surface-900 dark:text-white">
+              <details key={item.q} open={index === 0} className="group rounded-2xl border border-surface-200 dark:border-surface-700 bg-white/75 dark:bg-[#10161e]/75 p-4 text-left">
+                <summary className="flex cursor-pointer list-none [&::-webkit-details-marker]:hidden items-center justify-between gap-4 text-left text-base font-semibold text-surface-900 dark:text-white">
                   <span>{item.q}</span>
-                  <ChevronDown className="h-4 w-4 text-brand-700 dark:text-brand-300" />
+                  <ChevronDown aria-hidden="true" className="h-4 w-4 shrink-0 text-brand-700 transition-transform group-open:rotate-180 motion-reduce:transition-none dark:text-brand-300" />
                 </summary>
-                <div className="mt-3 pt-3 text-sm leading-relaxed text-surface-600 dark:text-surface-300">{item.a}</div>
+                <div className="mt-3 border-t border-surface-200 pt-3 text-sm leading-relaxed text-surface-600 dark:border-surface-700 dark:text-surface-300">{item.a}</div>
               </details>
             ))}
           </div>
