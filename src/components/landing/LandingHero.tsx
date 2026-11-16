@@ -10,8 +10,8 @@ export const LandingHero: React.FC<{ onEnterAsGuest: () => void; onOpenSellerSig
   return (
     <section id="hero" aria-labelledby="hero-heading" className="relative overflow-hidden rounded-[28px] border border-[#d0c8a5]/20 bg-[radial-gradient(circle_at_50%_18%,rgba(208,200,165,0.2),transparent_16%),radial-gradient(circle_at_50%_100%,rgba(119,119,90,0.48),transparent_36%),linear-gradient(135deg,#77775a_0%,#514c38_24%,#292820_52%,#11110f_100%)] p-6 shadow-[0_35px_90px_rgba(3,3,2,0.42)] md:px-12 md:py-12">
       <div className="absolute -top-20 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-white/10 blur-3xl" aria-hidden="true" />
-      <div className="grid items-center gap-8 lg:grid-cols-[1.05fr_0.95fr]">
-        <div className="relative z-10 text-left">
+      <div className="grid grid-cols-1 items-center gap-8 lg:grid-cols-[1.05fr_0.95fr]">
+        <div className="relative z-10 min-w-0 text-left">
           <span className="inline-flex rounded-full border border-[#d0c8a5]/25 bg-white/6 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-100 md:text-[11px]">
             {t('bangladeshMarketplaceApprovedSellers')}
           </span>
@@ -36,10 +36,10 @@ export const LandingHero: React.FC<{ onEnterAsGuest: () => void; onOpenSellerSig
           <p className="mt-4 text-sm text-surface-200">{t('heroReassurance')}</p>
         </div>
 
-        <div className="relative z-10">
+        <div className="relative z-10 min-w-0">
           <div className="relative mx-auto w-full max-w-[560px]">
             <div className="absolute -left-2 top-7 z-20 rounded-full border border-[#d0c8a5]/20 bg-[#141922]/80 px-3 py-1 text-[11px] font-semibold text-surface-100 shadow-xl backdrop-blur md:-left-6">{t('shopProducts')}</div>
-            <div className="absolute -right-2 bottom-10 z-20 rounded-full border border-[#d0c8a5]/20 bg-[#141922]/80 px-3 py-1 text-[11px] font-semibold text-surface-100 shadow-xl backdrop-blur md:-right-6">{t('approvedSellers')}</div>
+            <div className="absolute -right-2 bottom-16 z-20 rounded-full border border-[#d0c8a5]/20 bg-[#141922]/80 px-3 py-1 text-[11px] font-semibold text-surface-100 shadow-xl backdrop-blur md:-right-6">{t('approvedSellers')}</div>
             <div className="flex justify-center rounded-[28px] border border-[#d0c8a5]/12 bg-[#0d1115]/40 p-3 shadow-[0_20px_60px_rgba(0,0,0,0.25)] backdrop-blur-sm">
               <React.Suspense fallback={<div aria-hidden="true" className="h-[284px] w-full max-w-[420px] md:h-[374px]" />}>
                 <OrbitGlobe />
