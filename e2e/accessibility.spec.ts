@@ -28,7 +28,10 @@ const assertKeyboardReachability = async (page: import('@playwright/test').Page,
     const selector = 'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])';
     return Array.from(document.querySelectorAll<HTMLElement>(selector))
       .filter((element) => element.tabIndex >= 0 && getComputedStyle(element).visibility !== 'hidden' && element.getClientRects().length > 0 && !element.closest('[inert]'))
-      .map((element) => element.getAttribute('aria-label') || (element.innerText ?? element.textContent ?? '').trim().replace(/\s+/g, ' ') || element.title || `${element.tagName.toLowerCase()} control`);
+      .map((element) => ({
+        label: element.getAttribute('aria-label') || (element.innerText ?? element.textContent ?? '').trim().replace(/\s+/g, ' ') || element.title || `${element.tagName.toLowerCase()} control`,
+        html: element.outerHTML.slice(0, 240),
+      }));
   });
   expect(expected.length, `${label} has keyboard-accessible controls`).toBeGreaterThan(0);
   await page.evaluate(() => {
@@ -77,7 +80,7 @@ const assertKeyboardReachability = async (page: import('@playwright/test').Page,
       .filter(({ index }) => !visited.has(index));
     expect(
       visited.size,
-      `${label} controls missing from tab order: ${missing.map(({ index, control }) => `${index}: ${control}`).join('; ')}`,
+      `${label} controls missing from tab order: ${missing.map(({ index, control }) => `${index}: ${control.label} (${control.html})`).join('; ')}`,
     ).toBe(expected.length);
   } finally {
     await page.evaluate(() => document.querySelector('body > [data-a11y-focus-anchor]')?.remove());
