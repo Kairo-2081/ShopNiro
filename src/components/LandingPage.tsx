@@ -39,11 +39,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   onOpenCustomerSignup,
   onOpenSellerSignup,
   onOpenRiderSignup,
-  onOpenAdminSignup,
   theme = 'dark',
   onToggleTheme,
 }) => {
-  const { t, locale } = useLocale();
+  const { t } = useLocale();
 
   const approvedSellers = useMemo(
     () =>
@@ -431,12 +430,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </div>
         <div className="border-t border-surface-200 dark:border-surface-800 text-center text-sm text-surface-500 dark:text-surface-400">
           <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 py-4 sm:flex-row sm:px-6 md:px-8">
-            <p>© {currentYear} {BUSINESS.name}. {locale === 'bn' ? t('madeInBangladesh') : t('madeInBangladesh')}</p>
-            {onOpenAdminSignup && (
-              <button type="button" onClick={onOpenAdminSignup} className="text-xs text-surface-600 dark:text-surface-300 transition-colors hover:text-brand-800 dark:hover:text-brand-200 cursor-pointer">
+            <p>© {currentYear} {BUSINESS.name}. {t('madeInBangladesh')}</p>
+            <button type="button" onClick={onOpenLogin} className="cursor-pointer text-xs text-surface-600 transition-colors hover:text-brand-800 dark:text-surface-300 dark:hover:text-brand-200">
                 {t('adminSignIn')}
               </button>
-            )}
           </div>
         </div>
       </footer>
