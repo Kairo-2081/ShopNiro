@@ -1220,4 +1220,4 @@ export const bengaliMessages: Record<MessageKey, string> = {
     categoryNamePlaceholder: 'যেমন: ইকোলজি বা অডিও ও স্টুডিও',
     traceDeliveryRoutes: 'ডেলিভারি রুট ট্র্যাক করুন',
     deliveryRoutesHighlighted: 'ডেলিভারি রুট দৃশ্যমান করা হয়েছে।',
-    globeNetworkDescription: 'দক্ষিণ এশিয়া ভিত্তিক একটি গ্লোব যেখানে {home} থেকে {destinations} পর্যন্ত ডেলিভারি রুট দেখানো হয়েছে।',};
+    mapNetworkDescription: 'বাংলাদেশের একটি স্থির মানচিত্র, যেখানে {cities} শহরগুলোকে ডেলিভারি রুট দিয়ে যুক্ত দেখানো হয়েছে। {home} অন্য সব শহরের সঙ্গে যুক্ত।',};
