@@ -1,5 +1,5 @@
 // Run work that does not have to happen before the first paint once the browser has a free moment, and not at all if the
-// screen that wanted it is gone by then. The orbit globe uses it: drawing it takes a phone with a slow processor a
+// screen that wanted it is gone by then. The Bangladesh map uses it: drawing it takes a phone with a slow processor a
 // noticeable stretch of the main thread, and a visitor who taps "Explore Marketplace" straight away never needed it.
 export interface IdleTaskEnvironment {
   schedule: (task: () => void) => unknown;

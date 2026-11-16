@@ -43,7 +43,7 @@ function drawHaze(ctx: CanvasRenderingContext2D, { width, height }: MapFrame) {
 
 /**
  * The country: a translucent tan fill, a field of fine dots that catch the light on the upper left, and a thin glowing
- * outline. The dots echo the dotted look the globe had.
+ * outline. The dot grid gives the land a soft texture without a heavy fill.
  */
 function drawLand(ctx: CanvasRenderingContext2D, frame: MapFrame) {
   const land = landPath(frame);

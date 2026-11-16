@@ -1,6 +1,6 @@
 // The session cookie is HttpOnly, so the page cannot tell whether a visitor is signed in until the sign-in check
 // answers, and until then it has to guess which screen to draw. Guessing the landing page costs a returning customer
-// the landing page's render (including the globe) before the storefront they came for. This remembers that the last
+// the landing page's render (including the map) before the storefront they came for. This remembers that the last
 // check succeeded, in the browser only, so the next visit can start on the storefront instead.
 //
 // It is a hint, not a credential: it holds a timestamp and nothing that identifies anyone, the server still decides
