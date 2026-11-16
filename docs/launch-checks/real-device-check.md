@@ -39,7 +39,7 @@ kind: treat the click method (about 2.9 s, slowest 3.1 s) as the closer guide an
 ## Also check on the same phone, while you are there
 
 - [ ] Text is readable without zooming; tap targets are not cramped.
-- [ ] The orbit globe does not make scrolling janky.
+- [ ] The landing-page map does not make scrolling janky.
 - [ ] Rotating the phone does not break the layout.
 - [ ] Bangla text shows with no missing glyphs (boxes).
 - [ ] Checkout fits the screen with the keyboard open.

@@ -4,11 +4,11 @@ import { blockNonLocalTraffic } from './helpers.ts';
 
 const HINT_KEY = 'shopniro_signed_in_hint';
 
-// The landing page's globe is its own lazy chunk, fetched only when the landing page draws. Whether that file was ever
+// The landing page's map is its own lazy chunk, fetched only when the landing page draws. Whether that file was ever
 // requested says whether the landing page drew, however briefly, which looking at the page afterwards cannot.
-function watchForGlobeChunk(page: import('@playwright/test').Page) {
+function watchForMapChunk(page: import('@playwright/test').Page) {
   const requested: string[] = [];
-  page.on('request', (request) => { if (/OrbitGlobe/.test(request.url())) requested.push(request.url()); });
+  page.on('request', (request) => { if (/BangladeshMap/.test(request.url())) requested.push(request.url()); });
   return requested;
 }
 
@@ -17,13 +17,13 @@ test('a returning customer opens on the storefront without the landing page firs
   const context = await browser.newContext({ baseURL, storageState: AUTH.customer });
   await context.addInitScript(([key]) => window.localStorage.setItem(key, String(Date.now())), [HINT_KEY]);
   const page = await context.newPage();
-  const globeRequests = watchForGlobeChunk(page);
+  const mapRequests = watchForMapChunk(page);
   try {
     await blockNonLocalTraffic(page);
     await page.goto('/');
     await expect(page.getByText('E2E Linen Blanket').first()).toBeVisible();
     await page.waitForTimeout(1000);
-    expect(globeRequests, 'the landing page never drew').toEqual([]);
+    expect(mapRequests, 'the landing page never drew').toEqual([]);
     // Still signed in: the server confirmed the session and the hint is kept for the next visit.
     expect(await page.evaluate((key) => window.localStorage.getItem(key), HINT_KEY)).not.toBeNull();
   } finally {
@@ -50,12 +50,12 @@ test('without the hint the same customer still starts on the landing page, so th
   test.skip(testInfo.project.name !== 'desktop', 'The start screen is the same on every width.');
   const context = await browser.newContext({ baseURL, storageState: AUTH.customer });
   const page = await context.newPage();
-  const globeRequests = watchForGlobeChunk(page);
+  const mapRequests = watchForMapChunk(page);
   try {
     await blockNonLocalTraffic(page);
     await page.goto('/');
     await expect(page.getByText('E2E Linen Blanket').first()).toBeVisible();
-    expect(globeRequests.length, 'the landing page drew first').toBeGreaterThan(0);
+    expect(mapRequests.length, 'the landing page drew first').toBeGreaterThan(0);
   } finally {
     await context.close();
   }

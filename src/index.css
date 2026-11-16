@@ -606,8 +606,8 @@
     z-index: 2;
   }
 
-  /* Each badge is placed from the edge of the 440px globe, not from the edge of the hero, so a wider font can only push it
-     further away from the globe and never onto it. */
+  /* Each badge is placed from the edge of the map canvas, not from the edge of the hero, so a wider font can only push it
+     further away from the map and never onto it. */
   .floating-badge-left {
     right: calc(50% + 252px);
   }
@@ -618,7 +618,7 @@
     animation-delay: 0.8s;
   }
 
-  /* Beside the globe there is room for these from a small laptop width up. Below that they would sit on top of the globe and
+  /* Beside the map there is room for these from a small laptop width up. Below that they would sit on top of the map and
      hide its delivery hubs, so they are left out. */
   @media (max-width: 1099px) {
     .floating-badge {

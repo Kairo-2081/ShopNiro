@@ -21,7 +21,7 @@ admins, and delivery riders in one order journey.
 [API docs](./docs/api.md) ·
 [Deployment guide](./README-DEPLOY.md)
 
-<img src="./.github/assets/readme/shopniro-home.jpg" alt="ShopNiro landing page with a delivery-route globe and entry points for the marketplace, sellers, and riders" width="900" />
+<img src="./.github/assets/readme/shopniro-home.jpg" alt="ShopNiro landing page with a Bangladesh delivery-route map and entry points for the marketplace, sellers, and riders" width="900" />
 
 </div>
 
