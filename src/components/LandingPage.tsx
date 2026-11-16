@@ -26,8 +26,6 @@ interface LandingPageProps {
   onOpenSellerSignup: () => void;
   onOpenRiderSignup?: () => void;
   onOpenAdminSignup?: () => void;
-  theme?: 'dark' | 'light';
-  onToggleTheme?: () => void;
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({
@@ -38,13 +36,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   onOpenCustomerSignup,
   onOpenSellerSignup,
   onOpenRiderSignup,
-  theme = 'dark',
-  onToggleTheme,
 }) => {
   return (
     <div className="min-h-screen text-surface-900 transition-colors duration-200 selection:bg-[#80734f] selection:text-white dark:text-surface-100">
       <main id={MAIN_CONTENT_ID} tabIndex={-1} className="focus:outline-none mx-auto max-w-7xl px-4 pb-10 pt-3 sm:px-6 md:px-8 md:pt-5">
-        <LandingHeader theme={theme} onToggleTheme={onToggleTheme} onOpenLogin={onOpenLogin} onOpenSellerSignup={onOpenSellerSignup} />
+        <LandingHeader onOpenLogin={onOpenLogin} onOpenSellerSignup={onOpenSellerSignup} />
 
         <LandingHero onEnterAsGuest={onEnterAsGuest} onOpenSellerSignup={onOpenSellerSignup} />
 
