@@ -1,9 +1,12 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Customer, Seller, Admin } from '../types';
 import { MarketplaceClosing, MarketplaceStat } from './MarketplaceClosing';
-import { ArrowRight, BadgeCheck, Check, ChevronDown, CreditCard, MapPinned, PackageCheck, ShieldCheck } from 'lucide-react';
+import { Check, ChevronDown, CreditCard, MapPinned, PackageCheck, ShieldCheck } from 'lucide-react';
 import { LandingHeader } from './landing/LandingHeader';
 import { LandingHero } from './landing/LandingHero';
+import { PaymentStrip } from './landing/PaymentStrip';
+import { SellersShowcase } from './landing/SellersShowcase';
+import { HowItWorks } from './landing/HowItWorks';
 import { useLocale } from '../lib/i18n';
 import { MAIN_CONTENT_ID } from './SkipLink';
 import { PolicyLinks } from './legal/PolicyLinks';
@@ -30,19 +33,6 @@ interface LandingPageProps {
   onToggleTheme?: () => void;
 }
 
-// A seller's logo, or the first letter of their name when the picture is missing or fails to load.
-const SellerLogo: React.FC<{ logo?: string; name: string }> = ({ logo, name }) => {
-  const [failed, setFailed] = React.useState(false);
-  if (!logo || failed) {
-    return (
-      <span aria-hidden="true" className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-brand-600/20 text-sm font-bold text-brand-800 dark:text-brand-200">
-        {name.charAt(0).toUpperCase()}
-      </span>
-    );
-  }
-  return <img src={logo} alt="" loading="lazy" decoding="async" width={48} height={48} className="h-12 w-12 shrink-0 rounded-xl object-cover" onError={() => setFailed(true)} />;
-};
-
 export const LandingPage: React.FC<LandingPageProps> = ({
   sellers,
   stats,
@@ -56,14 +46,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 }) => {
   const { t } = useLocale();
 
-  const approvedSellers = useMemo(
-    () =>
-      sellers
-        .filter((seller) => seller.Status === 'approved')
-        .sort((a, b) => a.Name.localeCompare(b.Name, undefined, { sensitivity: 'base' }))
-        .slice(0, 8),
-    [sellers],
-  );
 
   const featureBlocks = [
     {
@@ -125,11 +107,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
   const currentYear = new Date().getFullYear();
 
-  const howItWorksSteps = [
-    { title: t('step1Title'), text: t('step1Desc'), tone: 'bg-brand-600' },
-    { title: t('step2Title'), text: t('step2Desc'), tone: 'bg-teal-600' },
-    { title: t('step3Title'), text: t('step3Desc'), tone: 'bg-warning-600' },
-  ];
 
   return (
     <div className="min-h-screen text-surface-900 transition-colors duration-200 selection:bg-[#80734f] selection:text-white dark:text-surface-100">
@@ -138,71 +115,11 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
         <LandingHero onEnterAsGuest={onEnterAsGuest} onOpenSellerSignup={onOpenSellerSignup} />
 
-        <section id="payment-strip" aria-labelledby="payment-strip-title" className="scroll-mt-24 py-12 md:py-20">
-          <h2 id="payment-strip-title" className="mb-6 text-center text-sm font-semibold uppercase tracking-[0.18em] text-brand-800 dark:text-brand-200 md:text-base">
-            {t('payYourWayTitle')}
-          </h2>
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            {[t('cashOnDelivery'), t('onlinePaymentText'), t('riderDelivery'), t('orderTracking'), t('deliveryCodeConfirmation'), t('productReviews')].map((item) => (
-              <div key={item} className="inline-flex items-center gap-2 rounded-full border border-[#d0c8a5]/15 bg-white/70 dark:bg-[#11161d]/70 px-4 py-2 text-sm text-surface-700 dark:text-surface-200">
-                <BadgeCheck className="h-4 w-4 text-brand-700 dark:text-brand-300" />
-                <span>{item}</span>
-              </div>
-            ))}
-          </div>
-        </section>
+        <PaymentStrip />
 
-        {approvedSellers.length >= 3 && (
-          <section id="sellers" aria-labelledby="sellers-heading" className="scroll-mt-24 py-12 md:py-20">
-            <div className="mb-6 text-center">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-700 dark:text-brand-300">{t('sellersSectionEyebrow')}</p>
-              <h2 id="sellers-heading" className="mt-2 text-3xl font-medium tracking-[-0.04em] text-surface-900 dark:text-white md:text-4xl">{t('sellersAlreadyOnShopNiro')}</h2>
-              <p className="mt-3 text-sm text-surface-600 dark:text-surface-300">{t('sellersReviewedBeforeListing')}</p>
-            </div>
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-              {approvedSellers.map((seller) => (
-                <button
-                  key={seller.Seller_ID}
-                  type="button"
-                  onClick={onEnterAsGuest}
-                  className="flex items-center gap-3 rounded-2xl border border-surface-200 dark:border-surface-700 bg-white/75 dark:bg-[#10161e]/75 p-4 text-left transition-colors hover:border-brand-500/60 hover:bg-white dark:hover:bg-[#121b26] cursor-pointer"
-                >
-                  <SellerLogo logo={seller.Logo} name={seller.Name} />
-                  <span className="truncate text-sm font-semibold text-surface-900 dark:text-white">{seller.Name}</span>
-                </button>
-              ))}
-            </div>
-          </section>
-        )}
+        <SellersShowcase sellers={sellers} onEnterAsGuest={onEnterAsGuest} />
 
-        <section id="how-it-works" aria-labelledby="how-it-works-heading" className="scroll-mt-24 py-12 md:py-20">
-          <div className="mb-8 text-center">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-700 dark:text-brand-300">{t('simpleSteps')}</p>
-            <h2 id="how-it-works-heading" className="mt-2 text-3xl font-medium tracking-[-0.04em] text-surface-900 dark:text-white md:text-4xl">{t('howShopNiroWorks')}</h2>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-3">
-            {howItWorksSteps.map((step, index) => (
-              <div key={step.title} className="rounded-2xl border border-surface-200 dark:border-surface-700 bg-white/75 dark:bg-[#10161e]/75 p-5 shadow-xl">
-                <div className="mb-5 flex items-center gap-3">
-                  <div className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-surface-900 dark:text-white ${step.tone}`}>
-                    {index + 1}
-                  </div>
-                  <span className="text-lg font-semibold text-surface-900 dark:text-white">{step.title}</span>
-                </div>
-                <p className="text-sm leading-relaxed text-surface-600 dark:text-surface-300">{step.text}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-8 flex flex-col items-center justify-between gap-4 rounded-2xl border border-brand-500/20 bg-gradient-to-r from-white/80 to-brand-50/70 dark:from-[#111a1b] dark:to-[#1a1d15] px-5 py-4 text-center md:flex-row md:text-left">
-            <p className="text-base text-surface-800 dark:text-surface-100">{t('sellerBandText')}</p>
-            <button type="button" onClick={onOpenSellerSignup} className="inline-flex items-center gap-2 rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-surface-900 dark:text-white transition-colors hover:bg-brand-500 cursor-pointer">
-              {t('applyAsSeller')}
-              <ArrowRight className="h-4 w-4" />
-            </button>
-          </div>
-        </section>
+        <HowItWorks onOpenSellerSignup={onOpenSellerSignup} />
 
         <section id="features" aria-labelledby="features-heading" className="scroll-mt-24 py-12 md:py-20">
           <div className="mb-8 text-center">
