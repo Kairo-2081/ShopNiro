@@ -50,7 +50,7 @@ export const LandingHeader: React.FC<{ theme: 'dark' | 'light'; onToggleTheme: (
           >
             {t('signIn')}
           </button>
-          <button type="button" onClick={onOpenSellerSignup} className="rounded-full bg-brand-600 px-4 py-2 text-xs font-semibold text-surface-900 dark:text-white shadow-[0_12px_25px_rgba(91,79,41,0.35)] transition-transform hover:-translate-y-0.5 hover:bg-brand-500 cursor-pointer sm:text-sm">
+          <button type="button" onClick={onOpenSellerSignup} className="rounded-full bg-brand-600 px-4 py-2 text-xs font-semibold text-white shadow-[0_12px_25px_rgba(91,79,41,0.35)] transition-transform hover:-translate-y-0.5 hover:bg-brand-500 cursor-pointer sm:text-sm">
             {t('startSelling')}
           </button>
         </div>
