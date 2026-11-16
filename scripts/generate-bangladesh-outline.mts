@@ -1,6 +1,6 @@
 // Writes src/components/landing/map/bangladeshOutline.ts: the outline of Bangladesh, simplified for the landing page map.
 //
-//   npm i --no-save world-atlas topojson-client && npx tsx scripts/generate-bangladesh-outline.mts
+//   npm run generate:outline
 //
 // The source is the public domain Natural Earth 1:10m country layer (npm package world-atlas). The script keeps the
 // mainland and every island big enough to show at the size the map is drawn, and thins each ring with Douglas-Peucker so
