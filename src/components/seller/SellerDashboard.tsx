@@ -25,8 +25,14 @@ import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { fallbackToBrandLogo } from '../../lib/branding';
 import { useLocale } from '../../lib/i18n';
+import { StatTile } from '../charts/StatTile';
+import { percentChange, sum } from '../charts/format';
 
-const compactSellerValue = (value: number) => value >= 1000 ? `${(value / 1000).toFixed(1)}k` : String(Math.round(value));
+// Recharts is large; load it only when a seller opens the analytics tab.
+const MonthlyBarChart = React.lazy(() =>
+  import('../charts/MonthlyBarChart').then(({ MonthlyBarChart: Component }) => ({ default: Component })),
+);
+
 interface SellerDashboardProps {
   activeTab: SellerDashboardTab;
   setActiveTab: React.Dispatch<React.SetStateAction<SellerDashboardTab>>;
@@ -258,7 +264,6 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
     });
     return months;
   })();
-  const maximumMonthlyRevenue = Math.max(1, ...recentMonthlySales.map((month) => month.revenue));
 
   const avgSellerRating =
     sellerReviews.length > 0
@@ -704,39 +709,62 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
           )}
           {!isLoadingAnalytics && <>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              { label: 'Net product sales', value: formatCurrency(totalSalesRevenue), note: 'Excludes cancelled and refunded orders' },
-              { label: 'Units sold', value: sellerUnitsSold.toLocaleString(), note: `${billableSellerOrders.length} eligible orders` },
-              { label: 'Average order value', value: formatCurrency(averageSellerOrderValue), note: 'Across eligible seller orders' },
-              { label: 'Product rating', value: avgSellerRating ? `${avgSellerRating.toFixed(1)} / 5` : 'No ratings', note: `${sellerReviews.length} customer reviews` },
-            ].map((metric) => (
-              <article key={metric.label} className="rounded-2xl border border-brand-100 bg-white p-4 dark:border-brand-500/20 dark:bg-[#12161D]">
-                <p className="text-micro font-semibold uppercase text-surface-500 dark:text-surface-400">{metric.label}</p>
-                <p className="mt-2 text-xl font-bold tabular-nums text-surface-900 dark:text-white">{metric.value}</p>
-                <p className="mt-1 text-micro text-surface-500 dark:text-surface-400">{metric.note}</p>
-              </article>
-            ))}
+            <StatTile
+              label="Net product sales"
+              value={formatCurrency(totalSalesRevenue)}
+              note="Excludes cancelled and refunded orders"
+              trend={recentMonthlySales.some((month) => month.revenue > 0) ? recentMonthlySales.map((month) => month.revenue) : undefined}
+              change={percentChange(sum(recentMonthlySales.slice(3).map((month) => month.revenue)), sum(recentMonthlySales.slice(0, 3).map((month) => month.revenue)))}
+              comparison={t('chartVsPrevious3')}
+            />
+            <StatTile label="Units sold" value={sellerUnitsSold.toLocaleString()} note={`${billableSellerOrders.length} eligible orders`} />
+            <StatTile
+              label="Average order value"
+              value={formatCurrency(averageSellerOrderValue)}
+              note="Across eligible seller orders"
+              trend={recentMonthlySales.some((month) => month.orders > 0) ? recentMonthlySales.map((month) => (month.orders ? month.revenue / month.orders : 0)) : undefined}
+            />
+            <StatTile label="Product rating" value={avgSellerRating ? `${avgSellerRating.toFixed(1)} / 5` : 'No ratings'} note={`${sellerReviews.length} customer reviews`} />
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <section className="rounded-2xl border border-surface-200 bg-white p-5 dark:border-surface-800 dark:bg-[#12161D]">
               <h2 className="text-sm font-bold text-surface-900 dark:text-white">{t('monthlySales')}</h2>
               <p className="mt-1 text-micro text-surface-500 dark:text-surface-400">{t('productRevenueLastSix')}</p>
-              <div role="img" aria-label="Monthly product sales for the last six months" className="mt-5 grid h-44 grid-cols-6 items-end gap-2">
-                {recentMonthlySales.map((month) => (
-                  <div key={month.key} className="flex h-full min-w-0 flex-col items-center justify-end gap-2">
-                    <span className="text-center text-micro tabular-nums text-surface-500 dark:text-surface-400">{month.revenue ? compactSellerValue(month.revenue) : ''}</span>
-                    <div className="flex h-28 w-full items-end rounded-md bg-surface-100 dark:bg-[#1B2430]">
-                      <div
-                        className="w-full rounded-md bg-success-600 transition-[height] duration-500 dark:bg-success-500"
-                        style={{ height: `${month.revenue ? Math.max(5, (month.revenue / maximumMonthlyRevenue) * 100) : 0}%` }}
-                        title={`${month.label}: ${formatCurrency(month.revenue)} · ${month.orders} orders`}
-                      />
-                    </div>
-                    <span className="text-micro text-surface-600 dark:text-surface-300">{month.label}</span>
-                  </div>
-                ))}
+              <div className="mt-4">
+                <React.Suspense fallback={<div aria-hidden="true" className="premium-skeleton h-[220px] rounded-xl" />}>
+                  <MonthlyBarChart
+                    data={recentMonthlySales.map((month) => ({ label: month.label, value: month.revenue }))}
+                    name={t('chartRevenue')}
+                    formatValue={(value) => formatCurrency(value)}
+                    ariaLabel="Monthly product sales for the last six months"
+                  />
+                </React.Suspense>
               </div>
+              <details className="mt-1 text-xs">
+                <summary className="min-h-11 cursor-pointer py-3 font-semibold text-brand-700 underline decoration-brand-300 underline-offset-4 dark:text-brand-300">
+                  {t('viewMonthlyDataAsTable')}
+                </summary>
+                <table className="w-full border-collapse text-left">
+                  <caption className="sr-only">Monthly product sales for the last six months</caption>
+                  <thead>
+                    <tr className="border-b border-surface-200 dark:border-surface-700">
+                      <th scope="col" className="p-2">{t('monthCol')}</th>
+                      <th scope="col" className="p-2">{t('ordersCol')}</th>
+                      <th scope="col" className="p-2">{t('chartRevenue')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentMonthlySales.map((month) => (
+                      <tr key={month.key} className="border-b border-surface-100 dark:border-surface-800">
+                        <th scope="row" className="p-2 font-medium">{month.label}</th>
+                        <td className="p-2 tabular-nums">{month.orders.toLocaleString()}</td>
+                        <td className="p-2 tabular-nums">{formatCurrency(month.revenue)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </details>
             </section>
 
             <section className="rounded-2xl border border-surface-200 bg-white p-5 dark:border-surface-800 dark:bg-[#12161D]">
