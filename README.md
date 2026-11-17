@@ -21,7 +21,10 @@ admins, and delivery riders in one order journey.
 [API docs](./docs/api.md) ·
 [Deployment guide](./README-DEPLOY.md)
 
-<img src="./.github/assets/readme/shopniro-home.jpg" alt="ShopNiro landing page with a Bangladesh delivery-route map and entry points for the marketplace, sellers, and riders" width="900" />
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="./.github/assets/readme/shopniro-home.jpg" />
+<img src="./.github/assets/readme/shopniro-home-light.jpg" alt="ShopNiro landing page with a Bangladesh delivery-route map and entry points for the marketplace, sellers, and riders" width="900" />
+</picture>
 
 </div>
 
@@ -88,28 +91,43 @@ role selector; it does not show sign-in, checkout, payment, or rider delivery.
 <table>
 <tr>
 <td width="50%" valign="top">
-<img src="./.github/assets/readme/shopniro-marketplace.jpg" alt="Marketplace catalog with search, sorting, stock filters, and customer navigation" width="100%" />
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="./.github/assets/readme/shopniro-marketplace.jpg" />
+<img src="./.github/assets/readme/shopniro-marketplace-light.jpg" alt="Marketplace catalog with search, sorting, stock filters, and customer navigation" width="100%" />
+</picture>
 <p><b>Browse the catalog.</b> Search listings, compare prices, and check stock before ordering.</p>
 </td>
 <td width="50%" valign="top">
-<img src="./.github/assets/readme/shopniro-marketplace-current.jpg" alt="Marketplace charts showing best sellers, top-rated products, and new arrivals" width="100%" />
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="./.github/assets/readme/shopniro-marketplace-current.jpg" />
+<img src="./.github/assets/readme/shopniro-marketplace-current-light.jpg" alt="Marketplace charts showing best sellers, top-rated products, and new arrivals" width="100%" />
+</picture>
 <p><b>Explore what is selling.</b> Product rankings and category trends bring popular listings into view.</p>
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
-<img src="./.github/assets/readme/shopniro-product-detail.jpg" alt="Product detail with a Bengali listing, price, verified seller, and seller-provided policies" width="100%" />
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="./.github/assets/readme/shopniro-product-detail.jpg" />
+<img src="./.github/assets/readme/shopniro-product-detail-light.jpg" alt="Product detail with price, available stock, the approved seller, a quantity picker and Add to cart and Buy now buttons" width="100%" />
+</picture>
 <p><b>Review the details.</b> Product pages show listing information, seller details, and policies.</p>
 </td>
 <td width="50%" valign="top">
-<img src="./.github/assets/readme/shopniro-sign-up.jpg" alt="Account creation screen with customer, merchant seller, and rider role choices" width="100%" />
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="./.github/assets/readme/shopniro-sign-up.jpg" />
+<img src="./.github/assets/readme/shopniro-sign-up-light.jpg" alt="Account creation screen with customer, merchant seller, and rider role choices" width="100%" />
+</picture>
 <p><b>Choose an account type.</b> Customer, seller, and rider registration start in the same flow.</p>
 </td>
 </tr>
 </table>
 
 <p>
-<img src="./.github/assets/readme/shopniro-mobile-phone.png" alt="ShopNiro public landing page displayed in a phone frame at a 390-pixel mobile viewport" width="250" />
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="./.github/assets/readme/shopniro-mobile-phone.png" />
+<img src="./.github/assets/readme/shopniro-mobile-phone-light.png" alt="ShopNiro public landing page displayed in a phone frame at a 390-pixel mobile viewport" width="250" />
+</picture>
 </p>
 <p><b>Mobile storefront.</b> Captured from the public site at a narrow viewport; the Android wrapper uses the app's web interface.</p>
 
@@ -130,27 +148,42 @@ the captures had no internet for map tiles.
 <table>
 <tr>
 <td width="50%" valign="top">
-<img src="./.github/assets/readme/app-customer-storefront.jpg" alt="Customer storefront catalogue with product cards showing price and an Add to Cart button" width="100%" />
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="./.github/assets/readme/app-customer-storefront.jpg" />
+<img src="./.github/assets/readme/app-customer-storefront-light.jpg" alt="Customer storefront catalogue with product cards showing price and an Add to Cart button" width="100%" />
+</picture>
 <p><b>Shop the catalogue.</b> Products from several sellers in one grid, each with its price and an add-to-cart button.</p>
 </td>
 <td width="50%" valign="top">
-<img src="./.github/assets/readme/app-customer-checkout.jpg" alt="Checkout dialog with SSLCOMMERZ, bKash and cash on delivery options, a voucher field, itemised totals and policy consent" width="100%" />
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="./.github/assets/readme/app-customer-checkout.jpg" />
+<img src="./.github/assets/readme/app-customer-checkout-light.jpg" alt="Checkout dialog with SSLCOMMERZ, bKash and cash on delivery options, a voucher field, itemised totals and policy consent" width="100%" />
+</picture>
 <p><b>Check out.</b> Pick cash on delivery or an online method, apply a voucher, see the itemised total, and accept the policies before placing the order.</p>
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
-<img src="./.github/assets/readme/app-customer-order-placed.jpg" alt="Order placed confirmation showing the order number and total with a View order button" width="100%" />
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="./.github/assets/readme/app-customer-order-placed.jpg" />
+<img src="./.github/assets/readme/app-customer-order-placed-light.jpg" alt="Order placed confirmation showing the order number and total with a View order button" width="100%" />
+</picture>
 <p><b>Get a confirmation.</b> The order number and total appear immediately, with a shortcut to the order.</p>
 </td>
 <td width="50%" valign="top">
-<img src="./.github/assets/readme/app-customer-orders-confirm.jpg" alt="Live delivery tracking with delivery milestones, the rider and a box to enter the rider's delivery code" width="100%" />
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="./.github/assets/readme/app-customer-orders-confirm.jpg" />
+<img src="./.github/assets/readme/app-customer-orders-confirm-light.jpg" alt="Live delivery tracking with delivery milestones, the rider and a box to enter the rider's delivery code" width="100%" />
+</picture>
 <p><b>Follow the delivery.</b> Milestones, the rider and, at the door, a box for the code the rider reads out.</p>
 </td>
 </tr>
 <tr>
 <td colspan="2" valign="top">
-<img src="./.github/assets/readme/app-customer-delivered.jpg" alt="A delivered, paid cash-on-delivery order with a delivery review form" width="100%" />
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="./.github/assets/readme/app-customer-delivered.jpg" />
+<img src="./.github/assets/readme/app-customer-delivered-light.jpg" alt="A delivered, paid cash-on-delivery order with a delivery review form" width="100%" />
+</picture>
 <p><b>Close the loop.</b> Entering the code marks the order delivered and paid, and opens a rating form for the delivery.</p>
 </td>
 </tr>
@@ -161,21 +194,33 @@ the captures had no internet for map tiles.
 <table>
 <tr>
 <td width="50%" valign="top">
-<img src="./.github/assets/readme/app-seller-new-product.jpg" alt="Create New Product Listing dialog with title, category, price, stock, voucher code and product images" width="100%" />
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="./.github/assets/readme/app-seller-new-product.jpg" />
+<img src="./.github/assets/readme/app-seller-new-product-light.jpg" alt="Create New Product Listing dialog with title, category, price, stock, voucher code and product images" width="100%" />
+</picture>
 <p><b>List a product.</b> Title, category, price, stock, an optional voucher and up to seven pictures.</p>
 </td>
 <td width="50%" valign="top">
-<img src="./.github/assets/readme/app-seller-catalog.jpg" alt="Seller catalogue for Banani Craft House with an Approved badge, totals and a product table with stock and status" width="100%" />
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="./.github/assets/readme/app-seller-catalog.jpg" />
+<img src="./.github/assets/readme/app-seller-catalog-light.jpg" alt="Seller catalogue for Banani Craft House with an Approved badge, totals and a product table with stock and status" width="100%" />
+</picture>
 <p><b>Run the catalogue.</b> An approved store sees its listings, stock and status, and totals for revenue and orders.</p>
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
-<img src="./.github/assets/readme/app-seller-fulfillment.jpg" alt="Fulfillment orders list with a cash-on-delivery order and a fulfilment status selector set to Shipped" width="100%" />
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="./.github/assets/readme/app-seller-fulfillment.jpg" />
+<img src="./.github/assets/readme/app-seller-fulfillment-light.jpg" alt="Fulfillment orders list with a cash-on-delivery order and a fulfilment status selector set to Shipped" width="100%" />
+</picture>
 <p><b>Fulfil orders.</b> Each order shows its items and destination; the seller moves it to Shipped and tracking starts.</p>
 </td>
 <td width="50%" valign="top">
-<img src="./.github/assets/readme/app-seller-analytics.jpg" alt="Sales analytics with net sales, units sold, average order value, monthly sales bars and top products" width="100%" />
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="./.github/assets/readme/app-seller-analytics.jpg" />
+<img src="./.github/assets/readme/app-seller-analytics-light.jpg" alt="Sales analytics with net sales, units sold, average order value, monthly sales bars and top products" width="100%" />
+</picture>
 <p><b>Read the numbers.</b> Net sales, units, average order value, monthly sales and top products.</p>
 </td>
 </tr>
@@ -186,17 +231,26 @@ the captures had no internet for map tiles.
 <table>
 <tr>
 <td width="50%" valign="top">
-<img src="./.github/assets/readme/app-rider-available.jpg" alt="Rider operations page listing a nearby pending shipment with a Claim delivery button" width="100%" />
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="./.github/assets/readme/app-rider-available.jpg" />
+<img src="./.github/assets/readme/app-rider-available-light.jpg" alt="Rider operations page listing a nearby pending shipment with a Claim delivery button" width="100%" />
+</picture>
 <p><b>Claim a delivery.</b> Pending pickups within 20 km are listed nearest first; the rider claims one.</p>
 </td>
 <td width="50%" valign="top">
-<img src="./.github/assets/readme/app-rider-active.jpg" alt="Active delivery with an On the way status, a delivery code to tell the customer and a Confirm received button for the cash amount" width="100%" />
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="./.github/assets/readme/app-rider-active.jpg" />
+<img src="./.github/assets/readme/app-rider-active-light.jpg" alt="Active delivery with an On the way status, a delivery code to tell the customer and a Confirm received button for the cash amount" width="100%" />
+</picture>
 <p><b>Deliver it.</b> On the way, the rider sees the delivery code to read out and the cash to collect.</p>
 </td>
 </tr>
 <tr>
 <td colspan="2" valign="top">
-<img src="./.github/assets/readme/app-rider-cash-recorded.jpg" alt="Delivery with the message COD collection recorded, waiting for the customer to confirm receipt" width="100%" />
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="./.github/assets/readme/app-rider-cash-recorded.jpg" />
+<img src="./.github/assets/readme/app-rider-cash-recorded-light.jpg" alt="Delivery with the message COD collection recorded, waiting for the customer to confirm receipt" width="100%" />
+</picture>
 <p><b>Record the cash.</b> Cash on delivery is recorded; the order closes when the customer enters the code.</p>
 </td>
 </tr>
@@ -207,21 +261,33 @@ the captures had no internet for map tiles.
 <table>
 <tr>
 <td width="50%" valign="top">
-<img src="./.github/assets/readme/app-admin-overview.jpg" alt="Platform admin governance console with market value, active merchants, order throughput and a seller approval table" width="100%" />
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="./.github/assets/readme/app-admin-overview.jpg" />
+<img src="./.github/assets/readme/app-admin-overview-light.jpg" alt="Platform admin governance console with market value, active merchants, order throughput and a seller approval table" width="100%" />
+</picture>
 <p><b>See the marketplace.</b> Pending applications, key totals and the seller approval queue on one screen.</p>
 </td>
 <td width="50%" valign="top">
-<img src="./.github/assets/readme/app-admin-seller-review.jpg" alt="Seller application dialog with a verification checklist for identity, documents and payout account, and Approve, Reject and Suspend buttons" width="100%" />
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="./.github/assets/readme/app-admin-seller-review.jpg" />
+<img src="./.github/assets/readme/app-admin-seller-review-light.jpg" alt="Seller application dialog with a verification checklist for identity, documents and payout account, and Approve, Reject and Suspend buttons" width="100%" />
+</picture>
 <p><b>Approve with a checklist.</b> Identity, documents and payout account are ticked off before a seller can be approved.</p>
 </td>
 </tr>
 <tr>
 <td width="50%" valign="top">
-<img src="./.github/assets/readme/app-admin-metrics.jpg" alt="Marketplace metrics with top rated products, top trends and latest added products" width="100%" />
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="./.github/assets/readme/app-admin-metrics.jpg" />
+<img src="./.github/assets/readme/app-admin-metrics-light.jpg" alt="Marketplace metrics with top rated products, top trends and latest added products" width="100%" />
+</picture>
 <p><b>Track performance.</b> Top-rated products, best sellers and new listings, with tabs for vendors and riders.</p>
 </td>
 <td width="50%" valign="top">
-<img src="./.github/assets/readme/app-admin-payments.jpg" alt="Online payments page with gateway status, transaction ledger and seller payout requests" width="100%" />
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="./.github/assets/readme/app-admin-payments.jpg" />
+<img src="./.github/assets/readme/app-admin-payments-light.jpg" alt="Online payments page with gateway status, transaction ledger and seller payout requests" width="100%" />
+</picture>
 <p><b>Watch the money.</b> Gateway status, an online-payment ledger and seller payout requests.</p>
 </td>
 </tr>
@@ -232,11 +298,17 @@ the captures had no internet for map tiles.
 <table>
 <tr>
 <td width="50%" align="center" valign="top">
-<img src="./.github/assets/readme/app-phone-storefront.jpg" alt="Storefront on a 390-pixel-wide phone" width="280" />
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="./.github/assets/readme/app-phone-storefront.jpg" />
+<img src="./.github/assets/readme/app-phone-storefront-light.jpg" alt="Storefront on a 390-pixel-wide phone" width="280" />
+</picture>
 <p><b>Same app, narrow screen.</b> The storefront at 390 × 844.</p>
 </td>
 <td width="50%" align="center" valign="top">
-<img src="./.github/assets/readme/app-phone-catalog.jpg" alt="Catalogue product card on a 390-pixel-wide phone" width="280" />
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="./.github/assets/readme/app-phone-catalog.jpg" />
+<img src="./.github/assets/readme/app-phone-catalog-light.jpg" alt="Catalogue product card on a 390-pixel-wide phone" width="280" />
+</picture>
 <p><b>Product cards.</b> One column, with price, stock and add to cart.</p>
 </td>
 </tr>
