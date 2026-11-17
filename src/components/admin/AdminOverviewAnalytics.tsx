@@ -1,22 +1,12 @@
 import React from 'react';
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  ComposedChart,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  TooltipContentProps,
-  XAxis,
-  YAxis,
-  Area,
-} from 'recharts';
 import { formatBDT } from '../../lib/api';
 import { Order, OrderStatus } from '../../types';
 import { useLocale } from '../../lib/i18n';
+import { ChartPanel } from '../charts/ChartPanel';
+import { DonutChart, DonutSlice } from '../charts/DonutChart';
+import { StatTile } from '../charts/StatTile';
+import { TrendAreaChart } from '../charts/TrendAreaChart';
+import { percentChange, sum } from '../charts/format';
 
 interface AdminOverviewAnalyticsProps {
   orders: Order[];
@@ -26,71 +16,36 @@ interface AdminOverviewAnalyticsProps {
 interface MonthlyMetric {
   month: string;
   orderCount: number;
+  billableCount: number;
   orderValue: number;
 }
 
-const statusPresentation: Record<OrderStatus, { label: string; color: string; shade: string }> = {
-  placed: { label: 'Placed', color: '#38bdf8', shade: '#0ea5e9' },
-  processing: { label: 'Processing', color: '#f59e0b', shade: '#d97706' },
-  shipped: { label: 'Shipped', color: '#8b5cf6', shade: '#7c3aed' },
-  delivered: { label: 'Delivered', color: '#34d399', shade: '#10b981' },
-  cancelled: { label: 'Cancelled', color: '#fb7185', shade: '#f43f5e' },
+type TrendMeasure = 'revenue' | 'orders';
+
+// Colour follows the entity, never its rank: the same status or payment method has the same colour in every chart and
+// in every theme. The slots are the validated --chart-cat-N tokens from index.css.
+const statusPresentation: Record<OrderStatus, { label: string; color: string }> = {
+  placed: { label: 'Placed', color: 'var(--chart-cat-5)' },
+  processing: { label: 'Processing', color: 'var(--chart-cat-1)' },
+  shipped: { label: 'Shipped', color: 'var(--chart-cat-2)' },
+  delivered: { label: 'Delivered', color: 'var(--chart-cat-6)' },
+  cancelled: { label: 'Cancelled', color: 'var(--chart-cat-4)' },
 };
 
-const paymentPresentation: Record<string, { label: string; color: string; shade: string }> = {
-  bkash: { label: 'bKash', color: '#f472b6', shade: '#ec4899' },
-  nagad: { label: 'Nagad', color: '#2dd4bf', shade: '#14b8a6' },
-  rocket: { label: 'Rocket', color: '#a78bfa', shade: '#8b5cf6' },
-  visa_mastercard: { label: 'Cards', color: '#60a5fa', shade: '#3b82f6' },
-  sslcommerz: { label: 'SSLCommerz', color: '#fbbf24', shade: '#f59e0b' },
-  cash_on_delivery: { label: 'COD', color: '#4ade80', shade: '#22c55e' },
-};
-
-const compactValue = (value: number) => {
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}m`;
-  if (value >= 10_000) return `${Math.round(value / 1_000)}k`;
-  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}k`;
-  return String(Math.round(value));
-};
-
-const AdminChartTooltip: React.FC<Partial<TooltipContentProps<number, string>>> = ({ active, payload, label }) => {
-  if (!active || !payload?.length) return null;
-
-  return (
-    <div className="rounded-2xl border border-white/20 bg-surface-900/85 p-3.5 shadow-2xl backdrop-blur-md text-xs text-white space-y-1.5 animate-in fade-in duration-150">
-      <p className="font-bold text-surface-300 border-b border-white/10 pb-1">{label}</p>
-      {payload.map((entry, index) => {
-        const name = String(entry.name || entry.dataKey || 'Metric');
-        const value = Number(entry.value) || 0;
-        const color = typeof entry.color === 'string' ? entry.color : typeof entry.fill === 'string' ? entry.fill : '#94a3b8';
-        return (
-          <div key={`${name}-${index}`} className="flex items-center gap-2">
-            <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
-            <span className="text-surface-400 capitalize">{name}:</span>
-            <span className="ml-auto font-semibold tabular-nums text-white">
-              {name.toLowerCase().includes('value') ? formatBDT(value) : value.toLocaleString()}
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
+const paymentPresentation: Record<string, { label: string; color: string }> = {
+  cash_on_delivery: { label: 'COD', color: 'var(--chart-cat-1)' },
+  bkash: { label: 'bKash', color: 'var(--chart-cat-2)' },
+  nagad: { label: 'Nagad', color: 'var(--chart-cat-3)' },
+  rocket: { label: 'Rocket', color: 'var(--chart-cat-4)' },
+  visa_mastercard: { label: 'Cards', color: 'var(--chart-cat-5)' },
+  sslcommerz: { label: 'SSLCommerz', color: 'var(--chart-cat-6)' },
 };
 
 export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ orders, isLoading = false }) => {
   const { t } = useLocale();
-  const [prefersReducedMotion, setPrefersReducedMotion] = React.useState(() =>
-    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  );
+  const [measure, setMeasure] = React.useState<TrendMeasure>('revenue');
 
-  React.useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const updatePreference = () => setPrefersReducedMotion(mediaQuery.matches);
-    mediaQuery.addEventListener('change', updatePreference);
-    return () => mediaQuery.removeEventListener('change', updatePreference);
-  }, []);
-
-  const { monthlyMetrics, statusMetrics, paymentMetrics, hasRecentOrders, trailingOrderCount, trailingOrderValue } = React.useMemo(() => {
+  const analytics = React.useMemo(() => {
     const now = new Date();
     const firstMonth = new Date(now.getFullYear(), now.getMonth() - 11, 1);
     const byMonth = new Map<string, MonthlyMetric>();
@@ -98,186 +53,190 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
 
     for (let offset = 0; offset < 12; offset += 1) {
       const date = new Date(firstMonth.getFullYear(), firstMonth.getMonth() + offset, 1);
-      const key = `${date.getFullYear()}-${date.getMonth()}`;
-      const metric = {
+      const metric: MonthlyMetric = {
         month: date.toLocaleDateString(undefined, { month: 'short', year: '2-digit' }),
         orderCount: 0,
+        billableCount: 0,
         orderValue: 0,
       };
-      byMonth.set(key, metric);
+      byMonth.set(`${date.getFullYear()}-${date.getMonth()}`, metric);
       monthly.push(metric);
     }
 
-    const counts = new Map<OrderStatus, number>();
+    const statusCounts = new Map<OrderStatus, number>();
     const paymentCounts = new Map<string, number>();
     let recentCount = 0;
 
     orders.forEach((order) => {
-      counts.set(order.Status, (counts.get(order.Status) || 0) + 1);
+      statusCounts.set(order.Status, (statusCounts.get(order.Status) || 0) + 1);
 
       const methodKey = String(order.Payment_Method || 'cash_on_delivery').toLowerCase();
       paymentCounts.set(methodKey, (paymentCounts.get(methodKey) || 0) + 1);
 
       const placedAt = new Date(order.Order_Placed_At);
       if (Number.isNaN(placedAt.getTime())) return;
-
       const month = byMonth.get(`${placedAt.getFullYear()}-${placedAt.getMonth()}`);
       if (!month) return;
 
       recentCount += 1;
       month.orderCount += 1;
       if (order.Status !== 'cancelled' && order.Payment_Status !== 'refunded') {
+        month.billableCount += 1;
         month.orderValue += Math.max(0, Number(order.Subtotal) || 0) + Math.max(0, Number(order.Shipping_Fee) || 0);
       }
     });
 
-    const statuses = (Object.keys(statusPresentation) as OrderStatus[])
-      .map((status) => ({
-        status,
-        name: statusPresentation[status].label,
-        value: counts.get(status) || 0,
-        color: statusPresentation[status].color,
-        shade: statusPresentation[status].shade,
-      }))
-      .filter((status) => status.value > 0);
+    const statusSlices: DonutSlice[] = (Object.keys(statusPresentation) as OrderStatus[])
+      .map((status) => ({ key: status, name: statusPresentation[status].label, value: statusCounts.get(status) || 0, color: statusPresentation[status].color }))
+      .filter((slice) => slice.value > 0);
 
-    const payments = Array.from(paymentCounts.entries())
+    const paymentSlices: DonutSlice[] = Array.from(paymentCounts.entries())
       .map(([method, value]) => ({
-        method,
+        key: method,
         name: paymentPresentation[method]?.label || method.replace(/_/g, ' '),
         value,
-        color: paymentPresentation[method]?.color || '#64748b',
-        shade: paymentPresentation[method]?.shade || '#475569',
+        color: paymentPresentation[method]?.color || 'var(--chart-axis)',
       }))
       .sort((a, b) => b.value - a.value);
 
+    // Last six months against the six before them: long enough to smooth out one odd month, short enough to be current.
+    const previous = monthly.slice(0, 6);
+    const recent = monthly.slice(6);
+    const averageOrder = (rows: MonthlyMetric[]) => {
+      const billable = sum(rows.map((row) => row.billableCount));
+      return billable > 0 ? sum(rows.map((row) => row.orderValue)) / billable : 0;
+    };
+
     return {
-      monthlyMetrics: monthly,
-      statusMetrics: statuses,
-      paymentMetrics: payments,
+      monthly,
+      statusSlices,
+      paymentSlices,
       hasRecentOrders: recentCount > 0,
-      trailingOrderCount: recentCount,
-      trailingOrderValue: monthly.reduce((sum, metric) => sum + metric.orderValue, 0),
+      revenue: sum(monthly.map((row) => row.orderValue)),
+      orderCount: recentCount,
+      averageOrder: averageOrder(monthly),
+      revenueChange: percentChange(sum(recent.map((row) => row.orderValue)), sum(previous.map((row) => row.orderValue))),
+      orderChange: percentChange(sum(recent.map((row) => row.orderCount)), sum(previous.map((row) => row.orderCount))),
+      averageOrderChange: percentChange(averageOrder(recent), averageOrder(previous)),
+      deliveredCount: statusCounts.get('delivered') || 0,
     };
   }, [orders]);
+
+  const trendData = React.useMemo(
+    () => analytics.monthly.map((row) => ({ label: row.month, value: measure === 'revenue' ? row.orderValue : row.orderCount })),
+    [analytics.monthly, measure],
+  );
+  const best = React.useMemo(() => {
+    let top: { label: string; value: number } | null = null;
+    for (const datum of trendData) if (datum.value > 0 && (!top || datum.value > top.value)) top = datum;
+    return top;
+  }, [trendData]);
 
   if (isLoading) {
     return (
       <section aria-label="Loading platform metrics" aria-busy="true" className="space-y-4">
         <div className="premium-skeleton h-6 w-56 rounded-full" />
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           {Array.from({ length: 4 }, (_, index) => (
-            <div key={index} className="premium-skeleton h-[290px] rounded-2xl" />
+            <div key={index} className="premium-skeleton h-36 rounded-2xl" />
           ))}
         </div>
+        <div className="premium-skeleton h-[360px] rounded-2xl" />
       </section>
     );
   }
 
+  const measureName = measure === 'revenue' ? t('chartRevenue') : t('chartOrders');
+  const formatTrendValue = (value: number) => (measure === 'revenue' ? formatBDT(value) : `${value.toLocaleString()} ${t('chartOrdersUnit')}`);
+  const comparison = t('chartVsPrevious6');
+
+  const toggle = (
+    <div role="group" aria-label={t('chartMeasureGroup')} className="inline-flex rounded-full border border-surface-200 bg-surface-50 p-0.5 text-xs font-semibold dark:border-white/10 dark:bg-white/5">
+      {(['revenue', 'orders'] as const).map((option) => (
+        <button
+          key={option}
+          type="button"
+          aria-pressed={measure === option}
+          onClick={() => setMeasure(option)}
+          className={`min-h-8 rounded-full px-3.5 py-1 transition-colors ${
+            measure === option
+              ? 'bg-brand-700 text-white shadow-xs dark:bg-brand-300 dark:text-brand-950'
+              : 'text-surface-600 hover:text-surface-900 dark:text-surface-300 dark:hover:text-white'
+          }`}
+        >
+          {option === 'revenue' ? t('chartRevenue') : t('chartOrders')}
+        </button>
+      ))}
+    </div>
+  );
+
   return (
-    <section aria-labelledby="admin-overview-analytics-title" className="space-y-4">
+    <section aria-labelledby="admin-overview-analytics-title" className="space-y-5">
       <header>
         <h2 id="admin-overview-analytics-title" className="text-lg font-bold text-surface-900 dark:text-white">
           {t('overallPlatformMetrics')}
         </h2>
-        <p className="mt-1 text-xs text-surface-500 dark:text-surface-400">
-          {t('orderActivityPast12Months')}
-        </p>
+        <p className="mt-1 text-xs text-surface-500 dark:text-surface-400">{t('orderActivityPast12Months')}</p>
       </header>
 
-      <div className="flex flex-col gap-5">
-        <section className="w-full rounded-3xl border border-brand-100 dark:border-brand-500/20 bg-gradient-to-br from-surface-900/95 via-surface-900/90 to-brand-950/70 p-5 shadow-[0_20px_60px_rgba(15,23,42,0.38)] transition-all duration-300 hover:shadow-[0_26px_70px_rgba(59,130,246,0.14)]">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <h3 className="text-sm font-bold text-white">{t('orderRevenueTrends')}</h3>
-              <p className="text-micro text-surface-300">Order revenue trends against completed order count</p>
-            </div>
-            <div className="text-right rounded-2xl border border-brand-500/20 bg-brand-500/10 px-3 py-2 shadow-inner shadow-brand-500/10">
-              <span className="text-lg font-black text-brand-300 block">{formatBDT(trailingOrderValue)}</span>
-              <span className="text-micro text-surface-300 font-medium">
-                {trailingOrderCount.toLocaleString()} total orders (12 mo)
-              </span>
-            </div>
-          </div>
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        <StatTile
+          label={t('chartRevenue')}
+          value={formatBDT(analytics.revenue)}
+          note={t('chartLast12Months')}
+          trend={analytics.monthly.map((row) => row.orderValue)}
+          change={analytics.revenueChange}
+          comparison={comparison}
+        />
+        <StatTile
+          label={t('chartOrders')}
+          value={analytics.orderCount.toLocaleString()}
+          note={t('chartLast12Months')}
+          trend={analytics.monthly.map((row) => row.orderCount)}
+          change={analytics.orderChange}
+          comparison={comparison}
+        />
+        <StatTile
+          label={t('chartAverageOrder')}
+          value={formatBDT(analytics.averageOrder)}
+          note={t('chartLast12Months')}
+          trend={analytics.monthly.map((row) => (row.billableCount ? row.orderValue / row.billableCount : 0))}
+          change={analytics.averageOrderChange}
+          comparison={comparison}
+        />
+        <StatTile
+          label={t('chartDelivered')}
+          value={orders.length ? `${Math.round((analytics.deliveredCount / orders.length) * 100)}%` : '0%'}
+          note={t('chartDeliveredNote', { count: analytics.deliveredCount.toLocaleString(), total: orders.length.toLocaleString() })}
+        />
+      </div>
 
-          {hasRecentOrders ? (
-            <>
-            <div role="img" aria-label="Monthly order count and order value for the past 12 months" aria-describedby="monthly-orders-data-caption" className="h-[290px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={monthlyMetrics} margin={{ top: 8, right: 8, bottom: 4, left: -14 }}>
-                  <defs>
-                    <linearGradient id="barBlueGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#60A5FA" stopOpacity={0.95} />
-                      <stop offset="50%" stopColor="#3B82F6" stopOpacity={0.82} />
-                      <stop offset="100%" stopColor="#1D4ED8" stopOpacity={0.26} />
-                    </linearGradient>
-                    <linearGradient id="areaAmberGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#FBBF24" stopOpacity={0.45} />
-                      <stop offset="50%" stopColor="#F59E0B" stopOpacity={0.28} />
-                      <stop offset="100%" stopColor="#F59E0B" stopOpacity={0.0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid stroke="#94a3b8" strokeDasharray="3 5" strokeOpacity={0.16} vertical={false} />
-                  <XAxis
-                    dataKey="month"
-                    tick={{ fill: '#64748b', fontSize: 10 }}
-                    tickLine={false}
-                    axisLine={{ stroke: '#94a3b8', strokeOpacity: 0.3 }}
-                    minTickGap={8}
-                  />
-                  <YAxis
-                    yAxisId="orders"
-                    allowDecimals={false}
-                    tick={{ fill: '#64748b', fontSize: 10 }}
-                    tickLine={false}
-                    axisLine={false}
-                    width={34}
-                  />
-                  <YAxis
-                    yAxisId="value"
-                    orientation="right"
-                    tickFormatter={(value: number) => compactValue(value)}
-                    tick={{ fill: '#64748b', fontSize: 10 }}
-                    tickLine={false}
-                    axisLine={false}
-                    width={42}
-                  />
-                  <Tooltip content={<AdminChartTooltip />} cursor={{ fill: 'rgba(148, 163, 184, 0.08)' }} />
-                  <Area
-                    yAxisId="value"
-                    type="monotone"
-                    dataKey="orderValue"
-                    name="Order Value"
-                    stroke="#FBBF24"
-                    strokeWidth={3}
-                    fill="url(#areaAmberGradient)"
-                    activeDot={{ r: 5, strokeWidth: 0, fill: '#FBBF24' }}
-                    isAnimationActive={!prefersReducedMotion}
-                    animationDuration={900}
-                  />
-                  <Bar
-                    yAxisId="orders"
-                    dataKey="orderCount"
-                    name="Orders"
-                    fill="url(#barBlueGradient)"
-                    radius={[7, 7, 0, 0]}
-                    maxBarSize={22}
-                    isAnimationActive={!prefersReducedMotion}
-                    animationDuration={900}
-                  />
-                </ComposedChart>
-              </ResponsiveContainer>
-            </div>
-            <p id="monthly-orders-data-caption" className="sr-only">
-              A data table with each month, order count, and order value is available below.
-            </p>
-            <details className="mt-2 text-xs">
+      <ChartPanel
+        headingId="admin-trend-title"
+        title={t('chartTrendTitle')}
+        subtitle={t('chartTrendSubtitle', { measure: measureName.toLowerCase() })}
+        actions={toggle}
+      >
+        {analytics.hasRecentOrders ? (
+          <>
+            <TrendAreaChart
+              data={trendData}
+              name={measureName}
+              formatValue={formatTrendValue}
+              ariaLabel={measure === 'revenue' ? t('chartRevenueAria') : t('chartOrdersAria')}
+            />
+            {best && (
+              <p className="mt-3 text-micro text-surface-500 dark:text-surface-400">
+                {t('chartBestMonth')} · <span className="font-semibold text-surface-800 dark:text-surface-100">{best.label}</span> · <span className="font-semibold tabular-nums text-surface-800 dark:text-surface-100">{formatTrendValue(best.value)}</span>
+              </p>
+            )}
+            <details className="mt-1 text-xs">
               <summary className="min-h-11 cursor-pointer py-3 font-semibold text-brand-700 underline decoration-brand-300 underline-offset-4 dark:text-brand-300">
                 {t('viewMonthlyDataAsTable')}
               </summary>
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[28rem] border-collapse text-left">
-                  <caption className="sr-only">Monthly order count and order value for the past 12 months</caption>
+                  <caption className="sr-only">{t('monthlyOrderValueTitle')}</caption>
                   <thead>
                     <tr className="border-b border-surface-200 dark:border-surface-700">
                       <th scope="col" className="p-2">{t('monthCol')}</th>
@@ -286,191 +245,57 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
                     </tr>
                   </thead>
                   <tbody>
-                    {monthlyMetrics.map((month) => (
+                    {analytics.monthly.map((month) => (
                       <tr key={month.month} className="border-b border-surface-100 dark:border-surface-800">
                         <th scope="row" className="p-2 font-medium">{month.month}</th>
-                        <td className="p-2">{month.orderCount.toLocaleString()}</td>
-                        <td className="p-2">{formatBDT(month.orderValue)}</td>
+                        <td className="p-2 tabular-nums">{month.orderCount.toLocaleString()}</td>
+                        <td className="p-2 tabular-nums">{formatBDT(month.orderValue)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             </details>
-            </>
-          ) : (
-            <div className="flex h-[280px] items-center justify-center text-center text-xs text-surface-500 dark:text-surface-400 sm:h-[320px]">
-              {t('noOrdersPast12Months')}
-            </div>
-          )}
-        </section>
-
-        <section className="premium-surface w-full min-w-0 rounded-xl p-5 shadow-xs transition-all hover:shadow-md">
-          <div className="mb-1">
-            <h3 className="text-sm font-bold text-surface-900 dark:text-white">{t('orderStatusMix')}</h3>
-            <p className="mt-1 text-micro text-surface-600 dark:text-surface-300">{t('lifecycleDistribution')}</p>
+          </>
+        ) : (
+          <div className="flex h-[280px] items-center justify-center text-center text-xs text-surface-500 dark:text-surface-400">
+            {t('noOrdersPast12Months')}
           </div>
+        )}
+      </ChartPanel>
 
-          {statusMetrics.length > 0 ? (
-            <>
-              <div className="relative my-2 mx-auto h-[220px] w-full max-w-[260px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={statusMetrics}
-                      dataKey="value"
-                      nameKey="name"
-                      innerRadius={58}
-                      outerRadius={82}
-                      paddingAngle={4}
-                      stroke="rgba(15, 23, 42, 0.75)"
-                      strokeWidth={2}
-                      isAnimationActive={!prefersReducedMotion}
-                      animationDuration={900}
-                    >
-                      {statusMetrics.map((entry) => (
-                        <Cell key={entry.status} fill={entry.color} stroke={entry.shade} strokeWidth={1} className="transition-all duration-300 hover:opacity-80" />
-                      ))}
-                    </Pie>
-                    <Tooltip content={<AdminChartTooltip />} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-2xl font-black text-white">{orders.length.toLocaleString()}</span>
-                  <span className="text-micro text-surface-300 font-semibold uppercase tracking-wider">Orders</span>
-                </div>
-              </div>
-
-              <ul className="grid grid-cols-2 gap-2 border-t border-surface-100 dark:border-surface-800/80 pt-3">
-                {statusMetrics.map((status) => (
-                  <li key={status.status} className="flex items-center justify-between text-micro">
-                    <span className="flex items-center gap-1.5 text-surface-200 truncate">
-                      <span className="w-2.5 h-2.5 rounded-full shrink-0 shadow-[0_0_12px_rgba(255,255,255,0.25)]" style={{ backgroundColor: status.color }} />
-                      <span className="truncate">{status.name}</span>
-                    </span>
-                    <span className="font-bold text-white ml-1">{status.value}</span>
-                  </li>
-                ))}
-              </ul>
-            </>
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+        <ChartPanel headingId="admin-status-title" title={t('orderStatusMix')} subtitle={t('lifecycleDistribution')}>
+          {analytics.statusSlices.length > 0 ? (
+            <DonutChart
+              slices={analytics.statusSlices}
+              centerValue={orders.length.toLocaleString()}
+              centerLabel={t('chartOrders')}
+              ariaLabel={t('chartStatusAria')}
+              unit={t('chartOrdersUnit')}
+            />
           ) : (
-            <div className="my-2 flex h-[220px] items-center justify-center rounded-2xl border border-dashed border-surface-200 bg-surface-50 text-center text-micro text-surface-500 dark:border-surface-700 dark:bg-surface-900/40 dark:text-surface-400">
+            <div className="flex h-[200px] items-center justify-center rounded-xl border border-dashed border-surface-200 text-center text-micro text-surface-500 dark:border-surface-700 dark:text-surface-400">
               {t('noOrderStatusData')}
             </div>
           )}
-        </section>
+        </ChartPanel>
 
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-          <section className="premium-surface w-full rounded-xl p-5 shadow-xs transition-all hover:shadow-md">
-            <div className="mb-3">
-              <h3 className="text-sm font-bold text-surface-900 dark:text-white">{t('revenueByMonth')}</h3>
-              <p className="mt-1 text-micro text-surface-600 dark:text-surface-300">{t('revenueTrend12Months')}</p>
+        <ChartPanel headingId="admin-payment-title" title={t('paymentMethodMix')} subtitle={t('howOrdersPaidFor')}>
+          {analytics.paymentSlices.length > 0 ? (
+            <DonutChart
+              slices={analytics.paymentSlices}
+              centerValue={orders.length.toLocaleString()}
+              centerLabel={t('chartOrders')}
+              ariaLabel={t('chartPaymentAria')}
+              unit={t('chartOrdersUnit')}
+            />
+          ) : (
+            <div className="flex h-[200px] items-center justify-center rounded-xl border border-dashed border-surface-200 text-center text-micro text-surface-500 dark:border-surface-700 dark:text-surface-400">
+              {t('noPaymentData')}
             </div>
-            <div role="img" aria-label="Revenue by month for the past 12 months" aria-describedby="monthly-revenue-data-caption" className="h-[220px] w-full rounded-2xl bg-surface-950/20 p-2">
-              <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={monthlyMetrics} margin={{ top: 8, right: 8, left: -12, bottom: 4 }}>
-                    <defs>
-                      <linearGradient id="revenueAmberGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#D0C8A5" stopOpacity={0.95} />
-                        <stop offset="100%" stopColor="#80734F" stopOpacity={0.45} />
-                      </linearGradient>
-                    </defs>
-                  <CartesianGrid stroke="#94a3b8" strokeDasharray="3 5" strokeOpacity={0.12} vertical={false} />
-                  <XAxis dataKey="month" tick={{ fill: '#64748b', fontSize: 10 }} tickLine={false} axisLine={{ stroke: '#94a3b8', strokeOpacity: 0.3 }} />
-                  <YAxis tickFormatter={(value: number) => compactValue(value)} tick={{ fill: '#64748b', fontSize: 10 }} tickLine={false} axisLine={false} width={42} />
-                  <Tooltip content={<AdminChartTooltip />} cursor={{ fill: 'rgba(148, 163, 184, 0.08)' }} />
-                  <Bar
-                    dataKey="orderValue"
-                    name="Order Value"
-                    fill="url(#revenueAmberGradient)"
-                    radius={[7, 7, 0, 0]}
-                    maxBarSize={28}
-                    isAnimationActive={!prefersReducedMotion}
-                    animationDuration={900}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-            <p id="monthly-revenue-data-caption" className="sr-only">
-              A data table with each month and order value is available below.
-            </p>
-            <details className="mt-2 text-xs">
-              <summary className="min-h-11 cursor-pointer py-3 font-semibold text-brand-700 underline decoration-brand-300 underline-offset-4 dark:text-brand-300">
-                {t('viewRevenueDataTable')}
-              </summary>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[20rem] border-collapse text-left">
-                  <caption className="sr-only">Revenue by month for the past 12 months</caption>
-                  <thead>
-                    <tr className="border-b border-surface-200 dark:border-surface-700">
-                      <th scope="col" className="p-2">{t('monthCol')}</th>
-                      <th scope="col" className="p-2">{t('orderValueCol')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {monthlyMetrics.map((month) => (
-                      <tr key={month.month} className="border-b border-surface-100 dark:border-surface-800">
-                        <th scope="row" className="p-2 font-medium">{month.month}</th>
-                        <td className="p-2">{formatBDT(month.orderValue)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </details>
-          </section>
-
-          <section className="premium-surface w-full min-w-0 rounded-xl p-5 shadow-xs transition-all hover:shadow-md">
-            <div className="mb-3">
-              <h3 className="text-sm font-bold text-surface-900 dark:text-white">{t('paymentMethodMix')}</h3>
-              <p className="mt-1 text-micro text-surface-600 dark:text-surface-300">{t('howOrdersPaidFor')}</p>
-            </div>
-
-            {paymentMetrics.length > 0 ? (
-              <>
-                <div className="relative mx-auto h-[220px] w-full max-w-[290px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={paymentMetrics}
-                        dataKey="value"
-                        nameKey="name"
-                        innerRadius={52}
-                        outerRadius={76}
-                        paddingAngle={3}
-                        stroke="rgba(15, 23, 42, 0.75)"
-                        strokeWidth={2}
-                        isAnimationActive={!prefersReducedMotion}
-                        animationDuration={900}
-                      >
-                        {paymentMetrics.map((entry) => (
-                          <Cell key={entry.method} fill={entry.color} stroke={entry.shade} strokeWidth={1} className="transition-all duration-300 hover:opacity-80" />
-                        ))}
-                      </Pie>
-                      <Tooltip content={<AdminChartTooltip />} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-
-                <ul className="mt-2 grid grid-cols-2 gap-2 border-t border-surface-100 dark:border-surface-800/80 pt-3">
-                  {paymentMetrics.map((method) => (
-                    <li key={method.method} className="flex items-center justify-between text-micro">
-                      <span className="flex items-center gap-1.5 text-surface-200 truncate">
-                        <span className="h-2.5 w-2.5 rounded-full shrink-0 shadow-[0_0_12px_rgba(255,255,255,0.25)]" style={{ backgroundColor: method.color }} />
-                        <span className="truncate">{method.name}</span>
-                      </span>
-                      <span className="ml-1 font-bold text-white">{method.value}</span>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            ) : (
-              <div className="flex h-[220px] items-center justify-center rounded-2xl border border-dashed border-surface-200 bg-surface-50 text-center text-micro text-surface-500 dark:border-surface-700 dark:bg-surface-900/40 dark:text-surface-400">
-                {t('noPaymentData')}
-              </div>
-            )}
-          </section>
-        </div>
+          )}
+        </ChartPanel>
       </div>
     </section>
   );

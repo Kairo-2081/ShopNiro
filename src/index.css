@@ -87,6 +87,24 @@
   --shopniro-card-soft: rgba(231, 229, 214, 0.06);
   --shopniro-border: rgba(231, 229, 214, 0.14);
   --shopniro-glow: rgba(169, 155, 114, 0.25);
+
+  /* Chart tokens. One hue (the brand's olive-gold) carries a single measure; the six categorical slots were checked
+     with the dataviz validator against both surfaces (lightness band, chroma, colour-blind separation, contrast). */
+  --chart-primary: #6e684b;
+  --chart-primary-soft: #a89d78;
+  --chart-grid: rgba(87, 82, 59, 0.14);
+  --chart-axis: #666454;
+  --chart-ink: #151510;
+  --chart-muted-bar: rgba(110, 104, 75, 0.22);
+  --chart-positive: #187a46;
+  --chart-negative: #be123c;
+  --chart-ring: #ffffff;
+  --chart-cat-1: #947700;
+  --chart-cat-2: #8668b6;
+  --chart-cat-3: #009084;
+  --chart-cat-4: #b36139;
+  --chart-cat-5: #3c7ebe;
+  --chart-cat-6: #518b44;
 }
 
 .dark {
@@ -94,6 +112,21 @@
   --bg: #10100f;
   --fg: #f4f3ec;
   --focus-ring: #e7e5d6;
+  --chart-primary: #d8cb94;
+  --chart-primary-soft: #8a805e;
+  --chart-grid: rgba(231, 229, 214, 0.1);
+  --chart-axis: #b5b3a5;
+  --chart-ink: #f4f3ec;
+  --chart-muted-bar: rgba(216, 203, 148, 0.2);
+  --chart-positive: #4cba79;
+  --chart-negative: #fb7185;
+  --chart-ring: #1a1a14;
+  --chart-cat-1: #ad8f2a;
+  --chart-cat-2: #9e80d1;
+  --chart-cat-3: #00a99c;
+  --chart-cat-4: #ce7951;
+  --chart-cat-5: #5497d9;
+  --chart-cat-6: #69a45c;
 }
 
 @layer base {
