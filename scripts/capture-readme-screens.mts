@@ -17,7 +17,12 @@ import { E2E } from '../e2e/seed.ts';
 import { openCheckout, selectWorkspaceNavigationItem, withDb } from '../e2e/helpers.ts';
 
 const BASE = process.env.E2E_BASE_URL || `http://127.0.0.1:${process.env.E2E_PORT || 3100}`;
-const OUT = '.github/assets/readme';
+const OUT = process.env.SHOT_OUT ?? '.github/assets/readme';
+// SHOT_THEME=light retakes the screens in the light theme; SHOT_SUFFIX is added to every file name (for example
+// "-light") and SHOT_ONLY is a comma-separated list of screen names to keep when only a few are wanted.
+const THEME = process.env.SHOT_THEME === 'light' ? 'light' : 'dark';
+const SUFFIX = process.env.SHOT_SUFFIX ?? '';
+const ONLY = process.env.SHOT_ONLY ? new Set(process.env.SHOT_ONLY.split(',')) : null;
 const DESKTOP = { width: 1440, height: 900 };
 const PHONE = { width: 390, height: 844 };
 mkdirSync(OUT, { recursive: true });
@@ -55,7 +60,8 @@ async function sampleData() {
 }
 
 async function open(browser: Browser, role: keyof typeof AUTH, viewport = DESKTOP): Promise<Page> {
-  const context = await browser.newContext({ storageState: AUTH[role], viewport, deviceScaleFactor: 1, colorScheme: 'dark' });
+  const context = await browser.newContext({ storageState: AUTH[role], viewport, deviceScaleFactor: 1, colorScheme: THEME });
+  await context.addInitScript((theme) => window.localStorage.setItem('marketpulse_theme', theme), THEME);
   const page = await context.newPage();
   await page.goto(BASE + '/');
   await page.waitForLoadState('networkidle').catch(() => undefined);
@@ -70,8 +76,9 @@ async function showCatalogue(page: Page) {
 }
 
 async function shot(page: Page, name: string) {
+  if (ONLY && !ONLY.has(name)) return;
   await page.waitForTimeout(700);
-  await page.screenshot({ path: `${OUT}/${name}.jpg`, type: 'jpeg', quality: 86 });
+  await page.screenshot({ path: `${OUT}/${name}${SUFFIX}.jpg`, type: 'jpeg', quality: 86 });
   console.log('captured', name);
 }
 
