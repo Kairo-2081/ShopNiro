@@ -713,7 +713,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
               label="Net product sales"
               value={formatCurrency(totalSalesRevenue)}
               note="Excludes cancelled and refunded orders"
-              trend={recentMonthlySales.map((month) => month.revenue)}
+              trend={recentMonthlySales.some((month) => month.revenue > 0) ? recentMonthlySales.map((month) => month.revenue) : undefined}
               change={percentChange(sum(recentMonthlySales.slice(3).map((month) => month.revenue)), sum(recentMonthlySales.slice(0, 3).map((month) => month.revenue)))}
               comparison={t('chartVsPrevious3')}
             />
@@ -722,7 +722,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
               label="Average order value"
               value={formatCurrency(averageSellerOrderValue)}
               note="Across eligible seller orders"
-              trend={recentMonthlySales.map((month) => (month.orders ? month.revenue / month.orders : 0))}
+              trend={recentMonthlySales.some((month) => month.orders > 0) ? recentMonthlySales.map((month) => (month.orders ? month.revenue / month.orders : 0)) : undefined}
             />
             <StatTile label="Product rating" value={avgSellerRating ? `${avgSellerRating.toFixed(1)} / 5` : 'No ratings'} note={`${sellerReviews.length} customer reviews`} />
           </div>
