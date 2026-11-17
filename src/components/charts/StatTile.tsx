@@ -21,7 +21,7 @@ export const StatTile: React.FC<StatTileProps> = ({ label, value, note, trend, c
       <p className="text-micro font-semibold uppercase tracking-wide text-surface-500 dark:text-surface-400">{label}</p>
       <DeltaChip change={change} comparison={comparison} />
     </div>
-    <p className="mt-2 truncate text-2xl font-extrabold tabular-nums tracking-tight text-surface-900 dark:text-white">{value}</p>
+    <p className="mt-2 break-words text-xl font-extrabold tabular-nums leading-tight tracking-tight text-surface-900 dark:text-white sm:text-2xl">{value}</p>
     {note && <p className="mt-0.5 text-micro text-surface-500 dark:text-surface-400">{note}</p>}
     {trend && trend.length > 1 && <Sparkline values={trend} className="mt-3" />}
   </article>
