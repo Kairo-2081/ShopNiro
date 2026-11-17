@@ -49,6 +49,7 @@ export const FeatureBlocks: React.FC = () => {
       description: t('trackingCopy'),
       bullets: [t('trackingBullet1'), t('trackingBullet2'), t('trackingBullet3')],
       image: screenshots.shipmentTracking,
+      imageHeight: 630,
       alt: t('trackingAlt'),
       flip: false,
     },
@@ -100,7 +101,7 @@ export const FeatureBlocks: React.FC = () => {
                   src={feature.image[theme]}
                   alt={feature.alt}
                   width={1440}
-                  height={900}
+                  height={feature.imageHeight ?? 900}
                   loading="lazy"
                   decoding="async"
                   className="h-auto w-full rounded-xl border border-surface-200 dark:border-surface-700 object-cover"
