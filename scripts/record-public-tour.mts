@@ -72,11 +72,12 @@ try {
   // Sign-up role choice.
   await page.getByRole('button', { name: /Customer signup/i }).first().click();
   await pause(page, 2500);
-  await page.getByRole('button', { name: /Merchant/i }).first().click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByRole('button', { name: /Merchant/i }).first().click();
   await pause(page, 1800);
-  await page.getByRole('button', { name: /Rider/i }).first().click();
+  await dialog.getByRole('button', { name: /Rider/i }).first().click();
   await pause(page, 1800);
-  await page.getByRole('button', { name: /Customer/i }).first().click();
+  await dialog.getByRole('button', { name: /Customer/i }).first().click();
   await pause(page, 2500);
 
   const video = page.video();
