@@ -86,7 +86,7 @@ export const FeatureBlocks: React.FC = () => {
                   src={feature.image}
                   alt={feature.alt}
                   width={1440}
-                  height={1000}
+                  height={900}
                   loading="lazy"
                   decoding="async"
                   className="h-auto w-full rounded-xl border border-surface-200 dark:border-surface-700 object-cover"
