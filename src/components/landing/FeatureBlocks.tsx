@@ -1,13 +1,27 @@
 import React from 'react';
 import { Check } from 'lucide-react';
-import adminSellerReview from '../../assets/landing/app-admin-seller-review.jpg';
-import customerCheckout from '../../assets/landing/app-customer-checkout.jpg';
-import shipmentTracking from '../../assets/landing/app-customer-orders-confirm.jpg';
-import riderActive from '../../assets/landing/app-rider-active.jpg';
+import adminSellerReviewDark from '../../assets/landing/app-admin-seller-review.jpg';
+import adminSellerReviewLight from '../../assets/landing/app-admin-seller-review-light.jpg';
+import customerCheckoutDark from '../../assets/landing/app-customer-checkout.jpg';
+import customerCheckoutLight from '../../assets/landing/app-customer-checkout-light.jpg';
+import shipmentTrackingDark from '../../assets/landing/app-customer-orders-confirm.jpg';
+import shipmentTrackingLight from '../../assets/landing/app-customer-orders-confirm-light.jpg';
+import riderActiveDark from '../../assets/landing/app-rider-active.jpg';
+import riderActiveLight from '../../assets/landing/app-rider-active-light.jpg';
 import { useLocale } from '../../lib/i18n';
+import { useTheme } from '../../lib/theme';
+
+// Each screenshot exists once per theme, so the page never shows a dark app inside a light page or the reverse.
+const screenshots = {
+  adminSellerReview: { light: adminSellerReviewLight, dark: adminSellerReviewDark },
+  customerCheckout: { light: customerCheckoutLight, dark: customerCheckoutDark },
+  shipmentTracking: { light: shipmentTrackingLight, dark: shipmentTrackingDark },
+  riderActive: { light: riderActiveLight, dark: riderActiveDark },
+} as const;
 
 export const FeatureBlocks: React.FC = () => {
   const { t } = useLocale();
+  const { theme } = useTheme();
 
   const featureBlocks = [
     {
@@ -15,7 +29,7 @@ export const FeatureBlocks: React.FC = () => {
       title: t('approvedSellersOnlyTitle'),
       description: t('approvedSellersOnlyCopy'),
       bullets: [t('approvedSellersOnlyBullet1'), t('approvedSellersOnlyBullet2'), t('approvedSellersOnlyBullet3')],
-      image: adminSellerReview,
+      image: screenshots.adminSellerReview,
       alt: t('approvedSellersOnlyAlt'),
       caption: t('screensShowSampleData'),
       flip: false,
@@ -25,7 +39,7 @@ export const FeatureBlocks: React.FC = () => {
       title: t('checkoutClearTitle'),
       description: t('checkoutClearCopy'),
       bullets: [t('checkoutClearBullet1'), t('checkoutClearBullet2'), t('checkoutClearBullet3')],
-      image: customerCheckout,
+      image: screenshots.customerCheckout,
       alt: t('checkoutClearAlt'),
       flip: true,
     },
@@ -34,7 +48,8 @@ export const FeatureBlocks: React.FC = () => {
       title: t('trackingTitle'),
       description: t('trackingCopy'),
       bullets: [t('trackingBullet1'), t('trackingBullet2'), t('trackingBullet3')],
-      image: shipmentTracking,
+      image: screenshots.shipmentTracking,
+      imageHeight: 630,
       alt: t('trackingAlt'),
       flip: false,
     },
@@ -43,7 +58,7 @@ export const FeatureBlocks: React.FC = () => {
       title: t('deliveryCodeTitle'),
       description: t('deliveryCodeCopy'),
       bullets: [t('deliveryCodeBullet1'), t('deliveryCodeBullet2'), t('deliveryCodeBullet3')],
-      image: riderActive,
+      image: screenshots.riderActive,
       alt: t('deliveryCodeAlt'),
       flip: true,
     },
@@ -83,10 +98,10 @@ export const FeatureBlocks: React.FC = () => {
                   <span className="h-2.5 w-2.5 rounded-full bg-[#56d66d]" />
                 </div>
                 <img
-                  src={feature.image}
+                  src={feature.image[theme]}
                   alt={feature.alt}
                   width={1440}
-                  height={900}
+                  height={feature.imageHeight ?? 900}
                   loading="lazy"
                   decoding="async"
                   className="h-auto w-full rounded-xl border border-surface-200 dark:border-surface-700 object-cover"
