@@ -18,24 +18,31 @@ export const Sparkline: React.FC<SparklineProps> = ({ values, width = 120, heigh
   if (points.length < 2) return null;
   const last = points[points.length - 1];
   return (
-    <svg
-      viewBox={`0 0 ${width} ${height}`}
-      preserveAspectRatio="none"
-      className={`block h-9 w-full overflow-visible ${className}`}
-      role={label ? 'img' : undefined}
-      aria-label={label}
-      aria-hidden={label ? undefined : true}
-      focusable="false"
-    >
-      <defs>
-        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="var(--chart-primary)" stopOpacity={0.34} />
-          <stop offset="100%" stopColor="var(--chart-primary)" stopOpacity={0} />
-        </linearGradient>
-      </defs>
-      <path d={areaPath(points, height)} fill={`url(#${gradientId})`} />
-      <path d={smoothPath(points, height)} fill="none" stroke="var(--chart-primary)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-      <circle cx={last.x} cy={last.y} r={3} fill="var(--chart-primary)" stroke="var(--chart-ring)" strokeWidth={2} vectorEffect="non-scaling-stroke" />
-    </svg>
+    <div className={`relative h-9 w-full ${className}`}>
+      <svg
+        viewBox={`0 0 ${width} ${height}`}
+        preserveAspectRatio="none"
+        className="block h-full w-full overflow-visible"
+        role={label ? 'img' : undefined}
+        aria-label={label}
+        aria-hidden={label ? undefined : true}
+        focusable="false"
+      >
+        <defs>
+          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--chart-primary)" stopOpacity={0.34} />
+            <stop offset="100%" stopColor="var(--chart-primary)" stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <path d={areaPath(points, height)} fill={`url(#${gradientId})`} />
+        <path d={smoothPath(points, height)} fill="none" stroke="var(--chart-primary)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+      </svg>
+      {/* The dot is an HTML element, not an SVG circle: the SVG is stretched to fit its tile and would squash a circle into an oval. */}
+      <span
+        aria-hidden="true"
+        className="absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[var(--chart-ring)] bg-[var(--chart-primary)]"
+        style={{ left: `${(last.x / width) * 100}%`, top: `${(last.y / height) * 100}%` }}
+      />
+    </div>
   );
 };
