@@ -4,12 +4,15 @@ export type Theme = 'dark' | 'light';
 
 const STORAGE_KEY = 'marketpulse_theme';
 
+/** What a first-time visitor sees. A saved choice always wins over it. */
+export const DEFAULT_THEME: Theme = 'light';
+
 interface ThemeContextValue {
   theme: Theme;
   toggleTheme: () => void;
 }
 
-const ThemeContext = React.createContext<ThemeContextValue>({ theme: 'dark', toggleTheme: () => undefined });
+const ThemeContext = React.createContext<ThemeContextValue>({ theme: DEFAULT_THEME, toggleTheme: () => undefined });
 
 function readStoredTheme(): Theme {
   try {
@@ -18,7 +21,7 @@ function readStoredTheme(): Theme {
   } catch {
     // Storage can be blocked; fall back to the default.
   }
-  return 'dark';
+  return DEFAULT_THEME;
 }
 
 /**
