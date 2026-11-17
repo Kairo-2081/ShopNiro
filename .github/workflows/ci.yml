@@ -77,7 +77,7 @@ jobs:
           node scripts/check-bundle-budget.mjs
 
       - name: Audit dependencies
-        run: npm audit --audit-level=high
+        run: node scripts/audit-gate.mjs
 
       - name: Scan secrets
         uses: gitleaks/gitleaks-action@v2
