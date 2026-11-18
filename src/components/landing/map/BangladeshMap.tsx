@@ -4,6 +4,7 @@ import { CITIES, HOME_CITY_ID, cityById } from './network';
 import { MAP_FRAME, project } from './projection';
 import { useLocale } from '../../../lib/i18n';
 import { runWhenIdle } from '../../../lib/idleTask';
+import { mapPosterFor } from './posters';
 
 interface BangladeshMapProps {
   /** Called when someone asks to trace the delivery routes. */
@@ -24,6 +25,8 @@ export const BangladeshMap: React.FC<BangladeshMapProps> = ({ onGreet }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isTracing, setIsTracing] = useState(false);
   const hasDrawn = useRef(false);
+  // The poster stands in until the first real draw, then goes in the same frame so the two never blend.
+  const [isDrawn, setIsDrawn] = useState(false);
 
   const names = (locale === 'bn' ? CITIES.map((city) => city.nameBn) : CITIES.map((city) => city.name)).join(', ');
   const description = t('mapNetworkDescription', {
@@ -49,6 +52,7 @@ export const BangladeshMap: React.FC<BangladeshMapProps> = ({ onGreet }) => {
       drawMap(ctx, MAP_FRAME, { emphasis: isTracing ? 1 : 0, locale: locale === 'bn' ? 'bn' : 'en' });
       hasDrawn.current = true;
       canvas.style.opacity = '1';
+      setIsDrawn(true);
     };
     if (hasDrawn.current) {
       draw();
@@ -71,12 +75,13 @@ export const BangladeshMap: React.FC<BangladeshMapProps> = ({ onGreet }) => {
   return (
     <div className="relative flex h-[344px] select-none flex-col items-center justify-center py-2 md:h-[452px]">
       <div className="relative w-[320px] max-w-full md:w-[440px]" style={{ aspectRatio: `${MAP_FRAME.width} / ${MAP_FRAME.height}` }}>
+        {!isDrawn && <img src={mapPosterFor(locale)} alt="" aria-hidden="true" decoding="async" className="absolute inset-0 block h-full w-full" />}
         <canvas
           ref={canvasRef}
           aria-hidden="true"
           width={MAP_FRAME.width}
           height={MAP_FRAME.height}
-          className="block h-full w-full motion-safe:transition-opacity motion-safe:duration-300"
+          className="block h-full w-full"
           style={{ opacity: 0 }}
         />
         {/* A slow ping on the capital says the network is live. It is a plain fade, and stops under reduced motion. */}
