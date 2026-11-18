@@ -348,6 +348,25 @@
     }
   }
 
+  /* Dialogs and drawers: nearly opaque ivory so the dark backdrop cannot turn them grey, over a lighter, warmer veil.
+     The page behind is still visible and blurred around the panel, which is what makes it read as glass. */
+  html:not(.dark) {
+    --glass-scrim: rgba(58, 50, 32, 0.26);
+  }
+
+  html:not(.dark) :is(.premium-surface, [role="dialog"]:not(.premium-surface)) {
+    background-color: rgba(255, 254, 250, 0.55);
+    background-image:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0) 38%),
+      linear-gradient(160deg, rgba(255, 254, 250, 0.94), rgba(252, 250, 243, 0.9));
+  }
+
+  /* Cards inside a dialog sit on that ivory, so they only need a faint lift rather than another smoky tint. */
+  html:not(.dark) [role="dialog"] :is(div, section, article, aside, li, details, form)[class*="rounded-"]:is([class~="bg-white"], [class~="bg-surface-50"]) {
+    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.6));
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.95) inset, 0 0 0 1px rgba(120, 106, 70, 0.08), 0 6px 16px -10px rgba(74, 62, 38, 0.18);
+  }
+
   /* ---- Performance ------------------------------------------------------------------------------------- */
 
   /* Long product and order lists create many blurred layers at once. On phones use a smaller blur radius so
