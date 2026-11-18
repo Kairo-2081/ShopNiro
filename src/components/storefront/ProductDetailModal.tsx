@@ -7,6 +7,7 @@ import { describeVoucher, discountedPriceForVoucher, getVoucherCountdownLabel, i
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useLocale } from '../../lib/i18n';
+import { formatAddressLine } from '../../lib/format';
 import {
   X,
   ShoppingCart,
@@ -312,7 +313,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                       <p className="text-surface-500 dark:text-surface-400 flex items-center gap-1 font-mono text-micro pt-1 truncate">
                         <MapPin className="w-3 h-3 text-surface-400 shrink-0" />
                         <span className="truncate">
-                          {seller.Address.Street}, {seller.Address.City} ({seller.Address.Postal_Code})
+                          {formatAddressLine(seller.Address)}
                         </span>
                       </p>
                     )}
