@@ -349,19 +349,26 @@
     opacity: 0.95;
   }
 
-  /* Blobs sit across the middle of the page, where the panels are, so the glass visibly picks up colour. */
+  /* Light theme scene: a calm champagne and pearl glow. The earlier amber, teal, pink and blue blobs tinted every
+     panel a different muddy colour; a premium light glass reads as clean frosted ivory with a soft warm light
+     behind it, so the colour here is low in saturation and kept away from where content sits. */
+  html:not(.dark) body::before,
+  html:not(.dark) body::after {
+    opacity: 0.8;
+  }
+
   html:not(.dark) body::before {
     background:
-      radial-gradient(circle at 30% 30%, rgba(238, 176, 62, 0.8), transparent 30%),
-      radial-gradient(circle at 72% 42%, rgba(40, 170, 156, 0.62), transparent 28%),
-      radial-gradient(circle at 48% 80%, rgba(226, 96, 140, 0.56), transparent 30%);
+      radial-gradient(circle at 22% 22%, rgba(226, 204, 154, 0.55), transparent 30%),
+      radial-gradient(circle at 78% 30%, rgba(236, 224, 200, 0.7), transparent 32%),
+      radial-gradient(circle at 50% 82%, rgba(214, 196, 160, 0.38), transparent 32%);
   }
 
   html:not(.dark) body::after {
     background:
-      radial-gradient(circle at 18% 64%, rgba(80, 150, 224, 0.62), transparent 28%),
-      radial-gradient(circle at 86% 18%, rgba(130, 196, 84, 0.5), transparent 26%),
-      radial-gradient(circle at 56% 52%, rgba(255, 255, 255, 0.5), transparent 22%);
+      radial-gradient(circle at 12% 70%, rgba(176, 190, 196, 0.3), transparent 28%),
+      radial-gradient(circle at 88% 78%, rgba(196, 184, 160, 0.3), transparent 26%),
+      radial-gradient(circle at 54% 44%, rgba(255, 255, 255, 0.7), transparent 26%);
   }
 
   html.dark body::before {
