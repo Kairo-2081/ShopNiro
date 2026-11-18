@@ -9,20 +9,22 @@
 
 @layer glass {
   :root {
-    /* Light theme: milky glass over the warm paper background. */
-    --glass-blur: 26px;
-    --glass-blur-strong: 38px;
-    --glass-saturate: 1.9;
-    --glass-tint: rgba(255, 255, 255, 0.44);
-    --glass-tint-strong: rgba(252, 251, 247, 0.84);
-    --glass-tint-soft: rgba(255, 255, 255, 0.26);
-    --glass-edge: rgba(255, 255, 255, 0.85);
-    --glass-edge-dim: rgba(128, 115, 79, 0.2);
-    --glass-highlight: rgba(255, 255, 255, 0.9);
-    --glass-shade: rgba(74, 62, 38, 0.16);
-    --glass-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 -1px 0 rgba(128, 115, 79, 0.1) inset,
-      0 10px 30px -12px rgba(74, 62, 38, 0.28), 0 2px 6px rgba(74, 62, 38, 0.08);
-    --glass-scrim: rgba(40, 36, 24, 0.38);
+    /* Light theme: frosted ivory. Higher tint than before so panels read as clean, even surfaces instead of picking
+       up the colour behind them, and a gentle saturate (1.9 turned any background hue loud). */
+    --glass-blur: 28px;
+    --glass-blur-strong: 40px;
+    --glass-saturate: 1.15;
+    --glass-tint: rgba(255, 255, 255, 0.66);
+    --glass-tint-strong: rgba(255, 254, 250, 0.9);
+    --glass-tint-soft: rgba(255, 253, 247, 0.5);
+    --glass-edge: rgba(255, 255, 255, 0.95);
+    --glass-edge-dim: rgba(120, 106, 70, 0.16);
+    --glass-highlight: rgba(255, 255, 255, 1);
+    --glass-shade: rgba(74, 62, 38, 0.13);
+    /* A lit top edge, a faint warm hairline all round, a soft contact shadow and a long, low ambient one. */
+    --glass-shadow: 0 1px 0 rgba(255, 255, 255, 0.95) inset, 0 0 0 1px rgba(120, 106, 70, 0.07),
+      0 1px 2px rgba(74, 62, 38, 0.06), 0 14px 32px -14px rgba(74, 62, 38, 0.2), 0 30px 60px -34px rgba(74, 62, 38, 0.16);
+    --glass-scrim: rgba(40, 36, 24, 0.34);
   }
 
   .dark {
