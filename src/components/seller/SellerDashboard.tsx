@@ -33,6 +33,10 @@ const MonthlyBarChart = React.lazy(() =>
   import('../charts/MonthlyBarChart').then(({ MonthlyBarChart: Component }) => ({ default: Component })),
 );
 
+const SellerStockHealth = React.lazy(() =>
+  import('./SellerStockHealth').then(({ SellerStockHealth: Component }) => ({ default: Component })),
+);
+
 interface SellerDashboardProps {
   activeTab: SellerDashboardTab;
   setActiveTab: React.Dispatch<React.SetStateAction<SellerDashboardTab>>;
@@ -728,6 +732,10 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
             />
             <StatTile label="Product rating" value={avgSellerRating ? `${avgSellerRating.toFixed(1)} / 5` : 'No ratings'} note={`${sellerReviews.length} customer reviews`} />
           </div>
+
+          <React.Suspense fallback={<div aria-hidden="true" className="premium-skeleton h-64 rounded-2xl" />}>
+            <SellerStockHealth products={sellerProducts} />
+          </React.Suspense>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <section className="rounded-2xl border border-surface-200 bg-white p-5 dark:border-surface-800 dark:bg-[#12161D]">
