@@ -82,7 +82,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     >
       {/* Product Image */}
       <div className="relative aspect-[4/5] w-full bg-surface-100 dark:bg-[#0C1014] overflow-hidden">
-        <div className="absolute inset-0 bg-surface-200/70 dark:bg-surface-800/80 shimmer skeleton-block" />
         {product.Image && !imgError ? (
           <img
             src={product.Image}
