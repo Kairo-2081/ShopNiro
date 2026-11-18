@@ -366,7 +366,7 @@ export const Storefront: React.FC<StorefrontProps> = ({
         </div>
       )}
       {isLoading ? (
-        <div role="status" aria-label={t('loadingProducts')} aria-busy="true" className="grid auto-rows-fr grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div role="status" aria-label={t('loadingProducts')} aria-busy="true" className="grid auto-rows-fr grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
           {Array.from({ length: 8 }, (_, index) => (
             <div key={index} className="premium-card flex h-full min-w-0 flex-col overflow-hidden rounded-xl">
               <div className="premium-skeleton aspect-[4/5] w-full" />
@@ -410,7 +410,7 @@ export const Storefront: React.FC<StorefrontProps> = ({
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
           {filteredProducts.map((prod) => (
             <ProductCard
               key={prod.Product_ID}
