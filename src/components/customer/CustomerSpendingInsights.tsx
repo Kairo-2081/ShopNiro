@@ -3,7 +3,7 @@ import { formatBDT } from '../../lib/api';
 import { useLocale } from '../../lib/i18n';
 import { Order, OrderStatus } from '../../types';
 import { ChartPanel } from '../charts/ChartPanel';
-import { DonutChart, DonutSlice } from '../charts/DonutChart';
+import { ShareBreakdown, ShareSlice } from '../charts/ShareBreakdown';
 import { MonthlyBarChart } from '../charts/MonthlyBarChart';
 import { StatTile } from '../charts/StatTile';
 import { percentChange, sum } from '../charts/format';
@@ -53,7 +53,7 @@ export const CustomerSpendingInsights: React.FC<CustomerSpendingInsightsProps> =
       }
     });
 
-    const slices: DonutSlice[] = (['delivered', 'shipped', 'processing', 'placed', 'cancelled'] as OrderStatus[])
+    const slices: ShareSlice[] = (['delivered', 'shipped', 'processing', 'placed', 'cancelled'] as OrderStatus[])
       .map((status) => ({
         key: status,
         name: status === 'delivered' ? t('delivered') : status === 'shipped' ? t('shipped') : status === 'processing' ? t('processingOrder') : status === 'cancelled' ? t('cancelled') : t('orderRegistered'),
@@ -123,7 +123,7 @@ export const CustomerSpendingInsights: React.FC<CustomerSpendingInsightsProps> =
           )}
         </ChartPanel>
         <ChartPanel headingId="customer-spend-status-title" title={t('spendStatusTitle')} subtitle={t('spendStatusSubtitle')} className="lg:col-span-2">
-          <DonutChart
+          <ShareBreakdown
             slices={summary.slices}
             centerValue={formatCount(orders.length)}
             centerLabel={t('chartOrders')}
