@@ -7,6 +7,7 @@
   "type": "module",
   "scripts": {
     "generate:outline": "tsx scripts/generate-bangladesh-outline.mts",
+    "generate:map-poster": "tsx scripts/generate-map-poster.mts",
     "dev": "cross-env NODE_ENV=development tsx server/index.ts",
     "build": "vite build && esbuild server/index.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs && node scripts/precompress-dist.mjs",
     "start": "node dist/server.cjs",
