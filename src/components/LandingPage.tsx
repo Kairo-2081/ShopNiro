@@ -11,6 +11,7 @@ import { LandingFooter } from './landing/LandingFooter';
 import { PaymentStrip } from './landing/PaymentStrip';
 import { SellersShowcase } from './landing/SellersShowcase';
 import { HowItWorks } from './landing/HowItWorks';
+import { Reveal } from './motion/Reveal';
 import { MAIN_CONTENT_ID } from './SkipLink';
 
 interface LandingPageProps {
@@ -46,17 +47,17 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
         <PaymentStrip />
 
-        <SellersShowcase sellers={sellers} onEnterAsGuest={onEnterAsGuest} />
+        <Reveal><SellersShowcase sellers={sellers} onEnterAsGuest={onEnterAsGuest} /></Reveal>
 
-        <HowItWorks onOpenSellerSignup={onOpenSellerSignup} />
+        <Reveal><HowItWorks onOpenSellerSignup={onOpenSellerSignup} /></Reveal>
 
-        <FeatureBlocks />
+        <Reveal><FeatureBlocks /></Reveal>
 
-        <TrustRow />
+        <Reveal><TrustRow /></Reveal>
 
-        <LandingFaq />
+        <Reveal><LandingFaq /></Reveal>
 
-        <ClosingCta stats={stats} onEnterAsGuest={onEnterAsGuest} onOpenSellerSignup={onOpenSellerSignup} />
+        <Reveal><ClosingCta stats={stats} onEnterAsGuest={onEnterAsGuest} onOpenSellerSignup={onOpenSellerSignup} /></Reveal>
       </main>
 
       <LandingFooter onEnterAsGuest={onEnterAsGuest} onOpenLogin={onOpenLogin} onOpenCustomerSignup={onOpenCustomerSignup} onOpenSellerSignup={onOpenSellerSignup} onOpenRiderSignup={onOpenRiderSignup} />
