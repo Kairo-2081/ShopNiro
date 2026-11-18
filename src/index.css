@@ -560,13 +560,6 @@
     animation-duration: 2.4s !important;
   }
 
-  .skeleton-block {
-    position: absolute;
-    inset: 0;
-    transform: translateX(-100%);
-    animation: shimmer 1.6s ease-in-out infinite;
-  }
-
   .premium-skeleton {
     position: relative;
     overflow: hidden;
@@ -585,11 +578,6 @@
 
   @keyframes premiumSkeletonSweep {
     to { transform: translateX(100%); }
-  }
-
-  @keyframes shimmer {
-    0% { transform: translateX(-120%); }
-    100% { transform: translateX(120%); }
   }
 
   .animate-fade-up {
