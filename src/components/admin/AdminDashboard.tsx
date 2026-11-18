@@ -9,6 +9,7 @@ import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { fallbackToBrandLogo } from '../../lib/branding';
 import { useLocale } from '../../lib/i18n';
+import { formatAddressLine } from '../../lib/format';
 
 const AdminOverviewAnalytics = React.lazy(() =>
   import('./AdminOverviewAnalytics').then(({ AdminOverviewAnalytics: Component }) => ({ default: Component }))
@@ -687,7 +688,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <p className="text-surface-500 dark:text-surface-500">{seller.Number}</p>
                       </td>
                       <td className="p-4 text-surface-600 dark:text-surface-400 max-w-xs">
-                        {seller.Address.House_Name}, {seller.Address.Street}, {seller.Address.City} ({seller.Address.Postal_Code})
+                        {formatAddressLine(seller.Address, { includeHouse: true })}
                       </td>
                       <td className="p-4">
                         {seller.Status === 'approved' && (
