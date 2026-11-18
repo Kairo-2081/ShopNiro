@@ -1,6 +1,8 @@
 import React from 'react';
 import { ArrowRight, ShoppingBag } from 'lucide-react';
 import { useLocale } from '../../lib/i18n';
+import { MapPoster } from './map/MapPoster';
+
 
 const BangladeshMap = React.lazy(() => import('./map/BangladeshMap').then((module) => ({ default: module.BangladeshMap })));
 
@@ -41,7 +43,7 @@ export const LandingHero: React.FC<{ onEnterAsGuest: () => void; onOpenSellerSig
             <div className="absolute -left-2 top-7 z-20 rounded-full border border-[#d0c8a5]/20 bg-[#141922]/80 px-3 py-1 text-[11px] font-semibold text-surface-100 shadow-xl backdrop-blur md:-left-6">{t('shopProducts')}</div>
             <div className="absolute -right-2 bottom-16 z-20 rounded-full border border-[#d0c8a5]/20 bg-[#141922]/80 px-3 py-1 text-[11px] font-semibold text-surface-100 shadow-xl backdrop-blur md:-right-6">{t('approvedSellers')}</div>
             <div className="flex justify-center">
-              <React.Suspense fallback={<div aria-hidden="true" className="h-[344px] w-full max-w-[420px] md:h-[452px]" />}>
+              <React.Suspense fallback={<MapPoster />}>
                 <BangladeshMap />
               </React.Suspense>
             </div>
