@@ -82,9 +82,11 @@ The images below are real captures of the public interface. The registration
 capture shows all three account choices together; the other two signup captures
 are intentionally omitted.
 
-[Watch the 65-second public-site recording](./.github/assets/readme/shopniro-public-tour.webm)
-(WebM, 1280 × 720). It shows browsing, search, a product detail, and the signup
-role selector; it does not show sign-in, checkout, payment, or rider delivery.
+[Watch the 2-minute public-site recording](./.github/assets/readme/shopniro-public-tour.webm)
+(WebM, 1280 × 720). It shows the landing page and its Bangladesh map, the
+feature sections, browsing, search, a product detail, and the signup role
+selector; it does not show sign-in, checkout, payment, or rider delivery.
+Regenerate it with `npx tsx scripts/record-public-tour.mts`.
 
 <div align="center">
 
