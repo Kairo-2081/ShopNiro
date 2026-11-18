@@ -15,6 +15,10 @@ const AdminOverviewAnalytics = React.lazy(() =>
   import('./AdminOverviewAnalytics').then(({ AdminOverviewAnalytics: Component }) => ({ default: Component }))
 );
 
+const AdminWeekdayOrders = React.lazy(() =>
+  import('./AdminWeekdayOrders').then(({ AdminWeekdayOrders: Component }) => ({ default: Component }))
+);
+
 interface AdminDashboardProps {
   activeTab: AdminDashboardTab;
   setActiveTab: React.Dispatch<React.SetStateAction<AdminDashboardTab>>;
@@ -602,6 +606,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
         <React.Suspense fallback={<div aria-hidden="true" className="premium-skeleton h-72 rounded-2xl" />}>
           <AdminOverviewAnalytics orders={orders} isLoading={isLoading} />
+        </React.Suspense>
+        <React.Suspense fallback={<div aria-hidden="true" className="premium-skeleton h-72 rounded-2xl" />}>
+          <AdminWeekdayOrders orders={orders} />
         </React.Suspense>
         </>
       )}
