@@ -3,7 +3,7 @@ import { formatBDT } from '../../lib/api';
 import { Order, OrderStatus } from '../../types';
 import { useLocale } from '../../lib/i18n';
 import { ChartPanel } from '../charts/ChartPanel';
-import { DonutChart, DonutSlice } from '../charts/DonutChart';
+import { ShareBreakdown, ShareSlice } from '../charts/ShareBreakdown';
 import { StatTile } from '../charts/StatTile';
 import { TrendAreaChart } from '../charts/TrendAreaChart';
 import { percentChange, sum } from '../charts/format';
@@ -86,11 +86,11 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
       }
     });
 
-    const statusSlices: DonutSlice[] = (Object.keys(statusPresentation) as OrderStatus[])
+    const statusSlices: ShareSlice[] = (Object.keys(statusPresentation) as OrderStatus[])
       .map((status) => ({ key: status, name: statusPresentation[status].label, value: statusCounts.get(status) || 0, color: statusPresentation[status].color }))
       .filter((slice) => slice.value > 0);
 
-    const paymentSlices: DonutSlice[] = Array.from(paymentCounts.entries())
+    const paymentSlices: ShareSlice[] = Array.from(paymentCounts.entries())
       .map(([method, value]) => ({
         key: method,
         name: paymentPresentation[method]?.label || method.replace(/_/g, ' '),
@@ -270,7 +270,7 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
         <ChartPanel headingId="admin-status-title" title={t('orderStatusMix')} subtitle={t('lifecycleDistribution')}>
           {analytics.statusSlices.length > 0 ? (
-            <DonutChart
+            <ShareBreakdown
               slices={analytics.statusSlices}
               centerValue={orders.length.toLocaleString()}
               centerLabel={t('chartOrders')}
@@ -286,7 +286,7 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
 
         <ChartPanel headingId="admin-payment-title" title={t('paymentMethodMix')} subtitle={t('howOrdersPaidFor')}>
           {analytics.paymentSlices.length > 0 ? (
-            <DonutChart
+            <ShareBreakdown
               slices={analytics.paymentSlices}
               centerValue={orders.length.toLocaleString()}
               centerLabel={t('chartOrders')}

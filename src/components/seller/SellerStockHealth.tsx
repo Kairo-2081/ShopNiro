@@ -2,7 +2,7 @@ import React from 'react';
 import { useLocale } from '../../lib/i18n';
 import { Product } from '../../types';
 import { ChartPanel } from '../charts/ChartPanel';
-import { DonutChart, DonutSlice } from '../charts/DonutChart';
+import { ShareBreakdown, ShareSlice } from '../charts/ShareBreakdown';
 
 interface SellerStockHealthProps {
   products: readonly Product[];
@@ -23,7 +23,7 @@ export const SellerStockHealth: React.FC<SellerStockHealthProps> = ({ products }
     },
     { healthy: 0, low: 0, out: 0 },
   );
-  const slices: DonutSlice[] = [
+  const slices: ShareSlice[] = [
     { key: 'healthy', name: t('stockHealthHealthy'), value: counts.healthy, color: 'var(--chart-cat-6)' },
     { key: 'low', name: t('stockHealthLow'), value: counts.low, color: 'var(--chart-cat-2)' },
     { key: 'out', name: t('stockHealthOut'), value: counts.out, color: 'var(--chart-cat-4)' },
@@ -32,7 +32,7 @@ export const SellerStockHealth: React.FC<SellerStockHealthProps> = ({ products }
   return (
     <ChartPanel headingId="seller-stock-health-title" title={t('stockHealthTitle')} subtitle={t('stockHealthSubtitle')}>
       {slices.length ? (
-        <DonutChart
+        <ShareBreakdown
           slices={slices}
           centerValue={products.length.toLocaleString(locale === 'bn' ? 'bn-BD' : 'en-BD')}
           centerLabel={t('stockHealthProducts')}
