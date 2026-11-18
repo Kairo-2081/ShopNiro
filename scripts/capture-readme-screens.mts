@@ -114,7 +114,10 @@ try {
     await seller.getByRole('button', { name: /Add product/i }).click();
     await seller.waitForTimeout(1200);
     await withDb(async (c) => c.query(
-      `UPDATE products SET image = $1 WHERE name = 'Brass Pour-Over Kettle'`, [tile('K', '#b8863b', '#5e3d12')]));
+      // A new product keeps its default photo, an external image, in the gallery too; point both at the local tile so the
+      // product detail dialog does not show a broken image when the capture machine is offline.
+      `UPDATE products SET image = $1, images_json = jsonb_build_array($1::text) WHERE name = 'Brass Pour-Over Kettle'`,
+      [tile('K', '#b8863b', '#5e3d12')]));
     await seller.reload();
     await seller.waitForTimeout(1200);
     await shot(seller, 'app-seller-catalog');
@@ -203,6 +206,38 @@ try {
     await showCatalogue(phone);
     await shot(phone, 'app-phone-catalog');
     await phone.context().close();
+  }
+
+  // The guest storefront: marketplace, the charts card, a product detail and the sign-up dialog.
+  {
+    const context = await browser.newContext({ viewport: DESKTOP, deviceScaleFactor: 1, colorScheme: THEME });
+    await context.addInitScript(([theme]) => {
+      window.localStorage.setItem('marketpulse_theme', theme);
+      window.localStorage.setItem('shopniro_locale', 'en');
+    }, [THEME]);
+    const guest = await context.newPage();
+    await guest.goto(BASE + '/');
+    await guest.waitForTimeout(2500);
+    await guest.getByRole('button', { name: /Browse products/i }).first().click();
+    await guest.waitForTimeout(3000);
+    await shot(guest, 'shopniro-marketplace');
+    if (!ONLY || ONLY.has('shopniro-marketplace-current')) {
+      const charts = guest.locator('section', { hasText: 'Marketplace Charts & Trends' }).first();
+      await charts.scrollIntoViewIfNeeded();
+      await guest.waitForTimeout(1000);
+      await charts.screenshot({ path: `${OUT}/shopniro-marketplace-current${SUFFIX}.jpg`, type: 'jpeg', quality: 86 });
+      console.log('captured shopniro-marketplace-current');
+      await guest.evaluate(() => document.querySelectorAll('*').forEach((element) => { if (element.scrollTop) element.scrollTop = 0; }));
+    }
+    await guest.getByRole('button', { name: /Brass Pour-Over Kettle|view details/i }).first().click();
+    await guest.waitForTimeout(1500);
+    await shot(guest, 'shopniro-product-detail');
+    await guest.keyboard.press('Escape');
+    await guest.waitForTimeout(500);
+    await guest.getByRole('button', { name: /Customer signup/i }).first().click();
+    await guest.waitForTimeout(1500);
+    await shot(guest, 'shopniro-sign-up');
+    await context.close();
   }
 } finally {
   await browser.close();
