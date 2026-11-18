@@ -183,6 +183,7 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
         <StatTile
           label={t('chartRevenue')}
           value={formatBDT(analytics.revenue)}
+          count={{ value: analytics.revenue, format: formatBDT }}
           note={t('chartLast12Months')}
           trend={analytics.monthly.map((row) => row.orderValue)}
           change={analytics.revenueChange}
@@ -191,6 +192,7 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
         <StatTile
           label={t('chartOrders')}
           value={analytics.orderCount.toLocaleString()}
+          count={{ value: analytics.orderCount, format: (n) => Math.round(n).toLocaleString() }}
           note={t('chartLast12Months')}
           trend={analytics.monthly.map((row) => row.orderCount)}
           change={analytics.orderChange}
@@ -199,6 +201,7 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
         <StatTile
           label={t('chartAverageOrder')}
           value={formatBDT(analytics.averageOrder)}
+          count={{ value: analytics.averageOrder, format: formatBDT }}
           note={t('chartLast12Months')}
           trend={analytics.monthly.map((row) => (row.billableCount ? row.orderValue / row.billableCount : 0))}
           change={analytics.averageOrderChange}
