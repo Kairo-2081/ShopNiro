@@ -2,7 +2,7 @@ import React from 'react';
 import { money } from '../../lib/format';
 import { useLocale } from '../../lib/i18n';
 import { ChartPanel } from '../charts/ChartPanel';
-import { DonutChart, DonutSlice } from '../charts/DonutChart';
+import { ShareBreakdown, ShareSlice } from '../charts/ShareBreakdown';
 
 export interface RiderWalletSummary {
   availableBalance: number;
@@ -26,12 +26,12 @@ export const RiderInsights: React.FC<RiderInsightsProps> = ({ totalDeliveries, l
 
   const late = Math.min(positive(lateDeliveries), positive(totalDeliveries));
   const onTime = positive(totalDeliveries) - late;
-  const punctuality: DonutSlice[] = [
+  const punctuality: ShareSlice[] = [
     { key: 'on-time', name: t('riderOnTime'), value: onTime, color: 'var(--chart-cat-6)' },
     { key: 'late', name: t('riderLate'), value: late, color: 'var(--chart-cat-4)' },
   ].filter((slice) => slice.value > 0);
 
-  const walletSlices: DonutSlice[] = wallet
+  const walletSlices: ShareSlice[] = wallet
     ? [
         { key: 'available', name: t('riderWalletAvailable'), value: positive(wallet.availableBalance), color: 'var(--chart-cat-6)' },
         { key: 'locked-cod', name: t('riderWalletLockedCod'), value: positive(wallet.lockedCod), color: 'var(--chart-cat-4)' },
@@ -47,14 +47,14 @@ export const RiderInsights: React.FC<RiderInsightsProps> = ({ totalDeliveries, l
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <ChartPanel headingId="rider-punctuality-title" title={t('riderPunctualityTitle')} subtitle={t('riderPunctualitySubtitle')}>
           {punctuality.length ? (
-            <DonutChart slices={punctuality} centerValue={formatCount(positive(totalDeliveries))} centerLabel={t('chartDelivered')} ariaLabel={t('riderPunctualityAria')} unit={t('chartDelivered')} />
+            <ShareBreakdown slices={punctuality} centerValue={formatCount(positive(totalDeliveries))} centerLabel={t('chartDelivered')} ariaLabel={t('riderPunctualityAria')} unit={t('chartDelivered')} />
           ) : (
             <p className="py-12 text-center text-sm text-surface-500 dark:text-surface-400">{t('riderNoDeliveriesYet')}</p>
           )}
         </ChartPanel>
         <ChartPanel headingId="rider-wallet-title" title={t('riderWalletTitle')} subtitle={t('riderWalletSubtitle')}>
           {walletSlices.length ? (
-            <DonutChart slices={walletSlices} centerValue={money(walletTotal)} centerLabel="BDT" ariaLabel={t('riderWalletAria')} unit="BDT" />
+            <ShareBreakdown slices={walletSlices} centerValue={money(walletTotal)} centerLabel="BDT" ariaLabel={t('riderWalletAria')} unit="BDT" />
           ) : (
             <p className="py-12 text-center text-sm text-surface-500 dark:text-surface-400">{t('riderNoWalletYet')}</p>
           )}
