@@ -319,6 +319,35 @@
     background-color: var(--glass-tint);
   }
 
+  /* ---- Light theme finish ------------------------------------------------------------------------------ */
+
+  /* A soft sheen across the top of every light panel, like light catching the upper edge of real glass. It is a
+     background layer under the content, so text contrast is unchanged. */
+  html:not(.dark) :is(.glass, .premium-card:not(.premium-card-dark), .glass-bar, .glass-header) {
+    background-image:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0) 46%),
+      linear-gradient(160deg, var(--glass-tint), var(--glass-tint-soft));
+  }
+
+  html:not(.dark) :is(.glass-strong, .premium-surface, [role="dialog"]:not(.premium-surface)) {
+    background-image:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0) 40%),
+      linear-gradient(160deg, var(--glass-tint-strong), var(--glass-tint));
+  }
+
+  html:not(.dark) :is(div, section, article, aside, li, details, form)[class*="rounded-"]:is([class~="bg-white"], [class~="bg-surface-50"]) {
+    background-image:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 46%),
+      linear-gradient(160deg, var(--glass-tint), var(--glass-tint-soft));
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    html:not(.dark) :is(.glass, .glass-strong, .premium-card, .premium-surface, .glass-bar, .glass-header, [role="dialog"]),
+    html:not(.dark) :is(div, section, article, aside, li, details, form)[class*="rounded-"]:is([class~="bg-white"], [class~="bg-surface-50"]) {
+      background-image: none;
+    }
+  }
+
   /* ---- Performance ------------------------------------------------------------------------------------- */
 
   /* Long product and order lists create many blurred layers at once. On phones use a smaller blur radius so
