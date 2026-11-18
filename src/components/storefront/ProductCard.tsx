@@ -153,7 +153,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       </div>
 
       {/* Card Content */}
-      <div className="p-4 flex-1 flex flex-col justify-between">
+      <div className="flex flex-1 flex-col justify-between p-3 sm:p-4">
         <div>
           {/* Category & Seller info */}
           <div className="flex items-center justify-between text-xs text-surface-500 dark:text-surface-400 mb-1.5">
@@ -161,7 +161,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               {category?.Name || t('generalCategory')}
             </span>
             {seller && (
-              <span className="flex items-center gap-1 text-surface-500 dark:text-surface-400 font-medium text-micro truncate max-w-[120px] transition-colors group-hover:text-[#80734f] dark:group-hover:text-[#d0c8a5]">
+              <span className="hidden items-center gap-1 text-surface-500 dark:text-surface-400 font-medium text-micro truncate max-w-[120px] sm:flex transition-colors group-hover:text-[#80734f] dark:group-hover:text-[#d0c8a5]">
                 <Store className="w-3 h-3 text-surface-500 dark:text-surface-500 shrink-0" />
                 <span className="truncate">{seller.Name}</span>
               </span>
@@ -169,18 +169,18 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           </div>
 
           {/* Product Name */}
-          <h3 className="font-bold text-surface-900 dark:text-white line-clamp-2 text-sm group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
+          <h3 className="font-bold text-surface-900 dark:text-white line-clamp-2 text-[13px] leading-snug sm:text-sm group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
             {product.Name}
           </h3>
 
           {/* Star Rating */}
-          <div className="mt-2">
+          <div className="mt-1.5 sm:mt-2">
             <StarRating rating={avgRating} size="sm" showText totalReviews={productReviews.length} />
           </div>
         </div>
 
         {/* Price & Action */}
-        <div className="mt-4 pt-3 border-t border-surface-100 dark:border-surface-800 flex items-center justify-between">
+        <div className="mt-3 flex flex-col gap-2.5 border-t border-surface-100 pt-3 dark:border-surface-800 sm:mt-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <span className="text-micro text-surface-500 dark:text-surface-500 uppercase tracking-wider block font-semibold">{t('price')}</span>
             {hasActiveVoucher ? (
@@ -207,7 +207,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             type="button"
             disabled={isOutOfStock || isDeactivated}
             onClick={handleAddClick}
-            className={`luxury-control min-h-9 px-3.5 rounded-full text-xs cursor-pointer ${
+            className={`luxury-control min-h-10 w-full rounded-full px-3.5 text-xs cursor-pointer sm:min-h-9 sm:w-auto ${
               isOutOfStock || isDeactivated
                 ? 'bg-surface-100 dark:bg-[#181F2A] text-surface-500 dark:text-surface-600 cursor-not-allowed'
                 : justAdded
