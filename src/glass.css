@@ -9,20 +9,22 @@
 
 @layer glass {
   :root {
-    /* Light theme: milky glass over the warm paper background. */
-    --glass-blur: 26px;
-    --glass-blur-strong: 38px;
-    --glass-saturate: 1.9;
-    --glass-tint: rgba(255, 255, 255, 0.44);
-    --glass-tint-strong: rgba(252, 251, 247, 0.84);
-    --glass-tint-soft: rgba(255, 255, 255, 0.26);
-    --glass-edge: rgba(255, 255, 255, 0.85);
-    --glass-edge-dim: rgba(128, 115, 79, 0.2);
-    --glass-highlight: rgba(255, 255, 255, 0.9);
-    --glass-shade: rgba(74, 62, 38, 0.16);
-    --glass-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 -1px 0 rgba(128, 115, 79, 0.1) inset,
-      0 10px 30px -12px rgba(74, 62, 38, 0.28), 0 2px 6px rgba(74, 62, 38, 0.08);
-    --glass-scrim: rgba(40, 36, 24, 0.38);
+    /* Light theme: frosted ivory. Higher tint than before so panels read as clean, even surfaces instead of picking
+       up the colour behind them, and a gentle saturate (1.9 turned any background hue loud). */
+    --glass-blur: 28px;
+    --glass-blur-strong: 40px;
+    --glass-saturate: 1.15;
+    --glass-tint: rgba(255, 255, 255, 0.66);
+    --glass-tint-strong: rgba(255, 254, 250, 0.9);
+    --glass-tint-soft: rgba(255, 253, 247, 0.5);
+    --glass-edge: rgba(255, 255, 255, 0.95);
+    --glass-edge-dim: rgba(120, 106, 70, 0.16);
+    --glass-highlight: rgba(255, 255, 255, 1);
+    --glass-shade: rgba(74, 62, 38, 0.13);
+    /* A lit top edge, a faint warm hairline all round, a soft contact shadow and a long, low ambient one. */
+    --glass-shadow: 0 1px 0 rgba(255, 255, 255, 0.95) inset, 0 0 0 1px rgba(120, 106, 70, 0.07),
+      0 1px 2px rgba(74, 62, 38, 0.06), 0 14px 32px -14px rgba(74, 62, 38, 0.2), 0 30px 60px -34px rgba(74, 62, 38, 0.16);
+    --glass-scrim: rgba(40, 36, 24, 0.34);
   }
 
   .dark {
@@ -317,6 +319,54 @@
     background-color: var(--glass-tint);
   }
 
+  /* ---- Light theme finish ------------------------------------------------------------------------------ */
+
+  /* A soft sheen across the top of every light panel, like light catching the upper edge of real glass. It is a
+     background layer under the content, so text contrast is unchanged. */
+  html:not(.dark) :is(.glass, .premium-card:not(.premium-card-dark), .glass-bar, .glass-header) {
+    background-image:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0) 46%),
+      linear-gradient(160deg, var(--glass-tint), var(--glass-tint-soft));
+  }
+
+  html:not(.dark) :is(.glass-strong, .premium-surface, [role="dialog"]:not(.premium-surface)) {
+    background-image:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0) 40%),
+      linear-gradient(160deg, var(--glass-tint-strong), var(--glass-tint));
+  }
+
+  html:not(.dark) :is(div, section, article, aside, li, details, form)[class*="rounded-"]:is([class~="bg-white"], [class~="bg-surface-50"]) {
+    background-image:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 46%),
+      linear-gradient(160deg, var(--glass-tint), var(--glass-tint-soft));
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    html:not(.dark) :is(.glass, .glass-strong, .premium-card, .premium-surface, .glass-bar, .glass-header, [role="dialog"]),
+    html:not(.dark) :is(div, section, article, aside, li, details, form)[class*="rounded-"]:is([class~="bg-white"], [class~="bg-surface-50"]) {
+      background-image: none;
+    }
+  }
+
+  /* Dialogs and drawers: nearly opaque ivory so the dark backdrop cannot turn them grey, over a lighter, warmer veil.
+     The page behind is still visible and blurred around the panel, which is what makes it read as glass. */
+  html:not(.dark) {
+    --glass-scrim: rgba(58, 50, 32, 0.26);
+  }
+
+  html:not(.dark) :is(.premium-surface, [role="dialog"]:not(.premium-surface)) {
+    background-color: rgba(255, 254, 250, 0.55);
+    background-image:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0) 38%),
+      linear-gradient(160deg, rgba(255, 254, 250, 0.94), rgba(252, 250, 243, 0.9));
+  }
+
+  /* Cards inside a dialog sit on that ivory, so they only need a faint lift rather than another smoky tint. */
+  html:not(.dark) [role="dialog"] :is(div, section, article, aside, li, details, form)[class*="rounded-"]:is([class~="bg-white"], [class~="bg-surface-50"]) {
+    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.6));
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.95) inset, 0 0 0 1px rgba(120, 106, 70, 0.08), 0 6px 16px -10px rgba(74, 62, 38, 0.18);
+  }
+
   /* ---- Performance ------------------------------------------------------------------------------------- */
 
   /* Long product and order lists create many blurred layers at once. On phones use a smaller blur radius so
@@ -349,19 +399,26 @@
     opacity: 0.95;
   }
 
-  /* Blobs sit across the middle of the page, where the panels are, so the glass visibly picks up colour. */
+  /* Light theme scene: a calm champagne and pearl glow. The earlier amber, teal, pink and blue blobs tinted every
+     panel a different muddy colour; a premium light glass reads as clean frosted ivory with a soft warm light
+     behind it, so the colour here is low in saturation and kept away from where content sits. */
+  html:not(.dark) body::before,
+  html:not(.dark) body::after {
+    opacity: 0.8;
+  }
+
   html:not(.dark) body::before {
     background:
-      radial-gradient(circle at 30% 30%, rgba(238, 176, 62, 0.8), transparent 30%),
-      radial-gradient(circle at 72% 42%, rgba(40, 170, 156, 0.62), transparent 28%),
-      radial-gradient(circle at 48% 80%, rgba(226, 96, 140, 0.56), transparent 30%);
+      radial-gradient(circle at 22% 22%, rgba(226, 204, 154, 0.55), transparent 30%),
+      radial-gradient(circle at 78% 30%, rgba(236, 224, 200, 0.7), transparent 32%),
+      radial-gradient(circle at 50% 82%, rgba(214, 196, 160, 0.38), transparent 32%);
   }
 
   html:not(.dark) body::after {
     background:
-      radial-gradient(circle at 18% 64%, rgba(80, 150, 224, 0.62), transparent 28%),
-      radial-gradient(circle at 86% 18%, rgba(130, 196, 84, 0.5), transparent 26%),
-      radial-gradient(circle at 56% 52%, rgba(255, 255, 255, 0.5), transparent 22%);
+      radial-gradient(circle at 12% 70%, rgba(176, 190, 196, 0.3), transparent 28%),
+      radial-gradient(circle at 88% 78%, rgba(196, 184, 160, 0.3), transparent 26%),
+      radial-gradient(circle at 54% 44%, rgba(255, 255, 255, 0.7), transparent 26%);
   }
 
   html.dark body::before {
