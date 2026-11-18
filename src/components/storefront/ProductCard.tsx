@@ -119,7 +119,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               <Lock className="w-3 h-3" /> {t('deactivated')}
             </span>
           ) : (
-            <span className="micro-badge bg-success-500/10 text-success-700 dark:text-success-400 border-success-500/20 backdrop-blur">
+            <span className="micro-badge hidden border-success-500/20 bg-success-500/10 text-success-700 backdrop-blur dark:text-success-400 sm:inline-flex">
               {product.Stock} {t('inStock')}
             </span>
           )}
