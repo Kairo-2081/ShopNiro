@@ -370,13 +370,13 @@ export const Storefront: React.FC<StorefrontProps> = ({
           {Array.from({ length: 8 }, (_, index) => (
             <div key={index} className="premium-card flex h-full min-w-0 flex-col overflow-hidden rounded-xl">
               <div className="premium-skeleton aspect-square w-full sm:aspect-[4/5]" />
-              <div className="flex flex-1 flex-col justify-between space-y-3 p-4">
+              <div className="flex flex-1 flex-col justify-between space-y-3 p-3 sm:p-4">
                 <div className="premium-skeleton h-3 w-1/3 rounded-full" />
                 <div className="premium-skeleton h-4 w-4/5 rounded-full" />
                 <div className="premium-skeleton h-3 w-2/3 rounded-full" />
-                <div className="flex items-center justify-between pt-2">
+                <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:items-center sm:justify-between">
                   <div className="premium-skeleton h-5 w-20 rounded-full" />
-                  <div className="premium-skeleton h-9 w-24 rounded-full" />
+                  <div className="premium-skeleton h-9 w-full rounded-full sm:w-24" />
                 </div>
               </div>
             </div>
