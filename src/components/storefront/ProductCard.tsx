@@ -81,7 +81,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       className="product-card group relative bg-[linear-gradient(180deg,rgba(246,245,239,0.98),rgba(228,226,213,0.96))] dark:bg-[linear-gradient(180deg,#292821,#151510)] rounded-2xl border border-[#d0c8a5]/20 dark:border-[#d0c8a5]/10 shadow-[0_18px_45px_rgba(6,6,4,0.18)] hover:shadow-[0_28px_60px_rgba(7,7,5,0.24)] hover:border-[#a99b72]/50 overflow-hidden flex flex-col"
     >
       {/* Product Image */}
-      <div className="relative aspect-[4/5] w-full bg-surface-100 dark:bg-[#0C1014] overflow-hidden">
+      <div className="relative aspect-square w-full bg-surface-100 sm:aspect-[4/5] dark:bg-[#0C1014] overflow-hidden">
         {product.Image && !imgError ? (
           <img
             src={product.Image}
