@@ -712,15 +712,17 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
             <StatTile
               label="Net product sales"
               value={formatCurrency(totalSalesRevenue)}
+              count={{ value: totalSalesRevenue, format: formatCurrency }}
               note="Excludes cancelled and refunded orders"
               trend={recentMonthlySales.some((month) => month.revenue > 0) ? recentMonthlySales.map((month) => month.revenue) : undefined}
               change={percentChange(sum(recentMonthlySales.slice(3).map((month) => month.revenue)), sum(recentMonthlySales.slice(0, 3).map((month) => month.revenue)))}
               comparison={t('chartVsPrevious3')}
             />
-            <StatTile label="Units sold" value={sellerUnitsSold.toLocaleString()} note={`${billableSellerOrders.length} eligible orders`} />
+            <StatTile label="Units sold" value={sellerUnitsSold.toLocaleString()} count={{ value: sellerUnitsSold, format: (n) => Math.round(n).toLocaleString() }} note={`${billableSellerOrders.length} eligible orders`} />
             <StatTile
               label="Average order value"
               value={formatCurrency(averageSellerOrderValue)}
+              count={{ value: averageSellerOrderValue, format: formatCurrency }}
               note="Across eligible seller orders"
               trend={recentMonthlySales.some((month) => month.orders > 0) ? recentMonthlySales.map((month) => (month.orders ? month.revenue / month.orders : 0)) : undefined}
             />
