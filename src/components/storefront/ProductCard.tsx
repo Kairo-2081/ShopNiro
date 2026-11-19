@@ -82,10 +82,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       data-testid="product-card"
       data-product-id={product.Product_ID}
       style={{ '--card-index': index } as React.CSSProperties}
-      className="product-card card-rise group relative bg-[linear-gradient(180deg,rgba(246,245,239,0.98),rgba(228,226,213,0.96))] dark:bg-[linear-gradient(180deg,#292821,#151510)] rounded-2xl border border-[#d0c8a5]/20 dark:border-[#d0c8a5]/10 shadow-[0_18px_45px_rgba(6,6,4,0.18)] hover:shadow-[0_28px_60px_rgba(7,7,5,0.24)] hover:border-[#a99b72]/50 overflow-hidden flex flex-col"
+      className="product-card card-rise group relative bg-[#fbfaf6] p-1.5 dark:bg-[linear-gradient(180deg,#292821,#151510)] rounded-[22px] sm:p-2 border border-[#d0c8a5]/20 dark:border-[#d0c8a5]/10 shadow-[0_18px_45px_rgba(6,6,4,0.18)] hover:shadow-[0_28px_60px_rgba(7,7,5,0.24)] hover:border-[#a99b72]/50 overflow-hidden flex flex-col"
     >
       {/* Product Image */}
-      <div className="relative aspect-square w-full bg-surface-100 sm:aspect-[4/5] dark:bg-[#0C1014] overflow-hidden">
+      <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-surface-100 sm:aspect-[4/5] dark:bg-[#0C1014]">
         {product.Image && !imgError ? (
           <img
             src={product.Image}
@@ -135,7 +135,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           type="button"
           onClick={handleSelect}
           aria-label={`${t('viewDetails')} ${product.Name}`}
-          className="absolute inset-0 z-10 rounded-t-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#d0c8a5]"
+          className="absolute inset-0 z-10 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#d0c8a5]"
         />
 
         {onToggleWishlist && (
@@ -159,11 +159,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       </div>
 
       {/* Card Content */}
-      <div className="flex flex-1 flex-col justify-between p-3 sm:p-4">
+      <div className="flex flex-1 flex-col justify-between px-1.5 pb-1 pt-3 sm:px-2.5 sm:pt-3.5">
         <div>
           {/* Category & Seller info */}
           <div className="flex items-center justify-between text-xs text-surface-500 dark:text-surface-400 mb-1.5">
-            <span className="font-bold text-brand-600 dark:text-brand-400 text-micro uppercase tracking-wider">
+            <span className="text-xs font-semibold text-brand-600 dark:text-brand-400">
               {category?.Name || t('generalCategory')}
             </span>
             {seller && (
@@ -175,7 +175,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           </div>
 
           {/* Product Name */}
-          <h3 className="font-bold text-surface-900 dark:text-white line-clamp-2 text-[13px] leading-snug sm:text-sm group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
+          <h3 className="font-display line-clamp-2 text-[15px] font-normal leading-snug tracking-[-0.005em] text-surface-900 dark:text-white sm:text-base group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
             {product.Name}
           </h3>
 
@@ -186,19 +186,18 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         </div>
 
         {/* Price & Action */}
-        <div className="mt-3 flex flex-col gap-2.5 border-t border-surface-100 pt-3 dark:border-surface-800 sm:mt-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-3 flex items-end justify-between gap-2 sm:mt-4">
           <div>
-            <span className="hidden text-micro font-semibold uppercase tracking-wider text-surface-500 dark:text-surface-500 sm:block">{t('price')}</span>
-            {hasActiveVoucher ? (
+                        {hasActiveVoucher ? (
               <>
                 <span className="block text-micro text-surface-500 line-through dark:text-surface-500">{formatCurrency(Number(product.Price) || 0)}</span>
-                <span className="text-base font-black text-surface-900 dark:text-white">
+                <span className="text-base font-extrabold tabular-nums tracking-tight text-surface-900 dark:text-white sm:text-lg">
                   {formatCurrency(discountedPriceForVoucher(Number(product.Price) || 0, product.Voucher))}
                 </span>
                 <span className="block text-micro font-medium text-success-700 dark:text-success-300">{product.Voucher}</span>
               </>
             ) : (
-              <span className="text-base font-black text-surface-900 dark:text-white">
+              <span className="text-base font-extrabold tabular-nums tracking-tight text-surface-900 dark:text-white sm:text-lg">
                 {formatCurrency(Number(product.Price) || 0)}
               </span>
             )}
@@ -211,9 +210,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
           <button
             type="button"
+            title={product.Sizes?.length ? t('chooseSize') : t('addToCart')}
             disabled={isOutOfStock || isDeactivated}
             onClick={handleAddClick}
-            className={`luxury-control min-h-10 w-full rounded-full px-3.5 text-xs cursor-pointer sm:min-h-9 sm:w-auto ${
+            aria-label={justAdded ? t('added') : product.Sizes?.length ? t('chooseSize') : t('addToCart')}
+            className={`luxury-control h-10 min-h-0 w-10 shrink-0 cursor-pointer rounded-full p-0 text-xs ${
               isOutOfStock || isDeactivated
                 ? 'bg-surface-100 dark:bg-[#181F2A] text-surface-500 dark:text-surface-600 cursor-not-allowed'
                 : justAdded
@@ -226,12 +227,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-white/20 transition-all duration-200 scale-100 opacity-100">
                   <Check className="w-2.5 h-2.5" />
                 </span>
-                <span className="transition-all duration-200">{t('added')}</span>
+                <span className="sr-only">{t('added')}</span>
               </>
             ) : (
               <>
-                <ShoppingCart className="w-3.5 h-3.5" />
-                <span>{product.Sizes?.length ? t('chooseSize') : t('addToCart')}</span>
+                <ShoppingCart className="h-4 w-4" />
+                <span className="sr-only">{product.Sizes?.length ? t('chooseSize') : t('addToCart')}</span>
               </>
             )}
           </button>
