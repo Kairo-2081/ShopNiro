@@ -163,7 +163,7 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto duration-150">
       <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="sslcommerz-dialog-title" tabIndex={-1} className="bg-white dark:bg-[#12161D] w-full max-w-xl rounded-3xl shadow-2xl border border-brand-100 dark:border-surface-800 overflow-hidden flex flex-col my-4">
         {/* SSLCommerz Security Banner */}
         <div className="bg-gradient-to-r from-surface-900 via-[#0F1D2B] to-surface-900 px-6 py-3 border-b border-brand-500/20 flex items-center justify-between text-white">
@@ -632,7 +632,7 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
 
           {/* ================= PROCESSING OVERLAY ================= */}
           {step === 'processing' && (
-            <div className="absolute inset-0 bg-white/95 dark:bg-[#12161D]/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center space-y-4 animate-in fade-in">
+            <div className="absolute inset-0 bg-white/95 dark:bg-[#12161D]/95 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center space-y-4 ">
               <div className="w-16 h-16 rounded-full border-4 border-surface-200 border-t-[#E2136E] animate-spin flex items-center justify-center">
                 <Lock className="w-6 h-6 text-[#E2136E]" />
               </div>
@@ -647,7 +647,7 @@ export const SSLCommerzModal: React.FC<SSLCommerzModalProps> = ({
 
           {/* ================= SUCCESS OVERLAY ================= */}
           {step === 'success' && (
-            <div className="absolute inset-0 bg-white dark:bg-[#12161D] flex flex-col items-center justify-center p-6 text-center space-y-4 animate-in zoom-in-95">
+            <div className="absolute inset-0 bg-white dark:bg-[#12161D] flex flex-col items-center justify-center p-6 text-center space-y-4 ">
               <div className="w-16 h-16 rounded-full bg-success-100 dark:bg-success-950/60 text-success-600 dark:text-success-400 border border-success-300 flex items-center justify-center shadow-lg">
                 <CheckCircle2 className="w-9 h-9" />
               </div>
