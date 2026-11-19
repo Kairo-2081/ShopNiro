@@ -224,4 +224,29 @@
       animation: none !important;
     }
   }
+
+  /* ---- Moments worth a flourish -------------------------------------------------------------------------- */
+  /* Order placed: the tick pops in and one ring spreads out from it, once. */
+  @keyframes ring-out {
+    from { box-shadow: 0 0 0 0 rgba(34, 139, 94, 0.45); }
+    to { box-shadow: 0 0 0 22px rgba(34, 139, 94, 0); }
+  }
+
+  .success-burst {
+    animation: pop 520ms var(--ease-spring) 120ms backwards, ring-out 900ms ease-out 320ms 1 both;
+  }
+
+  /* The landing hero text arrives in sequence, once, left to right and top to bottom. It is the only
+     orchestrated entrance in the app; everything else answers something the person did. */
+  .hero-step {
+    animation: view-in 640ms var(--ease-settle) backwards;
+    animation-delay: calc(var(--step, 0) * 90ms + 80ms);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .success-burst,
+    .hero-step {
+      animation: none !important;
+    }
+  }
 }
