@@ -156,7 +156,7 @@ export const SellerSignupModal: React.FC<SellerSignupModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto duration-200">
       <div
         ref={dialogRef}
         role="dialog"
