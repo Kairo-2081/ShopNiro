@@ -204,7 +204,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
   const total = order.Subtotal + order.Shipping_Fee;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto duration-150">
       <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="payment-receipt-title" tabIndex={-1} onKeyDown={(event) => { if (event.key === 'Escape') onClose(); }} className="bg-white dark:bg-[#12161D] w-full max-w-lg rounded-3xl shadow-2xl border border-brand-100 dark:border-surface-800 overflow-hidden flex flex-col my-4">
         {/* Receipt Header Banner */}
         <div className="bg-gradient-to-r from-[#0C1014] via-[#12161D] to-[#0C1014] p-6 text-white border-b border-brand-500/20 relative">

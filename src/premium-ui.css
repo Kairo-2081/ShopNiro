@@ -125,4 +125,128 @@
       transition: none;
     }
   }
+
+  /* ==== Motion system ======================================================================================
+     The app used classes such as animate-in, fade-in and slide-in-from-top-2, but the Tailwind animation plugin that
+     defines them is not installed, so dialogs, toasts and page views appeared with no motion at all. These are the
+     real definitions. One easing (a fast start that settles softly) and three durations are used everywhere so
+     everything moves with the same character. */
+  :root {
+    --ease-settle: cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --motion-quick: 180ms;
+    --motion-base: 320ms;
+    --motion-slow: 520ms;
+  }
+
+  @keyframes overlay-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes dialog-in {
+    from { opacity: 0; transform: translateY(16px) scale(0.965); }
+    to { opacity: 1; transform: none; }
+  }
+
+  @keyframes drawer-in-left {
+    from { transform: translateX(-100%); }
+    to { transform: none; }
+  }
+
+  @keyframes toast-in {
+    from { opacity: 0; transform: translate3d(0, -10px, 0) scale(0.97); }
+    60% { opacity: 1; transform: translate3d(0, 2px, 0) scale(1.005); }
+    to { opacity: 1; transform: none; }
+  }
+
+  @keyframes view-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  @keyframes pop {
+    0% { transform: scale(0.55); }
+    55% { transform: scale(1.22); }
+    100% { transform: scale(1); }
+  }
+
+  /* ---- Dialogs and their backdrops ---------------------------------------------------------------------- */
+  /* Every full-screen dim layer fades in, and every dialog on top of it rises and settles. Applied by selector, so
+     all the app's modals share it without each one being edited. The cart drawer and phone menu slide instead, and
+     are excluded here. `backwards` means that once finished, the element's own styles apply again. */
+  .fixed.inset-0[class*="bg-black/"] {
+    animation: overlay-in var(--motion-base) ease-out backwards;
+  }
+
+  [role="dialog"]:not(aside):not(#mobile-navigation-drawer) {
+    animation: dialog-in var(--motion-base) var(--ease-settle) backwards;
+    animation-delay: 40ms;
+  }
+
+  @media (max-width: 639px) {
+    /* On phones the dialog comes up from the bottom edge, the way a sheet does, rather than scaling from the middle. */
+    [role="dialog"]:not(aside):not(#mobile-navigation-drawer) {
+      animation-name: dialog-in-sheet;
+    }
+
+    @keyframes dialog-in-sheet {
+      from { opacity: 0; transform: translateY(32px); }
+      to { opacity: 1; transform: none; }
+    }
+  }
+
+  #mobile-navigation-drawer {
+    animation: drawer-in-left var(--motion-base) var(--ease-settle) backwards;
+  }
+
+  /* ---- Toasts, views and small confirmations ------------------------------------------------------------ */
+  .toast-in {
+    animation: toast-in 460ms var(--ease-settle) backwards;
+  }
+
+  .view-enter {
+    animation: view-in var(--motion-base) var(--ease-settle) backwards;
+  }
+
+  /* A quick springy pop for things that just changed: the cart count, a saved heart, an Added tick. */
+  .pop-in {
+    animation: pop 420ms var(--ease-spring) backwards;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .fixed.inset-0[class*="bg-black/"],
+    [role="dialog"],
+    #mobile-navigation-drawer,
+    .toast-in,
+    .view-enter,
+    .pop-in {
+      animation: none !important;
+    }
+  }
+
+  /* ---- Moments worth a flourish -------------------------------------------------------------------------- */
+  /* Order placed: the tick pops in and one ring spreads out from it, once. */
+  @keyframes ring-out {
+    from { box-shadow: 0 0 0 0 rgba(34, 139, 94, 0.45); }
+    to { box-shadow: 0 0 0 22px rgba(34, 139, 94, 0); }
+  }
+
+  .success-burst {
+    animation: pop 520ms var(--ease-spring) 120ms backwards, ring-out 900ms ease-out 320ms 1 both;
+  }
+
+  /* The landing hero text arrives in sequence, once, left to right and top to bottom. It is the only
+     orchestrated entrance in the app; everything else answers something the person did. */
+  .hero-step {
+    animation: view-in 640ms var(--ease-settle) backwards;
+    animation-delay: calc(var(--step, 0) * 90ms + 80ms);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .success-burst,
+    .hero-step {
+      animation: none !important;
+    }
+  }
 }
