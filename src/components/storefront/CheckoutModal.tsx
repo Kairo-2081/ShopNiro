@@ -391,7 +391,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
           <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
             {createdOrder ? (
               <div className="mx-auto max-w-md py-8 text-center">
-                <div className="mx-auto grid h-14 w-14 place-items-center rounded-full border border-success-200 bg-success-100 text-success-700 dark:border-success-800 dark:bg-success-950/60 dark:text-success-300">
+                <div className="success-burst mx-auto grid h-14 w-14 place-items-center rounded-full border border-success-200 bg-success-100 text-success-700 dark:border-success-800 dark:bg-success-950/60 dark:text-success-300">
                   <CheckCircle2 aria-hidden="true" className="h-7 w-7" />
                 </div>
                 <h3 className="mt-4 text-2xl font-bold text-surface-900 dark:text-white">{t('orderPlaced')}</h3>
