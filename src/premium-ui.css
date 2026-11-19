@@ -199,4 +199,29 @@
   #mobile-navigation-drawer {
     animation: drawer-in-left var(--motion-base) var(--ease-settle) backwards;
   }
+
+  /* ---- Toasts, views and small confirmations ------------------------------------------------------------ */
+  .toast-in {
+    animation: toast-in 460ms var(--ease-settle) backwards;
+  }
+
+  .view-enter {
+    animation: view-in var(--motion-base) var(--ease-settle) backwards;
+  }
+
+  /* A quick springy pop for things that just changed: the cart count, a saved heart, an Added tick. */
+  .pop-in {
+    animation: pop 420ms var(--ease-spring) backwards;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .fixed.inset-0[class*="bg-black/"],
+    [role="dialog"],
+    #mobile-navigation-drawer,
+    .toast-in,
+    .view-enter,
+    .pop-in {
+      animation: none !important;
+    }
+  }
 }
