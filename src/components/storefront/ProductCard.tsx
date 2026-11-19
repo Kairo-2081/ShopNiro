@@ -82,10 +82,10 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       data-testid="product-card"
       data-product-id={product.Product_ID}
       style={{ '--card-index': index } as React.CSSProperties}
-      className="product-card card-rise group relative bg-[linear-gradient(180deg,rgba(246,245,239,0.98),rgba(228,226,213,0.96))] dark:bg-[linear-gradient(180deg,#292821,#151510)] rounded-2xl border border-[#d0c8a5]/20 dark:border-[#d0c8a5]/10 shadow-[0_18px_45px_rgba(6,6,4,0.18)] hover:shadow-[0_28px_60px_rgba(7,7,5,0.24)] hover:border-[#a99b72]/50 overflow-hidden flex flex-col"
+      className="product-card card-rise group relative bg-[#fbfaf6] p-1.5 dark:bg-[linear-gradient(180deg,#292821,#151510)] rounded-[22px] sm:p-2 border border-[#d0c8a5]/20 dark:border-[#d0c8a5]/10 shadow-[0_18px_45px_rgba(6,6,4,0.18)] hover:shadow-[0_28px_60px_rgba(7,7,5,0.24)] hover:border-[#a99b72]/50 overflow-hidden flex flex-col"
     >
       {/* Product Image */}
-      <div className="relative aspect-square w-full bg-surface-100 sm:aspect-[4/5] dark:bg-[#0C1014] overflow-hidden">
+      <div className="relative aspect-square w-full overflow-hidden rounded-2xl bg-surface-100 sm:aspect-[4/5] dark:bg-[#0C1014]">
         {product.Image && !imgError ? (
           <img
             src={product.Image}
@@ -135,7 +135,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           type="button"
           onClick={handleSelect}
           aria-label={`${t('viewDetails')} ${product.Name}`}
-          className="absolute inset-0 z-10 rounded-t-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#d0c8a5]"
+          className="absolute inset-0 z-10 rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#d0c8a5]"
         />
 
         {onToggleWishlist && (
