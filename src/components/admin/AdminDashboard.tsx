@@ -316,7 +316,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     <div className="space-y-6 pb-16 text-surface-900 dark:text-surface-100">
       {/* Toast Feedback */}
       {feedbackMsg && (
-        <div role={feedbackTone === 'error' ? 'alert' : 'status'} className={`fixed right-4 top-20 z-50 flex items-center gap-2 rounded-xl border px-4 py-3 text-xs font-semibold shadow-xl backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-200 sm:right-6 ${feedbackTone === 'error' ? 'border-danger-500/20 bg-danger-500/10 text-danger-700 dark:text-danger-300' : 'border-success-500/20 bg-success-500/10 text-success-800 dark:text-success-300'}`}>
+        <div role={feedbackTone === 'error' ? 'alert' : 'status'} className={`fixed right-4 top-20 z-50 flex items-center gap-2 rounded-xl border px-4 py-3 text-xs font-semibold shadow-xl backdrop-blur-md toast-in sm:right-6 ${feedbackTone === 'error' ? 'border-danger-500/20 bg-danger-500/10 text-danger-700 dark:text-danger-300' : 'border-success-500/20 bg-success-500/10 text-success-800 dark:text-success-300'}`}>
           {feedbackTone === 'error' ? <AlertCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
           <span>{feedbackMsg}</span>
         </div>
