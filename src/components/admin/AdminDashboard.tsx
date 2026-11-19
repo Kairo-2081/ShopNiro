@@ -957,7 +957,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       {/* Tab 5: Online Payment Transactions Ledger */}
       {adminTab === 'payments' && (
-        <div className="space-y-6 animate-in fade-in duration-200">
+        <div className="view-enter space-y-6">
           {/* Summary KPIs */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white dark:bg-[#12161D] border border-brand-100 dark:border-brand-500/20 rounded-3xl p-5 shadow-xs flex flex-col justify-between">
