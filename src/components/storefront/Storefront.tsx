@@ -159,11 +159,11 @@ export const Storefront: React.FC<StorefrontProps> = ({
   return (
     <div className="space-y-8 text-surface-900 dark:text-surface-100">
       {/* Search & Hero Banner matching the landing page theme */}
-      <div className="text-white rounded-[32px] p-6 md:p-8 border border-[#d0c8a5]/20 shadow-[0_36px_80px_rgba(9,9,7,0.42)] relative overflow-hidden bg-[radial-gradient(circle_at_20%_15%,rgba(208,200,165,0.22),transparent_18%),radial-gradient(circle_at_82%_12%,rgba(119,119,90,0.5),transparent_22%),linear-gradient(135deg,#77775a_0%,#514c38_23%,#292820_52%,#11110f_100%)]">
+      <div className="text-white rounded-[28px] p-4 md:rounded-[32px] md:p-8 border border-[#d0c8a5]/20 shadow-[0_36px_80px_rgba(9,9,7,0.42)] relative overflow-hidden bg-[radial-gradient(circle_at_20%_15%,rgba(208,200,165,0.22),transparent_18%),radial-gradient(circle_at_82%_12%,rgba(119,119,90,0.5),transparent_22%),linear-gradient(135deg,#77775a_0%,#514c38_23%,#292820_52%,#11110f_100%)]">
         {/* Soft atmospheric glow */}
         <div className="absolute -top-20 -right-20 w-80 h-80 bg-white/10 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="relative z-10 space-y-5 max-w-3xl">
+        <div className="relative z-10 max-w-3xl space-y-3 md:space-y-5">
           <div>
             <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-white leading-tight">
               {t('shopSmart')}{' '}
@@ -171,7 +171,7 @@ export const Storefront: React.FC<StorefrontProps> = ({
                 {t('shipFast')}
               </span>
             </h1>
-            <p className="text-surface-400 text-xs md:text-sm mt-2 leading-relaxed">
+            <p className="mt-2 hidden text-xs leading-relaxed text-surface-400 sm:block md:text-sm">
               {t('catalogIntro')}
             </p>
           </div>
