@@ -204,12 +204,12 @@ export const Storefront: React.FC<StorefrontProps> = ({
       {/* Product Filters */}
       <div className="space-y-4">
         {/* Filter Toolbar: Sort & Price & Stock */}
-        <div className="premium-surface flex flex-wrap items-center justify-between gap-3 rounded-xl p-3.5">
-          <div className="flex flex-wrap items-center gap-4 text-xs">
+        <div className="premium-surface flex flex-wrap items-center justify-between gap-2 rounded-xl p-3 sm:gap-3 sm:p-3.5">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-2 text-xs">
             {/* Sorting Dropdown */}
             <div className="flex items-center gap-2">
               <ArrowUpDown className="w-3.5 h-3.5 text-surface-500 dark:text-surface-400" />
-              <span className="text-surface-600 dark:text-surface-400 font-medium">{t('sortBy')}:</span>
+              <span className="hidden font-medium text-surface-600 dark:text-surface-400 sm:inline">{t('sortBy')}:</span>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as StorefrontSort)}
@@ -225,7 +225,7 @@ export const Storefront: React.FC<StorefrontProps> = ({
             </div>
 
             {/* Price Slider */}
-            <div className="flex items-center gap-2 pl-3 border-l border-surface-200 dark:border-surface-800">
+            <div className="flex w-full items-center gap-2 sm:w-auto sm:border-l sm:border-surface-200 sm:pl-3 sm:dark:border-surface-800">
               <SlidersHorizontal className="w-3.5 h-3.5 text-surface-500 dark:text-surface-400" />
               <span className="text-surface-600 dark:text-surface-400 font-medium">{t('maxPrice')}:</span>
               <span className="font-bold text-[#80734f] dark:text-[#d0c8a5]">{formatCurrency(maxPrice)}</span>
@@ -237,7 +237,7 @@ export const Storefront: React.FC<StorefrontProps> = ({
                 value={maxPrice}
                 onChange={(e) => setMaxPrice(Number(e.target.value))}
                 aria-label={`${t('maxPrice')}: ${formatCurrency(maxPrice)}`}
-                className="w-24 md:w-32 accent-[var(--shopniro-orange)] cursor-pointer"
+                className="min-w-0 flex-1 cursor-pointer accent-[var(--shopniro-orange)] sm:w-24 sm:flex-none md:w-32"
               />
             </div>
           </div>
@@ -283,7 +283,7 @@ export const Storefront: React.FC<StorefrontProps> = ({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl border border-success-200 bg-success-50/80 px-4 py-3 text-xs text-success-900 dark:border-success-900/60 dark:bg-success-950 dark:text-success-200">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 rounded-xl border border-success-200 bg-success-50/80 px-3 py-2 text-xs sm:px-4 sm:py-3 text-success-900 dark:border-success-900/60 dark:bg-success-950 dark:text-success-200">
         <span className="inline-flex items-center gap-2 font-semibold"><Truck className="h-4 w-4" />{t('freeShipping')} {money(400)}+</span>
         <span className="inline-flex items-center gap-2"><Tag className="h-3.5 w-3.5" />{t('automaticSavings')} {money(500)}+</span>
       </div>
