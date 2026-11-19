@@ -212,7 +212,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             type="button"
             disabled={isOutOfStock || isDeactivated}
             onClick={handleAddClick}
-            className={`luxury-control min-h-10 w-full rounded-full px-3.5 text-xs cursor-pointer sm:min-h-9 sm:w-auto ${
+            aria-label={justAdded ? t('added') : product.Sizes?.length ? t('chooseSize') : t('addToCart')}
+            className={`luxury-control h-10 min-h-0 w-10 shrink-0 cursor-pointer rounded-full p-0 text-xs sm:h-9 sm:w-auto sm:px-3.5 ${
               isOutOfStock || isDeactivated
                 ? 'bg-surface-100 dark:bg-[#181F2A] text-surface-500 dark:text-surface-600 cursor-not-allowed'
                 : justAdded
@@ -225,12 +226,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-white/20 transition-all duration-200 scale-100 opacity-100">
                   <Check className="w-2.5 h-2.5" />
                 </span>
-                <span className="transition-all duration-200">{t('added')}</span>
+                <span className="hidden transition-all duration-200 sm:inline">{t('added')}</span>
               </>
             ) : (
               <>
-                <ShoppingCart className="w-3.5 h-3.5" />
-                <span>{product.Sizes?.length ? t('chooseSize') : t('addToCart')}</span>
+                <ShoppingCart className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+                <span className="hidden sm:inline">{product.Sizes?.length ? t('chooseSize') : t('addToCart')}</span>
               </>
             )}
           </button>
