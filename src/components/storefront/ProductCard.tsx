@@ -159,7 +159,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       </div>
 
       {/* Card Content */}
-      <div className="flex flex-1 flex-col justify-between p-3 sm:p-4">
+      <div className="flex flex-1 flex-col justify-between px-1.5 pb-1 pt-3 sm:px-2.5 sm:pt-3.5">
         <div>
           {/* Category & Seller info */}
           <div className="flex items-center justify-between text-xs text-surface-500 dark:text-surface-400 mb-1.5">
@@ -175,7 +175,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           </div>
 
           {/* Product Name */}
-          <h3 className="font-bold text-surface-900 dark:text-white line-clamp-2 text-[13px] leading-snug sm:text-sm group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
+          <h3 className="font-display line-clamp-2 text-[15px] font-normal leading-snug tracking-[-0.005em] text-surface-900 dark:text-white sm:text-base group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
             {product.Name}
           </h3>
 
