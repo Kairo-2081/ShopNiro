@@ -411,9 +411,10 @@ export const Storefront: React.FC<StorefrontProps> = ({
         </div>
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
-          {filteredProducts.map((prod) => (
+          {filteredProducts.map((prod, index) => (
             <ProductCard
               key={prod.Product_ID}
+              index={index}
               product={prod}
               category={categories.find((c) => c.Category_ID === prod.Category_ID)}
               seller={sellers.find((s) => s.Seller_ID === prod.Seller_ID)}
