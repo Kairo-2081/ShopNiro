@@ -129,7 +129,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               >
                 <ShoppingCart aria-hidden="true" className="h-4 w-4" />
                 {cartCount > 0 && (
-                  <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-micro font-bold text-white shadow-md shadow-brand-600/40">
+                  <span key={cartCount} className="pop-in absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-micro font-bold text-white shadow-md shadow-brand-600/40">
                     {cartCount}
                   </span>
                 )}
