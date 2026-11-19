@@ -181,14 +181,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
           {/* Star Rating */}
           <div className="mt-1.5 sm:mt-2">
-            <StarRating rating={avgRating} size="sm" showText totalReviews={productReviews.length} />
+            <StarRating rating={avgRating} size="sm" showText compactText totalReviews={productReviews.length} />
           </div>
         </div>
 
         {/* Price & Action */}
         <div className="mt-3 flex flex-col gap-2.5 border-t border-surface-100 pt-3 dark:border-surface-800 sm:mt-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <span className="text-micro text-surface-500 dark:text-surface-500 uppercase tracking-wider block font-semibold">{t('price')}</span>
+            <span className="hidden text-micro font-semibold uppercase tracking-wider text-surface-500 dark:text-surface-500 sm:block">{t('price')}</span>
             {hasActiveVoucher ? (
               <>
                 <span className="block text-micro text-surface-500 line-through dark:text-surface-500">{formatCurrency(Number(product.Price) || 0)}</span>
