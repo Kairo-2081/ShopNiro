@@ -170,4 +170,33 @@
     55% { transform: scale(1.22); }
     100% { transform: scale(1); }
   }
+
+  /* ---- Dialogs and their backdrops ---------------------------------------------------------------------- */
+  /* Every full-screen dim layer fades in, and every dialog on top of it rises and settles. Applied by selector, so
+     all the app's modals share it without each one being edited. The cart drawer and phone menu slide instead, and
+     are excluded here. `backwards` means that once finished, the element's own styles apply again. */
+  .fixed.inset-0[class*="bg-black/"] {
+    animation: overlay-in var(--motion-base) ease-out backwards;
+  }
+
+  [role="dialog"]:not(aside):not(#mobile-navigation-drawer) {
+    animation: dialog-in var(--motion-base) var(--ease-settle) backwards;
+    animation-delay: 40ms;
+  }
+
+  @media (max-width: 639px) {
+    /* On phones the dialog comes up from the bottom edge, the way a sheet does, rather than scaling from the middle. */
+    [role="dialog"]:not(aside):not(#mobile-navigation-drawer) {
+      animation-name: dialog-in-sheet;
+    }
+
+    @keyframes dialog-in-sheet {
+      from { opacity: 0; transform: translateY(32px); }
+      to { opacity: 1; transform: none; }
+    }
+  }
+
+  #mobile-navigation-drawer {
+    animation: drawer-in-left var(--motion-base) var(--ease-settle) backwards;
+  }
 }
