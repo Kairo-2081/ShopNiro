@@ -146,7 +146,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             onClick={(event) => { event.stopPropagation(); onToggleWishlist(product); }}
             className="absolute bottom-3 right-3 z-20 flex h-10 w-10 items-center justify-center rounded-full border border-white/60 bg-white/90 text-danger-600 shadow-lg transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5] dark:border-surface-700 dark:bg-[#181F2A]/90 dark:text-danger-300"
           >
-            <Heart className={`h-4 w-4 ${isWishlisted ? 'fill-current' : ''}`} />
+            <Heart key={String(isWishlisted)} className={`h-4 w-4 ${isWishlisted ? 'pop-in fill-current' : ''}`} />
           </button>
         )}
 
