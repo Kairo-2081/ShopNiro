@@ -224,7 +224,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           >
             {justAdded ? (
               <>
-                <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-white/20 transition-all duration-200 scale-100 opacity-100">
+                <span className="pop-in inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-white/20">
                   <Check className="w-2.5 h-2.5" />
                 </span>
                 <span className="sr-only">{t('added')}</span>
