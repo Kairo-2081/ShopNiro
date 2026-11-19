@@ -1238,7 +1238,7 @@ export default function App() {
 
         {/* Marketplace Top Charts & Trends Tab */}
         {activeTab === 'charts' && (
-          <div className="space-y-6 animate-in fade-in-50 duration-200">
+          <div className="space-y-6 view-enter">
             <MarketplaceTrendsTopCharts
               onSelectProduct={(p) => setSelectedProductForDetail(p)}
               onAddToCart={handleAddToCart}
@@ -1288,7 +1288,7 @@ export default function App() {
 
         {/* OpenStreetMap delivery tracking tab */}
         {activeTab === 'live-tracking' && (
-          <div className="space-y-6 animate-in fade-in-50 duration-200">
+          <div className="space-y-6 view-enter">
             <div className="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-[#12161D] p-6 rounded-3xl border border-brand-100 dark:border-surface-800 shadow-xl">
               <div>
                 <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-brand-950/80 text-brand-400 text-micro font-bold tracking-wider uppercase border border-brand-800/40 mb-2">
