@@ -163,7 +163,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         <div>
           {/* Category & Seller info */}
           <div className="flex items-center justify-between text-xs text-surface-500 dark:text-surface-400 mb-1.5">
-            <span className="font-bold text-brand-600 dark:text-brand-400 text-micro uppercase tracking-wider">
+            <span className="text-xs font-semibold text-brand-600 dark:text-brand-400">
               {category?.Name || t('generalCategory')}
             </span>
             {seller && (
