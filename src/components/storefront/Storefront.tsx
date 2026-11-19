@@ -157,13 +157,13 @@ export const Storefront: React.FC<StorefrontProps> = ({
   );
 
   return (
-    <div className="space-y-8 text-surface-900 dark:text-surface-100">
+    <div className="flex flex-col gap-8 text-surface-900 dark:text-surface-100">
       {/* Search & Hero Banner matching the landing page theme */}
-      <div className="text-white rounded-[32px] p-6 md:p-8 border border-[#d0c8a5]/20 shadow-[0_36px_80px_rgba(9,9,7,0.42)] relative overflow-hidden bg-[radial-gradient(circle_at_20%_15%,rgba(208,200,165,0.22),transparent_18%),radial-gradient(circle_at_82%_12%,rgba(119,119,90,0.5),transparent_22%),linear-gradient(135deg,#77775a_0%,#514c38_23%,#292820_52%,#11110f_100%)]">
+      <div className="text-white rounded-[28px] p-4 md:rounded-[32px] md:p-8 border border-[#d0c8a5]/20 shadow-[0_36px_80px_rgba(9,9,7,0.42)] relative overflow-hidden bg-[radial-gradient(circle_at_20%_15%,rgba(208,200,165,0.22),transparent_18%),radial-gradient(circle_at_82%_12%,rgba(119,119,90,0.5),transparent_22%),linear-gradient(135deg,#77775a_0%,#514c38_23%,#292820_52%,#11110f_100%)]">
         {/* Soft atmospheric glow */}
         <div className="absolute -top-20 -right-20 w-80 h-80 bg-white/10 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="relative z-10 space-y-5 max-w-3xl">
+        <div className="relative z-10 max-w-3xl space-y-3 md:space-y-5">
           <div>
             <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-white leading-tight">
               {t('shopSmart')}{' '}
@@ -171,7 +171,7 @@ export const Storefront: React.FC<StorefrontProps> = ({
                 {t('shipFast')}
               </span>
             </h1>
-            <p className="text-surface-400 text-xs md:text-sm mt-2 leading-relaxed">
+            <p className="mt-2 hidden text-xs leading-relaxed text-surface-400 sm:block md:text-sm">
               {t('catalogIntro')}
             </p>
           </div>
@@ -204,12 +204,12 @@ export const Storefront: React.FC<StorefrontProps> = ({
       {/* Product Filters */}
       <div className="space-y-4">
         {/* Filter Toolbar: Sort & Price & Stock */}
-        <div className="premium-surface flex flex-wrap items-center justify-between gap-3 rounded-xl p-3.5">
-          <div className="flex flex-wrap items-center gap-4 text-xs">
+        <div className="premium-surface flex flex-wrap items-center justify-between gap-2 rounded-xl p-3 sm:gap-3 sm:p-3.5">
+          <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-4 gap-y-2 text-xs">
             {/* Sorting Dropdown */}
             <div className="flex items-center gap-2">
               <ArrowUpDown className="w-3.5 h-3.5 text-surface-500 dark:text-surface-400" />
-              <span className="text-surface-600 dark:text-surface-400 font-medium">{t('sortBy')}:</span>
+              <span className="hidden font-medium text-surface-600 dark:text-surface-400 sm:inline">{t('sortBy')}:</span>
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as StorefrontSort)}
@@ -225,7 +225,7 @@ export const Storefront: React.FC<StorefrontProps> = ({
             </div>
 
             {/* Price Slider */}
-            <div className="flex items-center gap-2 pl-3 border-l border-surface-200 dark:border-surface-800">
+            <div className="flex w-full items-center gap-2 sm:w-auto sm:border-l sm:border-surface-200 sm:pl-3 sm:dark:border-surface-800">
               <SlidersHorizontal className="w-3.5 h-3.5 text-surface-500 dark:text-surface-400" />
               <span className="text-surface-600 dark:text-surface-400 font-medium">{t('maxPrice')}:</span>
               <span className="font-bold text-[#80734f] dark:text-[#d0c8a5]">{formatCurrency(maxPrice)}</span>
@@ -237,7 +237,7 @@ export const Storefront: React.FC<StorefrontProps> = ({
                 value={maxPrice}
                 onChange={(e) => setMaxPrice(Number(e.target.value))}
                 aria-label={`${t('maxPrice')}: ${formatCurrency(maxPrice)}`}
-                className="w-24 md:w-32 accent-[var(--shopniro-orange)] cursor-pointer"
+                className="min-w-0 flex-1 cursor-pointer accent-[var(--shopniro-orange)] sm:w-24 sm:flex-none md:w-32"
               />
             </div>
           </div>
@@ -283,7 +283,7 @@ export const Storefront: React.FC<StorefrontProps> = ({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl border border-success-200 bg-success-50/80 px-4 py-3 text-xs text-success-900 dark:border-success-900/60 dark:bg-success-950 dark:text-success-200">
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 rounded-xl border border-success-200 bg-success-50/80 px-3 py-2 text-xs sm:px-4 sm:py-3 text-success-900 dark:border-success-900/60 dark:bg-success-950 dark:text-success-200">
         <span className="inline-flex items-center gap-2 font-semibold"><Truck className="h-4 w-4" />{t('freeShipping')} {money(400)}+</span>
         <span className="inline-flex items-center gap-2"><Tag className="h-3.5 w-3.5" />{t('automaticSavings')} {money(500)}+</span>
       </div>
@@ -348,13 +348,16 @@ export const Storefront: React.FC<StorefrontProps> = ({
       )}
 
       {/* Schema-Powered Top Charts, Top Sellers, and Trending Products */}
-      <React.Suspense fallback={<div aria-hidden="true" className="premium-skeleton h-72 rounded-2xl" />}>
-        <MarketplaceTrendsTopCharts
-          allProducts={products}
-          onSelectProduct={onSelectProduct}
-          onAddToCart={onAddToCart}
-        />
-      </React.Suspense>
+      {/* On phones these charts are about 850px tall, so they come after the product list instead of before it. */}
+      <div className="max-md:order-last">
+        <React.Suspense fallback={<div aria-hidden="true" className="premium-skeleton h-72 rounded-2xl" />}>
+          <MarketplaceTrendsTopCharts
+            allProducts={products}
+            onSelectProduct={onSelectProduct}
+            onAddToCart={onAddToCart}
+          />
+        </React.Suspense>
+      </div>
 
       {/* Product Grid Header */}
       {/* Product Grid */}
@@ -366,17 +369,17 @@ export const Storefront: React.FC<StorefrontProps> = ({
         </div>
       )}
       {isLoading ? (
-        <div role="status" aria-label={t('loadingProducts')} aria-busy="true" className="grid auto-rows-fr grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        <div role="status" aria-label={t('loadingProducts')} aria-busy="true" className="grid auto-rows-fr grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
           {Array.from({ length: 8 }, (_, index) => (
             <div key={index} className="premium-card flex h-full min-w-0 flex-col overflow-hidden rounded-xl">
-              <div className="premium-skeleton aspect-[4/5] w-full" />
-              <div className="flex flex-1 flex-col justify-between space-y-3 p-4">
+              <div className="premium-skeleton aspect-square w-full sm:aspect-[4/5]" />
+              <div className="flex flex-1 flex-col justify-between space-y-3 p-3 sm:p-4">
                 <div className="premium-skeleton h-3 w-1/3 rounded-full" />
                 <div className="premium-skeleton h-4 w-4/5 rounded-full" />
                 <div className="premium-skeleton h-3 w-2/3 rounded-full" />
-                <div className="flex items-center justify-between pt-2">
+                <div className="flex flex-col gap-2 pt-2 sm:flex-row sm:items-center sm:justify-between">
                   <div className="premium-skeleton h-5 w-20 rounded-full" />
-                  <div className="premium-skeleton h-9 w-24 rounded-full" />
+                  <div className="premium-skeleton h-9 w-full rounded-full sm:w-24" />
                 </div>
               </div>
             </div>
@@ -410,10 +413,11 @@ export const Storefront: React.FC<StorefrontProps> = ({
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredProducts.map((prod) => (
+        <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-3 xl:grid-cols-4">
+          {filteredProducts.map((prod, index) => (
             <ProductCard
               key={prod.Product_ID}
+              index={index}
               product={prod}
               category={categories.find((c) => c.Category_ID === prod.Category_ID)}
               seller={sellers.find((s) => s.Seller_ID === prod.Seller_ID)}

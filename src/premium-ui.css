@@ -1,0 +1,128 @@
+/*
+ * Premium interaction layer: buttons, press feedback and entrance motion.
+ *
+ * Kept in its own cascade layer after Tailwind's utilities (and after glass), so it refines the shared control classes
+ * (premium-button, luxury-control) without editing every component. Hover effects are limited to devices that can
+ * hover, so a tap on a phone never leaves a button stuck in its hover state, and everything here stops under
+ * reduced motion.
+ */
+@layer theme, base, components, utilities, glass, polish;
+
+@layer polish {
+  /* ---- Primary button ------------------------------------------------------------------------------------ */
+  .premium-button {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    /* A lit top edge and a deeper base make the button feel raised rather than flat. */
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.28) inset,
+      0 -1px 0 rgba(0, 0, 0, 0.18) inset,
+      0 14px 28px -14px rgba(52, 40, 20, 0.5);
+  }
+
+  /* One soft band of light that passes over the button on hover, then rests. It is a transition, not a loop. */
+  .premium-button::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, 0.28) 50%, transparent 70%);
+    transform: translateX(-120%);
+    transition: transform 650ms cubic-bezier(0.22, 1, 0.36, 1);
+    pointer-events: none;
+  }
+
+  @media (hover: hover) {
+    .premium-button:not(:disabled):hover::after {
+      transform: translateX(120%);
+    }
+  }
+
+  .premium-button:not(:disabled):active {
+    transform: translateY(0) scale(0.97);
+    filter: brightness(0.96);
+    transition-duration: 90ms;
+  }
+
+  /* On touch screens the hover lift would stick after a tap, so it only applies where hovering is real. */
+  @media (hover: none) {
+    .premium-button:hover {
+      transform: none;
+      filter: none;
+    }
+  }
+
+  .premium-button:focus-visible,
+  .luxury-control:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-white, #fff), 0 0 0 4px rgba(179, 157, 115, 0.85);
+  }
+
+  html.dark .premium-button:focus-visible,
+  html.dark .luxury-control:focus-visible {
+    box-shadow: 0 0 0 2px #0b0e13, 0 0 0 4px rgba(208, 200, 165, 0.8);
+  }
+
+  .premium-button:disabled {
+    filter: saturate(0.5) brightness(0.95);
+    box-shadow: none;
+    cursor: not-allowed;
+  }
+
+  /* ---- Secondary controls --------------------------------------------------------------------------------- */
+  .luxury-control {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  @media (hover: hover) {
+    .luxury-control:not(:disabled):hover {
+      transform: translateY(-1px);
+    }
+  }
+
+  .luxury-control:not(:disabled):active {
+    transform: scale(0.96);
+    transition-duration: 90ms;
+  }
+
+  .luxury-control:disabled {
+    cursor: not-allowed;
+  }
+
+  /* ---- Product cards ------------------------------------------------------------------------------------- */
+  /* Cards rise and settle when the list appears. The delay is set per card (--card-index) and capped, so the first
+     screenful staggers in and a long list never makes anyone wait. */
+  @keyframes card-rise {
+    from {
+      opacity: 0;
+      transform: translateY(14px) scale(0.985);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .card-rise {
+    /* backwards, not both: once it has finished, the card's own hover lift must still be able to move it. */
+    animation: card-rise 520ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+    animation-delay: calc(min(var(--card-index, 0), 7) * 55ms);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card-rise {
+      animation: none;
+    }
+
+    .premium-button::after {
+      display: none;
+    }
+
+    .premium-button,
+    .luxury-control {
+      transition: none;
+    }
+  }
+}
