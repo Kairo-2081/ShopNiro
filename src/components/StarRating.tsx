@@ -9,7 +9,7 @@ interface StarRatingProps {
   interactive?: boolean;
   onRatingChange?: (rating: number) => void;
   showText?: boolean;
-  /** On phones, show only a number (never the long "no reviews yet" sentence), so a narrow card does not wrap it. */
+  /** On phones, show only a number (the long "no reviews yet" sentence is left out; the empty stars already say it). */
   compactText?: boolean;
   totalReviews?: number;
 }
@@ -93,7 +93,7 @@ export const StarRating: React.FC<StarRatingProps> = ({
 
       {showText && (
         <span className="text-xs font-medium text-surface-600 dark:text-surface-400">
-          {rating > 0 ? rating.toFixed(1) : <span className={compactText ? 'hidden sm:inline' : undefined}>{t('noRatings')}</span>}
+          {rating > 0 ? rating.toFixed(1) : <span className={compactText ? 'hidden' : undefined}>{t('noRatings')}</span>}
           {totalReviews !== undefined && totalReviews > 0 && ` (${totalReviews})`}
         </span>
       )}
