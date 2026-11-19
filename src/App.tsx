@@ -1109,7 +1109,7 @@ export default function App() {
               : 'border-warning-500/25 bg-warning-500/10 text-warning-800 dark:text-warning-200';
           const Icon = toast.tone === 'error' ? AlertCircle : toast.tone === 'success' ? CheckCircle2 : Info;
           return (
-            <div key={toast.id} role={toast.tone === 'error' ? 'alert' : 'status'} className={`premium-card flex items-start gap-3 rounded-xl border p-3.5 text-xs font-semibold shadow-xl backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-200 ${toneClass}`}>
+            <div key={toast.id} role={toast.tone === 'error' ? 'alert' : 'status'} className={`premium-card flex items-start gap-3 rounded-xl border p-3.5 text-xs font-semibold shadow-xl backdrop-blur-md toast-in ${toneClass}`}>
               <Icon className="mt-0.5 h-4 w-4 shrink-0" />
               <span className="min-w-0 flex-1">{toast.message}</span>
               <button type="button" onClick={() => setToastMessages((current) => current.filter((item) => item.id !== toast.id))} aria-label="Dismiss notification" className="rounded-full p-1 opacity-70 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5]">
