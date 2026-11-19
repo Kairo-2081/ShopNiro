@@ -1109,7 +1109,7 @@ export default function App() {
               : 'border-warning-500/25 bg-warning-500/10 text-warning-800 dark:text-warning-200';
           const Icon = toast.tone === 'error' ? AlertCircle : toast.tone === 'success' ? CheckCircle2 : Info;
           return (
-            <div key={toast.id} role={toast.tone === 'error' ? 'alert' : 'status'} className={`premium-card flex items-start gap-3 rounded-xl border p-3.5 text-xs font-semibold shadow-xl backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-200 ${toneClass}`}>
+            <div key={toast.id} role={toast.tone === 'error' ? 'alert' : 'status'} className={`premium-card flex items-start gap-3 rounded-xl border p-3.5 text-xs font-semibold shadow-xl backdrop-blur-md toast-in ${toneClass}`}>
               <Icon className="mt-0.5 h-4 w-4 shrink-0" />
               <span className="min-w-0 flex-1">{toast.message}</span>
               <button type="button" onClick={() => setToastMessages((current) => current.filter((item) => item.id !== toast.id))} aria-label="Dismiss notification" className="rounded-full p-1 opacity-70 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5]">
@@ -1238,7 +1238,7 @@ export default function App() {
 
         {/* Marketplace Top Charts & Trends Tab */}
         {activeTab === 'charts' && (
-          <div className="space-y-6 animate-in fade-in-50 duration-200">
+          <div className="space-y-6 view-enter">
             <MarketplaceTrendsTopCharts
               onSelectProduct={(p) => setSelectedProductForDetail(p)}
               onAddToCart={handleAddToCart}
@@ -1288,7 +1288,7 @@ export default function App() {
 
         {/* OpenStreetMap delivery tracking tab */}
         {activeTab === 'live-tracking' && (
-          <div className="space-y-6 animate-in fade-in-50 duration-200">
+          <div className="space-y-6 view-enter">
             <div className="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-[#12161D] p-6 rounded-3xl border border-brand-100 dark:border-surface-800 shadow-xl">
               <div>
                 <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-brand-950/80 text-brand-400 text-micro font-bold tracking-wider uppercase border border-brand-800/40 mb-2">

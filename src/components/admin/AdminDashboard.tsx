@@ -316,7 +316,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     <div className="space-y-6 pb-16 text-surface-900 dark:text-surface-100">
       {/* Toast Feedback */}
       {feedbackMsg && (
-        <div role={feedbackTone === 'error' ? 'alert' : 'status'} className={`fixed right-4 top-20 z-50 flex items-center gap-2 rounded-xl border px-4 py-3 text-xs font-semibold shadow-xl backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-200 sm:right-6 ${feedbackTone === 'error' ? 'border-danger-500/20 bg-danger-500/10 text-danger-700 dark:text-danger-300' : 'border-success-500/20 bg-success-500/10 text-success-800 dark:text-success-300'}`}>
+        <div role={feedbackTone === 'error' ? 'alert' : 'status'} className={`fixed right-4 top-20 z-50 flex items-center gap-2 rounded-xl border px-4 py-3 text-xs font-semibold shadow-xl backdrop-blur-md toast-in sm:right-6 ${feedbackTone === 'error' ? 'border-danger-500/20 bg-danger-500/10 text-danger-700 dark:text-danger-300' : 'border-success-500/20 bg-success-500/10 text-success-800 dark:text-success-300'}`}>
           {feedbackTone === 'error' ? <AlertCircle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
           <span>{feedbackMsg}</span>
         </div>
@@ -957,7 +957,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       {/* Tab 5: Online Payment Transactions Ledger */}
       {adminTab === 'payments' && (
-        <div className="space-y-6 animate-in fade-in duration-200">
+        <div className="view-enter space-y-6">
           {/* Summary KPIs */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white dark:bg-[#12161D] border border-brand-100 dark:border-brand-500/20 rounded-3xl p-5 shadow-xs flex flex-col justify-between">
@@ -1155,7 +1155,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
       {selectedSeller && (
         <div
-          className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-black/75 p-4 backdrop-blur-md animate-in fade-in duration-150"
+          className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-black/75 p-4 backdrop-blur-md duration-150"
           onClick={(event) => {
             if (event.target === event.currentTarget) setSelectedSellerId(null);
           }}
@@ -1166,7 +1166,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             aria-modal="true"
             aria-labelledby="seller-application-title"
             tabIndex={-1}
-            className="my-auto w-full max-w-xl overflow-hidden rounded-2xl border border-brand-100 bg-white shadow-2xl ring-2 ring-white/10 animate-in fade-in slide-in-from-bottom-2 duration-200 dark:border-brand-500/20 dark:bg-[#12161D]"
+            className="my-auto w-full max-w-xl overflow-hidden rounded-2xl border border-brand-100 bg-white shadow-2xl ring-2 ring-white/10 duration-200 dark:border-brand-500/20 dark:bg-[#12161D]"
           >
             <header className="flex items-start justify-between gap-4 border-b border-surface-200 p-5 dark:border-surface-800">
               <div className="flex min-w-0 items-center gap-3">

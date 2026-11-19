@@ -18,7 +18,7 @@ export const AuthenticationGuard: React.FC<AuthenticationGuardProps> = ({
   const { t } = useLocale();
 
   return (
-    <div className="max-w-xl mx-auto my-12 p-8 bg-white dark:bg-[#12161D] border border-brand-100 dark:border-brand-500/20 rounded-3xl shadow-xl text-center space-y-6 animate-in fade-in duration-200">
+    <div className="max-w-xl mx-auto my-12 p-8 bg-white dark:bg-[#12161D] border border-brand-100 dark:border-brand-500/20 rounded-3xl shadow-xl text-center space-y-6 duration-200">
       <div className="w-16 h-16 mx-auto rounded-2xl bg-brand-500/10 text-brand-500 flex items-center justify-center border border-brand-500/20 shadow-inner">
         <Lock className="w-8 h-8" />
       </div>
