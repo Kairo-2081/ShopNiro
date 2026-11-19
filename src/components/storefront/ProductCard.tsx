@@ -186,19 +186,18 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         </div>
 
         {/* Price & Action */}
-        <div className="mt-3 flex flex-col gap-2.5 border-t border-surface-100 pt-3 dark:border-surface-800 sm:mt-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-3 flex items-end justify-between gap-2 sm:mt-4">
           <div>
-            <span className="hidden text-micro font-semibold uppercase tracking-wider text-surface-500 dark:text-surface-500 sm:block">{t('price')}</span>
-            {hasActiveVoucher ? (
+                        {hasActiveVoucher ? (
               <>
                 <span className="block text-micro text-surface-500 line-through dark:text-surface-500">{formatCurrency(Number(product.Price) || 0)}</span>
-                <span className="text-base font-black text-surface-900 dark:text-white">
+                <span className="text-base font-extrabold tabular-nums tracking-tight text-surface-900 dark:text-white sm:text-lg">
                   {formatCurrency(discountedPriceForVoucher(Number(product.Price) || 0, product.Voucher))}
                 </span>
                 <span className="block text-micro font-medium text-success-700 dark:text-success-300">{product.Voucher}</span>
               </>
             ) : (
-              <span className="text-base font-black text-surface-900 dark:text-white">
+              <span className="text-base font-extrabold tabular-nums tracking-tight text-surface-900 dark:text-white sm:text-lg">
                 {formatCurrency(Number(product.Price) || 0)}
               </span>
             )}
