@@ -15,6 +15,8 @@ interface ProductCardProps {
   onAddToCart: (product: Product, e: React.MouseEvent) => void;
   isWishlisted?: boolean;
   onToggleWishlist?: (product: Product) => void;
+  /** Position in the list, used only to stagger the entrance. */
+  index?: number;
 }
 
 export const ProductCard: React.FC<ProductCardProps> = ({
@@ -26,6 +28,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   onAddToCart,
   isWishlisted = false,
   onToggleWishlist,
+  index = 0,
 }) => {
   const { t } = useLocale();
   const [imgError, setImgError] = React.useState(false);
@@ -78,7 +81,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       ref={cardRef}
       data-testid="product-card"
       data-product-id={product.Product_ID}
-      className="product-card group relative bg-[linear-gradient(180deg,rgba(246,245,239,0.98),rgba(228,226,213,0.96))] dark:bg-[linear-gradient(180deg,#292821,#151510)] rounded-2xl border border-[#d0c8a5]/20 dark:border-[#d0c8a5]/10 shadow-[0_18px_45px_rgba(6,6,4,0.18)] hover:shadow-[0_28px_60px_rgba(7,7,5,0.24)] hover:border-[#a99b72]/50 overflow-hidden flex flex-col"
+      style={{ '--card-index': index } as React.CSSProperties}
+      className="product-card card-rise group relative bg-[linear-gradient(180deg,rgba(246,245,239,0.98),rgba(228,226,213,0.96))] dark:bg-[linear-gradient(180deg,#292821,#151510)] rounded-2xl border border-[#d0c8a5]/20 dark:border-[#d0c8a5]/10 shadow-[0_18px_45px_rgba(6,6,4,0.18)] hover:shadow-[0_28px_60px_rgba(7,7,5,0.24)] hover:border-[#a99b72]/50 overflow-hidden flex flex-col"
     >
       {/* Product Image */}
       <div className="relative aspect-square w-full bg-surface-100 sm:aspect-[4/5] dark:bg-[#0C1014] overflow-hidden">
