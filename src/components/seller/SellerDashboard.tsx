@@ -29,6 +29,7 @@ import { StatTile } from '../charts/StatTile';
 import { ChartPanel } from '../charts/ChartPanel';
 import { DeltaChip } from '../charts/DeltaChip';
 import { SellerFulfilmentFunnel } from './SellerFulfilmentFunnel';
+import { RangeMonths, RangeSelector } from '../charts/RangeSelector';
 import { percentChange, sum } from '../charts/format';
 
 // Recharts is large; load it only when a seller opens the analytics tab.
@@ -203,10 +204,6 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
     const sellerItems = order.Items.filter((i) => i.Seller_ID === currentSeller.Seller_ID);
     return sum + sellerItems.reduce((acc, item) => acc + item.Price * item.Quantity, 0);
   }, 0);
-  const sellerUnitsSold = billableSellerOrders.reduce((total, order) => total + order.Items
-    .filter((item) => item.Seller_ID === currentSeller.Seller_ID)
-    .reduce((units, item) => units + Math.max(0, Number(item.Quantity) || 0), 0), 0);
-  const averageSellerOrderValue = billableSellerOrders.length ? totalSalesRevenue / billableSellerOrders.length : 0;
 
   const sellerProductPerformance = (() => {
     const totals = new Map<string, { units: number; revenue: number }>();
@@ -249,15 +246,17 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
     return { product, categoryMedian, effectivePrice, variance };
   });
 
+  const [analyticsRange, setAnalyticsRange] = React.useState<RangeMonths>(6);
   const recentMonthlySales = (() => {
     const now = new Date();
-    const months = Array.from({ length: 6 }, (_, index) => {
-      const date = new Date(now.getFullYear(), now.getMonth() - 5 + index, 1);
+    const months = Array.from({ length: analyticsRange }, (_, index) => {
+      const date = new Date(now.getFullYear(), now.getMonth() - (analyticsRange - 1) + index, 1);
       return {
         key: `${date.getFullYear()}-${date.getMonth()}`,
         label: date.toLocaleDateString(undefined, { month: 'short' }),
         revenue: 0,
         orders: 0,
+        units: 0,
       };
     });
     const monthMap = new Map(months.map((month) => [month.key, month]));
@@ -267,12 +266,19 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
       const month = monthMap.get(`${date.getFullYear()}-${date.getMonth()}`);
       if (!month) return;
       month.orders += 1;
+      month.units += order.Items.filter((item) => item.Seller_ID === currentSeller.Seller_ID).reduce((total, item) => total + Math.max(0, Number(item.Quantity) || 0), 0);
       month.revenue += order.Items
         .filter((item) => item.Seller_ID === currentSeller.Seller_ID)
         .reduce((sum, item) => sum + Math.max(0, Number(item.Price) || 0) * Math.max(0, Number(item.Quantity) || 0), 0);
     });
     return months;
   })();
+  const halfRange = Math.max(1, Math.floor(analyticsRange / 2));
+  const recentHalf = (pick: (month: (typeof recentMonthlySales)[number]) => number) => sum(recentMonthlySales.slice(-halfRange).map(pick));
+  const earlierHalf = (pick: (month: (typeof recentMonthlySales)[number]) => number) => sum(recentMonthlySales.slice(0, halfRange).map(pick));
+  const windowRevenue = sum(recentMonthlySales.map((month) => month.revenue));
+  const windowUnits = sum(recentMonthlySales.map((month) => month.units));
+  const windowOrders = sum(recentMonthlySales.map((month) => month.orders));
   const monthlySalesChange = percentChange(recentMonthlySales[recentMonthlySales.length - 1]?.revenue ?? 0, recentMonthlySales[0]?.revenue ?? 0);
 
   const avgSellerRating =
@@ -710,7 +716,14 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
       )}
 
       {activeTab === 'analytics' && (
-        <Section title="Sales Analytics" description="Sales, product performance, and pricing guidance for your store." className="space-y-4">
+        <Section
+          title="Sales Analytics"
+          description={t('sellerAnalyticsSubtitle')}
+          action={<RangeSelector value={analyticsRange} onChange={setAnalyticsRange} />}
+          className="space-y-5"
+          headingClassName="font-display text-3xl font-normal text-[var(--chart-ink)] sm:text-4xl"
+          descriptionClassName="mt-1.5 text-base text-[var(--chart-axis)]"
+        >
           {isLoadingAnalytics && (
             <div role="status" aria-label="Loading seller analytics" aria-busy="true" className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="premium-skeleton h-56 rounded-2xl" />
@@ -721,27 +734,38 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <StatTile
               label="Net product sales"
-              value={formatCurrency(totalSalesRevenue)}
-              count={{ value: totalSalesRevenue, format: formatCurrency }}
+              value={formatCurrency(windowRevenue)}
+              count={{ value: windowRevenue, format: formatCurrency }}
               note="Excludes cancelled and refunded orders"
               trend={recentMonthlySales.some((month) => month.revenue > 0) ? recentMonthlySales.map((month) => month.revenue) : undefined}
-              change={percentChange(sum(recentMonthlySales.slice(3).map((month) => month.revenue)), sum(recentMonthlySales.slice(0, 3).map((month) => month.revenue)))}
-              comparison={t('chartVsPrevious3')}
+              change={percentChange(recentHalf((month) => month.revenue), earlierHalf((month) => month.revenue))}
+              comparison={t('sellerVsEarlier')}
             />
-            <StatTile label="Units sold" value={sellerUnitsSold.toLocaleString()} count={{ value: sellerUnitsSold, format: (n) => Math.round(n).toLocaleString() }} note={`${billableSellerOrders.length} eligible orders`} accent="var(--chart-cat-2)" />
+            <StatTile
+              label="Units sold"
+              value={windowUnits.toLocaleString()}
+              count={{ value: windowUnits, format: (n) => Math.round(n).toLocaleString() }}
+              note={`${windowOrders.toLocaleString()} eligible orders`}
+              accent="var(--chart-cat-2)"
+              trend={recentMonthlySales.some((month) => month.units > 0) ? recentMonthlySales.map((month) => month.units) : undefined}
+              change={percentChange(recentHalf((month) => month.units), earlierHalf((month) => month.units))}
+              comparison={t('sellerVsEarlier')}
+            />
             <StatTile
               label="Average order value"
-              value={formatCurrency(averageSellerOrderValue)}
-              count={{ value: averageSellerOrderValue, format: formatCurrency }}
+              value={formatCurrency(windowOrders ? windowRevenue / windowOrders : 0)}
+              count={{ value: windowOrders ? windowRevenue / windowOrders : 0, format: formatCurrency }}
               note="Across eligible seller orders"
               accent="var(--chart-cat-3)"
               trend={recentMonthlySales.some((month) => month.orders > 0) ? recentMonthlySales.map((month) => (month.orders ? month.revenue / month.orders : 0)) : undefined}
+              change={percentChange(recentHalf((month) => month.revenue) / Math.max(1, recentHalf((month) => month.orders)), earlierHalf((month) => month.revenue) / Math.max(1, earlierHalf((month) => month.orders)))}
+              comparison={t('sellerVsEarlier')}
             />
             <StatTile label="Product rating" value={avgSellerRating ? avgSellerRating.toFixed(1) : 'No ratings'} after={avgSellerRating ? <span aria-label="out of 5" className="text-lg text-[var(--chart-cat-5)]">★</span> : undefined} progress={avgSellerRating ? (avgSellerRating / 5) * 100 : undefined} note={`${sellerReviews.length} customer reviews`} accent="var(--chart-cat-5)" />
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-            <ChartPanel className="lg:col-span-2" headingId="seller-monthly-sales-title" title={t('monthlySales')} subtitle={t('productRevenueLastSix')} featured actions={monthlySalesChange === null ? undefined : (<span className="inline-flex items-center gap-2 text-sm text-[var(--chart-axis)]"><DeltaChip change={monthlySalesChange} comparison={`since ${recentMonthlySales[0]?.label ?? ''}`} />{`since ${recentMonthlySales[0]?.label ?? ''}`}</span>)}>
+            <ChartPanel className="lg:col-span-2" headingId="seller-monthly-sales-title" title={t('monthlySales')} subtitle={t('productRevenueLastN', { count: analyticsRange })} featured actions={monthlySalesChange === null ? undefined : (<span className="inline-flex items-center gap-2 text-sm text-[var(--chart-axis)]"><DeltaChip change={monthlySalesChange} comparison={`since ${recentMonthlySales[0]?.label ?? ''}`} />{`since ${recentMonthlySales[0]?.label ?? ''}`}</span>)}>
               <div>
                 <React.Suspense fallback={<div aria-hidden="true" className="premium-skeleton h-[220px] rounded-xl" />}>
                   <MonthlyBarChart
@@ -809,7 +833,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                 <p className="py-10 text-center text-xs text-[var(--chart-axis)]">{t('salesAnalyticsEligibleOrder')}</p>
               )}
             </ChartPanel>
-            <div className="min-w-0 lg:col-span-2"><SellerFulfilmentFunnel orders={sellerOrders} /></div>
+            <div className="min-w-0 lg:col-span-2"><SellerFulfilmentFunnel orders={sellerOrders} months={analyticsRange} /></div>
           </div>
           <section className="chart-card overflow-x-auto rounded-2xl">
             <div className="p-5">
