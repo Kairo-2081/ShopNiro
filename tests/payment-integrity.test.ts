@@ -1175,7 +1175,36 @@ dbTest('checkout rolls back order, stock, and cart when a follow-up write fails'
     assert.equal(cancellation.status, 404);
     assert.equal(list.status, 200);
     assert.equal(list.body.some((order: any) => order.Order_ID === orderId), false);
-    assert.equal(transactions.status, 403);
+    assert.equal(transactions.status, 200);
+    assert.equal(transactions.body.rows.some((row: any) => row.id === orderId), false);
+  });
+
+  dbTest('transactions are private: the admin gets none and a customer sees only their own', async () => {
+    const ownerId = `CUSTOMER-${randomUUID()}`;
+    const otherId = `CUSTOMER-${randomUUID()}`;
+    const adminId = `admin-${randomUUID()}`;
+    const orderId = `ORD-${randomUUID()}`;
+    await createCustomer(ownerId);
+    await createCustomer(otherId);
+    await createTestUser('admin', adminId);
+    await createOrder(ownerId, orderId);
+    const ownerCookie = await createSession('customer', ownerId);
+    const otherCookie = await createSession('customer', otherId);
+    const adminCookie = await createSession('admin', adminId);
+
+    const asAdmin = await request(server, '/api/payment/transactions', 'GET', undefined, adminCookie);
+    const asOwner = await request(server, '/api/payment/transactions', 'GET', undefined, ownerCookie);
+    const asOther = await request(server, '/api/payment/transactions', 'GET', undefined, otherCookie);
+
+    assert.equal(asAdmin.status, 403);
+    assert.equal(asOwner.status, 200);
+    assert.equal(asOwner.body.role, 'customer');
+    assert.equal(asOwner.body.rows.some((row: any) => row.id === orderId), true);
+    assert.equal(asOther.body.rows.length, 0);
+    const text = JSON.stringify(asOwner.body);
+    for (const leaked of ['gateway_session', 'customer_phone', 'card_issuer', 'val_id', 'bank_tran_id']) {
+      assert.equal(text.includes(leaked), false, `${leaked} must not be returned`);
+    }
   });
 
   dbTest('seller approval requires the verification checklist', async () => {

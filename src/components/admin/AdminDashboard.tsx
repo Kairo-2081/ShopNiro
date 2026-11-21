@@ -1,10 +1,10 @@
 import React from 'react';
 import { Seller, Product, Order, Category, Review, SellerStatus, ProductStatus, OrderCancellationRequest, SupportRequest, AdminDashboardTab } from '../../types';
-import { api, formatCurrency, formatBDT, formatDate } from '../../lib/api';
+import { api, formatCurrency, formatDate } from '../../lib/api';
 import { RiderApplicationsPanel } from './RiderApplicationsPanel';
 import { AdminMarketplaceMetrics } from './AdminMarketplaceMetrics';
 import { Section } from '../Section';
-import { ShieldCheck, Store, FolderTree, CheckCircle2, Clock, Plus, Edit, Trash2, Search, Lock, RefreshCw, ExternalLink, X, AlertCircle } from 'lucide-react';
+import { ShieldCheck, Store, FolderTree, CheckCircle2, Clock, Plus, Edit, Trash2, Search, RefreshCw, ExternalLink, X, AlertCircle } from 'lucide-react';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { fallbackToBrandLogo } from '../../lib/branding';
@@ -60,6 +60,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const { t } = useLocale();
   const adminTab = activeTab;
   const setAdminTab = setActiveTab;
+  // The overview shows the sellers that need a decision first and stops at six, so the card stays the height of the page
+  // beside it. The full list is one click away under Merchant approvals.
+  const overviewSellers = React.useMemo(
+    () => [...sellers].sort((a, b) => Number(b.Status === 'pending') - Number(a.Status === 'pending')).slice(0, 6),
+    [sellers]
+  );
   const [newCategoryName, setNewCategoryName] = React.useState('');
   const [editingCategoryId, setEditingCategoryId] = React.useState<string | null>(null);
   const [editingCategoryName, setEditingCategoryName] = React.useState('');
@@ -73,12 +79,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   useEscapeKey(() => setSelectedSellerId(null), Boolean(selectedSellerId));
   const sellerDialogRef = useFocusTrap<HTMLElement>(Boolean(selectedSellerId));
   const [sellerChecklist, setSellerChecklist] = React.useState({ identityVerified: false, documentsReviewed: false, payoutVerified: false });
-  const [transactions, setTransactions] = React.useState<any[]>([]);
-  const [loadingTransactions, setLoadingTransactions] = React.useState(false);
   const [sellerPayouts, setSellerPayouts] = React.useState<any[]>([]);
   const [payoutReferences, setPayoutReferences] = React.useState<Record<string, string>>({});
   const [loadingPayouts, setLoadingPayouts] = React.useState(false);
-  const [paymentFilter, setPaymentFilter] = React.useState<string>('all');
   const [cancellationRequests, setCancellationRequests] = React.useState<OrderCancellationRequest[]>([]);
   const [loadingCancellations, setLoadingCancellations] = React.useState(false);
   const [reviewingCancellationId, setReviewingCancellationId] = React.useState<string | null>(null);
@@ -88,24 +91,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [savingSupportId, setSavingSupportId] = React.useState<string | null>(null);
   const [supportStatuses, setSupportStatuses] = React.useState<Record<string, SupportRequest['Status']>>({});
   const [supportNotes, setSupportNotes] = React.useState<Record<string, string>>({});
-  const filteredTransactions = transactions.filter((transaction) => {
-    if (paymentFilter === 'all') return true;
-    if (paymentFilter === 'cards') return ['visa_mastercard', 'visa', 'mastercard', 'amex'].includes(String(transaction.payment_method).toLowerCase());
-    return String(transaction.payment_method).toLowerCase() === paymentFilter;
-  });
-  const paymentChannelLabel = (method: string) => method === 'visa_mastercard' ? 'Cards' : method.replaceAll('_', ' ');
-
-  const fetchTransactions = async () => {
-    setLoadingTransactions(true);
-    try {
-      setTransactions(await api.getPaymentTransactions());
-    } catch (err: any) {
-      console.error('Failed to load transactions:', err);
-    } finally {
-      setLoadingTransactions(false);
-    }
-  };
-
   const fetchSellerPayouts = async () => {
     setLoadingPayouts(true);
     try {
@@ -138,7 +123,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   React.useEffect(() => {
     if (adminTab === 'payments') {
-      fetchTransactions();
       void fetchSellerPayouts();
     }
   }, [adminTab]);
@@ -223,7 +207,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     (sum, product) => sum + Math.max(Number(product.Price) || 0, 0) * Math.max(Number(product.Stock) || 0, 0),
     0
   );
-  const totalOrderVolume = orders.reduce((sum, order) => sum + order.Subtotal + order.Shipping_Fee, 0);
   // With no reviews there is no average: show that, instead of an invented score.
   const avgSentiment = reviews.length > 0 ? reviews.reduce((sum, r) => sum + r.Rating, 0) / reviews.length : null;
 
@@ -482,7 +465,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-brand-100/60 dark:divide-surface-800/80 text-surface-700 dark:text-surface-300">
-                  {sellers.map((seller) => (
+                  {overviewSellers.map((seller) => (
                     <tr key={seller.Seller_ID} className="hover:bg-surface-50 dark:hover:bg-[#181F2A]/60 transition-colors">
                       <td className="px-6 py-4">
                         <button
@@ -556,7 +539,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
 
           {/* Side Info Panels (Span 4) */}
-          <div className="col-span-12 lg:col-span-4 space-y-6">
+          <div className="col-span-12 flex flex-col gap-6 lg:col-span-4">
             {/* System Activity Log */}
             <div className="bg-white dark:bg-[#12161D] border border-brand-100 dark:border-brand-500/20 rounded-3xl p-6 flex flex-col justify-between shadow-xs">
               <h2 className="text-sm font-semibold text-surface-900 dark:text-white border-b border-brand-100 dark:border-surface-800 pb-3">
@@ -962,183 +945,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         </div>
       )}
 
-      {/* Tab 5: Online Payment Transactions Ledger */}
+      {/* Tab 5: seller payout approvals. The admin does not see customers' or sellers' transactions. */}
       {adminTab === 'payments' && (
         <div className="view-enter space-y-6">
-          {/* Summary KPIs */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white dark:bg-[#12161D] border border-brand-100 dark:border-brand-500/20 rounded-3xl p-5 shadow-xs flex flex-col justify-between">
-              <div>
-                <span className="text-micro font-bold text-surface-500 dark:text-surface-500 uppercase tracking-wider block">
-                  {t('totalOrderVolume')}
-                </span>
-                <div className="text-2xl font-black text-surface-900 dark:text-white mt-1">
-                  {formatBDT(totalOrderVolume)}
-                </div>
-              </div>
-              <span className="text-micro text-success-500 font-semibold mt-2">
-                {t('totalOrderVolumeDesc')}
-              </span>
-            </div>
-
-            <div className="bg-white dark:bg-[#12161D] border border-brand-100 dark:border-brand-500/20 rounded-3xl p-5 shadow-xs flex flex-col justify-between">
-              <div>
-                <span className="text-micro font-bold text-surface-500 dark:text-surface-500 uppercase tracking-wider block">
-                  bKash Transactions
-                </span>
-                <div className="text-2xl font-black text-[#E2136E] mt-1">
-                  {transactions.filter((t) => t.payment_method === 'bkash').length || orders.filter((o) => o.Payment_Method === 'bkash').length}
-                </div>
-              </div>
-              <span className="text-micro text-pink-600 dark:text-pink-400 font-semibold mt-2">
-                {t('officialMfsPartner')}
-              </span>
-            </div>
-
-            <div className="bg-white dark:bg-[#12161D] border border-brand-100 dark:border-brand-500/20 rounded-3xl p-5 shadow-xs flex flex-col justify-between">
-              <div>
-                <span className="text-micro font-bold text-surface-500 dark:text-surface-500 uppercase tracking-wider block">
-                  Cards &amp; Other MFS
-                </span>
-                <div className="text-2xl font-black text-brand-500 mt-1">
-                  {transactions.filter((t) => t.payment_method !== 'bkash' && t.payment_method !== 'cash_on_delivery').length}
-                </div>
-              </div>
-              <span className="text-micro text-surface-500 dark:text-surface-400 mt-2">
-                Nagad, Rocket &amp; Visa/Mastercard
-              </span>
-            </div>
-
-            <div className="bg-white dark:bg-[#12161D] border border-brand-100 dark:border-brand-500/20 rounded-3xl p-5 shadow-xs flex flex-col justify-between">
-              <div>
-                <span className="text-micro font-bold text-surface-500 dark:text-surface-500 uppercase tracking-wider block">
-                  {t('gatewayStatus')}
-                </span>
-                <div className="text-sm font-black text-success-500 mt-1 flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-success-500 animate-pulse"></span>
-                  <span>ONLINE (SANDBOX ACTIVE)</span>
-                </div>
-              </div>
-              <span className="text-micro text-surface-400 font-mono mt-2">Store ID: testbox</span>
-            </div>
-          </div>
-
-          {/* Transactions Table Container */}
-          <div className="bg-white dark:bg-[#12161D] border border-brand-100 dark:border-brand-500/20 rounded-3xl overflow-hidden shadow-xs">
-            <div className="p-6 border-b border-brand-100 dark:border-surface-800 flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <h2 className="text-sm font-bold text-surface-900 dark:text-white flex items-center gap-2">
-                  <Lock className="w-4 h-4 text-success-500" />
-                  {t('onlineTxnLedger')}
-                </h2>
-                <p className="text-micro text-surface-500 dark:text-surface-400 mt-0.5">
-                  {t('onlineTxnLedgerDesc')}
-                </p>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <label className="sr-only" htmlFor="payment-channel-filter">{t('filterOnlineChannel')}</label>
-                <select
-                  id="payment-channel-filter"
-                  value={paymentFilter}
-                  onChange={(event) => setPaymentFilter(event.target.value)}
-                  className="min-h-9 rounded-full border border-surface-200 bg-surface-50 px-3 text-xs font-semibold text-surface-700 dark:border-surface-700 dark:bg-[#181F2A] dark:text-surface-200"
-                >
-                  <option value="all">{t('allOnlineChannels')}</option>
-                  <option value="bkash">bKash</option>
-                  <option value="nagad">Nagad</option>
-                  <option value="rocket">Rocket</option>
-                  <option value="cards">{t('cardsInternetBanking')}</option>
-                </select>
-                <button
-                  type="button"
-                  onClick={fetchTransactions}
-                  disabled={loadingTransactions}
-                  className="px-3.5 py-1.5 rounded-full border border-surface-200 dark:border-surface-700 bg-surface-50 dark:bg-[#181F2A] hover:bg-surface-100 text-xs font-bold text-surface-700 dark:text-surface-300 flex items-center gap-1.5 transition-all cursor-pointer"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${loadingTransactions ? 'animate-spin' : ''}`} />
-                  <span>{t('refreshLedger')}</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="bg-surface-50/50 dark:bg-[#161C24]/80 border-b border-brand-100 dark:border-surface-800 text-micro uppercase font-bold tracking-wider text-surface-500 dark:text-surface-500">
-                    <th className="p-4">Transaction ID (tran_id)</th>
-                    <th className="p-4">{t('channelCol')}</th>
-                    <th className="p-4">Order ID</th>
-                    <th className="p-4">{t('customerPhoneCol')}</th>
-                    <th className="p-4">Amount (BDT)</th>
-                    <th className="p-4">{t('statusCol')}</th>
-                    <th className="p-4">{t('timeCol')}</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-brand-100/50 dark:divide-surface-800/80">
-                  {filteredTransactions.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="p-8 text-center text-surface-500 dark:text-surface-500">
-                        {loadingTransactions ? 'Loading online payment transactions...' : paymentFilter === 'all' ? 'No online payment transactions recorded yet.' : `No ${paymentChannelLabel(paymentFilter)} transactions recorded yet.`}
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredTransactions.map((t) => (
-                      <tr key={t.id} className="hover:bg-surface-50/80 dark:hover:bg-[#181F2A]/60 transition-colors">
-                        <td className="p-4 font-mono font-bold text-brand-600 dark:text-brand-400">
-                          {t.transaction_id}
-                          {t.val_id && (
-                            <span className="block text-micro text-surface-400 font-mono">Val: {t.val_id}</span>
-                          )}
-                        </td>
-                        <td className="p-4">
-                          <span
-                            className={`px-2.5 py-0.5 rounded-full text-micro font-black uppercase tracking-wider ${
-                              t.payment_method === 'bkash'
-                                ? 'bg-pink-100 dark:bg-pink-950/60 text-[#E2136E] border border-pink-300'
-                                : t.payment_method === 'nagad'
-                                ? 'bg-warning-100 dark:bg-warning-950/60 text-warning-600 border border-warning-300'
-                                : t.payment_method === 'rocket'
-                                ? 'bg-brand-100 dark:bg-brand-950/60 text-brand-600 border border-brand-300'
-                                : 'bg-brand-100 dark:bg-brand-950/60 text-brand-600 border border-brand-300'
-                            }`}
-                          >
-                            {paymentChannelLabel(String(t.payment_method || 'unknown').toLowerCase())}
-                          </span>
-                        </td>
-                        <td className="p-4 font-mono text-surface-700 dark:text-surface-300">
-                          {t.order_id || 'Checkout Pending'}
-                        </td>
-                        <td className="p-4 font-mono text-surface-600 dark:text-surface-400">
-                          {t.customer_phone || 'N/A'}
-                        </td>
-                        <td className="p-4 font-black text-surface-900 dark:text-white">
-                          {formatBDT(Number(t.amount))}
-                        </td>
-                        <td className="p-4">
-                          <span
-                            className={`px-2.5 py-0.5 rounded-full text-micro font-black uppercase tracking-wider ${
-                              t.status === 'VALIDATED' || t.status === 'VALID'
-                                ? 'bg-success-100 dark:bg-success-950/60 text-success-600 dark:text-success-400 border border-success-300'
-                                : t.status === 'PENDING'
-                                ? 'bg-warning-100 dark:bg-warning-950/60 text-warning-600 dark:text-warning-400 border border-warning-300'
-                                : 'bg-danger-100 text-danger-600 border border-danger-300'
-                            }`}
-                          >
-                            {t.status}
-                          </span>
-                        </td>
-                        <td className="p-4 text-micro text-surface-400">
-                          {formatDate(t.created_at)}
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
           <section className="overflow-hidden rounded-2xl border border-surface-200 bg-white dark:border-surface-800 dark:bg-[#12161D]">
             <header className="flex items-center justify-between gap-3 border-b border-surface-200 p-4 dark:border-surface-800">
               <div><h2 className="text-sm font-bold text-surface-900 dark:text-white">{t('sellerPayoutRequests')}</h2><p className="text-xs text-surface-500 dark:text-surface-400">{t('verifyPayoutReferenceNotice')}</p></div>
