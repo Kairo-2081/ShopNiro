@@ -43,7 +43,7 @@ export const RiderInsights: React.FC<RiderInsightsProps> = ({ totalDeliveries, l
 
   return (
     <section aria-labelledby="rider-insights-title" className="space-y-4">
-      <h2 id="rider-insights-title" className="font-display text-xl font-normal text-[var(--chart-ink)]">{t('riderInsightsTitle')}</h2>
+      <h2 id="rider-insights-title" className="font-display text-3xl font-normal text-[var(--chart-ink)] sm:text-4xl">{t('riderInsightsTitle')}</h2>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <ChartPanel headingId="rider-punctuality-title" title={t('riderPunctualityTitle')} subtitle={t('riderPunctualitySubtitle')}>
           {punctuality.length ? (
