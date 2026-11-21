@@ -25,6 +25,8 @@ const SUFFIX = process.env.SHOT_SUFFIX ?? '';
 const ONLY = process.env.SHOT_ONLY ? new Set(process.env.SHOT_ONLY.split(',')) : null;
 const DESKTOP = { width: 1440, height: 900 };
 const PHONE = { width: 390, height: 844 };
+// The chart pages are long, so they are photographed in a tall window starting at the section heading.
+const TALL = { width: 1440, height: 1560 };
 mkdirSync(OUT, { recursive: true });
 
 // A small, plain tile used for product and store pictures, so no screenshot shows a broken image and none uses
@@ -59,6 +61,69 @@ async function sampleData() {
   });
 }
 
+// About eleven months of invented order history, so the charts have a shape instead of one dot. Deterministic (a
+// fixed seed, no Math.random) so a retake looks the same. It runs on the throwaway database only, like everything here.
+async function sampleHistory() {
+  let seed = 20261122;
+  const rand = () => { seed = (seed * 1664525 + 1013904223) % 4294967296; return seed / 4294967296; };
+  // The history belongs to the store the seller screens show (Banani Craft House), with its own small catalogue.
+  const SELLER = E2E.newSeller.id;
+  const products = [
+    { id: 'SAMPLE-P-1', name: 'Handwoven Jute Rug', price: 3200, tile: tile('J', '#b59a6a', '#6e5530') },
+    { id: 'SAMPLE-P-2', name: 'Terracotta Planter Set', price: 1850, tile: tile('T', '#c98b6b', '#7d3f26') },
+    { id: 'SAMPLE-P-3', name: 'Cane Pendant Light', price: 4600, tile: tile('P', '#d8c38a', '#8a6f2c') },
+    { id: 'SAMPLE-P-4', name: 'Clay Tea Cups', price: 650, tile: tile('C', '#9db2a0', '#4a6650') },
+  ];
+  const methods = ['cash_on_delivery', 'cash_on_delivery', 'bkash', 'bkash', 'nagad', 'sslcommerz', 'visa_mastercard'];
+  const address = JSON.stringify({ House_Name: 'House 1', Street: 'Road 1', City: 'Dhaka', Postal_Code: '1207' });
+  await withDb(async (c) => {
+    for (const product of products) {
+      await c.query(`INSERT INTO products (id, name, price, stock, category_id, seller_id, image) VALUES ($1, $2, $3, 40, 'E2E-CAT', $4, $5)`,
+        [product.id, product.name, product.price, SELLER, product.tile]);
+    }
+    const now = new Date();
+    let n = 0;
+    for (let back = 11; back >= 0; back -= 1) {
+      // Growth with a dip or two, so it is not a ruler-straight line. The app loads the newest 50 orders first, so the whole
+      // history stays under that (about 40 orders) and every month reaches the charts.
+      const base = 1.2 + (11 - back) * 0.28 + (back === 6 ? -0.9 : 0) + (back === 3 ? -0.6 : 0);
+      const count = Math.max(1, Math.round(base + rand() * 1.6));
+      for (let i = 0; i < count; i += 1) {
+        const day = 1 + Math.floor(rand() * (back === 0 ? Math.max(1, now.getDate() - 1) : 27));
+        const placed = new Date(now.getFullYear(), now.getMonth() - back, day, 9 + Math.floor(rand() * 11), Math.floor(rand() * 60));
+        const roll = rand();
+        const status = roll < 0.07 ? 'cancelled' : back === 0 && roll < 0.3 ? 'processing' : 'delivered';
+        const method = methods[Math.floor(rand() * methods.length)];
+        const lines = 1 + Math.floor(rand() * 2);
+        let subtotal = 0;
+        const id = `SAMPLE-O-${++n}`;
+        const first = Math.floor(rand() * products.length);
+        // Consecutive products, so one order never lists the same product twice.
+        const picked = Array.from({ length: lines }, (_, line) => ({ product: products[(first + line) % products.length], quantity: 1 + Math.floor(rand() * 2) }));
+        picked.forEach(({ product, quantity }) => { subtotal += product.price * quantity; });
+        const paid = status === 'delivered';
+        await c.query(
+          `INSERT INTO orders (id, tracking_id, customer_id, subtotal, shipping_fee, status, shipping_address_json, billing_address_json,
+                               payment_status, payment_method, order_placed_at)
+           VALUES ($1, $2, $3, $4, 80, $5, $6, $6, $7, $8, $9)`,
+          [id, `TRK-${n}`, E2E.customer.id, subtotal, status, address, status === 'cancelled' ? 'pending' : paid ? 'paid' : 'pending', method, placed]);
+        for (const { product, quantity } of picked) {
+          await c.query(
+            `INSERT INTO order_items (order_id, product_id, seller_id, product_id_snapshot, seller_id_snapshot, product_name, unit_price, quantity, image)
+             VALUES ($1, $2, $3, $2, $3, $4, $5, $6, $7)`,
+            [id, product.id, SELLER, product.name, product.price, quantity, product.tile]);
+        }
+        await c.query(
+          `INSERT INTO seller_fulfillments (id, order_id, seller_id, subtotal, status, created_at, shipped_at, delivered_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+          [`SAMPLE-F-${n}`, id, SELLER, subtotal, status, placed,
+            status === 'delivered' ? new Date(placed.getTime() + 864e5) : null,
+            status === 'delivered' ? new Date(placed.getTime() + 3 * 864e5) : null]);
+      }
+    }
+  });
+}
+
 async function open(browser: Browser, role: keyof typeof AUTH, viewport = DESKTOP): Promise<Page> {
   const context = await browser.newContext({ storageState: AUTH[role], viewport, deviceScaleFactor: 1, colorScheme: THEME });
   await context.addInitScript((theme) => window.localStorage.setItem('marketpulse_theme', theme), THEME);
@@ -75,6 +140,16 @@ async function showCatalogue(page: Page) {
   await page.waitForTimeout(500);
 }
 
+// Scrolls a section to the top and gives the count-up numbers and the arcs, which start when they scroll into view,
+// time to finish before the picture is taken.
+async function showSection(page: Page, heading: string | RegExp) {
+  await page.getByRole('heading', { name: heading }).first().evaluate((el) => el.scrollIntoView({ block: 'start' }));
+  await page.waitForTimeout(400);
+  await page.mouse.wheel(0, 40);
+  await page.mouse.move(2, 2);
+  await page.waitForTimeout(2600);
+}
+
 async function shot(page: Page, name: string) {
   if (ONLY && !ONLY.has(name)) return;
   await page.waitForTimeout(700);
@@ -82,7 +157,7 @@ async function shot(page: Page, name: string) {
   console.log('captured', name);
 }
 
-const browser = await chromium.launch();
+const browser = await chromium.launch(process.env.SHOT_CHROMIUM ? { executablePath: process.env.SHOT_CHROMIUM } : {});
 try {
   await resetWorld();
   await sampleData();
@@ -90,7 +165,6 @@ try {
   // Admin reviews and approves the new seller.
   {
     const admin = await open(browser, 'admin');
-    await shot(admin, 'app-admin-overview');
     await selectWorkspaceNavigationItem(admin, /Merchant approvals/);
     await admin.getByRole('button', { name: /Banani Craft House.*View application/ }).first().click();
     for (const label of ['Identity verified', 'Documents reviewed', 'Payout account verified']) await admin.getByLabel(label).check();
@@ -121,6 +195,8 @@ try {
     await seller.reload();
     await seller.waitForTimeout(1200);
     await shot(seller, 'app-seller-catalog');
+    // From here on the store has a year of invented history, so the sales charts have something to show.
+    await sampleHistory();
     await seller.context().close();
   }
 
@@ -153,9 +229,12 @@ try {
     await seller.getByRole('combobox').first().selectOption('shipped');
     await seller.waitForTimeout(1200);
     await shot(seller, 'app-seller-fulfillment');
-    await selectWorkspaceNavigationItem(seller, /Sales analytics/);
-    await shot(seller, 'app-seller-analytics');
     await seller.context().close();
+    const analytics = await open(browser, 'seller', TALL);
+    await selectWorkspaceNavigationItem(analytics, /Sales analytics/);
+    await showSection(analytics, 'Sales Analytics');
+    await shot(analytics, 'app-seller-analytics');
+    await analytics.context().close();
   }
 
   // The rider claims and delivers it.
@@ -187,16 +266,28 @@ try {
     await customer.getByText(/Delivery confirmed/).waitFor();
     await shot(customer, 'app-customer-delivered');
     await customer.context().close();
+    const spending = await open(browser, 'customer', TALL);
+    await selectWorkspaceNavigationItem(spending, /Orders|My orders/);
+    await showSection(spending, 'Your spending');
+    await shot(spending, 'app-customer-spending');
+    await spending.context().close();
   }
 
   // Admin views after the order has moved through the marketplace.
   {
     const admin = await open(browser, 'admin');
-    await selectWorkspaceNavigationItem(admin, /Marketplace metrics/);
-    await shot(admin, 'app-admin-metrics');
-    await selectWorkspaceNavigationItem(admin, /Online payments/);
-    await shot(admin, 'app-admin-payments');
+    await shot(admin, 'app-admin-overview');
     await admin.context().close();
+    const charts = await open(browser, 'admin', TALL);
+    await showSection(charts, 'Overall Platform Metrics');
+    await shot(charts, 'app-admin-charts');
+    await charts.context().close();
+    const admin2 = await open(browser, 'admin');
+    await selectWorkspaceNavigationItem(admin2, /Marketplace metrics/);
+    await shot(admin2, 'app-admin-metrics');
+    await selectWorkspaceNavigationItem(admin2, /Online payments/);
+    await shot(admin2, 'app-admin-payments');
+    await admin2.context().close();
   }
 
   // The same storefront on a phone.
