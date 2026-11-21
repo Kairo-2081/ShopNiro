@@ -27,8 +27,8 @@ export const RiderInsights: React.FC<RiderInsightsProps> = ({ totalDeliveries, l
   const late = Math.min(positive(lateDeliveries), positive(totalDeliveries));
   const onTime = positive(totalDeliveries) - late;
   const punctuality: ShareSlice[] = [
-    { key: 'on-time', name: t('riderOnTime'), value: onTime, color: 'var(--chart-cat-6)' },
-    { key: 'late', name: t('riderLate'), value: late, color: 'var(--chart-cat-4)' },
+    { key: 'on-time', name: t('riderOnTime'), value: onTime, color: 'var(--chart-positive)' },
+    { key: 'late', name: t('riderLate'), value: late, color: 'var(--chart-cat-5)' },
   ].filter((slice) => slice.value > 0);
 
   const walletSlices: ShareSlice[] = wallet
@@ -43,20 +43,20 @@ export const RiderInsights: React.FC<RiderInsightsProps> = ({ totalDeliveries, l
 
   return (
     <section aria-labelledby="rider-insights-title" className="space-y-4">
-      <h2 id="rider-insights-title" className="text-lg font-bold text-surface-900 dark:text-white">{t('riderInsightsTitle')}</h2>
+      <h2 id="rider-insights-title" className="font-display text-xl font-normal text-[var(--chart-ink)]">{t('riderInsightsTitle')}</h2>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <ChartPanel headingId="rider-punctuality-title" title={t('riderPunctualityTitle')} subtitle={t('riderPunctualitySubtitle')}>
           {punctuality.length ? (
             <ShareBreakdown slices={punctuality} centerValue={formatCount(positive(totalDeliveries))} centerLabel={t('chartDelivered')} ariaLabel={t('riderPunctualityAria')} unit={t('chartDelivered')} />
           ) : (
-            <p className="py-12 text-center text-sm text-surface-500 dark:text-surface-400">{t('riderNoDeliveriesYet')}</p>
+            <p className="py-12 text-center text-sm text-[var(--chart-axis)]">{t('riderNoDeliveriesYet')}</p>
           )}
         </ChartPanel>
         <ChartPanel headingId="rider-wallet-title" title={t('riderWalletTitle')} subtitle={t('riderWalletSubtitle')}>
           {walletSlices.length ? (
             <ShareBreakdown slices={walletSlices} centerValue={money(walletTotal)} centerLabel="BDT" ariaLabel={t('riderWalletAria')} unit="BDT" />
           ) : (
-            <p className="py-12 text-center text-sm text-surface-500 dark:text-surface-400">{t('riderNoWalletYet')}</p>
+            <p className="py-12 text-center text-sm text-[var(--chart-axis)]">{t('riderNoWalletYet')}</p>
           )}
         </ChartPanel>
       </div>

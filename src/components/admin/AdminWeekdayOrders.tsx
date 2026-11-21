@@ -25,9 +25,10 @@ export const AdminWeekdayOrders: React.FC<AdminWeekdayOrdersProps> = ({ orders }
           name={t('chartOrders')}
           formatValue={(value) => value.toLocaleString(locale === 'bn' ? 'bn-BD' : 'en-BD')}
           ariaLabel={t('adminWeekdayAria')}
+          highlight="max"
         />
       ) : (
-        <p className="py-12 text-center text-sm text-surface-500 dark:text-surface-400">{t('adminWeekdayEmpty')}</p>
+        <p className="py-12 text-center text-sm text-[var(--chart-axis)]">{t('adminWeekdayEmpty')}</p>
       )}
     </ChartPanel>
   );

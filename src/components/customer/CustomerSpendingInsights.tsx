@@ -14,9 +14,9 @@ interface CustomerSpendingInsightsProps {
 
 const STATUS_COLOR: Record<OrderStatus, string> = {
   placed: 'var(--chart-cat-5)',
-  processing: 'var(--chart-cat-1)',
-  shipped: 'var(--chart-cat-2)',
-  delivered: 'var(--chart-cat-6)',
+  processing: 'var(--chart-cat-3)',
+  shipped: 'var(--chart-cat-1)',
+  delivered: 'var(--chart-positive)',
   cancelled: 'var(--chart-cat-4)',
 };
 
@@ -82,8 +82,8 @@ export const CustomerSpendingInsights: React.FC<CustomerSpendingInsightsProps> =
   return (
     <section aria-labelledby="customer-spending-title" className="space-y-4">
       <header>
-        <h2 id="customer-spending-title" className="text-lg font-bold text-surface-900 dark:text-white">{t('spendInsightsTitle')}</h2>
-        <p className="mt-1 text-xs text-surface-500 dark:text-surface-400">{t('spendInsightsSubtitle')}</p>
+        <h2 id="customer-spending-title" className="font-display text-xl font-normal text-[var(--chart-ink)]">{t('spendInsightsTitle')}</h2>
+        <p className="mt-1 text-xs text-[var(--chart-axis)]">{t('spendInsightsSubtitle')}</p>
       </header>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
@@ -92,6 +92,7 @@ export const CustomerSpendingInsights: React.FC<CustomerSpendingInsightsProps> =
           value={formatBDT(summary.allTimeSpent)}
           count={{ value: summary.allTimeSpent, format: formatBDT }}
           note={t('spendAllTime')}
+          accent="var(--chart-cat-3)"
         />
         <StatTile
           label={t('spendLast6Months')}
@@ -100,17 +101,19 @@ export const CustomerSpendingInsights: React.FC<CustomerSpendingInsightsProps> =
           trend={summary.months.map((month) => month.value)}
           change={summary.change}
           comparison={t('chartVsPrevious3')}
+          accent="var(--chart-primary)"
         />
         <StatTile
           label={t('spendOrdersPlaced')}
           value={formatCount(orders.length)}
           count={{ value: orders.length, format: formatCount }}
           note={t('chartDeliveredNote', { count: formatCount(summary.delivered), total: formatCount(orders.length) })}
+          accent="var(--chart-cat-2)"
         />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
-        <ChartPanel headingId="customer-spend-month-title" title={t('spendByMonthTitle')} subtitle={t('spendByMonthSubtitle')} className="lg:col-span-3">
+        <ChartPanel headingId="customer-spend-month-title" title={t('spendByMonthTitle')} subtitle={t('spendByMonthSubtitle')} className="lg:col-span-3" featured>
           {summary.sixMonthSpent > 0 ? (
             <MonthlyBarChart
               data={summary.months.map((month) => ({ label: month.label, value: month.value }))}
@@ -119,7 +122,7 @@ export const CustomerSpendingInsights: React.FC<CustomerSpendingInsightsProps> =
               ariaLabel={t('spendByMonthAria')}
             />
           ) : (
-            <p className="py-12 text-center text-sm text-surface-500 dark:text-surface-400">{t('spendNoSpending')}</p>
+            <p className="py-12 text-center text-sm text-[var(--chart-axis)]">{t('spendNoSpending')}</p>
           )}
         </ChartPanel>
         <ChartPanel headingId="customer-spend-status-title" title={t('spendStatusTitle')} subtitle={t('spendStatusSubtitle')} className="lg:col-span-2">
