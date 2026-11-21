@@ -1149,6 +1149,7 @@ export default function App() {
         onOpenNavigation={() => setIsNavigationOpen(true)}
         isNavigationOpen={isNavigationOpen}
         onOpenChat={() => setIsChatOpen(true)}
+        onSearch={(query) => { setActiveTab('storefront'); void searchStoreProducts(query); }}
       />
 
       <div className="flex flex-1 items-stretch">
