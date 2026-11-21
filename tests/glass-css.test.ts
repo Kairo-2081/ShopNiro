@@ -54,9 +54,12 @@ test('mapped panels get a solid fill under reduced transparency and the scene is
   assert.match(glass, /@media \(forced-colors: active\) \{\s*body::before/);
 });
 
-test('the scene behind the glass has colour blobs for both themes', async () => {
+test('the scene behind the glass is the calm two-glow backdrop in both themes', async () => {
   const glass = await read('src/glass.css');
-  assert.match(glass, /html:not\(\.dark\) body::before \{/);
-  assert.match(glass, /html\.dark body::before \{/);
-  assert.match(glass, /@media \(prefers-reduced-motion: reduce\) \{\s*body::before/);
+  const base = await read('src/index.css');
+  // glass.css must not repaint the backdrop; index.css owns it.
+  assert.doesNotMatch(glass, /html\.dark body::before \{/);
+  assert.doesNotMatch(glass, /html:not\(\.dark\) body::after \{/);
+  assert.match(base, /body::before \{/);
+  assert.match(base, /html:not\(\.dark\) body::before \{/);
 });
