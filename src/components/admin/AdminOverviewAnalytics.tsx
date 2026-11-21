@@ -26,9 +26,9 @@ type TrendMeasure = 'revenue' | 'orders';
 // in every theme. The slots are the validated --chart-cat-N tokens from index.css.
 const statusPresentation: Record<OrderStatus, { label: string; color: string }> = {
   placed: { label: 'Placed', color: 'var(--chart-cat-5)' },
-  processing: { label: 'Processing', color: 'var(--chart-cat-1)' },
-  shipped: { label: 'Shipped', color: 'var(--chart-cat-2)' },
-  delivered: { label: 'Delivered', color: 'var(--chart-cat-6)' },
+  processing: { label: 'Processing', color: 'var(--chart-cat-3)' },
+  shipped: { label: 'Shipped', color: 'var(--chart-cat-1)' },
+  delivered: { label: 'Delivered', color: 'var(--chart-positive)' },
   cancelled: { label: 'Cancelled', color: 'var(--chart-cat-4)' },
 };
 
@@ -151,7 +151,7 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
   const comparison = t('chartVsPrevious6');
 
   const toggle = (
-    <div role="group" aria-label={t('chartMeasureGroup')} className="inline-flex rounded-full border border-surface-200 bg-surface-50 p-0.5 text-xs font-semibold dark:border-white/10 dark:bg-white/5">
+    <div role="group" aria-label={t('chartMeasureGroup')} className="inline-flex rounded-full border border-[var(--chart-line)] bg-[var(--chart-track)] p-0.5 text-xs font-semibold">
       {(['revenue', 'orders'] as const).map((option) => (
         <button
           key={option}
@@ -160,8 +160,8 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
           onClick={() => setMeasure(option)}
           className={`min-h-8 rounded-full px-3.5 py-1 transition-colors ${
             measure === option
-              ? 'bg-brand-700 text-white shadow-xs dark:bg-brand-300 dark:text-brand-950'
-              : 'text-surface-600 hover:text-surface-900 dark:text-surface-300 dark:hover:text-white'
+              ? 'bg-[var(--chart-primary-hi)] text-[var(--chart-on-primary)] shadow-xs'
+              : 'text-[var(--chart-axis)] hover:text-[var(--chart-ink)]'
           }`}
         >
           {option === 'revenue' ? t('chartRevenue') : t('chartOrders')}
@@ -173,10 +173,10 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
   return (
     <section aria-labelledby="admin-overview-analytics-title" className="space-y-5">
       <header>
-        <h2 id="admin-overview-analytics-title" className="text-lg font-bold text-surface-900 dark:text-white">
+        <h2 id="admin-overview-analytics-title" className="font-display text-xl font-normal text-[var(--chart-ink)]">
           {t('overallPlatformMetrics')}
         </h2>
-        <p className="mt-1 text-xs text-surface-500 dark:text-surface-400">{t('orderActivityPast12Months')}</p>
+        <p className="mt-1 text-xs text-[var(--chart-axis)]">{t('orderActivityPast12Months')}</p>
       </header>
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
@@ -195,6 +195,7 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
           count={{ value: analytics.orderCount, format: (n) => Math.round(n).toLocaleString() }}
           note={t('chartLast12Months')}
           trend={analytics.monthly.map((row) => row.orderCount)}
+          accent="var(--chart-cat-2)"
           change={analytics.orderChange}
           comparison={comparison}
         />
@@ -204,6 +205,7 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
           count={{ value: analytics.averageOrder, format: formatBDT }}
           note={t('chartLast12Months')}
           trend={analytics.monthly.map((row) => (row.billableCount ? row.orderValue / row.billableCount : 0))}
+          accent="var(--chart-cat-3)"
           change={analytics.averageOrderChange}
           comparison={comparison}
         />
@@ -219,6 +221,7 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
         title={t('chartTrendTitle')}
         subtitle={t('chartTrendSubtitle', { measure: measureName.toLowerCase() })}
         actions={toggle}
+        featured
       >
         {analytics.hasRecentOrders ? (
           <>
@@ -229,19 +232,19 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
               ariaLabel={measure === 'revenue' ? t('chartRevenueAria') : t('chartOrdersAria')}
             />
             {best && (
-              <p className="mt-3 text-micro text-surface-500 dark:text-surface-400">
-                {t('chartBestMonth')} · <span className="font-semibold text-surface-800 dark:text-surface-100">{best.label}</span> · <span className="font-semibold tabular-nums text-surface-800 dark:text-surface-100">{formatTrendValue(best.value)}</span>
+              <p className="mt-3 text-micro text-[var(--chart-axis)]">
+                {t('chartBestMonth')} · <span className="font-semibold text-[var(--chart-ink)]">{best.label}</span> · <span className="font-semibold tabular-nums text-[var(--chart-ink)]">{formatTrendValue(best.value)}</span>
               </p>
             )}
             <details className="mt-1 text-xs">
-              <summary className="min-h-11 cursor-pointer py-3 font-semibold text-brand-700 underline decoration-brand-300 underline-offset-4 dark:text-brand-300">
+              <summary className="min-h-11 cursor-pointer py-3 font-semibold text-[var(--chart-primary-hi)] underline decoration-[var(--chart-line)] underline-offset-4">
                 {t('viewMonthlyDataAsTable')}
               </summary>
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[28rem] border-collapse text-left">
                   <caption className="sr-only">{t('monthlyOrderValueTitle')}</caption>
                   <thead>
-                    <tr className="border-b border-surface-200 dark:border-surface-700">
+                    <tr className="border-b border-[var(--chart-line)]">
                       <th scope="col" className="p-2">{t('monthCol')}</th>
                       <th scope="col" className="p-2">{t('ordersCol')}</th>
                       <th scope="col" className="p-2">{t('orderValueCol')}</th>
@@ -249,7 +252,7 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
                   </thead>
                   <tbody>
                     {analytics.monthly.map((month) => (
-                      <tr key={month.month} className="border-b border-surface-100 dark:border-surface-800">
+                      <tr key={month.month} className="border-b border-[var(--chart-hair)]">
                         <th scope="row" className="p-2 font-medium">{month.month}</th>
                         <td className="p-2 tabular-nums">{month.orderCount.toLocaleString()}</td>
                         <td className="p-2 tabular-nums">{formatBDT(month.orderValue)}</td>
@@ -261,7 +264,7 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
             </details>
           </>
         ) : (
-          <div className="flex h-[280px] items-center justify-center text-center text-xs text-surface-500 dark:text-surface-400">
+          <div className="flex h-[280px] items-center justify-center text-center text-xs text-[var(--chart-axis)]">
             {t('noOrdersPast12Months')}
           </div>
         )}
@@ -278,7 +281,7 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
               unit={t('chartOrdersUnit')}
             />
           ) : (
-            <div className="flex h-[200px] items-center justify-center rounded-xl border border-dashed border-surface-200 text-center text-micro text-surface-500 dark:border-surface-700 dark:text-surface-400">
+            <div className="flex h-[200px] items-center justify-center rounded-xl border border-dashed border-[var(--chart-line)] text-center text-micro text-[var(--chart-axis)]">
               {t('noOrderStatusData')}
             </div>
           )}
@@ -294,7 +297,7 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
               unit={t('chartOrdersUnit')}
             />
           ) : (
-            <div className="flex h-[200px] items-center justify-center rounded-xl border border-dashed border-surface-200 text-center text-micro text-surface-500 dark:border-surface-700 dark:text-surface-400">
+            <div className="flex h-[200px] items-center justify-center rounded-xl border border-dashed border-[var(--chart-line)] text-center text-micro text-[var(--chart-axis)]">
               {t('noPaymentData')}
             </div>
           )}
