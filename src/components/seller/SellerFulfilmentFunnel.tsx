@@ -5,6 +5,7 @@ import { ChartPanel } from '../charts/ChartPanel';
 
 interface SellerFulfilmentFunnelProps {
   orders: readonly Order[];
+  months?: number;
 }
 
 /**
@@ -12,12 +13,12 @@ interface SellerFulfilmentFunnelProps {
  * orders that reached it or went past it, so the bars can only shrink. Cancelled and refunded orders sit under the bars
  * as shares of everything received.
  */
-export const SellerFulfilmentFunnel: React.FC<SellerFulfilmentFunnelProps> = ({ orders }) => {
+export const SellerFulfilmentFunnel: React.FC<SellerFulfilmentFunnelProps> = ({ orders, months = 6 }) => {
   const { t, locale } = useLocale();
   const format = (value: number) => value.toLocaleString(locale === 'bn' ? 'bn-BD' : 'en-BD');
   const stats = React.useMemo(() => {
     const since = new Date();
-    since.setMonth(since.getMonth() - 6);
+    since.setMonth(since.getMonth() - months);
     const recent = orders.filter((order) => new Date(order.Order_Placed_At) >= since);
     const live = recent.filter((order) => order.Status !== 'cancelled');
     const count = (statuses: string[]) => live.filter((order) => statuses.includes(order.Status)).length;
@@ -32,12 +33,12 @@ export const SellerFulfilmentFunnel: React.FC<SellerFulfilmentFunnelProps> = ({ 
       cancelled: recent.filter((order) => order.Status === 'cancelled').length,
       refunded: recent.filter((order) => order.Payment_Status === 'refunded').length,
     };
-  }, [orders, t]);
+  }, [orders, months, t]);
   const top = Math.max(1, ...stats.steps.map((step) => step.value));
   const share = (value: number) => `${stats.all ? Math.round((value / stats.all) * 1000) / 10 : 0}%`;
 
   return (
-    <ChartPanel headingId="seller-fulfilment-title" title={t('fulfilTitle')} subtitle={t('fulfilSubtitle')} className="h-full">
+    <ChartPanel headingId="seller-fulfilment-title" title={t('fulfilTitle')} subtitle={t('fulfilSubtitleRange', { count: months })} className="h-full">
       {stats.all ? (
         <>
           <ul className="space-y-4">
