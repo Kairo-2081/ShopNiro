@@ -135,12 +135,12 @@
   color-scheme: dark;
   /* Dark theme surfaces: one near-black warm-neutral base, one gold glow, one faint green glow, and two flat panel
      greys. No blue, red or teal hues anywhere in the dark theme. */
-  --bg: #0d0d0c;
-  --bg-glow: rgba(150, 122, 56, 0.2);
-  --bg-glow-green: rgba(38, 92, 72, 0.18);
-  --surface-1: #151514;
-  --surface-2: #121211;
-  --border-subtle: rgba(255, 255, 255, 0.07);
+  --bg: #0b0b0a;
+  --bg-glow: rgba(176, 142, 62, 0.27);
+  --bg-glow-green: rgba(44, 104, 82, 0.22);
+  --surface-1: #1a1a18;
+  --surface-2: #151514;
+  --border-subtle: rgba(255, 255, 255, 0.1);
   --sidebar-bg: #0f0f0e;
   --sidebar-border: rgba(255, 255, 255, 0.06);
   --accent-gold: #c9a96e;
@@ -159,8 +159,8 @@
   --chart-track: rgba(255, 255, 255, 0.055);
   --chart-line: rgba(255, 255, 255, 0.09);
   --chart-hair: rgba(255, 255, 255, 0.05);
-  --chart-card: linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.022));
-  --chart-card-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 18px 40px -22px rgba(0, 0, 0, 0.5);
+  --chart-card: linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.03));
+  --chart-card-shadow: 0 1px 0 rgba(255, 255, 255, 0.09) inset, 0 0 0 1px rgba(201, 169, 110, 0.05), 0 22px 44px -22px rgba(0, 0, 0, 0.65);
   --chart-featured-line: rgba(236, 220, 160, 0.32);
   --chart-featured-shadow: 0 0 0 1px rgba(236, 220, 160, 0.05), 0 0 60px -20px rgba(205, 185, 125, 0.28), 0 18px 40px -22px rgba(0, 0, 0, 0.5);
   --chart-tip-bg: rgba(28, 29, 21, 0.96);
