@@ -39,6 +39,13 @@ export const TrendAreaChart: React.FC<TrendAreaChartProps> = ({ data, name, form
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={rows} margin={{ top: 14, right: 10, bottom: 0, left: 0 }}>
           <defs>
+            <filter id={`${gradientId}-glow`} x="-10%" y="-30%" width="120%" height="160%">
+              <feGaussianBlur stdDeviation="4" result="blur" />
+              <feMerge>
+                <feMergeNode in="blur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
             <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="var(--chart-primary)" stopOpacity={0.36} />
               <stop offset="70%" stopColor="var(--chart-primary)" stopOpacity={0.06} />
@@ -58,6 +65,7 @@ export const TrendAreaChart: React.FC<TrendAreaChartProps> = ({ data, name, form
             name={name}
             stroke="var(--chart-primary)"
             strokeWidth={2.5}
+            style={{ filter: `url(#${gradientId}-glow)` }}
             fill={`url(#${gradientId})`}
             dot={false}
             activeDot={{ r: 5, fill: 'var(--chart-primary)', stroke: 'var(--chart-ring)', strokeWidth: 2.5 }}

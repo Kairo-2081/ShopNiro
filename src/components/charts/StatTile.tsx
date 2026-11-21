@@ -11,22 +11,32 @@ interface StatTileProps {
   count?: { value: number; format: (value: number) => string };
   /** Small line under the number: the period, or what is excluded. */
   note?: string;
-  /** Series for the line under the number. Omit it for a tile that is just a figure. */
+  /** Series for the line beside the number. Omit it for a tile that is just a figure. */
   trend?: readonly number[];
   /** Percent change against the previous period; null hides the chip. */
   change?: number | null;
   comparison?: string;
+  /** CSS colour for the sparkline and the top accent. Defaults to the theme's gold. */
+  accent?: string;
 }
 
-/** A headline figure with an optional change chip and a small trend line, like the tiles at the top of a store dashboard. */
-export const StatTile: React.FC<StatTileProps> = ({ label, value, count, note, trend, change = null, comparison = '' }) => (
-  <article className="group/tile flex min-w-0 flex-col rounded-2xl transition-[transform,box-shadow] duration-300 motion-safe:hover:-translate-y-0.5 hover:shadow-[0_2px_4px_rgba(21,21,16,0.05),0_22px_44px_rgba(74,62,38,0.12)]  border border-surface-200 bg-white p-4 shadow-[0_1px_2px_rgba(21,21,16,0.04),0_14px_32px_rgba(74,62,38,0.06)] dark:border-white/10 dark:bg-[#12161D] dark:shadow-[0_18px_44px_rgba(0,0,0,0.28)] sm:p-5">
-    <div className="flex items-start justify-between gap-2">
-      <p className="text-micro font-semibold uppercase tracking-wide text-surface-500 dark:text-surface-400">{label}</p>
-      <DeltaChip change={change} comparison={comparison} />
-    </div>
-    <p className="mt-2 break-words text-xl font-extrabold tabular-nums leading-tight tracking-tight text-surface-900 dark:text-white sm:text-2xl">{count ? <CountUp value={count.value} format={count.format} /> : value}</p>
-    {note && <p className="mt-0.5 text-micro text-surface-500 dark:text-surface-400">{note}</p>}
-    {trend && trend.length > 1 && <Sparkline values={trend} className="mt-3" />}
-  </article>
-);
+/** A headline figure with a change chip and a small trend line. Same structure in light and dark; only the tokens differ. */
+export const StatTile: React.FC<StatTileProps> = ({ label, value, count, note, trend, change = null, comparison = '', accent = 'var(--chart-primary)' }) => {
+  const hasTrend = !!trend && trend.length > 1;
+  return (
+    <article className="chart-card group/tile relative flex min-w-0 flex-col overflow-hidden rounded-2xl p-4 transition-[transform] duration-300 motion-safe:hover:-translate-y-0.5 sm:p-5">
+      <span aria-hidden="true" className="absolute inset-x-5 top-0 h-px opacity-70" style={{ background: `linear-gradient(90deg, transparent, ${accent}, transparent)` }} />
+      <p className="text-xs font-semibold text-[var(--chart-axis)]">{label}</p>
+      <p className="mt-2 break-words font-display text-[1.75rem] font-normal tabular-nums leading-none tracking-tight text-[var(--chart-ink)] sm:text-[2rem]">
+        {count ? <CountUp value={count.value} format={count.format} /> : value}
+      </p>
+      <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex min-w-0 flex-col items-start gap-1">
+          <DeltaChip change={change} comparison={comparison} />
+          {note && <p className="text-micro text-[var(--chart-axis)]">{note}</p>}
+        </div>
+        {hasTrend && <Sparkline values={trend} color={accent} className="w-full sm:w-28 sm:shrink-0" />}
+      </div>
+    </article>
+  );
+};

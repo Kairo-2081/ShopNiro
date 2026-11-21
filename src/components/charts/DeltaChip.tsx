@@ -11,9 +11,9 @@ interface DeltaChipProps {
 }
 
 const TONE = {
-  up: 'bg-success-100 text-success-700 dark:bg-success-500/15 dark:text-success-300',
-  down: 'bg-danger-100 text-danger-700 dark:bg-danger-500/15 dark:text-danger-300',
-  flat: 'bg-surface-100 text-surface-600 dark:bg-white/8 dark:text-surface-300',
+  up: 'bg-[color-mix(in_srgb,var(--chart-positive)_14%,transparent)] text-[var(--chart-positive)]',
+  down: 'bg-[color-mix(in_srgb,var(--chart-negative)_14%,transparent)] text-[var(--chart-negative)]',
+  flat: 'bg-[var(--chart-track)] text-[var(--chart-axis)]',
 } as const;
 
 /** A small up/down pill. The arrow and the signed number carry the meaning; colour only reinforces it. */

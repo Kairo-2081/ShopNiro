@@ -9,10 +9,12 @@ interface SparklineProps {
   className?: string;
   /** Hidden from assistive tech by default: the number next to it already says everything the line shows. */
   label?: string;
+  /** CSS colour of the line, fill and dot. Defaults to the theme's gold. */
+  color?: string;
 }
 
 /** A tiny trend line with a soft fill and a dot on the latest value. Decorative unless a label is given. */
-export const Sparkline: React.FC<SparklineProps> = ({ values, width = 120, height = 36, className = '', label }) => {
+export const Sparkline: React.FC<SparklineProps> = ({ values, width = 120, height = 36, className = '', label, color = 'var(--chart-primary)' }) => {
   const gradientId = React.useId().replace(/:/g, '');
   const points = React.useMemo(() => sparklinePoints(values, width, height, 4), [values, width, height]);
   if (points.length < 2) return null;
@@ -30,18 +32,18 @@ export const Sparkline: React.FC<SparklineProps> = ({ values, width = 120, heigh
       >
         <defs>
           <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--chart-primary)" stopOpacity={0.34} />
-            <stop offset="100%" stopColor="var(--chart-primary)" stopOpacity={0} />
+            <stop offset="0%" stopColor={color} stopOpacity={0.34} />
+            <stop offset="100%" stopColor={color} stopOpacity={0} />
           </linearGradient>
         </defs>
         <path d={areaPath(points, height)} fill={`url(#${gradientId})`} />
-        <path d={smoothPath(points, height)} fill="none" stroke="var(--chart-primary)" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+        <path d={smoothPath(points, height)} fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
       </svg>
       {/* The dot is an HTML element, not an SVG circle: the SVG is stretched to fit its tile and would squash a circle into an oval. */}
       <span
         aria-hidden="true"
-        className="absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[var(--chart-ring)] bg-[var(--chart-primary)]"
-        style={{ left: `${(last.x / width) * 100}%`, top: `${(last.y / height) * 100}%` }}
+        className="absolute h-2.5 w-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[var(--chart-ring)]"
+        style={{ background: color, left: `${(last.x / width) * 100}%`, top: `${(last.y / height) * 100}%` }}
       />
     </div>
   );
