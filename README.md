@@ -523,7 +523,7 @@ production or staging sites. Commands and method are in [`docs/benchmarks.md`](.
 | **Restore drill** (`scripts/restore-drill-local.mjs`) | 23.6 MB / 19,781 rows restored in 1.8 s; 89 MB / 129,281 rows in 2.5 s; row counts matched in every table. Unencrypted and local, so it times the tools, not a real backup |
 | **CI history** | The last 30 push runs on `main` (14 to 19 Nov 2026) all passed, each taking about 11 to 18 minutes |
 | **Tests and coverage** | 68 serial + 235 parallel Node tests pass; combined coverage of `server/` and `src/lib/` is 62.5% of statements, 65.7% of branches and 76.7% of functions. The last full browser run was 173 passed, 37 skipped, 0 failed |
-| **Lighthouse, storefront, mobile** | Accessibility 100, best practices 96, SEO 92, performance **56** (LCP 4.8 s, TBT 1,240 ms, CLS 0). Local static server with Brotli, simulated mobile throttling |
+| **Lighthouse, storefront, mobile** | Three runs: performance 87, 86 and 81 (LCP 1.0 to 3.2 s, TBT 340 to 520 ms, CLS 0); accessibility 100, best practices 96, SEO 92 on the first run. Local static server with Brotli and a local API, simulated mobile throttling. A first run that scored 56 was invalid: that build called the production API, which the sandbox blocks |
 | **axe** | The axe suite passes on the desktop project with no critical or serious violations (11 passed; the phone project skips the checks that are not width-specific) |
 | **Local security probe** | Protected routes return 401 without a session; the session cookie is HttpOnly and SameSite=Lax. See the gaps below |
 
@@ -534,7 +534,7 @@ What this does not prove, and what is still open before a public launch:
 | External security review, or an OWASP ZAP and Burp pass | **Not done.** The probe above is a few scripted requests, not a scan |
 | 14 days of clean nightly reconciliation on real orders | **Not met.** 5 consecutive scheduled successes so far, and the sandbox has no payments to reconcile |
 | Lighthouse for the checkout dialog | **Not measured.** The dialog is not a page, and the automated flow timed out |
-| Mobile performance score | **56 is below a launch bar.** Main-thread script work is the likely cause; this needs a fix, not a footnote |
+| Mobile performance score | **Spread of 81 to 87 on a local run, with LCP varying from 1.0 to 3.2 s.** Total blocking time (340 to 520 ms) comes mostly from script work in the React vendor chunk. Measure again against staging on a real phone before quoting a number |
 | Dated restore drill on a real encrypted backup | **Not done.** The local drill is a timing floor only |
 | Closed beta summary, incident drill write-up | **Not done.** They need real sellers and a staged incident |
 | Signed merchant agreements, live gateway approval | **Not done.** Payments stay in sandbox |
