@@ -159,7 +159,7 @@ export const Storefront: React.FC<StorefrontProps> = ({
   return (
     <div className="flex flex-col gap-8 text-surface-900 dark:text-surface-100">
       {/* Search & Hero Banner matching the landing page theme */}
-      <div className="text-white rounded-[28px] p-4 md:rounded-[32px] md:p-8 border border-[#d0c8a5]/20 shadow-[0_36px_80px_rgba(9,9,7,0.42)] relative overflow-hidden bg-[radial-gradient(circle_at_20%_15%,rgba(208,200,165,0.22),transparent_18%),radial-gradient(circle_at_82%_12%,rgba(119,119,90,0.5),transparent_22%),linear-gradient(135deg,#77775a_0%,#514c38_23%,#292820_52%,#11110f_100%)]">
+      <div className="text-white rounded-[28px] p-4 md:rounded-[32px] md:p-8 border border-[#d0c8a5]/20 dark:border-[var(--border-subtle)] shadow-[0_36px_80px_rgba(9,9,7,0.42)] relative overflow-hidden hero-surface">
         {/* Soft atmospheric glow */}
         <div className="absolute -top-20 -right-20 w-80 h-80 bg-white/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -283,9 +283,9 @@ export const Storefront: React.FC<StorefrontProps> = ({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 rounded-xl border border-success-200 bg-success-50/80 px-3 py-2 text-xs sm:px-4 sm:py-3 text-success-900 dark:border-success-900/60 dark:bg-success-950 dark:text-success-200">
-        <span className="inline-flex items-center gap-2 font-semibold"><Truck className="h-4 w-4" />{t('freeShipping')} {money(400)}+</span>
-        <span className="inline-flex items-center gap-2"><Tag className="h-3.5 w-3.5" />{t('automaticSavings')} {money(500)}+</span>
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-1 rounded-xl border border-success-200 bg-success-50/80 px-3 py-2 text-xs sm:px-4 sm:py-3 text-success-900 dark:border-[var(--border-subtle)] dark:bg-[var(--surface-2)] dark:text-surface-100">
+        <span className="inline-flex items-center gap-2 font-semibold"><Truck className="h-4 w-4 dark:text-[var(--accent-green)]" />{t('freeShipping')} {money(400)}+</span>
+        <span className="inline-flex items-center gap-2"><Tag className="h-3.5 w-3.5 dark:text-[var(--accent-green)]" />{t('automaticSavings')} {money(500)}+</span>
       </div>
 
       {(featuredDeals.length > 0 || visibleBundles.length > 0) && (
