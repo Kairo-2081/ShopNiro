@@ -28,18 +28,18 @@
   }
 
   .dark {
-    --glass-blur: 28px;
-    --glass-blur-strong: 40px;
-    --glass-saturate: 1.7;
-    --glass-tint: rgba(30, 32, 30, 0.42);
-    --glass-tint-strong: rgba(24, 24, 20, 0.84);
-    --glass-tint-soft: rgba(231, 229, 214, 0.06);
-    --glass-edge: rgba(231, 229, 214, 0.3);
-    --glass-edge-dim: rgba(231, 229, 214, 0.08);
-    --glass-highlight: rgba(255, 255, 255, 0.32);
+    /* Flat neutral panels: the glass tokens resolve to the two surface greys, with no colour boost and a hairline edge. */
+    --glass-blur: 12px;
+    --glass-blur-strong: 16px;
+    --glass-saturate: 1;
+    --glass-tint: var(--surface-1);
+    --glass-tint-strong: var(--surface-1);
+    --glass-tint-soft: var(--surface-2);
+    --glass-edge: var(--border-subtle);
+    --glass-edge-dim: var(--border-subtle);
+    --glass-highlight: rgba(255, 255, 255, 0.06);
     --glass-shade: rgba(0, 0, 0, 0.4);
-    --glass-shadow: 0 1px 0 rgba(255, 255, 255, 0.1) inset, 0 -1px 0 rgba(0, 0, 0, 0.35) inset,
-      0 14px 36px -14px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.3);
+    --glass-shadow: 0 14px 36px -14px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.3);
     --glass-scrim: rgba(4, 4, 3, 0.58);
   }
 
@@ -287,6 +287,30 @@
     box-shadow: 0 1px 0 var(--glass-edge) inset, 0 10px 28px -16px var(--glass-shade);
   }
 
+  /* On desktop the header is just the logo cell above the sidebar and the search row: the sidebar's own surface
+     continues up behind the logo, and the rest of the bar lets the page show through. */
+  @media (min-width: 768px) {
+    html:not(.dark) .shell-header.glass-header,
+    html.dark .shell-header.glass-header {
+      background: transparent;
+      background-image: none;
+      box-shadow: none;
+      border-color: transparent;
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+
+    .shell-header .shell-brand {
+      background: rgba(246, 245, 239, 0.85);
+      border-right: 1px solid rgba(128, 115, 79, 0.2);
+    }
+
+    html.dark .shell-header .shell-brand {
+      background: var(--sidebar-bg);
+      border-right-color: var(--sidebar-border);
+    }
+  }
+
   nav.glass-bar {
     box-shadow: 0 1px 0 var(--glass-edge) inset, 0 -10px 28px -16px var(--glass-shade);
   }
@@ -389,57 +413,47 @@
     }
   }
 
-  /* ---- Scene behind the glass --------------------------------------------------------------------------- */
+  /* The backdrop behind the glass is the calm gold and green glow defined on body::before in index.css. */
 
-  /* Glass only reads as glass when there is something colourful to blur behind it. The existing ambient blobs
-     were faint (opacity 0.45, muted colours). These are stronger, and they are fixed, so panels visibly pick up
-     colour as the page scrolls over them. */
-  body::before,
-  body::after {
-    opacity: 0.95;
+  /* Dark theme: the app hard-codes about 300 navy panel colours (#181F2A and friends). Rather than edit every
+     component, they are mapped to the neutral surface tokens here, so no blue reaches the dark theme. */
+  html.dark :is(
+    [class~="dark:bg-[#181F2A]" i], [class~="bg-[#181F2A]" i],
+    [class~="dark:bg-[#161C24]" i], [class~="bg-[#161C24]" i],
+    [class~="dark:bg-[#18202D]" i], [class~="bg-[#18202D]" i],
+    [class~="dark:bg-[#161E2A]" i], [class~="bg-[#161E2A]" i],
+    [class~="dark:bg-[#161F2C]" i], [class~="bg-[#161F2C]" i],
+    [class~="dark:bg-[#10161e]" i], [class~="bg-[#10161e]" i],
+    [class~="dark:bg-[#11161C]" i], [class~="bg-[#11161C]" i],
+    [class~="dark:bg-[#11161d]" i], [class~="bg-[#11161d]" i],
+    [class~="dark:bg-[#141922]" i], [class~="bg-[#141922]" i],
+    [class~="dark:bg-[#1f2937]" i], [class~="bg-[#1f2937]" i],
+    [class~="dark:bg-[#20252d]" i], [class~="bg-[#20252d]" i],
+    [class~="dark:bg-[#252E3A]" i], [class~="bg-[#252E3A]" i],
+    [class~="dark:bg-[#202833]" i], [class~="bg-[#202833]" i],
+    [class~="dark:bg-[#202938]" i], [class~="bg-[#202938]" i],
+    [class~="dark:bg-[#12121a]" i], [class~="bg-[#12121a]" i],
+    [class~="dark:bg-[#0a0d12]" i], [class~="bg-[#0a0d12]" i],
+    [class~="dark:bg-[#0e1218]" i], [class~="bg-[#0e1218]" i],
+    [class~="dark:bg-[#1C2430]" i], [class~="bg-[#1C2430]" i],
+    [class~="dark:bg-[#0F141C]" i], [class~="bg-[#0F141C]" i],
+    [class~="dark:bg-[#141B24]" i], [class~="bg-[#141B24]" i],
+    [class~="dark:bg-[#121822]" i], [class~="bg-[#121822]" i],
+    [class~="dark:bg-[#121b26]" i], [class~="bg-[#121b26]" i],
+    [class~="dark:bg-[#2b3749]" i], [class~="bg-[#2b3749]" i]
+  ) {
+    background-color: var(--surface-1);
   }
 
-  /* Light theme scene: a calm champagne and pearl glow. The earlier amber, teal, pink and blue blobs tinted every
-     panel a different muddy colour; a premium light glass reads as clean frosted ivory with a soft warm light
-     behind it, so the colour here is low in saturation and kept away from where content sits. */
-  html:not(.dark) body::before,
-  html:not(.dark) body::after {
-    opacity: 0.8;
+  html.dark :is(
+    [class~="dark:bg-[#12161D]" i], [class~="bg-[#12161D]" i],
+    [class~="dark:bg-[#0C1014]" i], [class~="bg-[#0C1014]" i]
+  ) {
+    background-color: var(--surface-2);
   }
 
-  html:not(.dark) body::before {
-    background:
-      radial-gradient(circle at 22% 22%, rgba(226, 204, 154, 0.55), transparent 30%),
-      radial-gradient(circle at 78% 30%, rgba(236, 224, 200, 0.7), transparent 32%),
-      radial-gradient(circle at 50% 82%, rgba(214, 196, 160, 0.38), transparent 32%);
-  }
-
-  html:not(.dark) body::after {
-    background:
-      radial-gradient(circle at 12% 70%, rgba(176, 190, 196, 0.3), transparent 28%),
-      radial-gradient(circle at 88% 78%, rgba(196, 184, 160, 0.3), transparent 26%),
-      radial-gradient(circle at 54% 44%, rgba(255, 255, 255, 0.7), transparent 26%);
-  }
-
-  html.dark body::before {
-    background:
-      radial-gradient(circle at 30% 30%, rgba(206, 156, 36, 0.78), transparent 30%),
-      radial-gradient(circle at 72% 42%, rgba(20, 160, 148, 0.7), transparent 28%),
-      radial-gradient(circle at 48% 80%, rgba(180, 50, 128, 0.62), transparent 30%);
-  }
-
-  html.dark body::after {
-    background:
-      radial-gradient(circle at 18% 64%, rgba(56, 100, 232, 0.66), transparent 28%),
-      radial-gradient(circle at 86% 18%, rgba(60, 176, 96, 0.5), transparent 26%),
-      radial-gradient(circle at 56% 52%, rgba(255, 255, 255, 0.06), transparent 22%);
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    body::before,
-    body::after {
-      animation: none;
-    }
+  html.dark :is([class*="from-[#0B1528]" i], [class*="via-[#0B1528]" i], [class*="from-[#0C1014]" i], [class*="via-[#0F1D2B]" i], [class*="to-[#12161D]" i], [class*="via-[#12161D]" i]) {
+    background-image: linear-gradient(135deg, var(--surface-1), var(--surface-2));
   }
 
   /* ---- Every panel ------------------------------------------------------------------------------------- */

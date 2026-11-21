@@ -18,16 +18,19 @@ interface TrendAreaChartProps {
   /** Plain-language summary for assistive tech; the same numbers are in the table view next to the chart. */
   ariaLabel: string;
   height?: number;
+  /** The same measure a year earlier, one value per label. Drawn as a dotted line when given. */
+  previous?: readonly number[];
+  previousName?: string;
 }
 
 /**
  * One measure over time: a smooth line with a soft fill, faint horizontal guides, a crosshair on hover and a marker
  * on the best point. One y-axis only, so the line can never be read against the wrong scale.
  */
-export const TrendAreaChart: React.FC<TrendAreaChartProps> = ({ data, name, formatValue, ariaLabel, height = 280 }) => {
+export const TrendAreaChart: React.FC<TrendAreaChartProps> = ({ data, name, formatValue, ariaLabel, height = 280, previous, previousName = '' }) => {
   const reducedMotion = useReducedMotion();
   const gradientId = `trend-${React.useId().replace(/:/g, '')}`;
-  const rows = React.useMemo(() => data.map((datum) => ({ ...datum })), [data]);
+  const rows = React.useMemo(() => data.map((datum, index) => ({ ...datum, previous: previous?.[index] })), [data, previous]);
   const peak = React.useMemo(() => {
     let best: TrendDatum | null = null;
     for (const datum of data) if (datum.value > 0 && (!best || datum.value > best.value)) best = datum;
@@ -52,13 +55,28 @@ export const TrendAreaChart: React.FC<TrendAreaChartProps> = ({ data, name, form
               <stop offset="100%" stopColor="var(--chart-primary)" stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid stroke="var(--chart-grid)" strokeDasharray="2 6" vertical={false} />
-          <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={10} minTickGap={18} tick={{ fill: 'var(--chart-axis)', fontSize: 11 }} />
-          <YAxis tickLine={false} axisLine={false} width={40} tickCount={5} allowDecimals={false} tickFormatter={(value: number) => compactNumber(value)} tick={{ fill: 'var(--chart-axis)', fontSize: 11 }} />
+          <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
+          <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={10} interval="preserveStartEnd" minTickGap={4} tick={{ fill: 'var(--chart-axis)', fontSize: 13 }} />
+          <YAxis tickLine={false} axisLine={false} width={40} tickCount={5} allowDecimals={false} tickFormatter={(value: number) => compactNumber(value)} tick={{ fill: 'var(--chart-axis)', fontSize: 13 }} />
           <Tooltip
             cursor={{ stroke: 'var(--chart-primary)', strokeWidth: 1, strokeDasharray: '3 4', strokeOpacity: 0.7 }}
             content={<ChartTooltip formatValue={(value) => formatValue(value)} />}
           />
+          {previous && (
+            <Area
+              type="monotone"
+              dataKey="previous"
+              name={previousName}
+              stroke="var(--chart-axis)"
+              strokeWidth={1.75}
+              strokeDasharray="2 5"
+              strokeLinecap="round"
+              fill="none"
+              dot={false}
+              activeDot={{ r: 4, fill: 'var(--chart-axis)', stroke: 'var(--chart-ring)', strokeWidth: 2 }}
+              isAnimationActive={false}
+            />
+          )}
           <Area
             type="monotone"
             dataKey="value"

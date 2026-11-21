@@ -140,7 +140,7 @@ Regenerate it with `npx tsx scripts/record-public-tour.mts`.
 These screens are the real interface running on sample data: a throwaway local
 database seeded by the same story the browser tests run (a seller is approved,
 lists a product, a customer buys it with cash on delivery, the seller ships it,
-a rider delivers it). Names and product pictures are invented. Nothing comes
+a rider delivers it), plus about a year of invented order history so the charts have a shape. Names, amounts and product pictures are invented. Nothing comes
 from a production account, and [`npm run readme:screens`](./scripts/capture-readme-screens.mts)
 regenerates every image. The map panels are blank because the machine that took
 the captures had no internet for map tiles.
@@ -189,6 +189,15 @@ the captures had no internet for map tiles.
 <p><b>Close the loop.</b> Entering the code marks the order delivered and paid, and opens a rating form for the delivery.</p>
 </td>
 </tr>
+<tr>
+<td colspan="2" valign="top">
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="./.github/assets/readme/app-customer-spending.jpg" />
+<img src="./.github/assets/readme/app-customer-spending-light.jpg" alt="Your spending page with four headline tiles, a monthly spending line, a split by category and a recent orders table" width="100%" />
+</picture>
+<p><b>See your spending.</b> Spent this month, orders, average order and delivered share, a monthly line, a split by category and the most recent orders, for the last 3, 6 or 12 months. Built from the customer's own orders; cancelled and refunded orders are not counted.</p>
+</td>
+</tr>
 </table>
 
 #### Seller
@@ -221,9 +230,9 @@ the captures had no internet for map tiles.
 <td width="50%" valign="top">
 <picture>
 <source media="(prefers-color-scheme: dark)" srcset="./.github/assets/readme/app-seller-analytics.jpg" />
-<img src="./.github/assets/readme/app-seller-analytics-light.jpg" alt="Sales analytics with net sales, units sold, average order value, monthly sales bars and top products" width="100%" />
+<img src="./.github/assets/readme/app-seller-analytics-light.jpg" alt="Sales analytics with sales tiles, monthly sales bars, stock health, top products and an order fulfilment funnel" width="100%" />
 </picture>
-<p><b>Read the numbers.</b> Net sales, units, average order value, monthly sales and top products.</p>
+<p><b>Read the numbers.</b> Net sales, units, stock health, monthly sales, top products and how far orders got, for the last 3, 6 or 12 months.</p>
 </td>
 </tr>
 </table>
@@ -275,6 +284,15 @@ the captures had no internet for map tiles.
 <img src="./.github/assets/readme/app-admin-seller-review-light.jpg" alt="Seller application dialog with a verification checklist for identity, documents and payout account, and Approve, Reject and Suspend buttons" width="100%" />
 </picture>
 <p><b>Approve with a checklist.</b> Identity, documents and payout account are ticked off before a seller can be approved.</p>
+</td>
+</tr>
+<tr>
+<td colspan="2" valign="top">
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="./.github/assets/readme/app-admin-charts.jpg" />
+<img src="./.github/assets/readme/app-admin-charts-light.jpg" alt="Marketplace overview: revenue, orders, average order and delivered tiles, a sales trend, a payment ring, orders by weekday and top merchants" width="100%" />
+</picture>
+<p><b>Read the numbers.</b> Revenue and orders over 3, 6 or 12 months, how customers pay, the busiest weekday and the top merchants. The trend adds last year as a dotted line when the loaded orders include it. Each chart has a table view and a plain-language label for screen readers.</p>
 </td>
 </tr>
 <tr>

@@ -20,9 +20,10 @@ interface ShareBreakdownProps {
   unit: string;
   /** A full ring, or a half ring for a health reading. The ranked rows are the same either way. */
   variant?: 'ring' | 'gauge';
+  /** Formats each row's figure, for example as money. Defaults to a plain count. */
+  formatValue?: (value: number) => string;
 }
 
-const lighter = (color: string) => `color-mix(in srgb, ${color} 62%, white)`;
 const glow = (color: string) => `0 0 18px -6px color-mix(in srgb, ${color} 70%, transparent)`;
 
 // Arc geometry. Both shapes are drawn with pathLength=1000, so a slice of 25% is simply 250 units of dash.
@@ -38,7 +39,7 @@ const VIEW = 140;
  * on telling colours apart. Hovering or focusing a row lights up its segment and dims the rest. The arc draws in once
  * it scrolls into view, and is simply drawn under reduced motion.
  */
-export const ShareBreakdown: React.FC<ShareBreakdownProps> = ({ slices, centerValue, centerLabel, ariaLabel, unit, variant = 'ring' }) => {
+export const ShareBreakdown: React.FC<ShareBreakdownProps> = ({ slices, centerValue, centerLabel, ariaLabel, unit, variant = 'ring', formatValue }) => {
   const reducedMotion = useReducedMotion();
   const rootRef = React.useRef<HTMLDivElement | null>(null);
   const [filled, setFilled] = React.useState(false);
@@ -74,14 +75,14 @@ export const ShareBreakdown: React.FC<ShareBreakdownProps> = ({ slices, centerVa
   // On the half ring the outer ends line up with the track's own rounded ends, so only the inner joins need a gap.
   let offset = 0;
   const arcs = slices.map((slice, index) => {
+    if (gauge && index > 0) return { slice, visible: 0.01, start: 0, hidden: true };
     const length = (rows[index].percent / 100) * TOTAL;
     const first = index === 0;
-    const last = index === slices.length - 1;
     let visible: number;
     let start: number;
     if (gauge) {
       const lead = first ? 0 : gapU / 2 + capU / 2;
-      const trail = last ? 0 : gapU / 2 + capU / 2;
+      const trail = 0;
       start = offset + lead;
       visible = Math.max(length - lead - trail, 0.01);
     } else {
@@ -90,7 +91,7 @@ export const ShareBreakdown: React.FC<ShareBreakdownProps> = ({ slices, centerVa
       visible = Math.max(length - pad, 0.01);
     }
     offset += length;
-    return { slice, visible, start };
+    return { slice, visible, start, hidden: false };
   });
 
   const center = VIEW / 2;
@@ -102,7 +103,8 @@ export const ShareBreakdown: React.FC<ShareBreakdownProps> = ({ slices, centerVa
   const arcProps = { fill: 'none', pathLength: TOTAL, strokeLinecap: single && !gauge ? ('butt' as const) : ('round' as const) };
 
   return (
-    <div ref={rootRef} className={gauge ? 'space-y-4' : 'flex flex-col gap-5 sm:flex-row sm:items-center sm:gap-6'}>
+    <div ref={rootRef} className="@container">
+      <div className={gauge ? 'space-y-4' : 'flex flex-col gap-5 @md:flex-row @md:items-center @md:gap-6'}>
       <div role="img" aria-label={ariaLabel} className={`relative mx-auto shrink-0 ${gauge ? 'w-full max-w-[15rem]' : 'w-40'}`} style={{ aspectRatio: gauge ? `${VIEW} / ${VIEW / 2 + 14}` : '1 / 1' }}>
         <svg viewBox={gauge ? `0 0 ${VIEW} ${VIEW / 2 + 14}` : `0 0 ${VIEW} ${VIEW}`} className="block h-full w-full overflow-visible" aria-hidden="true" focusable="false">
           {gauge ? (
@@ -110,7 +112,7 @@ export const ShareBreakdown: React.FC<ShareBreakdownProps> = ({ slices, centerVa
           ) : (
             <circle cx={center} cy={center} r={RADIUS} stroke="var(--chart-track)" strokeWidth={STROKE} fill="none" />
           )}
-          {arcs.map(({ slice, visible, start }) => {
+          {arcs.filter((arc) => !arc.hidden).map(({ slice, visible, start }) => {
             const shared = {
               ...arcProps,
               stroke: slice.color,
@@ -128,8 +130,8 @@ export const ShareBreakdown: React.FC<ShareBreakdownProps> = ({ slices, centerVa
           })}
         </svg>
         <div className={`pointer-events-none absolute inset-x-0 flex flex-col items-center text-center ${gauge ? 'bottom-0' : 'inset-y-0 justify-center'}`}>
-          <p className="font-display text-3xl font-normal tabular-nums leading-none tracking-tight text-[var(--chart-ink)]">{centerValue}</p>
-          <p className="mt-1 text-micro font-medium text-[var(--chart-axis)]">{centerLabel}</p>
+          <p className={`font-extrabold tabular-nums leading-none tracking-tight text-[var(--chart-ink)] ${gauge ? 'text-4xl' : 'text-2xl'}`}>{centerValue}</p>
+          <p className="mt-1.5 text-sm text-[var(--chart-axis)]">{centerLabel}</p>
         </div>
       </div>
 
@@ -142,32 +144,23 @@ export const ShareBreakdown: React.FC<ShareBreakdownProps> = ({ slices, centerVa
             onMouseLeave={() => setActive(null)}
             onFocus={() => setActive(slice.key)}
             onBlur={() => setActive(null)}
-            className="group rounded-xl px-3 py-2 outline-none transition-colors hover:bg-[var(--chart-track)] focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="group rounded-xl px-3 py-2.5 outline-none transition-colors hover:bg-[var(--chart-track)] focus-visible:ring-2 focus-visible:ring-brand-500"
             style={{ opacity: dimmed(slice.key) ? 0.55 : 1, transition: reducedMotion ? 'none' : 'opacity 200ms ease, background-color 150ms ease' }}
           >
-            <div className="flex items-baseline gap-3 text-xs">
-              <span aria-hidden="true" className="h-2.5 w-2.5 shrink-0 self-center rounded-full" style={{ backgroundColor: slice.color, boxShadow: glow(slice.color) }} />
-              <span className="min-w-0 flex-1 truncate font-medium text-[var(--chart-ink)]">{slice.name}</span>
-              <span className="tabular-nums text-[var(--chart-axis)]">
-                <span className="font-semibold text-[var(--chart-ink)]">{slice.value.toLocaleString()}</span>
-                <span className="ml-1">{unit}</span>
+            <div className="flex items-center gap-3 text-[0.95rem]">
+              <span aria-hidden="true" className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: slice.color, boxShadow: glow(slice.color) }} />
+              <span className="min-w-0 flex-1 truncate text-[var(--chart-ink)]">{slice.name}</span>
+              <span className="font-bold tabular-nums text-[var(--chart-ink)]">
+                {formatValue ? formatValue(slice.value) : slice.value.toLocaleString()}
+                <span className="sr-only"> {unit}</span>
               </span>
-              <span className="w-11 text-right text-sm font-bold tabular-nums text-[var(--chart-ink)]">{rows[index].label}%</span>
-            </div>
-            <div aria-hidden="true" className="mt-2 h-1 w-full overflow-hidden rounded-full bg-[var(--chart-track)]">
-              <div
-                className="h-full rounded-full"
-                style={{
-                  width: filled ? `${rows[index].percent}%` : '0%',
-                  backgroundImage: `linear-gradient(90deg, ${lighter(slice.color)}, ${slice.color})`,
-                  transition: reducedMotion ? 'none' : 'width 900ms cubic-bezier(0.22, 1, 0.36, 1)',
-                  transitionDelay: reducedMotion ? '0ms' : `${200 + index * 90}ms`,
-                }}
-              />
+              {!gauge && <span className="w-11 text-right tabular-nums text-[var(--chart-axis)]">{rows[index].label}%</span>}
+              {gauge && <span className="sr-only">{rows[index].label}%</span>}
             </div>
           </li>
         ))}
       </ul>
+      </div>
     </div>
   );
 };
