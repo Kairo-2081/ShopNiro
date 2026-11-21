@@ -14,12 +14,10 @@ permissions:
 jobs:
   watch:
     runs-on: ubuntu-latest
-    # The watch has its own Environment, `schema-watch`, so it does not depend on the deploy rules of
-    # `production`. Setup (repository settings, once): create the Environment, leave required reviewers
-    # empty, allow the `main` branch, and add the secret MIGRATE_DATABASE_URL holding a READ-ONLY database
-    # URL. A scheduled run always uses the default branch; if the Environment rejects `main` the job fails
-    # before any step runs and nothing is compared (docs/runbooks/schema-drift-alert.md, step 0).
-    environment: schema-watch
+    # No Environment: the database URL is a plain repository secret, MIGRATE_DATABASE_URL, so the deploy rules of
+    # `production` cannot reject the scheduled run. Because any workflow in this repository can read a repository
+    # secret, it must be a READ-ONLY database login, never the migration owner. If the secret is missing the
+    # first step that needs it fails with a connection error; see docs/runbooks/schema-drift-alert.md, step 0.
     timeout-minutes: 10
     services:
       postgres:
