@@ -510,6 +510,36 @@ Payment benchmark instructions are in [`docs/benchmarks.md`](./docs/benchmarks.m
 They use a stub gateway and local PostgreSQL, so their latency numbers are not
 production measurements.
 
+### Launch evidence (measured 21 Nov 2026)
+
+Everything below was measured in a disposable local sandbox: one Node process, a throwaway PostgreSQL database,
+a stub payment gateway and no network fonts. None of it is a production figure, and no load was sent to the
+production or staging sites. Commands and method are in [`docs/benchmarks.md`](./docs/benchmarks.md).
+
+| Check | Result |
+| --- | --- |
+| **50 concurrent checkouts** (`npm run bench:checkout`) | 20 rounds of 50 customers racing for 20 units: exactly 20 orders each round, no oversell, no negative stock, no duplicate order or tracking IDs. A double-submit created one order, with and without an `Idempotency-Key` |
+| **Checkout throughput** | 1,000 of 1,000 checkouts succeeded; latency p50 128 ms, p95 207 ms, p99 224 ms, max 231 ms |
+| **Restore drill** (`scripts/restore-drill-local.mjs`) | 23.6 MB / 19,781 rows restored in 1.8 s; 89 MB / 129,281 rows in 2.5 s; row counts matched in every table. Unencrypted and local, so it times the tools, not a real backup |
+| **CI history** | The last 30 push runs on `main` (14 to 19 Nov 2026) all passed, each taking about 11 to 18 minutes |
+| **Tests and coverage** | 68 serial + 235 parallel Node tests pass; combined coverage of `server/` and `src/lib/` is 62.5% of statements, 65.7% of branches and 76.7% of functions. The last full browser run was 173 passed, 37 skipped, 0 failed |
+| **Lighthouse, storefront, mobile** | Three runs: performance 87, 86 and 81 (LCP 1.0 to 3.2 s, TBT 340 to 520 ms, CLS 0); accessibility 100, best practices 96, SEO 92 on the first run. Local static server with Brotli and a local API, simulated mobile throttling. A first run that scored 56 was invalid: that build called the production API, which the sandbox blocks |
+| **axe** | The axe suite passes on the desktop project with no critical or serious violations (11 passed; the phone project skips the checks that are not width-specific) |
+| **Local security probe** | Protected routes return 401 without a session; the session cookie is HttpOnly and SameSite=Lax. See the gaps below |
+
+What this does not prove, and what is still open before a public launch:
+
+| Item | Status |
+| --- | --- |
+| External security review, or an OWASP ZAP and Burp pass | **Not done.** The probe above is a few scripted requests, not a scan |
+| 14 days of clean nightly reconciliation on real orders | **Not met.** 5 consecutive scheduled successes so far, and the sandbox has no payments to reconcile |
+| Lighthouse for the checkout dialog | **Not measured.** The dialog is not a page, and the automated flow timed out |
+| Mobile performance score | **Spread of 81 to 87 on a local run, with LCP varying from 1.0 to 3.2 s.** Total blocking time (340 to 520 ms) comes mostly from script work in the React vendor chunk. Measure again against staging on a real phone before quoting a number |
+| Dated restore drill on a real encrypted backup | **Not done.** The local drill is a timing floor only |
+| Closed beta summary, incident drill write-up | **Not done.** They need real sellers and a staged incident |
+| Signed merchant agreements, live gateway approval | **Not done.** Payments stay in sandbox |
+| `Content-Security-Policy` and `Secure` cookie flag | Set only in production mode, so they were not checked here; verify them on staging |
+
 ## Engineering
 
 ### Technology
@@ -722,6 +752,7 @@ The storefront's load time on an emulated mid-range phone is measured with
 | `npm run migrate:drift` | Compares a database with the one the migrations would build |
 | `npm run perf:storefront` / `perf:profile` | Measures and profiles the storefront's load time on an emulated phone |
 | `npm run bench:payments` | Payment latency and idempotency benchmark against a stub gateway |
+| `npm run bench:checkout` | Concurrent checkout test: no oversell, no duplicate order or tracking IDs |
 | `npm run docs:schema` | Regenerates [`docs/schema.md`](./docs/schema.md) from a migrated database |
 | `npm run readme:screens` | Regenerates the interface screenshots in this README from a throwaway local database |
 
