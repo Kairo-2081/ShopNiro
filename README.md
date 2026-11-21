@@ -193,9 +193,9 @@ the captures had no internet for map tiles.
 <td colspan="2" valign="top">
 <picture>
 <source media="(prefers-color-scheme: dark)" srcset="./.github/assets/readme/app-customer-spending.jpg" />
-<img src="./.github/assets/readme/app-customer-spending-light.jpg" alt="Your spending page with total spent, spending by month as bars and a ring of order statuses" width="100%" />
+<img src="./.github/assets/readme/app-customer-spending-light.jpg" alt="Your spending page with four headline tiles, a monthly spending line, a split by category and a recent orders table" width="100%" />
 </picture>
-<p><b>See your spending.</b> Total spent, spending by month and where every order stands, built from the customer's own orders. Cancelled and refunded orders are not counted.</p>
+<p><b>See your spending.</b> Spent this month, orders, average order and delivered share, a monthly line, a split by category and the most recent orders, for the last 3, 6 or 12 months. Built from the customer's own orders; cancelled and refunded orders are not counted.</p>
 </td>
 </tr>
 </table>
@@ -230,9 +230,9 @@ the captures had no internet for map tiles.
 <td width="50%" valign="top">
 <picture>
 <source media="(prefers-color-scheme: dark)" srcset="./.github/assets/readme/app-seller-analytics.jpg" />
-<img src="./.github/assets/readme/app-seller-analytics-light.jpg" alt="Sales analytics with net sales, units sold, average order value, monthly sales bars and top products" width="100%" />
+<img src="./.github/assets/readme/app-seller-analytics-light.jpg" alt="Sales analytics with sales tiles, monthly sales bars, stock health, top products and an order fulfilment funnel" width="100%" />
 </picture>
-<p><b>Read the numbers.</b> Net sales, units, stock health, monthly sales and top products, ranked with a bar against the best seller.</p>
+<p><b>Read the numbers.</b> Net sales, units, stock health, monthly sales, top products and how far orders got, for the last 3, 6 or 12 months.</p>
 </td>
 </tr>
 </table>
@@ -290,9 +290,9 @@ the captures had no internet for map tiles.
 <td colspan="2" valign="top">
 <picture>
 <source media="(prefers-color-scheme: dark)" srcset="./.github/assets/readme/app-admin-charts.jpg" />
-<img src="./.github/assets/readme/app-admin-charts-light.jpg" alt="Admin charts: revenue, orders and average order tiles, a 12-month sales trend, and rings for order status and payment methods" width="100%" />
+<img src="./.github/assets/readme/app-admin-charts-light.jpg" alt="Marketplace overview: revenue, orders, average order and delivered tiles, a sales trend, a payment ring, orders by weekday and top merchants" width="100%" />
 </picture>
-<p><b>Read the numbers.</b> Revenue and orders over 12 months, how orders are paid, and the busiest weekday. Each chart has a table view and a plain-language label for screen readers.</p>
+<p><b>Read the numbers.</b> Revenue and orders over 3, 6 or 12 months, how customers pay, the busiest weekday and the top merchants. The trend adds last year as a dotted line when the loaded orders include it. Each chart has a table view and a plain-language label for screen readers.</p>
 </td>
 </tr>
 <tr>

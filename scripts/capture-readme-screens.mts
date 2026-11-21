@@ -74,12 +74,20 @@ async function sampleHistory() {
     { id: 'SAMPLE-P-3', name: 'Cane Pendant Light', price: 4600, tile: tile('P', '#d8c38a', '#8a6f2c') },
     { id: 'SAMPLE-P-4', name: 'Clay Tea Cups', price: 650, tile: tile('C', '#9db2a0', '#4a6650') },
   ];
+  // A second approved store takes about a third of the orders, so the marketplace views have more than one merchant.
+  const OTHER = E2E.seller.id;
+  const otherProducts = [
+    { id: 'SAMPLE-D-1', name: 'Oak Serving Board', price: 1450, tile: tile('O', '#c9ad7f', '#7a5a2e') },
+    { id: 'SAMPLE-D-2', name: 'Linen Table Runner', price: 980, tile: tile('L', '#a9bfae', '#506b58') },
+  ];
   const methods = ['cash_on_delivery', 'cash_on_delivery', 'bkash', 'bkash', 'nagad', 'sslcommerz', 'visa_mastercard'];
   const address = JSON.stringify({ House_Name: 'House 1', Street: 'Road 1', City: 'Dhaka', Postal_Code: '1207' });
   await withDb(async (c) => {
-    for (const product of products) {
-      await c.query(`INSERT INTO products (id, name, price, stock, category_id, seller_id, image) VALUES ($1, $2, $3, 40, 'E2E-CAT', $4, $5)`,
-        [product.id, product.name, product.price, SELLER, product.tile]);
+    for (const [owner, list] of [[SELLER, products], [OTHER, otherProducts]] as const) {
+      for (const product of list) {
+        await c.query(`INSERT INTO products (id, name, price, stock, category_id, seller_id, image) VALUES ($1, $2, $3, 40, 'E2E-CAT', $4, $5)`,
+          [product.id, product.name, product.price, owner, product.tile]);
+      }
     }
     const now = new Date();
     let n = 0;
@@ -97,9 +105,11 @@ async function sampleHistory() {
         const lines = 1 + Math.floor(rand() * 2);
         let subtotal = 0;
         const id = `SAMPLE-O-${++n}`;
-        const first = Math.floor(rand() * products.length);
+        const owner = rand() < 0.3 ? OTHER : SELLER;
+        const catalogue = owner === OTHER ? otherProducts : products;
+        const first = Math.floor(rand() * catalogue.length);
         // Consecutive products, so one order never lists the same product twice.
-        const picked = Array.from({ length: lines }, (_, line) => ({ product: products[(first + line) % products.length], quantity: 1 + Math.floor(rand() * 2) }));
+        const picked = Array.from({ length: Math.min(lines, catalogue.length) }, (_, line) => ({ product: catalogue[(first + line) % catalogue.length], quantity: 1 + Math.floor(rand() * 2) }));
         picked.forEach(({ product, quantity }) => { subtotal += product.price * quantity; });
         const paid = status === 'delivered';
         await c.query(
@@ -111,12 +121,12 @@ async function sampleHistory() {
           await c.query(
             `INSERT INTO order_items (order_id, product_id, seller_id, product_id_snapshot, seller_id_snapshot, product_name, unit_price, quantity, image)
              VALUES ($1, $2, $3, $2, $3, $4, $5, $6, $7)`,
-            [id, product.id, SELLER, product.name, product.price, quantity, product.tile]);
+            [id, product.id, owner, product.name, product.price, quantity, product.tile]);
         }
         await c.query(
           `INSERT INTO seller_fulfillments (id, order_id, seller_id, subtotal, status, created_at, shipped_at, delivered_at)
            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-          [`SAMPLE-F-${n}`, id, SELLER, subtotal, status, placed,
+          [`SAMPLE-F-${n}`, id, owner, subtotal, status, placed,
             status === 'delivered' ? new Date(placed.getTime() + 864e5) : null,
             status === 'delivered' ? new Date(placed.getTime() + 3 * 864e5) : null]);
       }
@@ -144,8 +154,10 @@ async function showCatalogue(page: Page) {
 // time to finish before the picture is taken.
 async function showSection(page: Page, heading: string | RegExp) {
   await page.getByRole('heading', { name: heading }).first().evaluate((el) => el.scrollIntoView({ block: 'start' }));
-  await page.waitForTimeout(400);
-  await page.mouse.wheel(0, 40);
+  await page.waitForTimeout(1200);
+  await page.mouse.move(800, 500);
+  await page.mouse.wheel(0, -56);
+  await page.waitForTimeout(600);
   await page.mouse.move(2, 2);
   await page.waitForTimeout(2600);
 }
@@ -267,7 +279,7 @@ try {
     await shot(customer, 'app-customer-delivered');
     await customer.context().close();
     const spending = await open(browser, 'customer', TALL);
-    await selectWorkspaceNavigationItem(spending, /Orders|My orders/);
+    await selectWorkspaceNavigationItem(spending, /Spending insights/);
     await showSection(spending, 'Your spending');
     await shot(spending, 'app-customer-spending');
     await spending.context().close();
@@ -279,7 +291,7 @@ try {
     await shot(admin, 'app-admin-overview');
     await admin.context().close();
     const charts = await open(browser, 'admin', TALL);
-    await showSection(charts, 'Overall Platform Metrics');
+    await showSection(charts, 'Marketplace overview');
     await shot(charts, 'app-admin-charts');
     await charts.context().close();
     const admin2 = await open(browser, 'admin');
