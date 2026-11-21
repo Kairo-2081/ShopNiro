@@ -4,9 +4,9 @@ import { useLocale } from '../../lib/i18n';
 type View = 'seller' | 'admin' | 'customer';
 
 const VIEWS: Array<{ id: View; width: number; height: number }> = [
-  { id: 'seller', width: 1150, height: 1030 },
-  { id: 'admin', width: 1150, height: 1035 },
-  { id: 'customer', width: 1150, height: 620 },
+  { id: 'seller', width: 1150, height: 1300 },
+  { id: 'admin', width: 1150, height: 1240 },
+  { id: 'customer', width: 1150, height: 630 },
 ];
 
 /**

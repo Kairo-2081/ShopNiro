@@ -4,7 +4,7 @@ import { useLocale } from '../../lib/i18n';
 import { Order, OrderStatus } from '../../types';
 import { ChartPanel } from '../charts/ChartPanel';
 import { ShareBreakdown, ShareSlice } from '../charts/ShareBreakdown';
-import { MonthlyBarChart } from '../charts/MonthlyBarChart';
+import { TrendAreaChart } from '../charts/TrendAreaChart';
 import { StatTile } from '../charts/StatTile';
 import { percentChange, sum } from '../charts/format';
 
@@ -82,8 +82,8 @@ export const CustomerSpendingInsights: React.FC<CustomerSpendingInsightsProps> =
   return (
     <section aria-labelledby="customer-spending-title" className="space-y-4">
       <header>
-        <h2 id="customer-spending-title" className="font-display text-xl font-normal text-[var(--chart-ink)]">{t('spendInsightsTitle')}</h2>
-        <p className="mt-1 text-xs text-[var(--chart-axis)]">{t('spendInsightsSubtitle')}</p>
+        <h2 id="customer-spending-title" className="font-display text-3xl font-normal text-[var(--chart-ink)] sm:text-4xl">{t('spendInsightsTitle')}</h2>
+        <p className="mt-1.5 text-base text-[var(--chart-axis)]">{t('spendInsightsSubtitle')}</p>
       </header>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
@@ -115,11 +115,12 @@ export const CustomerSpendingInsights: React.FC<CustomerSpendingInsightsProps> =
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
         <ChartPanel headingId="customer-spend-month-title" title={t('spendByMonthTitle')} subtitle={t('spendByMonthSubtitle')} className="lg:col-span-3" featured>
           {summary.sixMonthSpent > 0 ? (
-            <MonthlyBarChart
+            <TrendAreaChart
               data={summary.months.map((month) => ({ label: month.label, value: month.value }))}
               name={t('spendTotalSpent')}
               formatValue={formatBDT}
               ariaLabel={t('spendByMonthAria')}
+              height={300}
             />
           ) : (
             <p className="py-12 text-center text-sm text-[var(--chart-axis)]">{t('spendNoSpending')}</p>

@@ -11,6 +11,8 @@ import { percentChange, sum } from '../charts/format';
 interface AdminOverviewAnalyticsProps {
   orders: Order[];
   isLoading?: boolean;
+  /** Sits next to the order status ring, for example the weekday chart. */
+  children?: React.ReactNode;
 }
 
 interface MonthlyMetric {
@@ -20,7 +22,7 @@ interface MonthlyMetric {
   orderValue: number;
 }
 
-type TrendMeasure = 'revenue' | 'orders';
+type TrendMeasure = 'revenue' | 'orders' | 'average';
 
 // Colour follows the entity, never its rank: the same status or payment method has the same colour in every chart and
 // in every theme. The slots are the validated --chart-cat-N tokens from index.css.
@@ -41,7 +43,7 @@ const paymentPresentation: Record<string, { label: string; color: string }> = {
   sslcommerz: { label: 'SSLCommerz', color: 'var(--chart-cat-6)' },
 };
 
-export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ orders, isLoading = false }) => {
+export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ orders, isLoading = false, children }) => {
   const { t } = useLocale();
   const [measure, setMeasure] = React.useState<TrendMeasure>('revenue');
 
@@ -123,7 +125,10 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
   }, [orders]);
 
   const trendData = React.useMemo(
-    () => analytics.monthly.map((row) => ({ label: row.month, value: measure === 'revenue' ? row.orderValue : row.orderCount })),
+    () => analytics.monthly.map((row) => ({
+      label: row.month.split(' ')[0],
+      value: measure === 'revenue' ? row.orderValue : measure === 'orders' ? row.orderCount : row.billableCount ? row.orderValue / row.billableCount : 0,
+    })),
     [analytics.monthly, measure],
   );
   const best = React.useMemo(() => {
@@ -146,13 +151,13 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
     );
   }
 
-  const measureName = measure === 'revenue' ? t('chartRevenue') : t('chartOrders');
-  const formatTrendValue = (value: number) => (measure === 'revenue' ? formatBDT(value) : `${value.toLocaleString()} ${t('chartOrdersUnit')}`);
+  const measureName = measure === 'revenue' ? t('chartRevenue') : measure === 'orders' ? t('chartOrders') : t('chartAverageOrder');
+  const formatTrendValue = (value: number) => (measure === 'orders' ? `${value.toLocaleString()} ${t('chartOrdersUnit')}` : formatBDT(value));
   const comparison = t('chartVsPrevious6');
 
   const toggle = (
     <div role="group" aria-label={t('chartMeasureGroup')} className="inline-flex rounded-full border border-[var(--chart-line)] bg-[var(--chart-track)] p-0.5 text-xs font-semibold">
-      {(['revenue', 'orders'] as const).map((option) => (
+      {(['revenue', 'orders', 'average'] as const).map((option) => (
         <button
           key={option}
           type="button"
@@ -164,7 +169,7 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
               : 'text-[var(--chart-axis)] hover:text-[var(--chart-ink)]'
           }`}
         >
-          {option === 'revenue' ? t('chartRevenue') : t('chartOrders')}
+          {option === 'revenue' ? t('chartRevenue') : option === 'orders' ? t('chartOrders') : t('chartAverageOrder')}
         </button>
       ))}
     </div>
@@ -173,10 +178,10 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
   return (
     <section aria-labelledby="admin-overview-analytics-title" className="space-y-5">
       <header>
-        <h2 id="admin-overview-analytics-title" className="font-display text-xl font-normal text-[var(--chart-ink)]">
+        <h2 id="admin-overview-analytics-title" className="font-display text-3xl font-normal text-[var(--chart-ink)] sm:text-4xl">
           {t('overallPlatformMetrics')}
         </h2>
-        <p className="mt-1 text-xs text-[var(--chart-axis)]">{t('orderActivityPast12Months')}</p>
+        <p className="mt-1.5 text-base text-[var(--chart-axis)]">{t('orderActivityPast12Months')}</p>
       </header>
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
@@ -211,12 +216,16 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
         />
         <StatTile
           label={t('chartDelivered')}
-          value={orders.length ? `${Math.round((analytics.deliveredCount / orders.length) * 100)}%` : '0%'}
+          value={orders.length ? `${((analytics.deliveredCount / orders.length) * 100).toFixed(1)}%` : '0%'}
+          progress={orders.length ? (analytics.deliveredCount / orders.length) * 100 : 0}
+          accent="var(--chart-positive)"
           note={t('chartDeliveredNote', { count: analytics.deliveredCount.toLocaleString(), total: orders.length.toLocaleString() })}
         />
       </div>
 
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
       <ChartPanel
+        className="lg:col-span-2"
         headingId="admin-trend-title"
         title={t('chartTrendTitle')}
         subtitle={t('chartTrendSubtitle', { measure: measureName.toLowerCase() })}
@@ -229,13 +238,19 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
               data={trendData}
               name={measureName}
               formatValue={formatTrendValue}
-              ariaLabel={measure === 'revenue' ? t('chartRevenueAria') : t('chartOrdersAria')}
+              ariaLabel={measure === 'orders' ? t('chartOrdersAria') : t('chartRevenueAria')}
             />
-            {best && (
-              <p className="mt-3 text-micro text-[var(--chart-axis)]">
-                {t('chartBestMonth')} · <span className="font-semibold text-[var(--chart-ink)]">{best.label}</span> · <span className="font-semibold tabular-nums text-[var(--chart-ink)]">{formatTrendValue(best.value)}</span>
-              </p>
-            )}
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-x-6 gap-y-1 text-sm text-[var(--chart-axis)]">
+              <span className="inline-flex items-center gap-2">
+                <span aria-hidden="true" className="h-0.5 w-6 rounded-full bg-[var(--chart-primary)]" />
+                {measureName}
+              </span>
+              {best && (
+                <span>
+                  {t('chartBestMonth')} · <span className="font-bold text-[var(--chart-ink)]">{best.label}</span> · <span className="tabular-nums">{formatTrendValue(best.value)}</span>
+                </span>
+              )}
+            </div>
             <details className="mt-1 text-xs">
               <summary className="min-h-11 cursor-pointer py-3 font-semibold text-[var(--chart-primary-hi)] underline decoration-[var(--chart-line)] underline-offset-4">
                 {t('viewMonthlyDataAsTable')}
@@ -270,7 +285,24 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
         )}
       </ChartPanel>
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+        <ChartPanel headingId="admin-payment-title" title={t('paymentMethodMix')} subtitle={t('howOrdersPaidFor')}>
+          {analytics.paymentSlices.length > 0 ? (
+            <ShareBreakdown
+              slices={analytics.paymentSlices}
+              centerValue={orders.length.toLocaleString()}
+              centerLabel={t('chartOrders')}
+              ariaLabel={t('chartPaymentAria')}
+              unit={t('chartOrdersUnit')}
+            />
+          ) : (
+            <div className="flex h-[200px] items-center justify-center rounded-xl border border-dashed border-[var(--chart-line)] text-center text-micro text-[var(--chart-axis)]">
+              {t('noPaymentData')}
+            </div>
+          )}
+        </ChartPanel>
+      </div>
+
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
         <ChartPanel headingId="admin-status-title" title={t('orderStatusMix')} subtitle={t('lifecycleDistribution')}>
           {analytics.statusSlices.length > 0 ? (
             <ShareBreakdown
@@ -287,21 +319,7 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
           )}
         </ChartPanel>
 
-        <ChartPanel headingId="admin-payment-title" title={t('paymentMethodMix')} subtitle={t('howOrdersPaidFor')}>
-          {analytics.paymentSlices.length > 0 ? (
-            <ShareBreakdown
-              slices={analytics.paymentSlices}
-              centerValue={orders.length.toLocaleString()}
-              centerLabel={t('chartOrders')}
-              ariaLabel={t('chartPaymentAria')}
-              unit={t('chartOrdersUnit')}
-            />
-          ) : (
-            <div className="flex h-[200px] items-center justify-center rounded-xl border border-dashed border-[var(--chart-line)] text-center text-micro text-[var(--chart-axis)]">
-              {t('noPaymentData')}
-            </div>
-          )}
-        </ChartPanel>
+        {children && <div className="min-w-0 lg:col-span-2">{children}</div>}
       </div>
     </section>
   );

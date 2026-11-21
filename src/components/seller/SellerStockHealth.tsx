@@ -23,19 +23,21 @@ export const SellerStockHealth: React.FC<SellerStockHealthProps> = ({ products }
     },
     { healthy: 0, low: 0, out: 0 },
   );
+  // The reading is the share of listings that are well stocked; the three counts under it are listed even when zero.
   const slices: ShareSlice[] = [
     { key: 'healthy', name: t('stockHealthHealthy'), value: counts.healthy, color: 'var(--chart-positive)' },
     { key: 'low', name: t('stockHealthLow'), value: counts.low, color: 'var(--chart-cat-5)' },
     { key: 'out', name: t('stockHealthOut'), value: counts.out, color: 'var(--chart-negative)' },
-  ].filter((slice) => slice.value > 0);
+  ];
+  const wellStocked = products.length ? Math.round((counts.healthy / products.length) * 100) : 0;
 
   return (
-    <ChartPanel headingId="seller-stock-health-title" title={t('stockHealthTitle')} subtitle={t('stockHealthSubtitle')}>
-      {slices.length ? (
+    <ChartPanel headingId="seller-stock-health-title" title={t('stockHealthTitle')} subtitle={`${products.length.toLocaleString(locale === 'bn' ? 'bn-BD' : 'en-BD')} ${t('stockHealthProducts').toLowerCase()}`} className="h-full">
+      {products.length ? (
         <ShareBreakdown
           slices={slices}
-          centerValue={products.length.toLocaleString(locale === 'bn' ? 'bn-BD' : 'en-BD')}
-          centerLabel={t('stockHealthProducts')}
+          centerValue={`${wellStocked.toLocaleString(locale === 'bn' ? 'bn-BD' : 'en-BD')}%`}
+          centerLabel={t('stockHealthReading')}
           ariaLabel={t('stockHealthAria')}
           unit={t('stockHealthUnit')}
           variant="gauge"

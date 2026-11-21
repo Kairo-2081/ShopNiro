@@ -52,9 +52,9 @@ export const TrendAreaChart: React.FC<TrendAreaChartProps> = ({ data, name, form
               <stop offset="100%" stopColor="var(--chart-primary)" stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid stroke="var(--chart-grid)" strokeDasharray="2 6" vertical={false} />
-          <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={10} minTickGap={18} tick={{ fill: 'var(--chart-axis)', fontSize: 11 }} />
-          <YAxis tickLine={false} axisLine={false} width={40} tickCount={5} allowDecimals={false} tickFormatter={(value: number) => compactNumber(value)} tick={{ fill: 'var(--chart-axis)', fontSize: 11 }} />
+          <CartesianGrid stroke="var(--chart-grid)" vertical={false} />
+          <XAxis dataKey="label" tickLine={false} axisLine={false} tickMargin={10} interval="preserveStartEnd" minTickGap={4} tick={{ fill: 'var(--chart-axis)', fontSize: 13 }} />
+          <YAxis tickLine={false} axisLine={false} width={40} tickCount={5} allowDecimals={false} tickFormatter={(value: number) => compactNumber(value)} tick={{ fill: 'var(--chart-axis)', fontSize: 13 }} />
           <Tooltip
             cursor={{ stroke: 'var(--chart-primary)', strokeWidth: 1, strokeDasharray: '3 4', strokeOpacity: 0.7 }}
             content={<ChartTooltip formatValue={(value) => formatValue(value)} />}
