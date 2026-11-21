@@ -11,6 +11,7 @@ import { LandingFooter } from './landing/LandingFooter';
 import { PaymentStrip } from './landing/PaymentStrip';
 import { SellersShowcase } from './landing/SellersShowcase';
 import { HowItWorks } from './landing/HowItWorks';
+import { ChartsShowcase } from './landing/ChartsShowcase';
 import { Reveal } from './motion/Reveal';
 import { MAIN_CONTENT_ID } from './SkipLink';
 
@@ -52,6 +53,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         <Reveal><HowItWorks onOpenSellerSignup={onOpenSellerSignup} /></Reveal>
 
         <Reveal><FeatureBlocks /></Reveal>
+
+        <Reveal><ChartsShowcase /></Reveal>
 
         <Reveal><TrustRow /></Reveal>
 

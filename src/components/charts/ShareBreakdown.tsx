@@ -102,7 +102,8 @@ export const ShareBreakdown: React.FC<ShareBreakdownProps> = ({ slices, centerVa
   const arcProps = { fill: 'none', pathLength: TOTAL, strokeLinecap: single && !gauge ? ('butt' as const) : ('round' as const) };
 
   return (
-    <div ref={rootRef} className={gauge ? 'space-y-4' : 'flex flex-col gap-5 sm:flex-row sm:items-center sm:gap-6'}>
+    <div ref={rootRef} className="@container">
+      <div className={gauge ? 'space-y-4' : 'flex flex-col gap-5 @md:flex-row @md:items-center @md:gap-6'}>
       <div role="img" aria-label={ariaLabel} className={`relative mx-auto shrink-0 ${gauge ? 'w-full max-w-[15rem]' : 'w-40'}`} style={{ aspectRatio: gauge ? `${VIEW} / ${VIEW / 2 + 14}` : '1 / 1' }}>
         <svg viewBox={gauge ? `0 0 ${VIEW} ${VIEW / 2 + 14}` : `0 0 ${VIEW} ${VIEW}`} className="block h-full w-full overflow-visible" aria-hidden="true" focusable="false">
           {gauge ? (
@@ -168,6 +169,7 @@ export const ShareBreakdown: React.FC<ShareBreakdownProps> = ({ slices, centerVa
           </li>
         ))}
       </ul>
+      </div>
     </div>
   );
 };
