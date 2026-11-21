@@ -46,6 +46,8 @@ function present(text: string): { prefix: string; body: string; suffix: string }
 /** A headline figure with a change chip and a small trend line. Same structure in light and dark; only the tokens differ. */
 export const StatTile: React.FC<StatTileProps> = ({ label, value, count, note, trend, change = null, comparison = '', accent = 'var(--chart-primary)', progress, after }) => {
   const hasTrend = !!trend && trend.length > 1 && progress === undefined;
+  // With a change to show, the comparison is the visible line under the chip ("vs October"); otherwise the plain note.
+  const caption = change !== null && comparison ? comparison : note;
   const parts = present(count ? count.format(count.value) : value);
   return (
     <article className="chart-card group/tile relative flex min-w-0 flex-col overflow-hidden rounded-3xl p-5 transition-[transform] duration-300 motion-safe:hover:-translate-y-0.5 sm:p-6">
@@ -67,7 +69,7 @@ export const StatTile: React.FC<StatTileProps> = ({ label, value, count, note, t
       <div className={`${progress !== undefined ? 'mt-3' : 'mt-3'} flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between`}>
         <div className="flex min-w-0 flex-col items-start gap-1.5">
           <DeltaChip change={change} comparison={comparison} />
-          {note && <p className="text-sm text-[var(--chart-axis)]">{note}</p>}
+          {caption && <p className="text-sm text-[var(--chart-axis)]">{caption}</p>}
         </div>
         {hasTrend && <Sparkline values={trend} color={accent} className="w-full sm:w-24 sm:shrink-0" />}
       </div>
