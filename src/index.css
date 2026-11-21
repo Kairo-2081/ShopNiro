@@ -145,6 +145,8 @@
   --sidebar-border: rgba(255, 255, 255, 0.06);
   --accent-gold: #c9a96e;
   --accent-green: #5fc79a;
+  /* Muted text on the neutral surfaces: the light-theme value (#666454) reads 3:1 on them, so the dark theme gets a lighter one. */
+  --color-surface-500: #929080;
   --fg: #f4f3ec;
   --focus-ring: #e7e5d6;
   --chart-primary: #cdb97d;
