@@ -289,6 +289,7 @@ export type AppTab =
   | 'storefront'
   | 'charts'
   | 'orders'
+  | 'spending'
   | 'profile'
   | 'seller-dashboard'
   | 'admin-dashboard'

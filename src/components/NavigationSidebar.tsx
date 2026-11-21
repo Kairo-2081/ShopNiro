@@ -2,6 +2,7 @@ import React from 'react';
 import {
   Activity,
   BarChart3,
+  TrendingUp,
   Flame,
   FolderTree,
   LifeBuoy,
@@ -58,6 +59,7 @@ interface NavigationSidebarProps {
   adminSellerCount: number;
   adminCategoryCount: number;
   adminProductCount: number;
+  customerActiveOrderCount?: number;
 }
 
 const primaryItem = (
@@ -84,6 +86,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
   adminSellerCount,
   adminCategoryCount,
   adminProductCount,
+  customerActiveOrderCount = 0,
 }) => {
   const { t } = useLocale();
   const mobileDrawerRef = useFocusTrap<HTMLDivElement>(isOpen);
@@ -137,7 +140,8 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
             items: [
               primaryItem(t('shop'), ShoppingBag, 'storefront'),
               primaryItem(t('topCharts'), Flame, 'charts'),
-              primaryItem(t('orders'), PackageCheck, 'orders'),
+              { ...primaryItem(t('orders'), PackageCheck, 'orders'), badge: customerActiveOrderCount },
+              primaryItem(t('navSpendingInsights'), TrendingUp, 'spending'),
               primaryItem(t('liveTracking'), Radio, 'live-tracking'),
               primaryItem(t('profile'), User, 'profile'),
               primaryItem(t('support'), LifeBuoy, 'support'),

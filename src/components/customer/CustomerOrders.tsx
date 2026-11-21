@@ -6,7 +6,6 @@ import { Package, Truck, CheckCircle2, Clock, MapPin, Search, AlertCircle, Radio
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useLocale } from '../../lib/i18n';
 
-const CustomerSpendingInsights = React.lazy(() => import('./CustomerSpendingInsights').then((module) => ({ default: module.CustomerSpendingInsights })));
 
 const LiveProductTrackingMap = React.lazy(() => import('../tracking/LiveProductTrackingMap').then((module) => ({ default: module.LiveProductTrackingMap })));
 const MarketplaceTrendsTopCharts = React.lazy(() => import('../storefront/MarketplaceTrendsTopCharts').then((module) => ({ default: module.MarketplaceTrendsTopCharts })));
@@ -454,12 +453,6 @@ export const CustomerOrders: React.FC<CustomerOrdersProps> = ({
             </article>
           ))}
         </section>
-      )}
-
-      {customerOrders.length > 0 && (
-        <React.Suspense fallback={<div aria-hidden="true" className="premium-skeleton h-72 rounded-2xl" />}>
-          <CustomerSpendingInsights orders={customerOrders} />
-        </React.Suspense>
       )}
 
       {/* Orders List */}
