@@ -16,7 +16,9 @@ jobs:
     runs-on: ubuntu-latest
     # The production database URL is stored in this Environment. If the Environment requires reviewers,
     # each scheduled run waits for approval; remove that rule or move the secret to a repository secret
-    # to let it run unattended.
+    # to let it run unattended. A scheduled run always uses the default branch, so if the Environment only
+    # accepts another branch the job is rejected before any step runs ("Branch main is not allowed to deploy
+    # to production"). That red run did not compare anything; see docs/runbooks/schema-drift-alert.md, step 0.
     environment: production
     timeout-minutes: 10
     services:
