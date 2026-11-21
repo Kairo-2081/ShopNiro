@@ -26,6 +26,7 @@ import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { fallbackToBrandLogo } from '../../lib/branding';
 import { useLocale } from '../../lib/i18n';
 import { StatTile } from '../charts/StatTile';
+import { ChartPanel } from '../charts/ChartPanel';
 import { percentChange, sum } from '../charts/format';
 
 // Recharts is large; load it only when a seller opens the analytics tab.
@@ -221,6 +222,8 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 5);
   })();
+
+  const topProductRevenue = sellerProductPerformance[0]?.revenue ?? 0;
 
   const sellerPricingGuidance = sellerProducts.map((product) => {
     const comparablePrices = products
@@ -722,15 +725,16 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
               change={percentChange(sum(recentMonthlySales.slice(3).map((month) => month.revenue)), sum(recentMonthlySales.slice(0, 3).map((month) => month.revenue)))}
               comparison={t('chartVsPrevious3')}
             />
-            <StatTile label="Units sold" value={sellerUnitsSold.toLocaleString()} count={{ value: sellerUnitsSold, format: (n) => Math.round(n).toLocaleString() }} note={`${billableSellerOrders.length} eligible orders`} />
+            <StatTile label="Units sold" value={sellerUnitsSold.toLocaleString()} count={{ value: sellerUnitsSold, format: (n) => Math.round(n).toLocaleString() }} note={`${billableSellerOrders.length} eligible orders`} accent="var(--chart-cat-2)" />
             <StatTile
               label="Average order value"
               value={formatCurrency(averageSellerOrderValue)}
               count={{ value: averageSellerOrderValue, format: formatCurrency }}
               note="Across eligible seller orders"
+              accent="var(--chart-cat-3)"
               trend={recentMonthlySales.some((month) => month.orders > 0) ? recentMonthlySales.map((month) => (month.orders ? month.revenue / month.orders : 0)) : undefined}
             />
-            <StatTile label="Product rating" value={avgSellerRating ? `${avgSellerRating.toFixed(1)} / 5` : 'No ratings'} note={`${sellerReviews.length} customer reviews`} />
+            <StatTile label="Product rating" value={avgSellerRating ? `${avgSellerRating.toFixed(1)} / 5` : 'No ratings'} note={`${sellerReviews.length} customer reviews`} accent="var(--chart-cat-5)" />
           </div>
 
           <React.Suspense fallback={<div aria-hidden="true" className="premium-skeleton h-64 rounded-2xl" />}>
@@ -738,10 +742,8 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
           </React.Suspense>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <section className="rounded-2xl border border-surface-200 bg-white p-5 dark:border-surface-800 dark:bg-[#12161D]">
-              <h2 className="text-sm font-bold text-surface-900 dark:text-white">{t('monthlySales')}</h2>
-              <p className="mt-1 text-micro text-surface-500 dark:text-surface-400">{t('productRevenueLastSix')}</p>
-              <div className="mt-4">
+            <ChartPanel headingId="seller-monthly-sales-title" title={t('monthlySales')} subtitle={t('productRevenueLastSix')} featured>
+              <div>
                 <React.Suspense fallback={<div aria-hidden="true" className="premium-skeleton h-[220px] rounded-xl" />}>
                   <MonthlyBarChart
                     data={recentMonthlySales.map((month) => ({ label: month.label, value: month.revenue }))}
@@ -752,13 +754,13 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                 </React.Suspense>
               </div>
               <details className="mt-1 text-xs">
-                <summary className="min-h-11 cursor-pointer py-3 font-semibold text-brand-700 underline decoration-brand-300 underline-offset-4 dark:text-brand-300">
+                <summary className="min-h-11 cursor-pointer py-3 font-semibold text-[var(--chart-primary-hi)] underline decoration-[var(--chart-line)] underline-offset-4">
                   {t('viewMonthlyDataAsTable')}
                 </summary>
                 <table className="w-full border-collapse text-left">
                   <caption className="sr-only">Monthly product sales for the last six months</caption>
                   <thead>
-                    <tr className="border-b border-surface-200 dark:border-surface-700">
+                    <tr className="border-b border-[var(--chart-line)]">
                       <th scope="col" className="p-2">{t('monthCol')}</th>
                       <th scope="col" className="p-2">{t('ordersCol')}</th>
                       <th scope="col" className="p-2">{t('chartRevenue')}</th>
@@ -766,7 +768,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                   </thead>
                   <tbody>
                     {recentMonthlySales.map((month) => (
-                      <tr key={month.key} className="border-b border-surface-100 dark:border-surface-800">
+                      <tr key={month.key} className="border-b border-[var(--chart-hair)]">
                         <th scope="row" className="p-2 font-medium">{month.label}</th>
                         <td className="p-2 tabular-nums">{month.orders.toLocaleString()}</td>
                         <td className="p-2 tabular-nums">{formatCurrency(month.revenue)}</td>
@@ -775,38 +777,41 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                   </tbody>
                 </table>
               </details>
-            </section>
+            </ChartPanel>
 
-            <section className="rounded-2xl border border-surface-200 bg-white p-5 dark:border-surface-800 dark:bg-[#12161D]">
-              <h2 className="text-sm font-bold text-surface-900 dark:text-white">{t('topProducts')}</h2>
-              <p className="mt-1 text-micro text-surface-500 dark:text-surface-400">{t('rankedByNetSales')}</p>
+            <ChartPanel headingId="seller-top-products-title" title={t('topProducts')} subtitle={t('rankedByNetSales')}>
               {sellerProductPerformance.length ? (
-                <ol className="mt-3 divide-y divide-surface-100 dark:divide-surface-800">
+                <ol className="divide-y divide-[var(--chart-hair)]">
                   {sellerProductPerformance.map(({ product, units, revenue }, index) => (
                     <li key={product.Product_ID} className="flex items-center gap-3 py-3">
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-surface-100 text-xs font-bold text-surface-700 dark:bg-surface-800 dark:text-surface-200">{index + 1}</span>
-                      <img src={product.Image} alt="" className="h-9 w-9 shrink-0 rounded-md object-cover" />
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--chart-track)] text-xs font-bold tabular-nums text-[var(--chart-axis)]">{index + 1}</span>
+                      <img src={product.Image} alt="" className="h-10 w-10 shrink-0 rounded-lg object-cover" />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-semibold text-surface-900 dark:text-white">{product.Name}</p>
-                        <p className="text-micro text-surface-500 dark:text-surface-400">{units.toLocaleString()} units sold</p>
+                        <div className="flex items-baseline justify-between gap-3">
+                          <p className="truncate text-xs font-semibold text-[var(--chart-ink)]">{product.Name}</p>
+                          <span className="shrink-0 text-xs font-bold tabular-nums text-[var(--chart-ink)]">{formatCurrency(revenue)}</span>
+                        </div>
+                        <p className="text-micro text-[var(--chart-axis)]">{units.toLocaleString()} units sold</p>
+                        <div aria-hidden="true" className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-[var(--chart-track)]">
+                          <div className="h-full rounded-full" style={{ width: `${topProductRevenue > 0 ? Math.max((revenue / topProductRevenue) * 100, 3) : 0}%`, backgroundImage: 'linear-gradient(90deg, var(--chart-primary-soft), var(--chart-primary))' }} />
+                        </div>
                       </div>
-                      <span className="shrink-0 text-xs font-bold tabular-nums text-surface-800 dark:text-surface-200">{formatCurrency(revenue)}</span>
                     </li>
                   ))}
                 </ol>
               ) : (
-                <p className="py-10 text-center text-xs text-surface-500 dark:text-surface-400">{t('salesAnalyticsEligibleOrder')}</p>
+                <p className="py-10 text-center text-xs text-[var(--chart-axis)]">{t('salesAnalyticsEligibleOrder')}</p>
               )}
-            </section>
+            </ChartPanel>
           </div>
-          <section className="overflow-x-auto rounded-2xl border border-surface-200 bg-white dark:border-surface-800 dark:bg-[#12161D]">
+          <section className="chart-card overflow-x-auto rounded-2xl">
             <div className="p-5">
-              <h2 className="text-sm font-bold text-surface-900 dark:text-white">{t('pricePositioning')}</h2>
-              <p className="mt-1 text-micro text-surface-500 dark:text-surface-400">{t('pricePositioningDesc')}</p>
+              <h2 className="font-display text-lg font-normal text-[var(--chart-ink)]">{t('pricePositioning')}</h2>
+              <p className="mt-1 text-micro text-[var(--chart-axis)]">{t('pricePositioningDesc')}</p>
             </div>
             <table className="w-full min-w-[560px] text-left text-xs">
-              <thead className="border-y border-surface-200 bg-surface-50 text-micro uppercase text-surface-500 dark:border-surface-800 dark:bg-[#181F2A] dark:text-surface-400"><tr><th className="p-3">Product</th><th className="p-3">{t('listPrice')}</th><th className="p-3">{t('effectivePrice')}</th><th className="p-3">{t('categoryMedian')}</th><th className="p-3">{t('positionCol')}</th></tr></thead>
-              <tbody className="divide-y divide-surface-100 dark:divide-surface-800">
+              <thead className="border-y border-[var(--chart-line)] bg-[var(--chart-track)] text-micro font-semibold text-[var(--chart-axis)]"><tr><th className="p-3">Product</th><th className="p-3">{t('listPrice')}</th><th className="p-3">{t('effectivePrice')}</th><th className="p-3">{t('categoryMedian')}</th><th className="p-3">{t('positionCol')}</th></tr></thead>
+              <tbody className="divide-y divide-[var(--chart-hair)]">
                 {sellerPricingGuidance.map(({ product, categoryMedian, effectivePrice, variance }) => (
                   <tr key={product.Product_ID}>
                     <td className="p-3 font-semibold text-surface-900 dark:text-white">{product.Name}</td>
@@ -820,17 +825,17 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
               </tbody>
             </table>
           </section>
-          <section className="overflow-x-auto rounded-2xl border border-surface-200 bg-white dark:border-surface-800 dark:bg-[#12161D]">
+          <section className="chart-card overflow-x-auto rounded-2xl">
             <div className="p-5">
-              <h2 className="text-sm font-bold text-surface-900 dark:text-white">{t('listingPerformance')}</h2>
-              <p className="mt-1 text-micro text-surface-500 dark:text-surface-400">{t('listingPerformanceDesc')}</p>
+              <h2 className="font-display text-lg font-normal text-[var(--chart-ink)]">{t('listingPerformance')}</h2>
+              <p className="mt-1 text-micro text-[var(--chart-axis)]">{t('listingPerformanceDesc')}</p>
             </div>
             {analyticsError && <p role="alert" className="mx-5 mb-3 text-xs text-danger-700 dark:text-danger-300">{analyticsError}</p>}
             <table className="w-full min-w-[680px] text-left text-xs">
-              <thead className="border-y border-surface-200 bg-surface-50 text-micro uppercase text-surface-500 dark:border-surface-800 dark:bg-[#181F2A] dark:text-surface-400">
+              <thead className="border-y border-[var(--chart-line)] bg-[var(--chart-track)] text-micro font-semibold text-[var(--chart-axis)]">
                 <tr><th className="p-3">Product</th><th className="p-3">Views · 7d</th><th className="p-3">Clicks · 7d</th><th className="p-3">CTR</th><th className="p-3">Returned · 30d</th><th className="p-3">{t('returnRate')}</th><th className="p-3">{t('nextAction')}</th></tr>
               </thead>
-              <tbody className="divide-y divide-surface-100 dark:divide-surface-800">
+              <tbody className="divide-y divide-[var(--chart-hair)]">
                 {productAnalytics.map((metric) => {
                   const product = sellerProducts.find((item) => item.Product_ID === metric.Product_ID);
                   if (!product) return null;

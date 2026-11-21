@@ -89,23 +89,44 @@
   --shopniro-border: rgba(231, 229, 214, 0.14);
   --shopniro-glow: rgba(169, 155, 114, 0.25);
 
-  /* Chart tokens. One hue (the brand's olive-gold) carries a single measure; the six categorical slots were checked
-     with the dataviz validator against both surfaces (lightness band, chroma, colour-blind separation, contrast). */
-  --chart-primary: #6e684b;
-  --chart-primary-soft: #a89d78;
-  --chart-grid: rgba(87, 82, 59, 0.14);
+  /* Chart tokens. One gold carries a single measure; sage, slate, amber, stone and violet separate categories. Light and
+     dark define the same names with the same roles, so a chart reads identically in both and never needs a per-theme class. */
+  --chart-primary: #9a8446;
+  --chart-primary-hi: #7d6a30;
+  --chart-primary-soft: #b9a76a;
+  --chart-grid: rgba(87, 82, 59, 0.12);
   --chart-axis: #666454;
   --chart-ink: #151510;
-  --chart-muted-bar: rgba(110, 104, 75, 0.22);
+  --chart-muted-bar: #d9d4bd;
+  --chart-track: #efece0;
+  --chart-line: #e3e0d1;
+  --chart-hair: #ece9dc;
+  --chart-card: #ffffff;
+  --chart-card-shadow: 0 1px 2px rgba(60, 50, 20, 0.05), 0 12px 30px -18px rgba(60, 50, 20, 0.18);
+  --chart-featured-line: #d9cd9d;
+  --chart-featured-shadow: 0 12px 34px -16px rgba(154, 132, 70, 0.35);
+  --chart-tip-bg: rgba(255, 255, 255, 0.96);
+  --chart-tip-line: #d8d3bb;
   --chart-positive: #187a46;
   --chart-negative: #be123c;
   --chart-ring: #ffffff;
-  --chart-cat-1: #947700;
-  --chart-cat-2: #8668b6;
-  --chart-cat-3: #009084;
-  --chart-cat-4: #b36139;
-  --chart-cat-5: #3c7ebe;
-  --chart-cat-6: #518b44;
+  --chart-on-primary: #ffffff;
+  --chart-cat-1: #9a8446;
+  --chart-cat-2: #1f9a62;
+  --chart-cat-3: #4a79b8;
+  --chart-cat-4: #a8a48c;
+  --chart-cat-5: #b8861a;
+  --chart-cat-6: #8668b6;
+}
+
+.chart-card {
+  border: 1px solid var(--chart-line);
+  background: var(--chart-card);
+  box-shadow: var(--chart-card-shadow);
+}
+.chart-card-featured {
+  border-color: var(--chart-featured-line);
+  box-shadow: var(--chart-featured-shadow);
 }
 
 .dark {
@@ -113,21 +134,32 @@
   --bg: #10100f;
   --fg: #f4f3ec;
   --focus-ring: #e7e5d6;
-  --chart-primary: #d8cb94;
+  --chart-primary: #cdb97d;
+  --chart-primary-hi: #ecdca0;
   --chart-primary-soft: #8a805e;
-  --chart-grid: rgba(231, 229, 214, 0.1);
-  --chart-axis: #b5b3a5;
+  --chart-grid: rgba(255, 255, 255, 0.07);
+  --chart-axis: #b2af9b;
   --chart-ink: #f4f3ec;
-  --chart-muted-bar: rgba(216, 203, 148, 0.2);
-  --chart-positive: #4cba79;
-  --chart-negative: #fb7185;
+  --chart-muted-bar: #5a5640;
+  --chart-track: rgba(255, 255, 255, 0.055);
+  --chart-line: rgba(255, 255, 255, 0.09);
+  --chart-hair: rgba(255, 255, 255, 0.05);
+  --chart-card: linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.022));
+  --chart-card-shadow: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 18px 40px -22px rgba(0, 0, 0, 0.5);
+  --chart-featured-line: rgba(236, 220, 160, 0.32);
+  --chart-featured-shadow: 0 0 0 1px rgba(236, 220, 160, 0.05), 0 0 60px -20px rgba(205, 185, 125, 0.28), 0 18px 40px -22px rgba(0, 0, 0, 0.5);
+  --chart-tip-bg: rgba(28, 29, 21, 0.96);
+  --chart-tip-line: rgba(236, 220, 160, 0.28);
+  --chart-positive: #5fc79a;
+  --chart-negative: #ef7b86;
   --chart-ring: #1a1a14;
-  --chart-cat-1: #ad8f2a;
-  --chart-cat-2: #9e80d1;
-  --chart-cat-3: #00a99c;
-  --chart-cat-4: #ce7951;
-  --chart-cat-5: #5497d9;
-  --chart-cat-6: #69a45c;
+  --chart-on-primary: #1a1a14;
+  --chart-cat-1: #cdb97d;
+  --chart-cat-2: #5fc79a;
+  --chart-cat-3: #86a7d4;
+  --chart-cat-4: #6b6850;
+  --chart-cat-5: #e9b949;
+  --chart-cat-6: #9e80d1;
 }
 
 @layer base {

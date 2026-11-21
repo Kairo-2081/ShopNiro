@@ -24,9 +24,9 @@ export const SellerStockHealth: React.FC<SellerStockHealthProps> = ({ products }
     { healthy: 0, low: 0, out: 0 },
   );
   const slices: ShareSlice[] = [
-    { key: 'healthy', name: t('stockHealthHealthy'), value: counts.healthy, color: 'var(--chart-cat-6)' },
-    { key: 'low', name: t('stockHealthLow'), value: counts.low, color: 'var(--chart-cat-2)' },
-    { key: 'out', name: t('stockHealthOut'), value: counts.out, color: 'var(--chart-cat-4)' },
+    { key: 'healthy', name: t('stockHealthHealthy'), value: counts.healthy, color: 'var(--chart-positive)' },
+    { key: 'low', name: t('stockHealthLow'), value: counts.low, color: 'var(--chart-cat-5)' },
+    { key: 'out', name: t('stockHealthOut'), value: counts.out, color: 'var(--chart-negative)' },
   ].filter((slice) => slice.value > 0);
 
   return (
@@ -38,9 +38,10 @@ export const SellerStockHealth: React.FC<SellerStockHealthProps> = ({ products }
           centerLabel={t('stockHealthProducts')}
           ariaLabel={t('stockHealthAria')}
           unit={t('stockHealthUnit')}
+          variant="gauge"
         />
       ) : (
-        <p className="py-12 text-center text-sm text-surface-500 dark:text-surface-400">{t('stockHealthEmpty')}</p>
+        <p className="py-12 text-center text-sm text-[var(--chart-axis)]">{t('stockHealthEmpty')}</p>
       )}
     </ChartPanel>
   );
