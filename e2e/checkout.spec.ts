@@ -6,6 +6,11 @@ import {
 
 const { blanket, dripper, lamp, voucher } = E2E.products;
 
+// A 44 px target can be measured as 43.999996 px: the browser lays elements out in fractions of a pixel and some
+// Chromium builds report that rounding. Allow a hundredth of a pixel so a browser update does not fail the suite,
+// while a real 43 px control still does.
+const MIN_TARGET = 44 - 0.01;
+
 test.beforeEach(async ({ page }) => {
   await clearCartAndOrders();
   await blockNonLocalTraffic(page);
@@ -114,18 +119,18 @@ test('a first order completes at 360px with the total and pay action pinned toge
   const submitBounds = await submit.boundingBox();
   const totalBounds = await page.getByTestId('checkout-footer-total').boundingBox();
   expect(footerBounds?.height).toBeLessThanOrEqual(100);
-  expect(submitBounds?.height).toBeGreaterThanOrEqual(44);
+  expect(submitBounds?.height).toBeGreaterThanOrEqual(MIN_TARGET);
   expect(Math.abs((submitBounds?.y || 0) + (submitBounds?.height || 0) / 2 - ((totalBounds?.y || 0) + (totalBounds?.height || 0) / 2))).toBeLessThanOrEqual(12);
 
   for (const button of await checkout.getByRole('button').all()) {
     const bounds = await button.boundingBox();
-    expect(bounds?.width).toBeGreaterThanOrEqual(44);
-    expect(bounds?.height).toBeGreaterThanOrEqual(44);
+    expect(bounds?.width).toBeGreaterThanOrEqual(MIN_TARGET);
+    expect(bounds?.height).toBeGreaterThanOrEqual(MIN_TARGET);
   }
 
   for (const inputId of ['checkout-house', 'checkout-street', 'checkout-city', 'checkout-postal']) {
     const bounds = await page.locator(`#${inputId}`).boundingBox();
-    expect(bounds?.height).toBeGreaterThanOrEqual(44);
+    expect(bounds?.height).toBeGreaterThanOrEqual(MIN_TARGET);
   }
 
   await page.getByRole('button', { name: /Select cash on delivery.*as payment method/i }).click();
