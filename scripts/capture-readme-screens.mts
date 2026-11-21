@@ -263,6 +263,11 @@ try {
     await rider.getByText(/COD collection recorded/).waitFor();
     await shot(rider, 'app-rider-cash-recorded');
     await rider.context().close();
+    const analytics = await open(browser, 'rider', TALL);
+    await selectWorkspaceNavigationItem(analytics, /Rider analytics/);
+    await showSection(analytics, 'Rider analytics');
+    await shot(analytics, 'app-rider-analytics');
+    await analytics.context().close();
     code = (await withDb(async (c) => (await c.query(
       `SELECT rd.confirmation_code FROM rider_deliveries rd JOIN seller_fulfillments sf ON sf.id = rd.fulfillment_id
         WHERE sf.order_id = $1`, [orderId])).rows[0])).confirmation_code as string;
@@ -283,6 +288,11 @@ try {
     await showSection(spending, 'Your spending');
     await shot(spending, 'app-customer-spending');
     await spending.context().close();
+    const transactions = await open(browser, 'customer', TALL);
+    await selectWorkspaceNavigationItem(transactions, /Transactions/);
+    await showSection(transactions, 'Transactions');
+    await shot(transactions, 'app-customer-transactions');
+    await transactions.context().close();
   }
 
   // Admin views after the order has moved through the marketplace.
@@ -297,7 +307,7 @@ try {
     const admin2 = await open(browser, 'admin');
     await selectWorkspaceNavigationItem(admin2, /Marketplace metrics/);
     await shot(admin2, 'app-admin-metrics');
-    await selectWorkspaceNavigationItem(admin2, /Online payments/);
+    await selectWorkspaceNavigationItem(admin2, /Seller payout requests/);
     await shot(admin2, 'app-admin-payments');
     await admin2.context().close();
   }
