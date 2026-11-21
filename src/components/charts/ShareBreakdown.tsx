@@ -20,6 +20,8 @@ interface ShareBreakdownProps {
   unit: string;
   /** A full ring, or a half ring for a health reading. The ranked rows are the same either way. */
   variant?: 'ring' | 'gauge';
+  /** Formats each row's figure, for example as money. Defaults to a plain count. */
+  formatValue?: (value: number) => string;
 }
 
 const glow = (color: string) => `0 0 18px -6px color-mix(in srgb, ${color} 70%, transparent)`;
@@ -37,7 +39,7 @@ const VIEW = 140;
  * on telling colours apart. Hovering or focusing a row lights up its segment and dims the rest. The arc draws in once
  * it scrolls into view, and is simply drawn under reduced motion.
  */
-export const ShareBreakdown: React.FC<ShareBreakdownProps> = ({ slices, centerValue, centerLabel, ariaLabel, unit, variant = 'ring' }) => {
+export const ShareBreakdown: React.FC<ShareBreakdownProps> = ({ slices, centerValue, centerLabel, ariaLabel, unit, variant = 'ring', formatValue }) => {
   const reducedMotion = useReducedMotion();
   const rootRef = React.useRef<HTMLDivElement | null>(null);
   const [filled, setFilled] = React.useState(false);
@@ -149,7 +151,7 @@ export const ShareBreakdown: React.FC<ShareBreakdownProps> = ({ slices, centerVa
               <span aria-hidden="true" className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: slice.color, boxShadow: glow(slice.color) }} />
               <span className="min-w-0 flex-1 truncate text-[var(--chart-ink)]">{slice.name}</span>
               <span className="font-bold tabular-nums text-[var(--chart-ink)]">
-                {slice.value.toLocaleString()}
+                {formatValue ? formatValue(slice.value) : slice.value.toLocaleString()}
                 <span className="sr-only"> {unit}</span>
               </span>
               {!gauge && <span className="w-11 text-right tabular-nums text-[var(--chart-axis)]">{rows[index].label}%</span>}

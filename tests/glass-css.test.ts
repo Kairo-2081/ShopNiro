@@ -61,5 +61,6 @@ test('the scene behind the glass is the calm two-glow backdrop in both themes', 
   assert.doesNotMatch(glass, /html\.dark body::before \{/);
   assert.doesNotMatch(glass, /html:not\(\.dark\) body::after \{/);
   assert.match(base, /body::before \{/);
-  assert.match(base, /html:not\(\.dark\) body::before \{/);
+  assert.match(base, /var\(--bg-glow\)/);
+  assert.match(base, /\.dark \{[\s\S]*--bg-glow:/);
 });
