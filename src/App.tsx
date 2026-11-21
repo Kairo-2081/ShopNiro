@@ -54,6 +54,7 @@ const CartDrawer = React.lazy(() => import('./components/storefront/CartDrawer')
 const CheckoutModal = React.lazy(() => import('./components/storefront/CheckoutModal').then((module) => ({ default: module.CheckoutModal })));
 const PaymentResultModal = React.lazy(() => import('./components/payment/PaymentResultModal').then((module) => ({ default: module.PaymentResultModal })));
 const CustomerOrders = React.lazy(() => import('./components/customer/CustomerOrders').then((module) => ({ default: module.CustomerOrders })));
+const CustomerSpendingInsights = React.lazy(() => import('./components/customer/CustomerSpendingInsights').then((module) => ({ default: module.CustomerSpendingInsights })));
 const CustomerProfile = React.lazy(() => import('./components/customer/CustomerProfile').then((module) => ({ default: module.CustomerProfile })));
 const SupportPage = React.lazy(() => import('./components/support/SupportPage').then((module) => ({ default: module.SupportPage })));
 const AdminDashboard = React.lazy(() => import('./components/admin/AdminDashboard').then((module) => ({ default: module.AdminDashboard })));
@@ -1149,6 +1150,7 @@ export default function App() {
         onOpenNavigation={() => setIsNavigationOpen(true)}
         isNavigationOpen={isNavigationOpen}
         onOpenChat={() => setIsChatOpen(true)}
+        onSearch={(query) => { setActiveTab('storefront'); void searchStoreProducts(query); }}
       />
 
       <div className="flex flex-1 items-stretch">
@@ -1170,6 +1172,7 @@ export default function App() {
         adminSellerCount={sellers.length}
         adminCategoryCount={categories.length}
         adminProductCount={products.length}
+        customerActiveOrderCount={orders.filter((order) => order.Customer_ID === selectedCustomer?.Customer_ID && order.Status !== 'delivered' && order.Status !== 'cancelled').length}
       />
       <div className="flex min-w-0 flex-1 flex-col">
       {/* Main Content Area */}
@@ -1279,6 +1282,30 @@ export default function App() {
               requiredRole="Customer"
               onOpenLogin={() => {
                 setAuthNotice('Please sign in as a Customer to view and manage your orders.');
+                openLogin();
+              }}
+              onBackToStorefront={() => setActiveTab('storefront')}
+            />
+          )
+        )}
+
+        {/* Customer spending insights - Authenticated Guard */}
+        {activeTab === 'spending' && (
+          isLoggedIn && selectedCustomer ? (
+            <div className="view-enter">
+              <CustomerSpendingInsights
+                orders={orders.filter((order) => order.Customer_ID === selectedCustomer.Customer_ID)}
+                products={products}
+                categories={categories}
+                onViewOrders={() => setActiveTab('orders')}
+              />
+            </div>
+          ) : (
+            <AuthenticationGuard
+              pageName="Spending insights"
+              requiredRole="Customer"
+              onOpenLogin={() => {
+                setAuthNotice('Please sign in as a Customer to see your spending.');
                 openLogin();
               }}
               onBackToStorefront={() => setActiveTab('storefront')}

@@ -8,6 +8,7 @@ interface SectionProps {
   className?: string;
   headingAs?: 'h2' | 'h3';
   headingClassName?: string;
+  descriptionClassName?: string;
 }
 
 export const Section: React.FC<SectionProps> = ({
@@ -18,6 +19,7 @@ export const Section: React.FC<SectionProps> = ({
   className = 'space-y-4',
   headingAs: Heading = 'h2',
   headingClassName = 'text-lg font-bold text-surface-900 dark:text-white',
+  descriptionClassName = 'mt-1 text-xs text-surface-500 dark:text-surface-400',
 }) => {
   const headingId = React.useId();
 
@@ -26,7 +28,7 @@ export const Section: React.FC<SectionProps> = ({
       <header className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <Heading id={headingId} className={headingClassName}>{title}</Heading>
-          {description && <p className="mt-1 text-xs text-surface-500 dark:text-surface-400">{description}</p>}
+          {description && <p className={descriptionClassName}>{description}</p>}
         </div>
         {action}
       </header>

@@ -1,5 +1,4 @@
 import React from 'react';
-import { ArrowDownRight, ArrowUpRight, Minus } from 'lucide-react';
 import { formatPercent, trendOf } from './format';
 
 interface DeltaChipProps {
@@ -20,15 +19,16 @@ const TONE = {
 export const DeltaChip: React.FC<DeltaChipProps> = ({ change, comparison, className = '' }) => {
   if (change === null) return null;
   const trend = trendOf(change);
-  const Icon = trend === 'up' ? ArrowUpRight : trend === 'down' ? ArrowDownRight : Minus;
   const text = formatPercent(change);
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-micro font-semibold tabular-nums ${TONE[trend]} ${className}`}
+      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold tabular-nums ${TONE[trend]} ${className}`}
       title={`${text} ${comparison}`}
     >
-      <Icon aria-hidden="true" className="h-3 w-3" strokeWidth={2.5} />
-      <span aria-hidden="true">{text}</span>
+      <svg aria-hidden="true" viewBox="0 0 10 10" className="h-2.5 w-2.5 shrink-0" fill="currentColor">
+        {trend === 'up' ? <path d="M5 1.5 9 8.5H1z" /> : trend === 'down' ? <path d="M5 8.5 1 1.5h8z" /> : <rect x="1" y="4" width="8" height="2" rx="1" />}
+      </svg>
+      <span aria-hidden="true">{text.replace(/^[+-]/, '')}</span>
       <span className="sr-only">{`${trend === 'up' ? 'Up' : trend === 'down' ? 'Down' : 'No change,'} ${text} ${comparison}`}</span>
     </span>
   );

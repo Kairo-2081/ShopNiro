@@ -8,6 +8,7 @@ import {
   LogOut,
   Sparkles,
   Menu,
+  Search,
 } from 'lucide-react';
 import { useLocale } from '../lib/i18n';
 import { LanguageToggle, ThemeToggle } from './PreferenceControls';
@@ -27,6 +28,8 @@ interface NavbarProps {
   onOpenNavigation: () => void;
   isNavigationOpen: boolean;
   onOpenChat?: () => void;
+  /** Runs a storefront product search from the header field. */
+  onSearch?: (query: string) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -43,7 +46,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenNavigation,
   isNavigationOpen,
   onOpenChat,
+  onSearch,
 }) => {
+  const [searchText, setSearchText] = React.useState('');
   const { t } = useLocale();
   const [isAccountMenuOpen, setIsAccountMenuOpen] = React.useState(false);
   const accountMenuRef = React.useRef<HTMLDivElement>(null);
@@ -71,10 +76,10 @@ export const Navbar: React.FC<NavbarProps> = ({
   }, [isAccountMenuOpen]);
 
   return (
-    <header className="glass-header sticky top-0 z-30 border-b border-[#80734f]/20 bg-[#f6f5ef] shadow-[0_8px_24px_rgba(41,40,33,0.10)] transition-colors duration-200 dark:border-white/10 dark:bg-[#10100f] dark:shadow-[0_12px_32px_rgba(6,6,4,0.25)]">
-      <div className="w-full px-3 sm:px-6 lg:px-8">
-        <div className="flex min-h-16 flex-wrap items-center justify-between gap-2 py-2 sm:gap-3">
-          <div className="order-1 flex min-w-0 items-center gap-2 md:order-none">
+    <header className="glass-header shell-header sticky top-0 z-30 border-b border-[#80734f]/20 bg-[#f6f5ef] shadow-[0_8px_24px_rgba(41,40,33,0.10)] transition-colors duration-200 dark:border-[var(--sidebar-border)] dark:bg-[var(--sidebar-bg)] dark:shadow-[0_12px_32px_rgba(6,6,4,0.25)]">
+      <div className="w-full pr-3 pl-3 sm:pr-6 md:pl-0 lg:pr-8">
+        <div className="flex min-h-16 flex-wrap items-center justify-between gap-2 py-2 sm:gap-3 md:min-h-20 md:flex-nowrap">
+          <div className="order-1 flex min-w-0 items-center gap-2 md:order-none md:w-64 md:shrink-0 md:self-stretch md:px-6 shell-brand">
             <button
               type="button"
               onClick={onOpenNavigation}
@@ -103,7 +108,27 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           </div>
 
-          <div className="order-2 flex w-full flex-wrap items-center justify-end gap-2 md:order-none md:w-auto">
+          {onSearch && (
+            <form
+              role="search"
+              onSubmit={(event) => { event.preventDefault(); onSearch(searchText.trim()); }}
+              className="order-3 hidden min-w-0 flex-1 md:order-none md:ml-6 md:block md:max-w-md"
+            >
+              <label className="relative block">
+                <span className="sr-only">{t('headerSearchLabel')}</span>
+                <Search aria-hidden="true" className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-500 dark:text-surface-400" />
+                <input
+                  type="search"
+                  value={searchText}
+                  onChange={(event) => setSearchText(event.target.value)}
+                  placeholder={t('headerSearchPlaceholder')}
+                  className="h-12 w-full rounded-2xl border border-[#80734f]/20 bg-white/60 pl-11 pr-4 text-[0.95rem] text-surface-900 placeholder:text-surface-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a99b72] dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-surface-400"
+                />
+              </label>
+            </form>
+          )}
+
+          <div className="order-2 flex w-full flex-wrap items-center justify-end gap-2 md:order-none md:ml-auto md:w-auto">
             {onOpenChat && isLoggedIn && ['seller', 'admin'].includes(currentRole) && (
               <button
                 type="button"

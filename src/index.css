@@ -75,6 +75,8 @@
 :root {
   color-scheme: light;
   --bg: #f6f5ef;
+  --bg-glow: rgba(169, 148, 88, 0.2);
+  --bg-glow-green: rgba(96, 150, 128, 0.14);
   --fg: #151510;
   --shopniro-amber: #d0c8a5;
   --shopniro-orange: #a99b72;
@@ -131,7 +133,20 @@
 
 .dark {
   color-scheme: dark;
-  --bg: #10100f;
+  /* Dark theme surfaces: one near-black warm-neutral base, one gold glow, one faint green glow, and two flat panel
+     greys. No blue, red or teal hues anywhere in the dark theme. */
+  --bg: #0d0d0c;
+  --bg-glow: rgba(150, 122, 56, 0.2);
+  --bg-glow-green: rgba(38, 92, 72, 0.18);
+  --surface-1: #151514;
+  --surface-2: #121211;
+  --border-subtle: rgba(255, 255, 255, 0.07);
+  --sidebar-bg: #0f0f0e;
+  --sidebar-border: rgba(255, 255, 255, 0.06);
+  --accent-gold: #c9a96e;
+  --accent-green: #5fc79a;
+  /* Muted text on the neutral surfaces: the light-theme value (#666454) reads 3:1 on them, so the dark theme gets a lighter one. */
+  --color-surface-500: #929080;
   --fg: #f4f3ec;
   --focus-ring: #e7e5d6;
   --chart-primary: #cdb97d;
@@ -206,45 +221,17 @@
     outline-offset: 3px;
   }
 
-  body::before,
-  body::after {
+  /* One calm backdrop for every page: a warm gold glow in the top-left corner and a faint green one in the bottom-right,
+     on a plain base. Static (no drift, no blur), so it costs nothing to paint and does not move behind the charts. */
+  body::before {
     content: "";
     position: fixed;
-    inset: -18% -12%;
+    inset: 0;
     pointer-events: none;
     z-index: 0;
-    filter: blur(60px);
-    opacity: 0.45;
-  }
-
-  body::before {
     background:
-      radial-gradient(circle at 15% 30%, rgba(192, 185, 156, 0.24), transparent 22%),
-      radial-gradient(circle at 62% 18%, rgba(120, 142, 167, 0.16), transparent 24%),
-      radial-gradient(circle at 80% 72%, rgba(109, 103, 75, 0.18), transparent 28%);
-    animation: ambientDrift 18s ease-in-out infinite alternate;
-  }
-
-  body::after {
-    background:
-      radial-gradient(circle at 28% 68%, rgba(78, 123, 108, 0.14), transparent 20%),
-      radial-gradient(circle at 80% 42%, rgba(164, 133, 98, 0.14), transparent 20%),
-      radial-gradient(circle at 52% 52%, rgba(255, 255, 255, 0.06), transparent 20%);
-    animation: ambientDrift 24s ease-in-out infinite alternate-reverse;
-  }
-
-  html:not(.dark) body::before {
-    background:
-      radial-gradient(circle at 18% 26%, rgba(169, 155, 114, 0.28), transparent 22%),
-      radial-gradient(circle at 65% 18%, rgba(85, 118, 110, 0.17), transparent 20%),
-      radial-gradient(circle at 80% 72%, rgba(151, 129, 87, 0.2), transparent 28%);
-  }
-
-  html:not(.dark) body::after {
-    background:
-      radial-gradient(circle at 30% 72%, rgba(128, 115, 79, 0.14), transparent 21%),
-      radial-gradient(circle at 76% 42%, rgba(115, 149, 170, 0.14), transparent 21%),
-      radial-gradient(circle at 52% 52%, rgba(255, 255, 255, 0.12), transparent 24%);
+      radial-gradient(60% 55% at 12% 0%, var(--bg-glow), transparent 70%),
+      radial-gradient(50% 50% at 100% 100%, var(--bg-glow-green), transparent 70%);
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -447,6 +434,22 @@
     transform: rotate(-45deg);
   }
 
+  /* The big hero card on the storefront and landing page. Light keeps the olive card; dark is a neutral surface with
+     the same gold glow in one corner. */
+  .hero-surface {
+    background:
+      radial-gradient(circle at 50% 18%, rgba(208, 200, 165, 0.2), transparent 16%),
+      radial-gradient(circle at 50% 100%, rgba(119, 119, 90, 0.48), transparent 36%),
+      linear-gradient(135deg, #77775a 0%, #514c38 24%, #292820 52%, #11110f 100%);
+  }
+
+  .dark .hero-surface {
+    background:
+      radial-gradient(70% 90% at 0% 0%, rgba(201, 169, 110, 0.1), transparent 60%),
+      linear-gradient(160deg, var(--surface-1), var(--surface-2));
+    border-color: var(--border-subtle);
+  }
+
   .premium-surface {
     background: linear-gradient(155deg, rgba(255, 255, 255, 0.97), rgba(246, 245, 239, 0.94));
     border: 1px solid rgba(169, 155, 114, 0.2);
@@ -454,8 +457,8 @@
   }
 
   .dark .premium-surface {
-    background: linear-gradient(155deg, rgba(37, 37, 30, 0.94), rgba(17, 17, 15, 0.9));
-    border-color: rgba(231, 229, 214, 0.12);
+    background: linear-gradient(155deg, var(--surface-1), var(--surface-2));
+    border-color: var(--border-subtle);
     box-shadow: 0 28px 60px rgba(3, 3, 2, 0.3);
   }
 
@@ -467,8 +470,8 @@
   }
 
   .dark .premium-card {
-    background: linear-gradient(155deg, rgba(43, 43, 34, 0.9), rgba(23, 23, 19, 0.88));
-    border-color: rgba(231, 229, 214, 0.11);
+    background: linear-gradient(155deg, var(--surface-1), var(--surface-2));
+    border-color: var(--border-subtle);
     box-shadow: 0 18px 40px rgba(3, 3, 2, 0.24);
   }
 

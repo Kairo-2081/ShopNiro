@@ -605,10 +605,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
         </div>
         <React.Suspense fallback={<div aria-hidden="true" className="premium-skeleton h-72 rounded-2xl" />}>
-          <AdminOverviewAnalytics orders={orders} isLoading={isLoading} />
-        </React.Suspense>
-        <React.Suspense fallback={<div aria-hidden="true" className="premium-skeleton h-72 rounded-2xl" />}>
-          <AdminWeekdayOrders orders={orders} />
+          <AdminOverviewAnalytics
+            orders={orders}
+            sellers={sellers}
+            isLoading={isLoading}
+            onViewMerchants={() => setAdminTab('sellers')}
+            renderWeekday={(rangeOrders) => (
+              <React.Suspense fallback={<div aria-hidden="true" className="premium-skeleton h-72 rounded-3xl" />}>
+                <AdminWeekdayOrders orders={rangeOrders} />
+              </React.Suspense>
+            )}
+          />
         </React.Suspense>
         </>
       )}
