@@ -27,6 +27,8 @@ import { fallbackToBrandLogo } from '../../lib/branding';
 import { useLocale } from '../../lib/i18n';
 import { StatTile } from '../charts/StatTile';
 import { ChartPanel } from '../charts/ChartPanel';
+import { DeltaChip } from '../charts/DeltaChip';
+import { SellerFulfilmentFunnel } from './SellerFulfilmentFunnel';
 import { percentChange, sum } from '../charts/format';
 
 // Recharts is large; load it only when a seller opens the analytics tab.
@@ -271,6 +273,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
     });
     return months;
   })();
+  const monthlySalesChange = percentChange(recentMonthlySales[recentMonthlySales.length - 1]?.revenue ?? 0, recentMonthlySales[0]?.revenue ?? 0);
 
   const avgSellerRating =
     sellerReviews.length > 0
@@ -734,15 +737,11 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
               accent="var(--chart-cat-3)"
               trend={recentMonthlySales.some((month) => month.orders > 0) ? recentMonthlySales.map((month) => (month.orders ? month.revenue / month.orders : 0)) : undefined}
             />
-            <StatTile label="Product rating" value={avgSellerRating ? `${avgSellerRating.toFixed(1)} / 5` : 'No ratings'} note={`${sellerReviews.length} customer reviews`} accent="var(--chart-cat-5)" />
+            <StatTile label="Product rating" value={avgSellerRating ? avgSellerRating.toFixed(1) : 'No ratings'} after={avgSellerRating ? <span aria-label="out of 5" className="text-lg text-[var(--chart-cat-5)]">★</span> : undefined} progress={avgSellerRating ? (avgSellerRating / 5) * 100 : undefined} note={`${sellerReviews.length} customer reviews`} accent="var(--chart-cat-5)" />
           </div>
 
-          <React.Suspense fallback={<div aria-hidden="true" className="premium-skeleton h-64 rounded-2xl" />}>
-            <SellerStockHealth products={sellerProducts} />
-          </React.Suspense>
-
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <ChartPanel headingId="seller-monthly-sales-title" title={t('monthlySales')} subtitle={t('productRevenueLastSix')} featured>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <ChartPanel className="lg:col-span-2" headingId="seller-monthly-sales-title" title={t('monthlySales')} subtitle={t('productRevenueLastSix')} featured actions={monthlySalesChange === null ? undefined : (<span className="inline-flex items-center gap-2 text-sm text-[var(--chart-axis)]"><DeltaChip change={monthlySalesChange} comparison={`since ${recentMonthlySales[0]?.label ?? ''}`} />{`since ${recentMonthlySales[0]?.label ?? ''}`}</span>)}>
               <div>
                 <React.Suspense fallback={<div aria-hidden="true" className="premium-skeleton h-[220px] rounded-xl" />}>
                   <MonthlyBarChart
@@ -750,6 +749,9 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                     name={t('chartRevenue')}
                     formatValue={(value) => formatCurrency(value)}
                     ariaLabel="Monthly product sales for the last six months"
+                    compact
+                    valueLabels="all"
+                    height={300}
                   />
                 </React.Suspense>
               </div>
@@ -778,24 +780,28 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                 </table>
               </details>
             </ChartPanel>
+            <React.Suspense fallback={<div aria-hidden="true" className="premium-skeleton h-64 rounded-2xl" />}>
+              <SellerStockHealth products={sellerProducts} />
+            </React.Suspense>
+          </div>
 
-            <ChartPanel headingId="seller-top-products-title" title={t('topProducts')} subtitle={t('rankedByNetSales')}>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
+
+            <ChartPanel className="lg:col-span-3" headingId="seller-top-products-title" title={t('topProducts')} subtitle={t('rankedByNetSales')}>
               {sellerProductPerformance.length ? (
                 <ol className="divide-y divide-[var(--chart-hair)]">
                   {sellerProductPerformance.map(({ product, units, revenue }, index) => (
-                    <li key={product.Product_ID} className="flex items-center gap-3 py-3">
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[var(--chart-track)] text-xs font-bold tabular-nums text-[var(--chart-axis)]">{index + 1}</span>
-                      <img src={product.Image} alt="" className="h-10 w-10 shrink-0 rounded-lg object-cover" />
+                    <li key={product.Product_ID} className="flex items-center gap-4 py-3.5">
+                      <span className="w-4 shrink-0 text-center text-base font-medium tabular-nums text-[var(--chart-axis)]">{index + 1}</span>
+                      <img src={product.Image} alt="" className="h-14 w-14 shrink-0 rounded-2xl object-cover" />
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-baseline justify-between gap-3">
-                          <p className="truncate text-xs font-semibold text-[var(--chart-ink)]">{product.Name}</p>
-                          <span className="shrink-0 text-xs font-bold tabular-nums text-[var(--chart-ink)]">{formatCurrency(revenue)}</span>
-                        </div>
-                        <p className="text-micro text-[var(--chart-axis)]">{units.toLocaleString()} units sold</p>
-                        <div aria-hidden="true" className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-[var(--chart-track)]">
-                          <div className="h-full rounded-full" style={{ width: `${topProductRevenue > 0 ? Math.max((revenue / topProductRevenue) * 100, 3) : 0}%`, backgroundImage: 'linear-gradient(90deg, var(--chart-primary-soft), var(--chart-primary))' }} />
-                        </div>
+                        <p className="truncate text-base font-bold text-[var(--chart-ink)]">{product.Name}</p>
+                        <p className="text-sm text-[var(--chart-axis)]">{units.toLocaleString()} units sold</p>
                       </div>
+                      <div aria-hidden="true" className="hidden h-2 w-40 shrink-0 overflow-hidden rounded-full bg-[var(--chart-track)] sm:block lg:w-32 xl:w-44">
+                        <div className="h-full rounded-full" style={{ width: `${topProductRevenue > 0 ? Math.max((revenue / topProductRevenue) * 100, 4) : 0}%`, backgroundImage: 'linear-gradient(90deg, var(--chart-primary-soft), var(--chart-primary-hi))' }} />
+                      </div>
+                      <span className="w-28 shrink-0 text-right text-base font-bold tabular-nums text-[var(--chart-ink)]">{formatCurrency(revenue).replace(/\.00$/, '')}</span>
                     </li>
                   ))}
                 </ol>
@@ -803,6 +809,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
                 <p className="py-10 text-center text-xs text-[var(--chart-axis)]">{t('salesAnalyticsEligibleOrder')}</p>
               )}
             </ChartPanel>
+            <div className="min-w-0 lg:col-span-2"><SellerFulfilmentFunnel orders={sellerOrders} /></div>
           </div>
           <section className="chart-card overflow-x-auto rounded-2xl">
             <div className="p-5">
