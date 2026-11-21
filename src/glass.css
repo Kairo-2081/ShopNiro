@@ -389,58 +389,7 @@
     }
   }
 
-  /* ---- Scene behind the glass --------------------------------------------------------------------------- */
-
-  /* Glass only reads as glass when there is something colourful to blur behind it. The existing ambient blobs
-     were faint (opacity 0.45, muted colours). These are stronger, and they are fixed, so panels visibly pick up
-     colour as the page scrolls over them. */
-  body::before,
-  body::after {
-    opacity: 0.95;
-  }
-
-  /* Light theme scene: a calm champagne and pearl glow. The earlier amber, teal, pink and blue blobs tinted every
-     panel a different muddy colour; a premium light glass reads as clean frosted ivory with a soft warm light
-     behind it, so the colour here is low in saturation and kept away from where content sits. */
-  html:not(.dark) body::before,
-  html:not(.dark) body::after {
-    opacity: 0.8;
-  }
-
-  html:not(.dark) body::before {
-    background:
-      radial-gradient(circle at 22% 22%, rgba(226, 204, 154, 0.55), transparent 30%),
-      radial-gradient(circle at 78% 30%, rgba(236, 224, 200, 0.7), transparent 32%),
-      radial-gradient(circle at 50% 82%, rgba(214, 196, 160, 0.38), transparent 32%);
-  }
-
-  html:not(.dark) body::after {
-    background:
-      radial-gradient(circle at 12% 70%, rgba(176, 190, 196, 0.3), transparent 28%),
-      radial-gradient(circle at 88% 78%, rgba(196, 184, 160, 0.3), transparent 26%),
-      radial-gradient(circle at 54% 44%, rgba(255, 255, 255, 0.7), transparent 26%);
-  }
-
-  html.dark body::before {
-    background:
-      radial-gradient(circle at 30% 30%, rgba(206, 156, 36, 0.78), transparent 30%),
-      radial-gradient(circle at 72% 42%, rgba(20, 160, 148, 0.7), transparent 28%),
-      radial-gradient(circle at 48% 80%, rgba(180, 50, 128, 0.62), transparent 30%);
-  }
-
-  html.dark body::after {
-    background:
-      radial-gradient(circle at 18% 64%, rgba(56, 100, 232, 0.66), transparent 28%),
-      radial-gradient(circle at 86% 18%, rgba(60, 176, 96, 0.5), transparent 26%),
-      radial-gradient(circle at 56% 52%, rgba(255, 255, 255, 0.06), transparent 22%);
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    body::before,
-    body::after {
-      animation: none;
-    }
-  }
+  /* The backdrop behind the glass is the calm gold and green glow defined on body::before in index.css. */
 
   /* ---- Every panel ------------------------------------------------------------------------------------- */
 
