@@ -79,7 +79,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     <header className="glass-header shell-header sticky top-0 z-30 border-b border-[#80734f]/20 bg-[#f6f5ef] shadow-[0_8px_24px_rgba(41,40,33,0.10)] transition-colors duration-200 dark:border-[var(--sidebar-border)] dark:bg-[var(--sidebar-bg)] dark:shadow-[0_12px_32px_rgba(6,6,4,0.25)]">
       <div className="w-full pr-3 pl-3 sm:pr-6 md:pl-0 lg:pr-8">
         <div className="flex min-h-16 flex-wrap items-center justify-between gap-2 py-2 sm:gap-3 md:min-h-20 md:flex-nowrap">
-          <div className="order-1 flex min-w-0 items-center gap-2 md:order-none md:w-64 md:shrink-0 md:self-stretch md:px-6 shell-brand">
+          <div className="order-1 flex min-w-0 items-center gap-2 md:order-none md:w-72 md:shrink-0 md:self-stretch md:px-6 shell-brand">
             <button
               type="button"
               onClick={onOpenNavigation}
