@@ -14,12 +14,12 @@ permissions:
 jobs:
   watch:
     runs-on: ubuntu-latest
-    # The production database URL is stored in this Environment. If the Environment requires reviewers,
-    # each scheduled run waits for approval; remove that rule or move the secret to a repository secret
-    # to let it run unattended. A scheduled run always uses the default branch, so if the Environment only
-    # accepts another branch the job is rejected before any step runs ("Branch main is not allowed to deploy
-    # to production"). That red run did not compare anything; see docs/runbooks/schema-drift-alert.md, step 0.
-    environment: production
+    # The watch has its own Environment, `schema-watch`, so it does not depend on the deploy rules of
+    # `production`. Setup (repository settings, once): create the Environment, leave required reviewers
+    # empty, allow the `main` branch, and add the secret MIGRATE_DATABASE_URL holding a READ-ONLY database
+    # URL. A scheduled run always uses the default branch; if the Environment rejects `main` the job fails
+    # before any step runs and nothing is compared (docs/runbooks/schema-drift-alert.md, step 0).
+    environment: schema-watch
     timeout-minutes: 10
     services:
       postgres:
