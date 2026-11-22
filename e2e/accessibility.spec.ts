@@ -7,10 +7,10 @@ import { blockNonLocalTraffic, caseInsensitiveName, clearCartAndOrders, openChec
 test.describe.configure({ retries: 0 });
 
 const rolePages = [
-  { role: 'customer', home: 'Shop', pages: ['Top charts', 'Orders', 'Live tracking', 'Profile', 'Support'] },
-  { role: 'seller', home: 'Product Catalog', pages: ['Fulfillment Orders', 'Sales Analytics', 'Customer Reviews', 'Deals and bundles', 'COD remittances', 'Preview storefront', 'Support'] },
-  { role: 'admin', home: 'Governance Overview', pages: ['Marketplace Metrics', 'Merchant Approvals', 'Category Registry', 'Rider Hiring', 'Product Moderation', 'Online Payments', 'Order Cancellations', 'Support Inbox', 'Storefront', 'Support'] },
-  { role: 'rider', home: 'Deliveries', pages: ['Support'] },
+  { role: 'customer', home: 'Shop', pages: ['Top charts', 'Orders', 'Spending insights', 'Transactions', 'Live tracking', 'Profile', 'Support'] },
+  { role: 'seller', home: 'Product Catalog', pages: ['Fulfillment Orders', 'Sales Analytics', 'Customer Reviews', 'Deals and bundles', 'COD remittances', 'Transactions', 'Preview storefront', 'Support'] },
+  { role: 'admin', home: 'Governance Overview', pages: ['Marketplace Metrics', 'Merchant Approvals', 'Category Registry', 'Rider Hiring', 'Product Moderation', 'Seller Payout Requests', 'Order Cancellations', 'Support Inbox', 'Storefront', 'Support'] },
+  { role: 'rider', home: 'Deliveries', pages: ['Rider analytics', 'Transactions', 'Support'] },
 ] as const;
 
 const guestStorageState = { cookies: [], origins: [] };
