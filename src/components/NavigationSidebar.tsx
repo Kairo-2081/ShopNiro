@@ -240,7 +240,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
                   }`}
                 >
                   <Icon aria-hidden="true" className={`h-4 w-4 shrink-0 ${isActive ? 'text-[#80734f] dark:text-[#d0c8a5]' : 'text-surface-500 dark:text-surface-400'}`} />
-                  <span className="min-w-0 flex-1 truncate">{label}</span>
+                  <span className="min-w-0 flex-1 break-words leading-tight">{label}</span>
                   {item.badge !== undefined && item.badge > 0 && (
                     <span className="grid h-6 min-w-6 place-items-center rounded-full bg-[#80734f]/12 px-1.5 text-xs font-medium tabular-nums text-surface-700 dark:bg-white/[0.07] dark:text-surface-300">
                       {item.badge}
@@ -257,7 +257,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
 
   return (
     <>
-      <aside className="hidden min-h-[calc(100vh-4rem)] w-72 shrink-0 self-stretch border-r border-[#80734f]/20 bg-[#f6f5ef]/85 px-3 py-5 backdrop-blur-xl dark:border-[var(--sidebar-border)] dark:bg-[var(--sidebar-bg)] md:block">
+      <aside className="hidden min-h-[calc(100vh-4rem)] w-64 shrink-0 self-stretch border-r border-[#80734f]/20 bg-[#f6f5ef]/85 px-3 py-5 backdrop-blur-xl dark:border-[var(--sidebar-border)] dark:bg-[var(--sidebar-bg)] md:block">
         <div className="sticky top-16 flex h-[calc(100vh-4rem)] flex-col">
           <div className="-mx-2 min-h-0 flex-1 overflow-y-auto overscroll-contain px-2">
             {renderNavigation()}
