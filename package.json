@@ -24,6 +24,7 @@
     "migrate": "tsx scripts/migrate.ts",
     "migrate:status": "tsx scripts/migrate.ts --status",
     "migrate:drift": "tsx scripts/schema-drift.ts",
+    "migrate:snapshot": "tsx scripts/schema-snapshot.ts",
     "migrate:passwords": "cross-env NODE_ENV=development tsx scripts/migrate-existing-passwords.ts",
     "migrate:product-images": "cross-env NODE_ENV=development tsx scripts/migrate-product-images-to-storage.ts",
     "bench:payments": "cross-env NODE_ENV=test tsx scripts/payment-bench.mts",

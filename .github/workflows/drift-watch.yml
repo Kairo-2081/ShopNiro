@@ -1,8 +1,10 @@
 name: Production schema watch
 
-# Read-only. Builds a reference database from the migration files and compares production with it every
-# day, so a schema change made outside the migration runner is noticed within a day instead of at the
-# next deploy. A failed run is the alert: GitHub emails the repository's watchers.
+# Read-only. Asks the live app to compare its own database with the schema the migration files build
+# (db/expected-schema.json) and to check that every shipped migration is recorded. The app already holds the
+# database connection, so this workflow needs no database credential and no Environment: it uses the same
+# APP_URL and CRON_SECRET repository secrets as the scheduled jobs. A failed run is the alert: GitHub emails
+# the repository's watchers.
 on:
   schedule:
     - cron: '17 3 * * *'
@@ -14,52 +16,29 @@ permissions:
 jobs:
   watch:
     runs-on: ubuntu-latest
-    # No Environment: the database URL is a plain repository secret, MIGRATE_DATABASE_URL, so the deploy rules of
-    # `production` cannot reject the scheduled run. Because any workflow in this repository can read a repository
-    # secret, it must be a READ-ONLY database login, never the migration owner. If the secret is missing the
-    # first step that needs it fails with a connection error; see docs/runbooks/schema-drift-alert.md, step 0.
-    timeout-minutes: 10
-    services:
-      postgres:
-        image: postgres:17
-        env:
-          POSTGRES_DB: reference
-          POSTGRES_USER: reference
-          POSTGRES_PASSWORD: reference
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd="pg_isready -U reference -d reference"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=10
-    env:
-      LIVE_DATABASE_URL: ${{ secrets.MIGRATE_DATABASE_URL }}
-      REFERENCE_DATABASE_URL: postgresql://reference:reference@127.0.0.1:5432/reference
+    timeout-minutes: 5
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build a reference database from the migration files
+      - name: Compare the live schema with the migration files
         env:
-          DATABASE_URL: ${{ env.REFERENCE_DATABASE_URL }}
-        run: npm run migrate
-
-      - name: Check the live schema against the recorded adoption fingerprint and migration history
-        env:
-          DATABASE_URL: ${{ env.LIVE_DATABASE_URL }}
-        run: npm run migrate:status
-
-      - name: Compare the live database with the reference
-        env:
-          DATABASE_URL: ${{ env.LIVE_DATABASE_URL }}
-        run: npm run migrate:drift -- --reference "$REFERENCE_DATABASE_URL" --full
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$APP_URL" || -z "$CRON_SECRET" ]]; then
+            echo "::error::APP_URL and CRON_SECRET repository secrets must be configured."
+            exit 1
+          fi
+          status=$(curl -sS --retry 3 --retry-delay 20 --retry-all-errors -m 60 -o result.json -w '%{http_code}' \
+            -H "Authorization: Bearer $CRON_SECRET" "$APP_URL/api/cron/schema-drift")
+          echo "HTTP $status"
+          # The body names schema objects only, never data or credentials.
+          jq . result.json || cat result.json
+          if [[ "$status" == "200" ]]; then
+            echo "No drift: the live schema matches the migration files."
+          elif [[ "$status" == "409" ]]; then
+            echo "::error::Schema drift. See docs/runbooks/schema-drift-alert.md."
+            exit 1
+          else
+            echo "::error::The schema watch could not run (HTTP $status): app down, wrong APP_URL/CRON_SECRET, or db/expected-schema.json not deployed."
+            exit 1
+          fi
