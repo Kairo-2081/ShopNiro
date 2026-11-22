@@ -537,4 +537,13 @@
       display: none;
     }
   }
+
+  /* Big headings (every page title and the large section titles) are bold sans-serif, in both themes. The serif stays
+     for small panel titles. This layer sorts after the utilities, so it wins over font-normal, font-medium and the like. */
+  :is(h1, h2.font-display, h2[class*="text-3xl"], h2[class*="text-4xl"], h2[class*="text-5xl"], h2[class*="md:text-4xl"]) {
+    font-family: "Manrope", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.08;
+  }
 }
