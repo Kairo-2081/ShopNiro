@@ -22,6 +22,9 @@ export default defineConfig({
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: {
     baseURL: target.baseURL,
+    // Without this a click on a control that is not there waits for the whole test timeout (25 minutes in the
+    // accessibility sweeps) before it names the missing control.
+    actionTimeout: target.remote ? 30_000 : 15_000,
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     storageState: 'e2e/.auth/customer.json',
