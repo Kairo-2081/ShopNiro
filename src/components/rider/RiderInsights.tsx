@@ -42,9 +42,8 @@ export const RiderInsights: React.FC<RiderInsightsProps> = ({ totalDeliveries, l
   const walletTotal = walletSlices.reduce((total, slice) => total + slice.value, 0);
 
   return (
-    <section aria-labelledby="rider-insights-title" className="space-y-4">
-      <h2 id="rider-insights-title" className="font-display text-3xl font-normal text-[var(--chart-ink)] sm:text-4xl">{t('riderInsightsTitle')}</h2>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+    <div className="space-y-4">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <ChartPanel headingId="rider-punctuality-title" title={t('riderPunctualityTitle')} subtitle={t('riderPunctualitySubtitle')}>
           {punctuality.length ? (
             <ShareBreakdown slices={punctuality} centerValue={formatCount(positive(totalDeliveries))} centerLabel={t('chartDelivered')} ariaLabel={t('riderPunctualityAria')} unit={t('chartDelivered')} />
@@ -54,12 +53,12 @@ export const RiderInsights: React.FC<RiderInsightsProps> = ({ totalDeliveries, l
         </ChartPanel>
         <ChartPanel headingId="rider-wallet-title" title={t('riderWalletTitle')} subtitle={t('riderWalletSubtitle')}>
           {walletSlices.length ? (
-            <ShareBreakdown slices={walletSlices} centerValue={money(walletTotal)} centerLabel="BDT" ariaLabel={t('riderWalletAria')} unit="BDT" />
+            <ShareBreakdown slices={walletSlices} centerValue={money(walletTotal).replace(/^BDT\s*/, '')} centerLabel="BDT" ariaLabel={t('riderWalletAria')} unit="BDT" />
           ) : (
             <p className="py-12 text-center text-sm text-[var(--chart-axis)]">{t('riderNoWalletYet')}</p>
           )}
         </ChartPanel>
       </div>
-    </section>
+    </div>
   );
 };
