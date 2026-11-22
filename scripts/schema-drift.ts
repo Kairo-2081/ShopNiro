@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import pg, { type Client } from 'pg';
+import pg from 'pg';
 import { buildDatabaseSsl } from '../server/db/ssl.ts';
 
 const { Client: PgClient } = pg;
@@ -28,8 +28,13 @@ export interface DriftReport {
  * against production. Column order is ignored on purpose: it differs between databases built by
  * different histories and no query depends on it.
  */
-export async function readFingerprint(client: Client): Promise<Fingerprint> {
-  const result = await client.query<{ kind: string; name: string; definition: string }>(`
+/** Anything that runs one SQL string: a pg Client, or the app's pooled query helper. */
+export interface CatalogReader {
+  query(text: string): Promise<{ rows: any[] }>;
+}
+
+export async function readFingerprint(client: CatalogReader): Promise<Fingerprint> {
+  const result = await client.query(`
     SELECT 'table' AS kind, c.relname::text AS name, 'table' AS definition
     FROM pg_class c
     WHERE c.relnamespace = 'public'::regnamespace AND c.relkind = 'r'
@@ -71,7 +76,17 @@ export async function readFingerprint(client: Client): Promise<Fingerprint> {
     FROM pg_views v
     WHERE v.schemaname = 'public'
   `);
-  return new Map(result.rows.map((row) => [`${row.kind} ${row.name}`, row.definition]));
+  return new Map((result.rows as { kind: string; name: string; definition: string }[]).map((row) => [`${row.kind} ${row.name}`, row.definition]));
+}
+
+/** The committed form of a fingerprint: keys sorted so the file only changes when the schema does. */
+export function fingerprintToSnapshot(fingerprint: Fingerprint): Record<string, string> {
+  const entries = [...fingerprint.entries()].sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0));
+  return Object.fromEntries(entries);
+}
+
+export function snapshotToFingerprint(snapshot: Record<string, string>): Fingerprint {
+  return new Map(Object.entries(snapshot));
 }
 
 export function compareFingerprints(live: Fingerprint, reference: Fingerprint): DriftReport {

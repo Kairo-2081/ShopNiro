@@ -6,6 +6,7 @@ import { emptyBody } from '../validation/schemas.ts';
 import { finalizeSslCommerzPayment, processRefundQueue } from './payment.routes.ts';
 import { ReconciliationBusyError, runPaymentReconciliation } from '../services/paymentReconciliation.service.ts';
 import { sslcommerz } from '../services/sslcommerz.service.ts';
+import { runSchemaWatch } from '../services/schemaWatch.service.ts';
 
 const router = Router();
 
@@ -40,6 +41,18 @@ router.post('/reconcile-payments', requireCronSecret, validateBody(emptyBody), a
     }
     req.log.error('Payment reconciliation endpoint failed.');
     return res.status(500).json({ error: 'Payment reconciliation failed.' });
+  }
+});
+
+// Read-only. 200 when the live schema matches the migration files, 409 with the differences when it does not.
+// The daily Production schema watch workflow calls this, so no database credential leaves the app.
+router.get('/schema-drift', requireCronSecret, async (req, res) => {
+  try {
+    const result = await runSchemaWatch();
+    return res.status(result.ok ? 200 : 409).json(result);
+  } catch (error) {
+    req.log.error('Schema watch failed.');
+    return res.status(500).json({ error: 'Schema watch failed.' });
   }
 });
 
