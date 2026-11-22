@@ -763,26 +763,94 @@ router.post('/sslcommerz/ipn', requireIpnToken, validateBody(sslcommerzIpnBody),
 
 /**
  * GET /api/payment/transactions
- * Retrieve payments list via schema shopniro_payments_list
+ * Each person sees only their own money, with a fixed list of safe columns. The admin role is deliberately
+ * not allowed: customers' payments, sellers' sales and riders' earnings are private, and the raw payments
+ * table also holds gateway session data and phone numbers that nobody outside the payer needs.
+ * - customer: orders they paid for, and who each part of the amount went to (each seller, delivery).
+ * - seller: their own share of each order, the platform commission and what is left for them.
+ * - rider: their own wallet entries, and the seller each cash-on-delivery collection is owed to.
  */
-router.get('/transactions', requireAuth, requireRole(['admin']), async (req, res) => {
+router.get('/transactions', requireAuth, requireRole(['customer', 'seller', 'rider']), async (req: AuthRequest, res) => {
   try {
-    const orderId = typeof req.query.orderId === 'string' ? req.query.orderId : null;
-    const customerId = typeof req.query.customerId === 'string' ? req.query.customerId : null;
+    const { role, entityId } = req.user!;
     const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 50));
     const offset = Math.max(0, Number(req.query.offset) || 0);
-    const result = await query(`
-      SELECT * FROM payments
-      WHERE ($1::varchar IS NULL OR order_id = $1)
-        AND ($2::varchar IS NULL OR customer_id = $2)
-      ORDER BY created_at DESC, id DESC
-      LIMIT $3 OFFSET $4
-    `, [orderId, customerId, limit + 1, offset]);
-    res.setHeader('X-Has-More', String(result.rows.length > limit));
-    res.json(result.rows.slice(0, limit));
+    if (role === 'customer') {
+      const orders = await query(`
+        SELECT o.id, o.order_placed_at, o.payment_method, o.payment_status, o.status, o.subtotal, o.shipping_fee,
+          o.transaction_id
+        FROM orders o WHERE o.customer_id = $1
+        ORDER BY o.order_placed_at DESC, o.id DESC LIMIT $2 OFFSET $3`, [entityId, limit + 1, offset]);
+      const page = orders.rows.slice(0, limit);
+      const ids = page.map((row: any) => row.id);
+      const parts = ids.length ? await query(`
+        SELECT f.order_id, s.name AS seller_name, f.subtotal
+        FROM seller_fulfillments f JOIN sellers s ON s.id = f.seller_id
+        WHERE f.order_id = ANY($1::varchar[]) ORDER BY s.name`, [ids]) : { rows: [] as any[] };
+      res.setHeader('X-Has-More', String(orders.rows.length > limit));
+      return res.json({
+        role,
+        rows: page.map((row: any) => ({
+          id: row.id,
+          date: row.order_placed_at,
+          method: row.payment_method,
+          paymentStatus: row.payment_status,
+          orderStatus: row.status,
+          reference: row.transaction_id || null,
+          total: Number(row.subtotal) + Number(row.shipping_fee),
+          payees: [
+            ...parts.rows.filter((part: any) => part.order_id === row.id)
+              .map((part: any) => ({ kind: 'seller', name: part.seller_name, amount: Number(part.subtotal) })),
+            ...(Number(row.shipping_fee) > 0 ? [{ kind: 'delivery', name: 'Delivery', amount: Number(row.shipping_fee) }] : []),
+          ],
+        })),
+      });
+    }
+    if (role === 'seller') {
+      const sales = await query(`
+        SELECT f.order_id, f.created_at, f.subtotal, f.status, o.payment_method, o.payment_status,
+          platform_commission(f.subtotal) AS commission
+        FROM seller_fulfillments f JOIN orders o ON o.id = f.order_id
+        WHERE f.seller_id = $1 ORDER BY f.created_at DESC, f.id DESC LIMIT $2 OFFSET $3`, [entityId, limit + 1, offset]);
+      res.setHeader('X-Has-More', String(sales.rows.length > limit));
+      return res.json({
+        role,
+        rows: sales.rows.slice(0, limit).map((row: any) => ({
+          id: row.order_id,
+          date: row.created_at,
+          method: row.payment_method,
+          paymentStatus: row.payment_status,
+          fulfilmentStatus: row.status,
+          gross: Number(row.subtotal),
+          commission: Number(row.commission) || 0,
+          net: Number(row.subtotal) - (Number(row.commission) || 0),
+        })),
+      });
+    }
+    const entries = await query(`
+      SELECT e.id, e.entry_type, e.amount, e.description, e.created_at, e.available_at, s.name AS owed_to
+      FROM rider_wallet_entries e
+      LEFT JOIN rider_deliveries d ON e.entry_type = 'cod_collected' AND d.id = e.reference_id AND d.rider_id = e.rider_id
+      LEFT JOIN seller_fulfillments f ON f.id = d.fulfillment_id
+      LEFT JOIN sellers s ON s.id = f.seller_id
+      WHERE e.rider_id = $1 AND e.entry_type <> 'cod_wallet_balance'
+      ORDER BY e.created_at DESC, e.id DESC LIMIT $2 OFFSET $3`, [entityId, limit + 1, offset]);
+    res.setHeader('X-Has-More', String(entries.rows.length > limit));
+    return res.json({
+      role: 'rider',
+      rows: entries.rows.slice(0, limit).map((row: any) => ({
+        id: row.id,
+        date: row.created_at,
+        type: row.entry_type,
+        description: row.description,
+        amount: Number(row.amount),
+        availableAt: row.available_at,
+        owedTo: row.owed_to || null,
+      })),
+    });
   } catch (error: any) {
     req.log.error({ err: error }, 'Error fetching transactions:');
-    res.status(500).json({ error: 'Failed to fetch transactions' });
+    return res.status(500).json({ error: 'Failed to fetch transactions' });
   }
 });
 

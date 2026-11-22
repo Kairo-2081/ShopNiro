@@ -9,7 +9,6 @@ import { Banknote, CheckCircle2, Clock3, MapPin, RefreshCw, Star, Truck, Wallet 
 import { useLocale } from '../../lib/i18n';
 import 'leaflet/dist/leaflet.css';
 
-const RiderInsights = React.lazy(() => import('./RiderInsights').then((module) => ({ default: module.RiderInsights })));
 
 interface RiderDashboardProps {
   rider: Rider;
@@ -223,10 +222,6 @@ export const RiderDashboard: React.FC<RiderDashboardProps> = ({ rider, profileCo
           { label: 'Wallet balance', value: money(wallet?.balance || 0), icon: Wallet },
         ].map(({ label, value, icon: Icon }) => <div key={label} className="rounded-xl border border-surface-200 bg-white p-4 dark:border-surface-800 dark:bg-[#12161D]"><Icon className="mb-3 h-4 w-4 text-success-700 dark:text-success-400" /><p className="text-xs text-surface-500 dark:text-surface-400">{label}</p><p className="mt-1 text-xl font-bold text-surface-900 dark:text-white">{value}</p></div>)}
       </section>
-
-      <React.Suspense fallback={<div aria-hidden="true" className="premium-skeleton h-64 rounded-2xl" />}>
-        <RiderInsights totalDeliveries={profile.Total_Deliveries} lateDeliveries={profile.Late_Deliveries} wallet={wallet} />
-      </React.Suspense>
 
       <section className="grid gap-5 lg:grid-cols-[1fr_1fr]">
         <div className="rounded-xl border border-surface-200 bg-white p-5 dark:border-surface-800 dark:bg-[#12161D]">
