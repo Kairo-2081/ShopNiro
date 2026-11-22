@@ -60,6 +60,8 @@ const SupportPage = React.lazy(() => import('./components/support/SupportPage').
 const AdminDashboard = React.lazy(() => import('./components/admin/AdminDashboard').then((module) => ({ default: module.AdminDashboard })));
 const SellerDashboard = React.lazy(() => import('./components/seller/SellerDashboard').then((module) => ({ default: module.SellerDashboard })));
 const LiveProductTrackingMap = React.lazy(() => import('./components/tracking/LiveProductTrackingMap').then((module) => ({ default: module.LiveProductTrackingMap })));
+const RiderAnalytics = React.lazy(() => import('./components/rider/RiderAnalytics').then((module) => ({ default: module.RiderAnalytics })));
+const TransactionsPage = React.lazy(() => import('./components/transactions/TransactionsPage').then((module) => ({ default: module.TransactionsPage })));
 const RiderDashboard = React.lazy(() => import('./components/rider/RiderDashboard').then((module) => ({ default: module.RiderDashboard })));
 const SellerSignupModal = React.lazy(() => import('./components/seller/SellerSignupModal').then((module) => ({ default: module.SellerSignupModal })));
 const CustomerSignupModal = React.lazy(() => import('./components/customer/CustomerSignupModal').then((module) => ({ default: module.CustomerSignupModal })));
@@ -1455,6 +1457,12 @@ export default function App() {
             />
           )
         )}
+
+        {activeTab === 'rider-analytics' && (
+          isLoggedIn && selectedRider ? <RiderAnalytics rider={selectedRider} /> : null
+        )}
+
+        {activeTab === 'transactions' && isLoggedIn && (currentRole === 'customer' || currentRole === 'seller' || currentRole === 'rider') && <TransactionsPage />}
 
         {activeTab === 'rider-dashboard' && (
           isLoggedIn && selectedRider ? (
