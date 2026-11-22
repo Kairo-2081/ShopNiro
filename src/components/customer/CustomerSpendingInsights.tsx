@@ -9,6 +9,7 @@ import { StatTile } from '../charts/StatTile';
 import { TrendAreaChart } from '../charts/TrendAreaChart';
 import { percentChange, sum } from '../charts/format';
 import { monthBuckets, placedMonthKey } from '../charts/months';
+import { useMonthlyTotals } from '../../lib/useMonthlyTotals';
 
 interface CustomerSpendingInsightsProps {
   orders: Order[];
@@ -32,6 +33,8 @@ export const CustomerSpendingInsights: React.FC<CustomerSpendingInsightsProps> =
   const { t, locale } = useLocale();
   const [range, setRange] = React.useState<RangeMonths>(6);
   const intl = locale === 'bn' ? 'bn-BD' : 'en-BD';
+  // Counted in the database, so the line, tiles and comparisons stay right when only the newest orders are loaded.
+  const serverTotals = useMonthlyTotals();
 
   const data = React.useMemo(() => {
     const now = new Date();
@@ -85,6 +88,25 @@ export const CustomerSpendingInsights: React.FC<CustomerSpendingInsightsProps> =
     const remainder = spent - sum(slices.map((slice) => slice.value));
     if (remainder > 0.5) slices.push({ key: 'delivery', name: t('spendDeliveryCategory'), value: remainder, color: CATEGORY_COLORS[slices.length] });
 
+    // The category ring above only knows the orders that are loaded; the line, tiles and comparisons use the full counts.
+    if (serverTotals) {
+      buckets.forEach((bucket, position) => {
+        const row = serverTotals.get(bucket.key);
+        monthly[position] = { value: row?.value ?? 0, orders: row?.billable ?? 0 };
+      });
+      previous.value = 0;
+      previous.billable = 0;
+      previousBuckets.forEach((bucket) => {
+        const row = serverTotals.get(bucket.key);
+        previous.value += row?.value ?? 0;
+        previous.billable += row?.billable ?? 0;
+      });
+      const rows = buckets.map((bucket) => serverTotals.get(bucket.key));
+      billable = sum(rows.map((row) => row?.billable ?? 0));
+      delivered = sum(rows.map((row) => row?.delivered ?? 0));
+      windowOrders = sum(rows.map((row) => row?.orders ?? 0));
+    }
+
     const last = monthly.length - 1;
     const total = sum(monthly.map((month) => month.value));
     const averageOf = (value: number, count: number) => (count > 0 ? value / count : 0);
@@ -103,7 +125,7 @@ export const CustomerSpendingInsights: React.FC<CustomerSpendingInsightsProps> =
       thisMonthName: new Intl.DateTimeFormat(intl, { month: 'long' }).format(now),
       lastMonthName: new Intl.DateTimeFormat(intl, { month: 'long' }).format(new Date(now.getFullYear(), now.getMonth() - 1, 1)),
     };
-  }, [orders, products, categories, range, intl, t]);
+  }, [orders, products, categories, serverTotals, range, intl, t]);
 
   const recent = React.useMemo(
     () => [...orders].sort((a, b) => new Date(b.Order_Placed_At).getTime() - new Date(a.Order_Placed_At).getTime()).slice(0, 5),

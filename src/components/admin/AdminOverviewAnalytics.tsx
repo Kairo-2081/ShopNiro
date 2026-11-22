@@ -10,6 +10,7 @@ import { StatTile } from '../charts/StatTile';
 import { TrendAreaChart } from '../charts/TrendAreaChart';
 import { percentChange, sum } from '../charts/format';
 import { monthBuckets, placedMonthKey } from '../charts/months';
+import { useMonthlyTotals } from '../../lib/useMonthlyTotals';
 
 interface AdminOverviewAnalyticsProps {
   orders: Order[];
@@ -50,6 +51,8 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
   const { t, locale } = useLocale();
   const [measure, setMeasure] = React.useState<TrendMeasure>('revenue');
   const [range, setRange] = React.useState<RangeMonths>(12);
+  // Month totals are counted in the database, so they stay right when the app has only loaded the newest orders.
+  const serverTotals = useMonthlyTotals();
 
   const analytics = React.useMemo(() => {
     const now = new Date();
@@ -75,7 +78,10 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
       if (inWindow.has(key)) windowOrders.push(order);
     });
 
-    const pick = (buckets: { key: string }[]) => buckets.map((bucket) => totals.get(bucket.key) ?? emptyTotals());
+    const source = serverTotals
+      ? new Map(Array.from(serverTotals, ([key, row]) => [key, { orders: row.orders, billable: row.billable, value: row.value, delivered: row.delivered }] as const))
+      : totals;
+    const pick = (buckets: { key: string }[]) => buckets.map((bucket) => source.get(bucket.key) ?? emptyTotals());
     const now12 = pick(current);
     const before = pick(previousPeriod);
     const year = pick(lastYear);
@@ -135,7 +141,7 @@ export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ 
       averageChange: percentChange(average(now_.value, now_.billable), average(prev_.value, prev_.billable)),
       hasYear: year.some((row) => row.orders > 0),
     };
-  }, [orders, range, locale]);
+  }, [orders, serverTotals, range, locale]);
 
   const valueOf = (row: MonthTotals) => (measure === 'revenue' ? row.value : measure === 'orders' ? row.orders : row.billable ? row.value / row.billable : 0);
   const trendData = analytics.labels.map((label, index) => ({ label, value: valueOf(analytics.now12[index]) }));

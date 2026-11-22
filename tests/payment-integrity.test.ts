@@ -22,6 +22,7 @@ const { default: sellersRoutes } = await import('../server/routes/sellers.routes
 const { default: payoutsRoutes } = await import('../server/routes/payouts.routes.ts');
 const { default: riderDeliveryRoutes } = await import('../server/routes/rider-delivery.routes.ts');
 const { default: paymentRoutes, processRefundQueue } = await import('../server/routes/payment.routes.ts');
+const { default: analyticsRoutes } = await import('../server/routes/analytics.routes.ts');
 const { sslcommerz } = await import('../server/services/sslcommerz.service.ts');
 
 const listen = (app: express.Express): Promise<Server> =>
@@ -205,6 +206,7 @@ app.use('/api/payouts', payoutsRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', ordersRoutes);
 app.use('/api/payment', paymentRoutes);
+app.use('/api/analytics', analyticsRoutes);
 app.use('/api/riders', riderDeliveryRoutes);
 const server = await listen(app);
 
@@ -1205,6 +1207,31 @@ dbTest('checkout rolls back order, stock, and cart when a follow-up write fails'
     for (const leaked of ['gateway_session', 'customer_phone', 'card_issuer', 'val_id', 'bank_tran_id']) {
       assert.equal(text.includes(leaked), false, `${leaked} must not be returned`);
     }
+  });
+
+  dbTest('monthly totals are counted per role: a customer gets only their own orders and the admin gets sums', async () => {
+    const ownerId = `CUSTOMER-${randomUUID()}`;
+    const otherId = `CUSTOMER-${randomUUID()}`;
+    const adminId = `admin-${randomUUID()}`;
+    await createCustomer(ownerId);
+    await createCustomer(otherId);
+    await createTestUser('admin', adminId);
+    await createOrder(ownerId, `ORD-${randomUUID()}`);
+    const ownerCookie = await createSession('customer', ownerId);
+    const otherCookie = await createSession('customer', otherId);
+    const adminCookie = await createSession('admin', adminId);
+
+    const asOwner = await request(server, '/api/analytics/monthly?months=3', 'GET', undefined, ownerCookie);
+    const asOther = await request(server, '/api/analytics/monthly?months=3', 'GET', undefined, otherCookie);
+    const asAdmin = await request(server, '/api/analytics/monthly?months=3', 'GET', undefined, adminCookie);
+    const guest = await request(server, '/api/analytics/monthly', 'GET');
+
+    assert.equal(asOwner.status, 200);
+    assert.equal(asOwner.body.months.reduce((total: number, row: any) => total + row.orders, 0), 1);
+    assert.equal(asOther.body.months.length, 0);
+    assert.ok(asAdmin.body.months.reduce((total: number, row: any) => total + row.orders, 0) >= 1);
+    assert.deepEqual(Object.keys(asAdmin.body.months[0]).sort(), ['billable', 'delivered', 'month', 'orders', 'units', 'value', 'year']);
+    assert.equal(guest.status, 401);
   });
 
   dbTest('seller approval requires the verification checklist', async () => {

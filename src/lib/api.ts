@@ -1,5 +1,6 @@
 import {
   MyTransactions,
+  MonthlyTotalsRow,
   Admin,
   Category,
   Seller,
@@ -806,6 +807,7 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+  getMonthlyTotals: async (months = 25): Promise<MonthlyTotalsRow[]> => (await fetchJson<{ months: MonthlyTotalsRow[] }>(`/api/analytics/monthly?months=${months}`)).months,
   getMyTransactions: async (): Promise<MyTransactions> => fetchJson<MyTransactions>('/api/payment/transactions'),
 };
 
