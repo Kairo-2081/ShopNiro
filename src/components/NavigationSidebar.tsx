@@ -103,7 +103,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
             { label: t('navCategoryRegistry'), icon: FolderTree, adminTab: 'categories', badge: adminCategoryCount },
             { label: t('riderHiring'), icon: Truck, adminTab: 'riders' },
             { label: t('navProductModeration'), icon: Package, adminTab: 'products', badge: adminProductCount },
-            { label: t('onlinePayments'), icon: Lock, adminTab: 'payments' },
+            { label: t('sellerPayoutRequests'), icon: Lock, adminTab: 'payments' },
             { label: t('orderCancellations'), icon: RotateCcw, adminTab: 'cancellations' },
             { label: t('supportInbox'), icon: LifeBuoy, adminTab: 'support' },
           ],
@@ -129,6 +129,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
           {
             label: t('marketplace'),
             items: [
+              primaryItem(t('navTransactions'), Wallet, 'transactions'),
               primaryItem(t('previewStorefront'), ShoppingBag, 'storefront'),
               primaryItem(t('support'), LifeBuoy, 'support'),
             ],
@@ -142,6 +143,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
               primaryItem(t('topCharts'), Flame, 'charts'),
               { ...primaryItem(t('orders'), PackageCheck, 'orders'), badge: customerActiveOrderCount },
               primaryItem(t('navSpendingInsights'), TrendingUp, 'spending'),
+              primaryItem(t('navTransactions'), Wallet, 'transactions'),
               primaryItem(t('liveTracking'), Radio, 'live-tracking'),
               primaryItem(t('profile'), User, 'profile'),
               primaryItem(t('support'), LifeBuoy, 'support'),
@@ -170,6 +172,8 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
                   label: t('deliveries'),
                   items: [
                     primaryItem(t('deliveries'), Truck, 'rider-dashboard'),
+                    primaryItem(t('navRiderAnalytics'), BarChart3, 'rider-analytics'),
+                    primaryItem(t('navTransactions'), Wallet, 'transactions'),
                     primaryItem(t('support'), LifeBuoy, 'support'),
                   ],
                 }]
@@ -253,7 +257,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
 
   return (
     <>
-      <aside className="hidden min-h-[calc(100vh-4rem)] w-64 shrink-0 self-stretch border-r border-[#80734f]/20 bg-[#f6f5ef]/85 px-3 py-5 backdrop-blur-xl dark:border-[var(--sidebar-border)] dark:bg-[var(--sidebar-bg)] md:block">
+      <aside className="hidden min-h-[calc(100vh-4rem)] w-72 shrink-0 self-stretch border-r border-[#80734f]/20 bg-[#f6f5ef]/85 px-3 py-5 backdrop-blur-xl dark:border-[var(--sidebar-border)] dark:bg-[var(--sidebar-bg)] md:block">
         <div className="sticky top-16 flex h-[calc(100vh-4rem)] flex-col">
           <div className="-mx-2 min-h-0 flex-1 overflow-y-auto overscroll-contain px-2">
             {renderNavigation()}
