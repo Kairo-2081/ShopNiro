@@ -130,7 +130,7 @@ export const ShareBreakdown: React.FC<ShareBreakdownProps> = ({ slices, centerVa
           })}
         </svg>
         <div className={`pointer-events-none absolute inset-x-0 flex flex-col items-center text-center ${gauge ? 'bottom-0' : 'inset-y-0 justify-center'}`}>
-          <p className={`font-extrabold tabular-nums leading-none tracking-tight text-[var(--chart-ink)] ${gauge ? 'text-4xl' : 'text-2xl'}`}>{centerValue}</p>
+          <p className={`font-extrabold tabular-nums leading-none tracking-tight text-[var(--chart-ink)] ${gauge ? 'text-4xl' : centerValue.length > 9 ? 'text-base' : centerValue.length > 6 ? 'text-xl' : 'text-2xl'}`}>{centerValue}</p>
           <p className="mt-1.5 text-sm text-[var(--chart-axis)]">{centerLabel}</p>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import {
+  MyTransactions,
   Admin,
   Category,
   Seller,
@@ -805,12 +806,7 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
-  getPaymentTransactions: async (params?: { customerId?: string; orderId?: string }): Promise<any[]> => {
-    const filters = new URLSearchParams();
-    if (params?.customerId) filters.set('customerId', params.customerId);
-    if (params?.orderId) filters.set('orderId', params.orderId);
-    return fetchAllPages<any>('/api/payment/transactions', filters);
-  },
+  getMyTransactions: async (): Promise<MyTransactions> => fetchJson<MyTransactions>('/api/payment/transactions'),
 };
 
 
