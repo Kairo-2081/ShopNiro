@@ -1,3 +1,4 @@
+import { useMonthlyTotals } from '../../lib/useMonthlyTotals';
 import React from 'react';
 import { Seller, Product, Order, Review, Category, ProductStatus, SellerDashboardTab } from '../../types';
 import { api, formatCurrency, formatDate } from '../../lib/api';
@@ -247,6 +248,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
   });
 
   const [analyticsRange, setAnalyticsRange] = React.useState<RangeMonths>(6);
+  const serverTotals = useMonthlyTotals();
   const recentMonthlySales = (() => {
     const now = new Date();
     const months = Array.from({ length: analyticsRange }, (_, index) => {
@@ -259,6 +261,15 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
         units: 0,
       };
     });
+    if (serverTotals) {
+      months.forEach((month) => {
+        const row = serverTotals.get(month.key);
+        month.revenue = row?.value ?? 0;
+        month.orders = row?.billable ?? 0;
+        month.units = row?.units ?? 0;
+      });
+      return months;
+    }
     const monthMap = new Map(months.map((month) => [month.key, month]));
     billableSellerOrders.forEach((order) => {
       const date = new Date(order.Order_Placed_At);
