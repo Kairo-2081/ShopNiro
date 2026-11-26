@@ -113,7 +113,7 @@ export const NavigationSidebar: React.FC<NavigationSidebarProps> = ({
           items: [primaryItem(t('storefront'), ShoppingBag, 'storefront')],
         },
       ]
-    : isLoggedIn && currentRole === 'seller' && activeTab === 'seller-dashboard'
+    : isLoggedIn && currentRole === 'seller' && (activeTab === 'seller-dashboard' || activeTab === 'transactions')
       ? [
           {
             label: t('sellerStudioSection'),
