@@ -54,11 +54,14 @@ const CartDrawer = React.lazy(() => import('./components/storefront/CartDrawer')
 const CheckoutModal = React.lazy(() => import('./components/storefront/CheckoutModal').then((module) => ({ default: module.CheckoutModal })));
 const PaymentResultModal = React.lazy(() => import('./components/payment/PaymentResultModal').then((module) => ({ default: module.PaymentResultModal })));
 const CustomerOrders = React.lazy(() => import('./components/customer/CustomerOrders').then((module) => ({ default: module.CustomerOrders })));
+const CustomerSpendingInsights = React.lazy(() => import('./components/customer/CustomerSpendingInsights').then((module) => ({ default: module.CustomerSpendingInsights })));
 const CustomerProfile = React.lazy(() => import('./components/customer/CustomerProfile').then((module) => ({ default: module.CustomerProfile })));
 const SupportPage = React.lazy(() => import('./components/support/SupportPage').then((module) => ({ default: module.SupportPage })));
 const AdminDashboard = React.lazy(() => import('./components/admin/AdminDashboard').then((module) => ({ default: module.AdminDashboard })));
 const SellerDashboard = React.lazy(() => import('./components/seller/SellerDashboard').then((module) => ({ default: module.SellerDashboard })));
 const LiveProductTrackingMap = React.lazy(() => import('./components/tracking/LiveProductTrackingMap').then((module) => ({ default: module.LiveProductTrackingMap })));
+const RiderAnalytics = React.lazy(() => import('./components/rider/RiderAnalytics').then((module) => ({ default: module.RiderAnalytics })));
+const TransactionsPage = React.lazy(() => import('./components/transactions/TransactionsPage').then((module) => ({ default: module.TransactionsPage })));
 const RiderDashboard = React.lazy(() => import('./components/rider/RiderDashboard').then((module) => ({ default: module.RiderDashboard })));
 const SellerSignupModal = React.lazy(() => import('./components/seller/SellerSignupModal').then((module) => ({ default: module.SellerSignupModal })));
 const CustomerSignupModal = React.lazy(() => import('./components/customer/CustomerSignupModal').then((module) => ({ default: module.CustomerSignupModal })));
@@ -103,29 +106,6 @@ export default function App() {
   const [selectedSeller, setSelectedSeller] = React.useState<Seller | null>(null);
   const [selectedAdmin, setSelectedAdmin] = React.useState<Admin | null>(null);
   const [selectedRider, setSelectedRider] = React.useState<Rider | null>(null);
-
-  // Theme State ('dark' | 'light')
-  const [theme, setTheme] = React.useState<'dark' | 'light'>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('marketpulse_theme');
-      if (saved === 'light' || saved === 'dark') return saved;
-    }
-    return 'dark';
-  });
-
-  React.useEffect(() => {
-    const root = document.documentElement;
-    if (theme === 'dark') {
-      root.classList.add('dark');
-    } else {
-      root.classList.remove('dark');
-    }
-    localStorage.setItem('marketpulse_theme', theme);
-  }, [theme]);
-
-  const toggleTheme = React.useCallback(() => {
-    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
-  }, []);
 
   // Core Entity States (Directly from Raw SQL Database)
   const [categories, setCategories] = React.useState<Category[]>([]);
@@ -1063,8 +1043,6 @@ export default function App() {
           onOpenSellerSignup={() => openSignup('seller')}
           onOpenRiderSignup={() => openSignup('rider')}
           onOpenAdminSignup={() => setIsAdminRegistrationOpen(true)}
-          theme={theme}
-          onToggleTheme={toggleTheme}
         />
 
         {isCustomerRegistrationOpen && (
@@ -1134,7 +1112,7 @@ export default function App() {
               : 'border-warning-500/25 bg-warning-500/10 text-warning-800 dark:text-warning-200';
           const Icon = toast.tone === 'error' ? AlertCircle : toast.tone === 'success' ? CheckCircle2 : Info;
           return (
-            <div key={toast.id} role={toast.tone === 'error' ? 'alert' : 'status'} className={`premium-card flex items-start gap-3 rounded-xl border p-3.5 text-xs font-semibold shadow-xl backdrop-blur-md animate-in fade-in slide-in-from-top-2 duration-200 ${toneClass}`}>
+            <div key={toast.id} role={toast.tone === 'error' ? 'alert' : 'status'} className={`premium-card flex items-start gap-3 rounded-xl border p-3.5 text-xs font-semibold shadow-xl backdrop-blur-md toast-in ${toneClass}`}>
               <Icon className="mt-0.5 h-4 w-4 shrink-0" />
               <span className="min-w-0 flex-1">{toast.message}</span>
               <button type="button" onClick={() => setToastMessages((current) => current.filter((item) => item.id !== toast.id))} aria-label="Dismiss notification" className="rounded-full p-1 opacity-70 transition-opacity hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d0c8a5]">
@@ -1173,9 +1151,8 @@ export default function App() {
         onLogout={handleLogout}
         onOpenNavigation={() => setIsNavigationOpen(true)}
         isNavigationOpen={isNavigationOpen}
-        theme={theme}
-        onToggleTheme={toggleTheme}
         onOpenChat={() => setIsChatOpen(true)}
+        onSearch={(query) => { setActiveTab('storefront'); void searchStoreProducts(query); }}
       />
 
       <div className="flex flex-1 items-stretch">
@@ -1197,6 +1174,7 @@ export default function App() {
         adminSellerCount={sellers.length}
         adminCategoryCount={categories.length}
         adminProductCount={products.length}
+        customerActiveOrderCount={orders.filter((order) => order.Customer_ID === selectedCustomer?.Customer_ID && order.Status !== 'delivered' && order.Status !== 'cancelled').length}
       />
       <div className="flex min-w-0 flex-1 flex-col">
       {/* Main Content Area */}
@@ -1265,7 +1243,7 @@ export default function App() {
 
         {/* Marketplace Top Charts & Trends Tab */}
         {activeTab === 'charts' && (
-          <div className="space-y-6 animate-in fade-in-50 duration-200">
+          <div className="space-y-6 view-enter">
             <MarketplaceTrendsTopCharts
               onSelectProduct={(p) => setSelectedProductForDetail(p)}
               onAddToCart={handleAddToCart}
@@ -1313,9 +1291,33 @@ export default function App() {
           )
         )}
 
+        {/* Customer spending insights - Authenticated Guard */}
+        {activeTab === 'spending' && (
+          isLoggedIn && selectedCustomer ? (
+            <div className="view-enter">
+              <CustomerSpendingInsights
+                orders={orders.filter((order) => order.Customer_ID === selectedCustomer.Customer_ID)}
+                products={products}
+                categories={categories}
+                onViewOrders={() => setActiveTab('orders')}
+              />
+            </div>
+          ) : (
+            <AuthenticationGuard
+              pageName="Spending insights"
+              requiredRole="Customer"
+              onOpenLogin={() => {
+                setAuthNotice('Please sign in as a Customer to see your spending.');
+                openLogin();
+              }}
+              onBackToStorefront={() => setActiveTab('storefront')}
+            />
+          )
+        )}
+
         {/* OpenStreetMap delivery tracking tab */}
         {activeTab === 'live-tracking' && (
-          <div className="space-y-6 animate-in fade-in-50 duration-200">
+          <div className="space-y-6 view-enter">
             <div className="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-[#12161D] p-6 rounded-3xl border border-brand-100 dark:border-surface-800 shadow-xl">
               <div>
                 <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-brand-950/80 text-brand-400 text-micro font-bold tracking-wider uppercase border border-brand-800/40 mb-2">
@@ -1455,6 +1457,12 @@ export default function App() {
             />
           )
         )}
+
+        {activeTab === 'rider-analytics' && (
+          isLoggedIn && selectedRider ? <RiderAnalytics rider={selectedRider} /> : null
+        )}
+
+        {activeTab === 'transactions' && isLoggedIn && (currentRole === 'customer' || currentRole === 'seller' || currentRole === 'rider') && <TransactionsPage />}
 
         {activeTab === 'rider-dashboard' && (
           isLoggedIn && selectedRider ? (

@@ -1,3 +1,4 @@
+import { useMonthlyTotals } from '../../lib/useMonthlyTotals';
 import React from 'react';
 import { Seller, Product, Order, Review, Category, ProductStatus, SellerDashboardTab } from '../../types';
 import { api, formatCurrency, formatDate } from '../../lib/api';
@@ -25,8 +26,22 @@ import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { fallbackToBrandLogo } from '../../lib/branding';
 import { useLocale } from '../../lib/i18n';
+import { StatTile } from '../charts/StatTile';
+import { ChartPanel } from '../charts/ChartPanel';
+import { DeltaChip } from '../charts/DeltaChip';
+import { SellerFulfilmentFunnel } from './SellerFulfilmentFunnel';
+import { RangeMonths, RangeSelector } from '../charts/RangeSelector';
+import { percentChange, sum } from '../charts/format';
 
-const compactSellerValue = (value: number) => value >= 1000 ? `${(value / 1000).toFixed(1)}k` : String(Math.round(value));
+// Recharts is large; load it only when a seller opens the analytics tab.
+const MonthlyBarChart = React.lazy(() =>
+  import('../charts/MonthlyBarChart').then(({ MonthlyBarChart: Component }) => ({ default: Component })),
+);
+
+const SellerStockHealth = React.lazy(() =>
+  import('./SellerStockHealth').then(({ SellerStockHealth: Component }) => ({ default: Component })),
+);
+
 interface SellerDashboardProps {
   activeTab: SellerDashboardTab;
   setActiveTab: React.Dispatch<React.SetStateAction<SellerDashboardTab>>;
@@ -190,10 +205,6 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
     const sellerItems = order.Items.filter((i) => i.Seller_ID === currentSeller.Seller_ID);
     return sum + sellerItems.reduce((acc, item) => acc + item.Price * item.Quantity, 0);
   }, 0);
-  const sellerUnitsSold = billableSellerOrders.reduce((total, order) => total + order.Items
-    .filter((item) => item.Seller_ID === currentSeller.Seller_ID)
-    .reduce((units, item) => units + Math.max(0, Number(item.Quantity) || 0), 0), 0);
-  const averageSellerOrderValue = billableSellerOrders.length ? totalSalesRevenue / billableSellerOrders.length : 0;
 
   const sellerProductPerformance = (() => {
     const totals = new Map<string, { units: number; revenue: number }>();
@@ -211,6 +222,8 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 5);
   })();
+
+  const topProductRevenue = sellerProductPerformance[0]?.revenue ?? 0;
 
   const sellerPricingGuidance = sellerProducts.map((product) => {
     const comparablePrices = products
@@ -234,17 +247,29 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
     return { product, categoryMedian, effectivePrice, variance };
   });
 
+  const [analyticsRange, setAnalyticsRange] = React.useState<RangeMonths>(6);
+  const serverTotals = useMonthlyTotals();
   const recentMonthlySales = (() => {
     const now = new Date();
-    const months = Array.from({ length: 6 }, (_, index) => {
-      const date = new Date(now.getFullYear(), now.getMonth() - 5 + index, 1);
+    const months = Array.from({ length: analyticsRange }, (_, index) => {
+      const date = new Date(now.getFullYear(), now.getMonth() - (analyticsRange - 1) + index, 1);
       return {
         key: `${date.getFullYear()}-${date.getMonth()}`,
         label: date.toLocaleDateString(undefined, { month: 'short' }),
         revenue: 0,
         orders: 0,
+        units: 0,
       };
     });
+    if (serverTotals) {
+      months.forEach((month) => {
+        const row = serverTotals.get(month.key);
+        month.revenue = row?.value ?? 0;
+        month.orders = row?.billable ?? 0;
+        month.units = row?.units ?? 0;
+      });
+      return months;
+    }
     const monthMap = new Map(months.map((month) => [month.key, month]));
     billableSellerOrders.forEach((order) => {
       const date = new Date(order.Order_Placed_At);
@@ -252,13 +277,20 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
       const month = monthMap.get(`${date.getFullYear()}-${date.getMonth()}`);
       if (!month) return;
       month.orders += 1;
+      month.units += order.Items.filter((item) => item.Seller_ID === currentSeller.Seller_ID).reduce((total, item) => total + Math.max(0, Number(item.Quantity) || 0), 0);
       month.revenue += order.Items
         .filter((item) => item.Seller_ID === currentSeller.Seller_ID)
         .reduce((sum, item) => sum + Math.max(0, Number(item.Price) || 0) * Math.max(0, Number(item.Quantity) || 0), 0);
     });
     return months;
   })();
-  const maximumMonthlyRevenue = Math.max(1, ...recentMonthlySales.map((month) => month.revenue));
+  const halfRange = Math.max(1, Math.floor(analyticsRange / 2));
+  const recentHalf = (pick: (month: (typeof recentMonthlySales)[number]) => number) => sum(recentMonthlySales.slice(-halfRange).map(pick));
+  const earlierHalf = (pick: (month: (typeof recentMonthlySales)[number]) => number) => sum(recentMonthlySales.slice(0, halfRange).map(pick));
+  const windowRevenue = sum(recentMonthlySales.map((month) => month.revenue));
+  const windowUnits = sum(recentMonthlySales.map((month) => month.units));
+  const windowOrders = sum(recentMonthlySales.map((month) => month.orders));
+  const monthlySalesChange = percentChange(recentMonthlySales[recentMonthlySales.length - 1]?.revenue ?? 0, recentMonthlySales[0]?.revenue ?? 0);
 
   const avgSellerRating =
     sellerReviews.length > 0
@@ -695,7 +727,14 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
       )}
 
       {activeTab === 'analytics' && (
-        <Section title="Sales Analytics" description="Sales, product performance, and pricing guidance for your store." className="space-y-4">
+        <Section
+          title="Sales Analytics"
+          description={t('sellerAnalyticsSubtitle')}
+          action={<RangeSelector value={analyticsRange} onChange={setAnalyticsRange} />}
+          className="space-y-5"
+          headingClassName="font-display text-3xl font-normal text-[var(--chart-ink)] sm:text-4xl"
+          descriptionClassName="mt-1.5 text-base text-[var(--chart-axis)]"
+        >
           {isLoadingAnalytics && (
             <div role="status" aria-label="Loading seller analytics" aria-busy="true" className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="premium-skeleton h-56 rounded-2xl" />
@@ -704,71 +743,117 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
           )}
           {!isLoadingAnalytics && <>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {[
-              { label: 'Net product sales', value: formatCurrency(totalSalesRevenue), note: 'Excludes cancelled and refunded orders' },
-              { label: 'Units sold', value: sellerUnitsSold.toLocaleString(), note: `${billableSellerOrders.length} eligible orders` },
-              { label: 'Average order value', value: formatCurrency(averageSellerOrderValue), note: 'Across eligible seller orders' },
-              { label: 'Product rating', value: avgSellerRating ? `${avgSellerRating.toFixed(1)} / 5` : 'No ratings', note: `${sellerReviews.length} customer reviews` },
-            ].map((metric) => (
-              <article key={metric.label} className="rounded-2xl border border-brand-100 bg-white p-4 dark:border-brand-500/20 dark:bg-[#12161D]">
-                <p className="text-micro font-semibold uppercase text-surface-500 dark:text-surface-400">{metric.label}</p>
-                <p className="mt-2 text-xl font-bold tabular-nums text-surface-900 dark:text-white">{metric.value}</p>
-                <p className="mt-1 text-micro text-surface-500 dark:text-surface-400">{metric.note}</p>
-              </article>
-            ))}
+            <StatTile
+              label="Net product sales"
+              value={formatCurrency(windowRevenue)}
+              count={{ value: windowRevenue, format: formatCurrency }}
+              note="Excludes cancelled and refunded orders"
+              trend={recentMonthlySales.some((month) => month.revenue > 0) ? recentMonthlySales.map((month) => month.revenue) : undefined}
+              change={percentChange(recentHalf((month) => month.revenue), earlierHalf((month) => month.revenue))}
+              comparison={t('sellerVsEarlier')}
+            />
+            <StatTile
+              label="Units sold"
+              value={windowUnits.toLocaleString()}
+              count={{ value: windowUnits, format: (n) => Math.round(n).toLocaleString() }}
+              note={`${windowOrders.toLocaleString()} eligible orders`}
+              accent="var(--chart-cat-2)"
+              trend={recentMonthlySales.some((month) => month.units > 0) ? recentMonthlySales.map((month) => month.units) : undefined}
+              change={percentChange(recentHalf((month) => month.units), earlierHalf((month) => month.units))}
+              comparison={t('sellerVsEarlier')}
+            />
+            <StatTile
+              label="Average order value"
+              value={formatCurrency(windowOrders ? windowRevenue / windowOrders : 0)}
+              count={{ value: windowOrders ? windowRevenue / windowOrders : 0, format: formatCurrency }}
+              note="Across eligible seller orders"
+              accent="var(--chart-cat-3)"
+              trend={recentMonthlySales.some((month) => month.orders > 0) ? recentMonthlySales.map((month) => (month.orders ? month.revenue / month.orders : 0)) : undefined}
+              change={percentChange(recentHalf((month) => month.revenue) / Math.max(1, recentHalf((month) => month.orders)), earlierHalf((month) => month.revenue) / Math.max(1, earlierHalf((month) => month.orders)))}
+              comparison={t('sellerVsEarlier')}
+            />
+            <StatTile label="Product rating" value={avgSellerRating ? avgSellerRating.toFixed(1) : 'No ratings'} after={avgSellerRating ? <span aria-label="out of 5" className="text-lg text-[var(--chart-cat-5)]">★</span> : undefined} progress={avgSellerRating ? (avgSellerRating / 5) * 100 : undefined} note={`${sellerReviews.length} customer reviews`} accent="var(--chart-cat-5)" />
           </div>
 
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <section className="rounded-2xl border border-surface-200 bg-white p-5 dark:border-surface-800 dark:bg-[#12161D]">
-              <h2 className="text-sm font-bold text-surface-900 dark:text-white">{t('monthlySales')}</h2>
-              <p className="mt-1 text-micro text-surface-500 dark:text-surface-400">{t('productRevenueLastSix')}</p>
-              <div role="img" aria-label="Monthly product sales for the last six months" className="mt-5 grid h-44 grid-cols-6 items-end gap-2">
-                {recentMonthlySales.map((month) => (
-                  <div key={month.key} className="flex h-full min-w-0 flex-col items-center justify-end gap-2">
-                    <span className="text-center text-micro tabular-nums text-surface-500 dark:text-surface-400">{month.revenue ? compactSellerValue(month.revenue) : ''}</span>
-                    <div className="flex h-28 w-full items-end rounded-md bg-surface-100 dark:bg-[#1B2430]">
-                      <div
-                        className="w-full rounded-md bg-success-600 transition-[height] duration-500 dark:bg-success-500"
-                        style={{ height: `${month.revenue ? Math.max(5, (month.revenue / maximumMonthlyRevenue) * 100) : 0}%` }}
-                        title={`${month.label}: ${formatCurrency(month.revenue)} · ${month.orders} orders`}
-                      />
-                    </div>
-                    <span className="text-micro text-surface-600 dark:text-surface-300">{month.label}</span>
-                  </div>
-                ))}
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+            <ChartPanel className="lg:col-span-2" headingId="seller-monthly-sales-title" title={t('monthlySales')} subtitle={t('productRevenueLastN', { count: analyticsRange })} featured actions={monthlySalesChange === null ? undefined : (<span className="inline-flex items-center gap-2 text-sm text-[var(--chart-axis)]"><DeltaChip change={monthlySalesChange} comparison={`since ${recentMonthlySales[0]?.label ?? ''}`} />{`since ${recentMonthlySales[0]?.label ?? ''}`}</span>)}>
+              <div>
+                <React.Suspense fallback={<div aria-hidden="true" className="premium-skeleton h-[220px] rounded-xl" />}>
+                  <MonthlyBarChart
+                    data={recentMonthlySales.map((month) => ({ label: month.label, value: month.revenue }))}
+                    name={t('chartRevenue')}
+                    formatValue={(value) => formatCurrency(value)}
+                    ariaLabel="Monthly product sales for the last six months"
+                    compact
+                    valueLabels="all"
+                    height={300}
+                  />
+                </React.Suspense>
               </div>
-            </section>
+              <details className="mt-1 text-xs">
+                <summary className="min-h-11 cursor-pointer py-3 font-semibold text-[var(--chart-primary-hi)] underline decoration-[var(--chart-line)] underline-offset-4">
+                  {t('viewMonthlyDataAsTable')}
+                </summary>
+                <table className="w-full border-collapse text-left">
+                  <caption className="sr-only">Monthly product sales for the last six months</caption>
+                  <thead>
+                    <tr className="border-b border-[var(--chart-line)]">
+                      <th scope="col" className="p-2">{t('monthCol')}</th>
+                      <th scope="col" className="p-2">{t('ordersCol')}</th>
+                      <th scope="col" className="p-2">{t('chartRevenue')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recentMonthlySales.map((month) => (
+                      <tr key={month.key} className="border-b border-[var(--chart-hair)]">
+                        <th scope="row" className="p-2 font-medium">{month.label}</th>
+                        <td className="p-2 tabular-nums">{month.orders.toLocaleString()}</td>
+                        <td className="p-2 tabular-nums">{formatCurrency(month.revenue)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </details>
+            </ChartPanel>
+            <React.Suspense fallback={<div aria-hidden="true" className="premium-skeleton h-64 rounded-2xl" />}>
+              <SellerStockHealth products={sellerProducts} />
+            </React.Suspense>
+          </div>
 
-            <section className="rounded-2xl border border-surface-200 bg-white p-5 dark:border-surface-800 dark:bg-[#12161D]">
-              <h2 className="text-sm font-bold text-surface-900 dark:text-white">{t('topProducts')}</h2>
-              <p className="mt-1 text-micro text-surface-500 dark:text-surface-400">{t('rankedByNetSales')}</p>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
+
+            <ChartPanel className="lg:col-span-3" headingId="seller-top-products-title" title={t('topProducts')} subtitle={t('rankedByNetSales')}>
               {sellerProductPerformance.length ? (
-                <ol className="mt-3 divide-y divide-surface-100 dark:divide-surface-800">
+                <ol className="divide-y divide-[var(--chart-hair)]">
                   {sellerProductPerformance.map(({ product, units, revenue }, index) => (
-                    <li key={product.Product_ID} className="flex items-center gap-3 py-3">
-                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-surface-100 text-xs font-bold text-surface-700 dark:bg-surface-800 dark:text-surface-200">{index + 1}</span>
-                      <img src={product.Image} alt="" className="h-9 w-9 shrink-0 rounded-md object-cover" />
+                    <li key={product.Product_ID} className="flex items-center gap-4 py-3.5">
+                      <span className="w-4 shrink-0 text-center text-base font-medium tabular-nums text-[var(--chart-axis)]">{index + 1}</span>
+                      <img src={product.Image} alt="" className="h-14 w-14 shrink-0 rounded-2xl object-cover" />
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-semibold text-surface-900 dark:text-white">{product.Name}</p>
-                        <p className="text-micro text-surface-500 dark:text-surface-400">{units.toLocaleString()} units sold</p>
+                        <p className="truncate text-base font-bold text-[var(--chart-ink)]">{product.Name}</p>
+                        <p className="text-sm text-[var(--chart-axis)]">{units.toLocaleString()} units sold</p>
                       </div>
-                      <span className="shrink-0 text-xs font-bold tabular-nums text-surface-800 dark:text-surface-200">{formatCurrency(revenue)}</span>
+                      <div aria-hidden="true" className="hidden h-2 w-40 shrink-0 overflow-hidden rounded-full bg-[var(--chart-track)] sm:block lg:w-32 xl:w-44">
+                        <div className="h-full rounded-full" style={{ width: `${topProductRevenue > 0 ? Math.max((revenue / topProductRevenue) * 100, 4) : 0}%`, backgroundImage: 'linear-gradient(90deg, var(--chart-primary-soft), var(--chart-primary-hi))' }} />
+                      </div>
+                      <span className="w-28 shrink-0 text-right text-base font-bold tabular-nums text-[var(--chart-ink)]">{formatCurrency(revenue).replace(/\.00$/, '')}</span>
                     </li>
                   ))}
                 </ol>
               ) : (
-                <p className="py-10 text-center text-xs text-surface-500 dark:text-surface-400">{t('salesAnalyticsEligibleOrder')}</p>
+                <p className="py-10 text-center text-xs text-[var(--chart-axis)]">{t('salesAnalyticsEligibleOrder')}</p>
               )}
-            </section>
+            </ChartPanel>
+            <div className="min-w-0 lg:col-span-2"><SellerFulfilmentFunnel orders={sellerOrders} months={analyticsRange} /></div>
           </div>
-          <section className="overflow-x-auto rounded-2xl border border-surface-200 bg-white dark:border-surface-800 dark:bg-[#12161D]">
+          <section className="chart-card overflow-x-auto rounded-2xl">
             <div className="p-5">
-              <h2 className="text-sm font-bold text-surface-900 dark:text-white">{t('pricePositioning')}</h2>
-              <p className="mt-1 text-micro text-surface-500 dark:text-surface-400">{t('pricePositioningDesc')}</p>
+              <h2 className="font-display text-lg font-normal text-[var(--chart-ink)]">{t('pricePositioning')}</h2>
+              <p className="mt-1 text-micro text-[var(--chart-axis)]">{t('pricePositioningDesc')}</p>
             </div>
             <table className="w-full min-w-[560px] text-left text-xs">
-              <thead className="border-y border-surface-200 bg-surface-50 text-micro uppercase text-surface-500 dark:border-surface-800 dark:bg-[#181F2A] dark:text-surface-400"><tr><th className="p-3">Product</th><th className="p-3">{t('listPrice')}</th><th className="p-3">{t('effectivePrice')}</th><th className="p-3">{t('categoryMedian')}</th><th className="p-3">{t('positionCol')}</th></tr></thead>
-              <tbody className="divide-y divide-surface-100 dark:divide-surface-800">
+              <thead className="border-y border-[var(--chart-line)] bg-[var(--chart-track)] text-micro font-semibold text-[var(--chart-axis)]"><tr><th className="p-3">Product</th><th className="p-3">{t('listPrice')}</th><th className="p-3">{t('effectivePrice')}</th><th className="p-3">{t('categoryMedian')}</th><th className="p-3">{t('positionCol')}</th></tr></thead>
+              <tbody className="divide-y divide-[var(--chart-hair)]">
                 {sellerPricingGuidance.map(({ product, categoryMedian, effectivePrice, variance }) => (
                   <tr key={product.Product_ID}>
                     <td className="p-3 font-semibold text-surface-900 dark:text-white">{product.Name}</td>
@@ -782,17 +867,17 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({
               </tbody>
             </table>
           </section>
-          <section className="overflow-x-auto rounded-2xl border border-surface-200 bg-white dark:border-surface-800 dark:bg-[#12161D]">
+          <section className="chart-card overflow-x-auto rounded-2xl">
             <div className="p-5">
-              <h2 className="text-sm font-bold text-surface-900 dark:text-white">{t('listingPerformance')}</h2>
-              <p className="mt-1 text-micro text-surface-500 dark:text-surface-400">{t('listingPerformanceDesc')}</p>
+              <h2 className="font-display text-lg font-normal text-[var(--chart-ink)]">{t('listingPerformance')}</h2>
+              <p className="mt-1 text-micro text-[var(--chart-axis)]">{t('listingPerformanceDesc')}</p>
             </div>
             {analyticsError && <p role="alert" className="mx-5 mb-3 text-xs text-danger-700 dark:text-danger-300">{analyticsError}</p>}
             <table className="w-full min-w-[680px] text-left text-xs">
-              <thead className="border-y border-surface-200 bg-surface-50 text-micro uppercase text-surface-500 dark:border-surface-800 dark:bg-[#181F2A] dark:text-surface-400">
+              <thead className="border-y border-[var(--chart-line)] bg-[var(--chart-track)] text-micro font-semibold text-[var(--chart-axis)]">
                 <tr><th className="p-3">Product</th><th className="p-3">Views · 7d</th><th className="p-3">Clicks · 7d</th><th className="p-3">CTR</th><th className="p-3">Returned · 30d</th><th className="p-3">{t('returnRate')}</th><th className="p-3">{t('nextAction')}</th></tr>
               </thead>
-              <tbody className="divide-y divide-surface-100 dark:divide-surface-800">
+              <tbody className="divide-y divide-[var(--chart-hair)]">
                 {productAnalytics.map((metric) => {
                   const product = sellerProducts.find((item) => item.Product_ID === metric.Product_ID);
                   if (!product) return null;

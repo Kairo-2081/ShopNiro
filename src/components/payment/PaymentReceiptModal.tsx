@@ -1,7 +1,7 @@
 import React from 'react';
 import { Order, Customer } from '../../types';
 import { formatCurrency, formatBDT, formatDate } from '../../lib/api';
-import { money } from '../../lib/format';
+import { formatAddressLine, money } from '../../lib/format';
 import { shopNiroLogo } from '../../lib/branding';
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useLocale } from '../../lib/i18n';
@@ -204,7 +204,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
   const total = order.Subtotal + order.Shipping_Fee;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto duration-150">
       <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="payment-receipt-title" tabIndex={-1} onKeyDown={(event) => { if (event.key === 'Escape') onClose(); }} className="bg-white dark:bg-[#12161D] w-full max-w-lg rounded-3xl shadow-2xl border border-brand-100 dark:border-surface-800 overflow-hidden flex flex-col my-4">
         {/* Receipt Header Banner */}
         <div className="bg-gradient-to-r from-[#0C1014] via-[#12161D] to-[#0C1014] p-6 text-white border-b border-brand-500/20 relative">
@@ -299,7 +299,7 @@ export const PaymentReceiptModal: React.FC<PaymentReceiptModalProps> = ({
             </span>
             <p className="font-bold text-surface-900 dark:text-white">{customer?.Name || t('marketplaceCustomer')}</p>
             <p className="text-surface-600 dark:text-surface-300">
-              {order.Shipping_Address.House_Name}, {order.Shipping_Address.Street}, {order.Shipping_Address.City} ({order.Shipping_Address.Postal_Code})
+              {formatAddressLine(order.Shipping_Address, { includeHouse: true })}
             </p>
             {customer?.Number && (
               <p className="text-surface-500 dark:text-surface-400 flex items-center gap-1.5 pt-1">

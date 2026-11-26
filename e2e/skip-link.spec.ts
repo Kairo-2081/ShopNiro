@@ -28,14 +28,14 @@ test.describe('a guest', () => {
   test('can skip to the main content on the landing page', async ({ page }) => {
     await blockNonLocalTraffic(page);
     await page.goto('/');
-    await expect(page.getByRole('button', { name: 'Explore Marketplace' })).toBeVisible();
+    await expect(page.locator('#hero').getByRole('button', { name: 'Browse products' })).toBeVisible();
     await skipToMain(page);
   });
 
   test('can skip again after entering the marketplace', async ({ page }) => {
     await blockNonLocalTraffic(page);
     await page.goto('/');
-    await page.getByRole('button', { name: 'Explore Marketplace' }).click();
+    await page.locator('#hero').getByRole('button', { name: 'Browse products' }).click();
     await expect(page.getByText('E2E Linen Blanket').first()).toBeVisible();
     await skipToMain(page);
   });

@@ -1,476 +1,403 @@
 import React from 'react';
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Cell,
-  ComposedChart,
-  Pie,
-  PieChart,
-  ResponsiveContainer,
-  Tooltip,
-  TooltipContentProps,
-  XAxis,
-  YAxis,
-  Area,
-} from 'recharts';
 import { formatBDT } from '../../lib/api';
-import { Order, OrderStatus } from '../../types';
+import { Order, Seller } from '../../types';
 import { useLocale } from '../../lib/i18n';
+import { ChartPanel } from '../charts/ChartPanel';
+import { RangeMonths, RangeSelector } from '../charts/RangeSelector';
+import { ShareBreakdown, ShareSlice } from '../charts/ShareBreakdown';
+import { Sparkline } from '../charts/Sparkline';
+import { StatTile } from '../charts/StatTile';
+import { TrendAreaChart } from '../charts/TrendAreaChart';
+import { percentChange, sum } from '../charts/format';
+import { monthBuckets, placedMonthKey } from '../charts/months';
+import { useMonthlyTotals } from '../../lib/useMonthlyTotals';
 
 interface AdminOverviewAnalyticsProps {
   orders: Order[];
+  sellers?: Seller[];
   isLoading?: boolean;
+  /** Draws the weekday chart for the orders in the chosen range. */
+  renderWeekday?: (orders: Order[]) => React.ReactNode;
+  onViewMerchants?: () => void;
 }
 
-interface MonthlyMetric {
-  month: string;
-  orderCount: number;
-  orderValue: number;
+interface MonthTotals {
+  orders: number;
+  billable: number;
+  value: number;
+  delivered: number;
 }
 
-const statusPresentation: Record<OrderStatus, { label: string; color: string; shade: string }> = {
-  placed: { label: 'Placed', color: '#38bdf8', shade: '#0ea5e9' },
-  processing: { label: 'Processing', color: '#f59e0b', shade: '#d97706' },
-  shipped: { label: 'Shipped', color: '#8b5cf6', shade: '#7c3aed' },
-  delivered: { label: 'Delivered', color: '#34d399', shade: '#10b981' },
-  cancelled: { label: 'Cancelled', color: '#fb7185', shade: '#f43f5e' },
+type TrendMeasure = 'revenue' | 'orders' | 'average';
+
+const paymentPresentation: Record<string, { label: string; color: string }> = {
+  cash_on_delivery: { label: 'COD', color: 'var(--chart-cat-1)' },
+  bkash: { label: 'bKash', color: 'var(--chart-cat-2)' },
+  nagad: { label: 'Nagad', color: 'var(--chart-cat-3)' },
+  rocket: { label: 'Rocket', color: 'var(--chart-cat-4)' },
+  visa_mastercard: { label: 'Cards', color: 'var(--chart-cat-5)' },
+  sslcommerz: { label: 'SSLCommerz', color: 'var(--chart-cat-6)' },
 };
 
-const paymentPresentation: Record<string, { label: string; color: string; shade: string }> = {
-  bkash: { label: 'bKash', color: '#f472b6', shade: '#ec4899' },
-  nagad: { label: 'Nagad', color: '#2dd4bf', shade: '#14b8a6' },
-  rocket: { label: 'Rocket', color: '#a78bfa', shade: '#8b5cf6' },
-  visa_mastercard: { label: 'Cards', color: '#60a5fa', shade: '#3b82f6' },
-  sslcommerz: { label: 'SSLCommerz', color: '#fbbf24', shade: '#f59e0b' },
-  cash_on_delivery: { label: 'COD', color: '#4ade80', shade: '#22c55e' },
-};
+// Soft tiles for the merchant initials. Fixed per merchant so a merchant keeps its colour between visits.
+const AVATARS = ['#e0cd8e', '#9ad6b8', '#9db8e8', '#dba17c', '#c9b2e6', '#e6a9b4'];
+const avatarFor = (id: string) => AVATARS[Array.from(id).reduce((total, char) => total + char.charCodeAt(0), 0) % AVATARS.length];
 
-const compactValue = (value: number) => {
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}m`;
-  if (value >= 10_000) return `${Math.round(value / 1_000)}k`;
-  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}k`;
-  return String(Math.round(value));
-};
+const orderValue = (order: Order) => Math.max(0, Number(order.Subtotal) || 0) + Math.max(0, Number(order.Shipping_Fee) || 0);
+const counts = (order: Order) => order.Status !== 'cancelled' && order.Payment_Status !== 'refunded';
+const emptyTotals = (): MonthTotals => ({ orders: 0, billable: 0, value: 0, delivered: 0 });
 
-const AdminChartTooltip: React.FC<Partial<TooltipContentProps<number, string>>> = ({ active, payload, label }) => {
-  if (!active || !payload?.length) return null;
+export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ orders, sellers = [], isLoading = false, renderWeekday, onViewMerchants }) => {
+  const { t, locale } = useLocale();
+  const [measure, setMeasure] = React.useState<TrendMeasure>('revenue');
+  const [range, setRange] = React.useState<RangeMonths>(12);
+  // Month totals are counted in the database, so they stay right when the app has only loaded the newest orders.
+  const serverTotals = useMonthlyTotals();
 
-  return (
-    <div className="rounded-2xl border border-white/20 bg-surface-900/85 p-3.5 shadow-2xl backdrop-blur-md text-xs text-white space-y-1.5 animate-in fade-in duration-150">
-      <p className="font-bold text-surface-300 border-b border-white/10 pb-1">{label}</p>
-      {payload.map((entry, index) => {
-        const name = String(entry.name || entry.dataKey || 'Metric');
-        const value = Number(entry.value) || 0;
-        const color = typeof entry.color === 'string' ? entry.color : typeof entry.fill === 'string' ? entry.fill : '#94a3b8';
-        return (
-          <div key={`${name}-${index}`} className="flex items-center gap-2">
-            <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
-            <span className="text-surface-400 capitalize">{name}:</span>
-            <span className="ml-auto font-semibold tabular-nums text-white">
-              {name.toLowerCase().includes('value') ? formatBDT(value) : value.toLocaleString()}
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
-};
-
-export const AdminOverviewAnalytics: React.FC<AdminOverviewAnalyticsProps> = ({ orders, isLoading = false }) => {
-  const { t } = useLocale();
-  const [prefersReducedMotion, setPrefersReducedMotion] = React.useState(() =>
-    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  );
-
-  React.useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const updatePreference = () => setPrefersReducedMotion(mediaQuery.matches);
-    mediaQuery.addEventListener('change', updatePreference);
-    return () => mediaQuery.removeEventListener('change', updatePreference);
-  }, []);
-
-  const { monthlyMetrics, statusMetrics, paymentMetrics, hasRecentOrders, trailingOrderCount, trailingOrderValue } = React.useMemo(() => {
+  const analytics = React.useMemo(() => {
     const now = new Date();
-    const firstMonth = new Date(now.getFullYear(), now.getMonth() - 11, 1);
-    const byMonth = new Map<string, MonthlyMetric>();
-    const monthly: MonthlyMetric[] = [];
+    const intl = locale === 'bn' ? 'bn-BD' : undefined;
+    const current = monthBuckets(range, now, 0, intl);
+    const previousPeriod = monthBuckets(range, now, range);
+    const lastYear = monthBuckets(range, now, 12);
 
-    for (let offset = 0; offset < 12; offset += 1) {
-      const date = new Date(firstMonth.getFullYear(), firstMonth.getMonth() + offset, 1);
-      const key = `${date.getFullYear()}-${date.getMonth()}`;
-      const metric = {
-        month: date.toLocaleDateString(undefined, { month: 'short', year: '2-digit' }),
-        orderCount: 0,
-        orderValue: 0,
-      };
-      byMonth.set(key, metric);
-      monthly.push(metric);
-    }
-
-    const counts = new Map<OrderStatus, number>();
-    const paymentCounts = new Map<string, number>();
-    let recentCount = 0;
-
+    const totals = new Map<string, MonthTotals>();
+    const inWindow = new Set(current.map((bucket) => bucket.key));
+    const windowOrders: Order[] = [];
     orders.forEach((order) => {
-      counts.set(order.Status, (counts.get(order.Status) || 0) + 1);
-
-      const methodKey = String(order.Payment_Method || 'cash_on_delivery').toLowerCase();
-      paymentCounts.set(methodKey, (paymentCounts.get(methodKey) || 0) + 1);
-
-      const placedAt = new Date(order.Order_Placed_At);
-      if (Number.isNaN(placedAt.getTime())) return;
-
-      const month = byMonth.get(`${placedAt.getFullYear()}-${placedAt.getMonth()}`);
-      if (!month) return;
-
-      recentCount += 1;
-      month.orderCount += 1;
-      if (order.Status !== 'cancelled' && order.Payment_Status !== 'refunded') {
-        month.orderValue += Math.max(0, Number(order.Subtotal) || 0) + Math.max(0, Number(order.Shipping_Fee) || 0);
+      const key = placedMonthKey(order.Order_Placed_At);
+      if (!key) return;
+      const month = totals.get(key) ?? emptyTotals();
+      month.orders += 1;
+      if (counts(order)) {
+        month.billable += 1;
+        month.value += orderValue(order);
       }
+      if (order.Status === 'delivered') month.delivered += 1;
+      totals.set(key, month);
+      if (inWindow.has(key)) windowOrders.push(order);
     });
 
-    const statuses = (Object.keys(statusPresentation) as OrderStatus[])
-      .map((status) => ({
-        status,
-        name: statusPresentation[status].label,
-        value: counts.get(status) || 0,
-        color: statusPresentation[status].color,
-        shade: statusPresentation[status].shade,
-      }))
-      .filter((status) => status.value > 0);
+    const source = serverTotals
+      ? new Map(Array.from(serverTotals, ([key, row]) => [key, { orders: row.orders, billable: row.billable, value: row.value, delivered: row.delivered }] as const))
+      : totals;
+    const pick = (buckets: { key: string }[]) => buckets.map((bucket) => source.get(bucket.key) ?? emptyTotals());
+    const now12 = pick(current);
+    const before = pick(previousPeriod);
+    const year = pick(lastYear);
+    const total = (rows: MonthTotals[]) => ({
+      orders: sum(rows.map((row) => row.orders)),
+      billable: sum(rows.map((row) => row.billable)),
+      value: sum(rows.map((row) => row.value)),
+      delivered: sum(rows.map((row) => row.delivered)),
+    });
+    const now_ = total(now12);
+    const prev_ = total(before);
+    const average = (value: number, billable: number) => (billable > 0 ? value / billable : 0);
 
-    const payments = Array.from(paymentCounts.entries())
+    const paymentCounts = new Map<string, number>();
+    const merchants = new Map<string, { revenue: number; orderIds: Set<string>; series: number[] }>();
+    const indexOf = new Map(current.map((bucket, index) => [bucket.key, index]));
+    windowOrders.forEach((order) => {
+      const method = String(order.Payment_Method || 'cash_on_delivery').toLowerCase();
+      paymentCounts.set(method, (paymentCounts.get(method) || 0) + 1);
+      if (!counts(order)) return;
+      const slot = indexOf.get(placedMonthKey(order.Order_Placed_At) ?? '') ?? 0;
+      (order.Items || []).forEach((item) => {
+        const entry = merchants.get(item.Seller_ID) ?? { revenue: 0, orderIds: new Set<string>(), series: new Array(range).fill(0) };
+        const line = Math.max(0, Number(item.Price) || 0) * Math.max(0, Number(item.Quantity) || 0);
+        entry.revenue += line;
+        entry.series[slot] += line;
+        entry.orderIds.add(order.Order_ID);
+        merchants.set(item.Seller_ID, entry);
+      });
+    });
+
+    const paymentSlices: ShareSlice[] = Array.from(paymentCounts.entries())
       .map(([method, value]) => ({
-        method,
+        key: method,
         name: paymentPresentation[method]?.label || method.replace(/_/g, ' '),
         value,
-        color: paymentPresentation[method]?.color || '#64748b',
-        shade: paymentPresentation[method]?.shade || '#475569',
+        color: paymentPresentation[method]?.color || 'var(--chart-axis)',
       }))
       .sort((a, b) => b.value - a.value);
 
     return {
-      monthlyMetrics: monthly,
-      statusMetrics: statuses,
-      paymentMetrics: payments,
-      hasRecentOrders: recentCount > 0,
-      trailingOrderCount: recentCount,
-      trailingOrderValue: monthly.reduce((sum, metric) => sum + metric.orderValue, 0),
+      labels: current.map((bucket) => bucket.label),
+      now12,
+      year,
+      windowOrders,
+      paymentSlices,
+      merchants: Array.from(merchants.entries())
+        .map(([id, entry]) => ({ id, revenue: entry.revenue, orders: entry.orderIds.size, series: entry.series }))
+        .sort((a, b) => b.revenue - a.revenue)
+        .slice(0, 5),
+      revenue: now_.value,
+      orderCount: now_.orders,
+      averageOrder: average(now_.value, now_.billable),
+      delivered: now_.delivered,
+      revenueChange: percentChange(now_.value, prev_.value),
+      orderChange: percentChange(now_.orders, prev_.orders),
+      averageChange: percentChange(average(now_.value, now_.billable), average(prev_.value, prev_.billable)),
+      hasYear: year.some((row) => row.orders > 0),
     };
-  }, [orders]);
+  }, [orders, serverTotals, range, locale]);
+
+  const valueOf = (row: MonthTotals) => (measure === 'revenue' ? row.value : measure === 'orders' ? row.orders : row.billable ? row.value / row.billable : 0);
+  const trendData = analytics.labels.map((label, index) => ({ label, value: valueOf(analytics.now12[index]) }));
+  const lastYearValues = analytics.hasYear ? analytics.year.map(valueOf) : undefined;
+  const best = trendData.reduce<{ label: string; value: number } | null>((top, datum) => (datum.value > 0 && (!top || datum.value > top.value) ? datum : top), null);
+  const sellerName = (id: string) => sellers.find((seller) => seller.Seller_ID === id)?.Name || t('seller');
+  const sellerStatus = (id: string) => sellers.find((seller) => seller.Seller_ID === id)?.Status;
 
   if (isLoading) {
     return (
       <section aria-label="Loading platform metrics" aria-busy="true" className="space-y-4">
         <div className="premium-skeleton h-6 w-56 rounded-full" />
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           {Array.from({ length: 4 }, (_, index) => (
-            <div key={index} className="premium-skeleton h-[290px] rounded-2xl" />
+            <div key={index} className="premium-skeleton h-36 rounded-2xl" />
           ))}
         </div>
+        <div className="premium-skeleton h-[360px] rounded-2xl" />
       </section>
     );
   }
 
+  const measureName = measure === 'revenue' ? t('chartRevenue') : measure === 'orders' ? t('chartOrders') : t('chartAverageOrder');
+  const formatTrendValue = (value: number) => (measure === 'orders' ? `${value.toLocaleString()} ${t('chartOrdersUnit')}` : formatBDT(value));
+  const comparison = range === 12 ? t('chartVsPreviousYear') : t('chartVsPreviousN', { count: range });
+  const periodNote = t('rangeMonths', { count: range });
+
+  const toggle = (
+    <div role="group" aria-label={t('chartMeasureGroup')} className="inline-flex rounded-full border border-[var(--chart-line)] bg-[var(--chart-track)] p-0.5 text-xs font-semibold">
+      {(['revenue', 'orders', 'average'] as const).map((option) => (
+        <button
+          key={option}
+          type="button"
+          aria-pressed={measure === option}
+          onClick={() => setMeasure(option)}
+          className={`min-h-8 rounded-full px-3.5 py-1 transition-colors ${
+            measure === option
+              ? 'bg-[var(--chart-card)] text-[var(--chart-ink)] shadow-xs ring-1 ring-[var(--chart-line)]'
+              : 'text-[var(--chart-axis)] hover:text-[var(--chart-ink)]'
+          }`}
+        >
+          {option === 'revenue' ? t('chartRevenue') : option === 'orders' ? t('chartOrders') : t('chartAverageOrder')}
+        </button>
+      ))}
+    </div>
+  );
+
+  const statusChip = (status?: string) => {
+    const tone = status === 'approved' ? 'positive' : status === 'pending' ? 'primary' : 'negative';
+    const label = status === 'approved' ? t('merchantActive') : status === 'pending' ? t('merchantPending') : status === 'suspended' ? t('merchantSuspended') : status === 'rejected' ? t('merchantRejected') : '';
+    if (!label) return null;
+    return (
+      <span
+        className="inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium"
+        style={{
+          color: `var(--chart-${tone === 'primary' ? 'primary-hi' : tone})`,
+          borderColor: `color-mix(in srgb, var(--chart-${tone === 'primary' ? 'primary' : tone}) 40%, transparent)`,
+          background: `color-mix(in srgb, var(--chart-${tone === 'primary' ? 'primary' : tone}) 12%, transparent)`,
+        }}
+      >
+        {label}
+      </span>
+    );
+  };
+
   return (
-    <section aria-labelledby="admin-overview-analytics-title" className="space-y-4">
-      <header>
-        <h2 id="admin-overview-analytics-title" className="text-lg font-bold text-surface-900 dark:text-white">
-          {t('overallPlatformMetrics')}
-        </h2>
-        <p className="mt-1 text-xs text-surface-500 dark:text-surface-400">
-          {t('orderActivityPast12Months')}
-        </p>
+    <section aria-labelledby="admin-overview-analytics-title" className="space-y-5">
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h2 id="admin-overview-analytics-title" className="font-display text-3xl font-normal text-[var(--chart-ink)] sm:text-4xl">
+            {t('marketplaceOverview')}
+          </h2>
+          <p className="mt-1.5 text-base text-[var(--chart-axis)]">{t('marketplaceOverviewSub', { count: range })}</p>
+        </div>
+        <RangeSelector value={range} onChange={setRange} />
       </header>
 
-      <div className="flex flex-col gap-5">
-        <section className="w-full rounded-3xl border border-brand-100 dark:border-brand-500/20 bg-gradient-to-br from-surface-900/95 via-surface-900/90 to-brand-950/70 p-5 shadow-[0_20px_60px_rgba(15,23,42,0.38)] transition-all duration-300 hover:shadow-[0_26px_70px_rgba(59,130,246,0.14)]">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <h3 className="text-sm font-bold text-white">{t('orderRevenueTrends')}</h3>
-              <p className="text-micro text-surface-300">Order revenue trends against completed order count</p>
-            </div>
-            <div className="text-right rounded-2xl border border-brand-500/20 bg-brand-500/10 px-3 py-2 shadow-inner shadow-brand-500/10">
-              <span className="text-lg font-black text-brand-300 block">{formatBDT(trailingOrderValue)}</span>
-              <span className="text-micro text-surface-300 font-medium">
-                {trailingOrderCount.toLocaleString()} total orders (12 mo)
-              </span>
-            </div>
-          </div>
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        <StatTile
+          label={t('chartRevenue')}
+          value={formatBDT(analytics.revenue)}
+          count={{ value: analytics.revenue, format: formatBDT }}
+          note={periodNote}
+          trend={analytics.now12.map((row) => row.value)}
+          change={analytics.revenueChange}
+          comparison={comparison}
+        />
+        <StatTile
+          label={t('chartOrders')}
+          value={analytics.orderCount.toLocaleString()}
+          count={{ value: analytics.orderCount, format: (n) => Math.round(n).toLocaleString() }}
+          note={periodNote}
+          trend={analytics.now12.map((row) => row.orders)}
+          accent="var(--chart-cat-2)"
+          change={analytics.orderChange}
+          comparison={comparison}
+        />
+        <StatTile
+          label={t('chartAverageOrder')}
+          value={formatBDT(analytics.averageOrder)}
+          count={{ value: analytics.averageOrder, format: formatBDT }}
+          note={periodNote}
+          trend={analytics.now12.map((row) => (row.billable ? row.value / row.billable : 0))}
+          accent="var(--chart-cat-3)"
+          change={analytics.averageChange}
+          comparison={comparison}
+        />
+        <StatTile
+          label={t('chartDelivered')}
+          value={analytics.orderCount ? `${((analytics.delivered / analytics.orderCount) * 100).toFixed(1)}%` : '0%'}
+          progress={analytics.orderCount ? (analytics.delivered / analytics.orderCount) * 100 : 0}
+          accent="var(--chart-positive)"
+          note={t('chartDeliveredNote', { count: analytics.delivered.toLocaleString(), total: analytics.orderCount.toLocaleString() })}
+        />
+      </div>
 
-          {hasRecentOrders ? (
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+        <ChartPanel
+          className="lg:col-span-2"
+          headingId="admin-trend-title"
+          title={t('chartTrendTitle')}
+          subtitle={lastYearValues ? t('chartTrendSubtitleLastYear', { measure: measureName.toLowerCase() }) : t('chartTrendSubtitle', { measure: measureName.toLowerCase() })}
+          actions={toggle}
+          featured
+        >
+          {analytics.orderCount > 0 ? (
             <>
-            <div role="img" aria-label="Monthly order count and order value for the past 12 months" aria-describedby="monthly-orders-data-caption" className="h-[290px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={monthlyMetrics} margin={{ top: 8, right: 8, bottom: 4, left: -14 }}>
-                  <defs>
-                    <linearGradient id="barBlueGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#60A5FA" stopOpacity={0.95} />
-                      <stop offset="50%" stopColor="#3B82F6" stopOpacity={0.82} />
-                      <stop offset="100%" stopColor="#1D4ED8" stopOpacity={0.26} />
-                    </linearGradient>
-                    <linearGradient id="areaAmberGradient" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#FBBF24" stopOpacity={0.45} />
-                      <stop offset="50%" stopColor="#F59E0B" stopOpacity={0.28} />
-                      <stop offset="100%" stopColor="#F59E0B" stopOpacity={0.0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid stroke="#94a3b8" strokeDasharray="3 5" strokeOpacity={0.16} vertical={false} />
-                  <XAxis
-                    dataKey="month"
-                    tick={{ fill: '#64748b', fontSize: 10 }}
-                    tickLine={false}
-                    axisLine={{ stroke: '#94a3b8', strokeOpacity: 0.3 }}
-                    minTickGap={8}
-                  />
-                  <YAxis
-                    yAxisId="orders"
-                    allowDecimals={false}
-                    tick={{ fill: '#64748b', fontSize: 10 }}
-                    tickLine={false}
-                    axisLine={false}
-                    width={34}
-                  />
-                  <YAxis
-                    yAxisId="value"
-                    orientation="right"
-                    tickFormatter={(value: number) => compactValue(value)}
-                    tick={{ fill: '#64748b', fontSize: 10 }}
-                    tickLine={false}
-                    axisLine={false}
-                    width={42}
-                  />
-                  <Tooltip content={<AdminChartTooltip />} cursor={{ fill: 'rgba(148, 163, 184, 0.08)' }} />
-                  <Area
-                    yAxisId="value"
-                    type="monotone"
-                    dataKey="orderValue"
-                    name="Order Value"
-                    stroke="#FBBF24"
-                    strokeWidth={3}
-                    fill="url(#areaAmberGradient)"
-                    activeDot={{ r: 5, strokeWidth: 0, fill: '#FBBF24' }}
-                    isAnimationActive={!prefersReducedMotion}
-                    animationDuration={900}
-                  />
-                  <Bar
-                    yAxisId="orders"
-                    dataKey="orderCount"
-                    name="Orders"
-                    fill="url(#barBlueGradient)"
-                    radius={[7, 7, 0, 0]}
-                    maxBarSize={22}
-                    isAnimationActive={!prefersReducedMotion}
-                    animationDuration={900}
-                  />
-                </ComposedChart>
-              </ResponsiveContainer>
-            </div>
-            <p id="monthly-orders-data-caption" className="sr-only">
-              A data table with each month, order count, and order value is available below.
-            </p>
-            <details className="mt-2 text-xs">
-              <summary className="min-h-11 cursor-pointer py-3 font-semibold text-brand-700 underline decoration-brand-300 underline-offset-4 dark:text-brand-300">
-                {t('viewMonthlyDataAsTable')}
-              </summary>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[28rem] border-collapse text-left">
-                  <caption className="sr-only">Monthly order count and order value for the past 12 months</caption>
-                  <thead>
-                    <tr className="border-b border-surface-200 dark:border-surface-700">
-                      <th scope="col" className="p-2">{t('monthCol')}</th>
-                      <th scope="col" className="p-2">{t('ordersCol')}</th>
-                      <th scope="col" className="p-2">{t('orderValueCol')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {monthlyMetrics.map((month) => (
-                      <tr key={month.month} className="border-b border-surface-100 dark:border-surface-800">
-                        <th scope="row" className="p-2 font-medium">{month.month}</th>
-                        <td className="p-2">{month.orderCount.toLocaleString()}</td>
-                        <td className="p-2">{formatBDT(month.orderValue)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <TrendAreaChart
+                data={trendData}
+                name={measureName}
+                formatValue={formatTrendValue}
+                ariaLabel={measure === 'orders' ? t('chartOrdersAria') : t('chartRevenueAria')}
+                previous={lastYearValues}
+                previousName={t('chartLastYear')}
+              />
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-x-6 gap-y-1 text-sm text-[var(--chart-axis)]">
+                <span className="inline-flex flex-wrap items-center gap-x-5 gap-y-1">
+                  <span className="inline-flex items-center gap-2">
+                    <span aria-hidden="true" className="h-0.5 w-6 rounded-full bg-[var(--chart-primary)]" />
+                    {lastYearValues ? t('chartThisYear') : measureName}
+                  </span>
+                  {lastYearValues && (
+                    <span className="inline-flex items-center gap-2">
+                      <span aria-hidden="true" className="w-6 border-t-2 border-dotted border-[var(--chart-axis)]" />
+                      {t('chartLastYear')}
+                    </span>
+                  )}
+                </span>
+                {best && (
+                  <span>
+                    {t('chartBestMonth')} · <span className="font-bold text-[var(--chart-ink)]">{best.label}</span> · <span className="tabular-nums">{formatTrendValue(best.value)}</span>
+                  </span>
+                )}
               </div>
-            </details>
+              <details className="mt-1 text-xs">
+                <summary className="min-h-11 cursor-pointer py-3 font-semibold text-[var(--chart-primary-hi)] underline decoration-[var(--chart-line)] underline-offset-4">
+                  {t('viewMonthlyDataAsTable')}
+                </summary>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[28rem] border-collapse text-left">
+                    <caption className="sr-only">{t('monthlyOrderValueTitle')}</caption>
+                    <thead>
+                      <tr className="border-b border-[var(--chart-line)]">
+                        <th scope="col" className="p-2">{t('monthCol')}</th>
+                        <th scope="col" className="p-2">{t('ordersCol')}</th>
+                        <th scope="col" className="p-2">{t('orderValueCol')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {analytics.labels.map((label, index) => (
+                        <tr key={`${label}-${index}`} className="border-b border-[var(--chart-hair)]">
+                          <th scope="row" className="p-2 font-medium">{label}</th>
+                          <td className="p-2 tabular-nums">{analytics.now12[index].orders.toLocaleString()}</td>
+                          <td className="p-2 tabular-nums">{formatBDT(analytics.now12[index].value)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </details>
             </>
           ) : (
-            <div className="flex h-[280px] items-center justify-center text-center text-xs text-surface-500 dark:text-surface-400 sm:h-[320px]">
+            <div className="flex h-[280px] items-center justify-center text-center text-xs text-[var(--chart-axis)]">
               {t('noOrdersPast12Months')}
             </div>
           )}
-        </section>
+        </ChartPanel>
 
-        <section className="premium-surface w-full min-w-0 rounded-xl p-5 shadow-xs transition-all hover:shadow-md">
-          <div className="mb-1">
-            <h3 className="text-sm font-bold text-surface-900 dark:text-white">{t('orderStatusMix')}</h3>
-            <p className="mt-1 text-micro text-surface-600 dark:text-surface-300">{t('lifecycleDistribution')}</p>
-          </div>
-
-          {statusMetrics.length > 0 ? (
-            <>
-              <div className="relative my-2 mx-auto h-[220px] w-full max-w-[260px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={statusMetrics}
-                      dataKey="value"
-                      nameKey="name"
-                      innerRadius={58}
-                      outerRadius={82}
-                      paddingAngle={4}
-                      stroke="rgba(15, 23, 42, 0.75)"
-                      strokeWidth={2}
-                      isAnimationActive={!prefersReducedMotion}
-                      animationDuration={900}
-                    >
-                      {statusMetrics.map((entry) => (
-                        <Cell key={entry.status} fill={entry.color} stroke={entry.shade} strokeWidth={1} className="transition-all duration-300 hover:opacity-80" />
-                      ))}
-                    </Pie>
-                    <Tooltip content={<AdminChartTooltip />} />
-                  </PieChart>
-                </ResponsiveContainer>
-                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-2xl font-black text-white">{orders.length.toLocaleString()}</span>
-                  <span className="text-micro text-surface-300 font-semibold uppercase tracking-wider">Orders</span>
-                </div>
-              </div>
-
-              <ul className="grid grid-cols-2 gap-2 border-t border-surface-100 dark:border-surface-800/80 pt-3">
-                {statusMetrics.map((status) => (
-                  <li key={status.status} className="flex items-center justify-between text-micro">
-                    <span className="flex items-center gap-1.5 text-surface-200 truncate">
-                      <span className="w-2.5 h-2.5 rounded-full shrink-0 shadow-[0_0_12px_rgba(255,255,255,0.25)]" style={{ backgroundColor: status.color }} />
-                      <span className="truncate">{status.name}</span>
-                    </span>
-                    <span className="font-bold text-white ml-1">{status.value}</span>
-                  </li>
-                ))}
-              </ul>
-            </>
+        <ChartPanel headingId="admin-payment-title" title={t('adminPaymentTitle')} subtitle={t('adminPaymentSub', { count: analytics.orderCount.toLocaleString() })}>
+          {analytics.paymentSlices.length > 0 ? (
+            <ShareBreakdown
+              slices={analytics.paymentSlices}
+              centerValue={analytics.orderCount.toLocaleString()}
+              centerLabel={t('chartOrders')}
+              ariaLabel={t('chartPaymentAria')}
+              unit={t('chartOrdersUnit')}
+            />
           ) : (
-            <div className="my-2 flex h-[220px] items-center justify-center rounded-2xl border border-dashed border-surface-200 bg-surface-50 text-center text-micro text-surface-500 dark:border-surface-700 dark:bg-surface-900/40 dark:text-surface-400">
-              {t('noOrderStatusData')}
+            <div className="flex h-[200px] items-center justify-center rounded-xl border border-dashed border-[var(--chart-line)] text-center text-micro text-[var(--chart-axis)]">
+              {t('noPaymentData')}
             </div>
           )}
-        </section>
+        </ChartPanel>
+      </div>
 
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-          <section className="premium-surface w-full rounded-xl p-5 shadow-xs transition-all hover:shadow-md">
-            <div className="mb-3">
-              <h3 className="text-sm font-bold text-surface-900 dark:text-white">{t('revenueByMonth')}</h3>
-              <p className="mt-1 text-micro text-surface-600 dark:text-surface-300">{t('revenueTrend12Months')}</p>
-            </div>
-            <div role="img" aria-label="Revenue by month for the past 12 months" aria-describedby="monthly-revenue-data-caption" className="h-[220px] w-full rounded-2xl bg-surface-950/20 p-2">
-              <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={monthlyMetrics} margin={{ top: 8, right: 8, left: -12, bottom: 4 }}>
-                    <defs>
-                      <linearGradient id="revenueAmberGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#D0C8A5" stopOpacity={0.95} />
-                        <stop offset="100%" stopColor="#80734F" stopOpacity={0.45} />
-                      </linearGradient>
-                    </defs>
-                  <CartesianGrid stroke="#94a3b8" strokeDasharray="3 5" strokeOpacity={0.12} vertical={false} />
-                  <XAxis dataKey="month" tick={{ fill: '#64748b', fontSize: 10 }} tickLine={false} axisLine={{ stroke: '#94a3b8', strokeOpacity: 0.3 }} />
-                  <YAxis tickFormatter={(value: number) => compactValue(value)} tick={{ fill: '#64748b', fontSize: 10 }} tickLine={false} axisLine={false} width={42} />
-                  <Tooltip content={<AdminChartTooltip />} cursor={{ fill: 'rgba(148, 163, 184, 0.08)' }} />
-                  <Bar
-                    dataKey="orderValue"
-                    name="Order Value"
-                    fill="url(#revenueAmberGradient)"
-                    radius={[7, 7, 0, 0]}
-                    maxBarSize={28}
-                    isAnimationActive={!prefersReducedMotion}
-                    animationDuration={900}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-            <p id="monthly-revenue-data-caption" className="sr-only">
-              A data table with each month and order value is available below.
-            </p>
-            <details className="mt-2 text-xs">
-              <summary className="min-h-11 cursor-pointer py-3 font-semibold text-brand-700 underline decoration-brand-300 underline-offset-4 dark:text-brand-300">
-                {t('viewRevenueDataTable')}
-              </summary>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[20rem] border-collapse text-left">
-                  <caption className="sr-only">Revenue by month for the past 12 months</caption>
-                  <thead>
-                    <tr className="border-b border-surface-200 dark:border-surface-700">
-                      <th scope="col" className="p-2">{t('monthCol')}</th>
-                      <th scope="col" className="p-2">{t('orderValueCol')}</th>
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-5">
+        {renderWeekday && <div className="min-w-0 lg:col-span-2">{renderWeekday(analytics.windowOrders)}</div>}
+
+        <ChartPanel
+          className="lg:col-span-3"
+          headingId="admin-merchants-title"
+          title={t('topMerchants')}
+          subtitle={t('topMerchantsSub', { count: range })}
+          actions={onViewMerchants && (
+            <button type="button" onClick={onViewMerchants} className="min-h-10 rounded-full border border-[var(--chart-line)] px-4 text-sm font-medium text-[var(--chart-ink)] hover:bg-[var(--chart-track)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--chart-primary)]">
+              {t('viewAllMerchants')}
+            </button>
+          )}
+        >
+          {analytics.merchants.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[34rem] border-collapse text-left">
+                <caption className="sr-only">{t('topMerchants')}</caption>
+                <thead>
+                  <tr className="border-b border-[var(--chart-line)] text-sm font-medium text-[var(--chart-axis)]">
+                    <th scope="col" className="px-2 pb-3 font-medium">{t('merchantCol')}</th>
+                    <th scope="col" className="px-2 pb-3 font-medium">{t('ordersCol')}</th>
+                    <th scope="col" className="px-2 pb-3 font-medium">{t('chartRevenue')}</th>
+                    <th scope="col" className="px-2 pb-3 font-medium">{t('trendCol')}</th>
+                    <th scope="col" className="px-2 pb-3"><span className="sr-only">Status</span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {analytics.merchants.map((merchant) => (
+                    <tr key={merchant.id} className="border-b border-[var(--chart-hair)] last:border-0">
+                      <th scope="row" className="px-2 py-3 font-medium text-[var(--chart-ink)]">
+                        <span className="flex items-center gap-3">
+                          <span aria-hidden="true" className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-sm font-bold text-[#1a1a17]" style={{ background: avatarFor(merchant.id) }}>
+                            {sellerName(merchant.id).charAt(0).toUpperCase()}
+                          </span>
+                          <span className="min-w-0 truncate">{sellerName(merchant.id)}</span>
+                        </span>
+                      </th>
+                      <td className="px-2 py-3 tabular-nums text-[var(--chart-axis)]">{merchant.orders.toLocaleString()}</td>
+                      <td className="px-2 py-3 font-semibold tabular-nums text-[var(--chart-ink)]">{formatBDT(merchant.revenue)}</td>
+                      <td className="px-2 py-3"><Sparkline values={merchant.series} className="w-24" /></td>
+                      <td className="px-2 py-3 text-right">{statusChip(sellerStatus(merchant.id))}</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {monthlyMetrics.map((month) => (
-                      <tr key={month.month} className="border-b border-surface-100 dark:border-surface-800">
-                        <th scope="row" className="p-2 font-medium">{month.month}</th>
-                        <td className="p-2">{formatBDT(month.orderValue)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </details>
-          </section>
-
-          <section className="premium-surface w-full min-w-0 rounded-xl p-5 shadow-xs transition-all hover:shadow-md">
-            <div className="mb-3">
-              <h3 className="text-sm font-bold text-surface-900 dark:text-white">{t('paymentMethodMix')}</h3>
-              <p className="mt-1 text-micro text-surface-600 dark:text-surface-300">{t('howOrdersPaidFor')}</p>
-            </div>
-
-            {paymentMetrics.length > 0 ? (
-              <>
-                <div className="relative mx-auto h-[220px] w-full max-w-[290px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={paymentMetrics}
-                        dataKey="value"
-                        nameKey="name"
-                        innerRadius={52}
-                        outerRadius={76}
-                        paddingAngle={3}
-                        stroke="rgba(15, 23, 42, 0.75)"
-                        strokeWidth={2}
-                        isAnimationActive={!prefersReducedMotion}
-                        animationDuration={900}
-                      >
-                        {paymentMetrics.map((entry) => (
-                          <Cell key={entry.method} fill={entry.color} stroke={entry.shade} strokeWidth={1} className="transition-all duration-300 hover:opacity-80" />
-                        ))}
-                      </Pie>
-                      <Tooltip content={<AdminChartTooltip />} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-
-                <ul className="mt-2 grid grid-cols-2 gap-2 border-t border-surface-100 dark:border-surface-800/80 pt-3">
-                  {paymentMetrics.map((method) => (
-                    <li key={method.method} className="flex items-center justify-between text-micro">
-                      <span className="flex items-center gap-1.5 text-surface-200 truncate">
-                        <span className="h-2.5 w-2.5 rounded-full shrink-0 shadow-[0_0_12px_rgba(255,255,255,0.25)]" style={{ backgroundColor: method.color }} />
-                        <span className="truncate">{method.name}</span>
-                      </span>
-                      <span className="ml-1 font-bold text-white">{method.value}</span>
-                    </li>
                   ))}
-                </ul>
-              </>
-            ) : (
-              <div className="flex h-[220px] items-center justify-center rounded-2xl border border-dashed border-surface-200 bg-surface-50 text-center text-micro text-surface-500 dark:border-surface-700 dark:bg-surface-900/40 dark:text-surface-400">
-                {t('noPaymentData')}
-              </div>
-            )}
-          </section>
-        </div>
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="py-12 text-center text-sm text-[var(--chart-axis)]">{t('topMerchantsEmpty')}</p>
+          )}
+        </ChartPanel>
       </div>
     </section>
   );

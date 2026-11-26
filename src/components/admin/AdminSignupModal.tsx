@@ -3,6 +3,8 @@ import { Admin, Address } from '../../types';
 import { AccountLocationPicker } from '../AccountLocationPicker';
 import { X, ShieldPlus, Send, Eye, EyeOff, Lock, User, Mail, Phone, MapPin } from 'lucide-react';
 import { useLocale } from '../../lib/i18n';
+import { useFocusTrap } from '../../hooks/useFocusTrap';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface AdminSignupModalProps {
   isOpen: boolean;
@@ -18,6 +20,8 @@ export const AdminSignupModal: React.FC<AdminSignupModalProps> = ({
   onSuccessRegistered,
 }) => {
   const { t } = useLocale();
+  useEscapeKey(onClose, isOpen);
+  const dialogRef = useFocusTrap<HTMLDivElement>(isOpen);
   const [username, setUsername] = useState('');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -81,8 +85,15 @@ export const AdminSignupModal: React.FC<AdminSignupModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-4 overflow-y-auto animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-[#12161D] border border-brand-100 dark:border-brand-500/20 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-4 overflow-y-auto duration-200">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="admin-registration-title"
+        tabIndex={-1}
+        className="bg-white dark:bg-[#12161D] border border-brand-100 dark:border-brand-500/20 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh]"
+      >
         {/* Header */}
         <div className="p-6 border-b border-brand-100 dark:border-surface-800/80 flex items-center justify-between bg-brand-50/50 dark:bg-brand-950/20">
           <div className="flex items-center gap-3">
@@ -90,13 +101,15 @@ export const AdminSignupModal: React.FC<AdminSignupModalProps> = ({
               <ShieldPlus className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-surface-900 dark:text-white">{t('adminOfficerRegistration')}</h3>
+              <h3 id="admin-registration-title" className="text-base font-bold text-surface-900 dark:text-white">{t('adminOfficerRegistration')}</h3>
               <p className="text-xs text-surface-500 dark:text-surface-400">{t('registerGovernanceOfficer')}</p>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
+            aria-label={t('close')}
+            title={t('close')}
             className="p-2 rounded-full text-surface-400 hover:text-surface-700 dark:hover:text-surface-200 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
@@ -171,6 +184,8 @@ export const AdminSignupModal: React.FC<AdminSignupModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowPasswordState(!showPasswordState)}
+                  aria-label={showPasswordState ? t('hidePassword') : t('showPassword')}
+                  title={showPasswordState ? t('hidePassword') : t('showPassword')}
                   className="absolute right-2.5 top-3 text-surface-400 hover:text-surface-600 dark:hover:text-surface-300 cursor-pointer"
                 >
                   {showPasswordState ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}

@@ -48,3 +48,48 @@ npm run bench:payments -- load
   held one of the pool's 10 connections for the whole gateway call.
 - For `init`, `refund` and `dupvalidate`, zero violations in `n` trials bounds the true failure rate below
   `1 - 0.05^(1/n)` at 95% confidence (`ruleOfThreeUpperBoundPct`), for the scenarios tested only.
+
+
+# Checkout load test
+
+`scripts/checkout-load.mts` mounts the real `POST /api/orders` route over HTTP and races many customers for limited
+stock. Like the payment benchmark it refuses a non-local `DATABASE_URL`.
+
+```sh
+export DATABASE_URL=postgresql://shopniro_test:shopniro_test_password@127.0.0.1:5432/shopniro_bench
+npm run migrate
+CHECKOUTS=50 STOCK=20 ROUNDS=20 npm run bench:checkout
+```
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `CHECKOUTS` | 50 | Simultaneous customers per round |
+| `STOCK` | 20 | Units available per round |
+| `ROUNDS` | 10 | Rounds per scenario |
+| `BENCH_OUT` | none | Also write the JSON result to this file |
+
+Scenarios: `oversell` (50 customers, 20 units), `oversell-qty` (multi-unit carts), `same-cart` (one customer submits
+the same cart repeatedly, with and without an `Idempotency-Key`) and `throughput` (all checkouts succeed). A run
+passes only if every round creates exactly as many orders as there was stock, stock never goes below zero, and no
+order or tracking ID repeats.
+
+Result on 21 Nov 2026 (20 rounds, 50 customers, 20 units): all scenarios passed. Over 1,000 checkouts per scenario
+created 400 orders (`oversell`), 200 (`oversell-qty`) and 40 (`same-cart`), and 1,000 of 1,000 in `throughput`
+(p50 128.4 ms, p95 206.9 ms, p99 223.9 ms, max 231.3 ms). Stock-exhausted requests got a 409, not a server error.
+
+# Local restore drill
+
+`scripts/restore-drill-local.mjs` runs `pg_dump -Fc`, restores into a new database with `pg_restore`, compares row
+counts for every public table, prints the timings and drops the restore database. It refuses a non-local database.
+
+```sh
+DATABASE_URL=postgresql://... DRILL_OUT=/tmp/restore.json node scripts/restore-drill-local.mjs
+```
+
+| Database | Rows | Dump | Restore | Total | Row counts |
+| --- | --- | --- | --- | --- | --- |
+| 23.6 MB | 19,781 | 1.13 s | 0.63 s | 1.76 s | match |
+| 89 MB | 129,281 | 0.78 s | 1.76 s | 2.54 s | match |
+
+This is a timing floor on local disk with no encryption or download. The dated drill on a real age-encrypted backup
+(see [`runbooks/drill-record.md`](./runbooks/drill-record.md)) is still required.

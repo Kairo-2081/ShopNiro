@@ -4,15 +4,14 @@ import { shopNiroLogoSmall } from '../lib/branding';
 import {
   ShoppingCart,
   User,
-  Sun,
-  Moon,
   LogIn,
   LogOut,
   Sparkles,
-  Languages,
   Menu,
+  Search,
 } from 'lucide-react';
 import { useLocale } from '../lib/i18n';
+import { LanguageToggle, ThemeToggle } from './PreferenceControls';
 
 interface NavbarProps {
   isLoggedIn: boolean;
@@ -28,9 +27,9 @@ interface NavbarProps {
   onLogout: () => void;
   onOpenNavigation: () => void;
   isNavigationOpen: boolean;
-  theme?: 'dark' | 'light';
-  onToggleTheme?: () => void;
   onOpenChat?: () => void;
+  /** Runs a storefront product search from the header field. */
+  onSearch?: (query: string) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -46,11 +45,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   onLogout,
   onOpenNavigation,
   isNavigationOpen,
-  theme = 'dark',
-  onToggleTheme,
   onOpenChat,
+  onSearch,
 }) => {
-  const { t, locale, setLocale } = useLocale();
+  const [searchText, setSearchText] = React.useState('');
+  const { t } = useLocale();
   const [isAccountMenuOpen, setIsAccountMenuOpen] = React.useState(false);
   const accountMenuRef = React.useRef<HTMLDivElement>(null);
   const accountButtonRef = React.useRef<HTMLButtonElement>(null);
@@ -77,10 +76,10 @@ export const Navbar: React.FC<NavbarProps> = ({
   }, [isAccountMenuOpen]);
 
   return (
-    <header className="glass-header sticky top-0 z-30 border-b border-[#80734f]/20 bg-[#f6f5ef] shadow-[0_8px_24px_rgba(41,40,33,0.10)] transition-colors duration-200 dark:border-white/10 dark:bg-[#10100f] dark:shadow-[0_12px_32px_rgba(6,6,4,0.25)]">
-      <div className="w-full px-3 sm:px-6 lg:px-8">
-        <div className="flex min-h-16 flex-wrap items-center justify-between gap-2 py-2 sm:gap-3">
-          <div className="order-1 flex min-w-0 items-center gap-2 md:order-none">
+    <header className="glass-header shell-header sticky top-0 z-30 border-b border-[#80734f]/20 bg-[#f6f5ef] shadow-[0_8px_24px_rgba(41,40,33,0.10)] transition-colors duration-200 dark:border-[var(--sidebar-border)] dark:bg-[var(--sidebar-bg)] dark:shadow-[0_12px_32px_rgba(6,6,4,0.25)]">
+      <div className="w-full pr-3 pl-3 sm:pr-6 md:pl-0 lg:pr-8">
+        <div className="flex min-h-16 flex-wrap items-center justify-between gap-2 py-2 sm:gap-3 md:min-h-20 md:flex-nowrap">
+          <div className="order-1 flex min-w-0 items-center gap-2 md:order-none md:w-64 md:shrink-0 md:self-stretch md:px-6 shell-brand">
             <button
               type="button"
               onClick={onOpenNavigation}
@@ -109,7 +108,27 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           </div>
 
-          <div className="order-2 flex w-full flex-wrap items-center justify-end gap-2 md:order-none md:w-auto">
+          {onSearch && (
+            <form
+              role="search"
+              onSubmit={(event) => { event.preventDefault(); onSearch(searchText.trim()); }}
+              className="order-3 hidden min-w-0 flex-1 md:order-none md:ml-6 md:block md:max-w-md"
+            >
+              <label className="relative block">
+                <span className="sr-only">{t('headerSearchLabel')}</span>
+                <Search aria-hidden="true" className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-surface-500 dark:text-surface-400" />
+                <input
+                  type="search"
+                  value={searchText}
+                  onChange={(event) => setSearchText(event.target.value)}
+                  placeholder={t('headerSearchPlaceholder')}
+                  className="h-12 w-full rounded-2xl border border-[#80734f]/20 bg-white/60 pl-11 pr-4 text-[0.95rem] text-surface-900 placeholder:text-surface-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a99b72] dark:border-white/10 dark:bg-white/[0.03] dark:text-white dark:placeholder:text-surface-400"
+                />
+              </label>
+            </form>
+          )}
+
+          <div className="order-2 flex w-full flex-wrap items-center justify-end gap-2 md:order-none md:ml-auto md:w-auto">
             {onOpenChat && isLoggedIn && ['seller', 'admin'].includes(currentRole) && (
               <button
                 type="button"
@@ -123,30 +142,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             )}
 
-            {(!isLoggedIn || currentRole === 'customer') && (
-              <button
-                type="button"
-                onClick={() => setLocale(locale === 'en' ? 'bn' : 'en')}
-                className="luxury-control min-h-11 gap-1.5 rounded-full border border-surface-200 bg-white px-3 text-xs font-semibold text-surface-800 hover:bg-surface-50 dark:border-surface-700 dark:bg-[#161C24] dark:text-surface-200 dark:hover:bg-surface-800"
-                aria-label={`${t('language')}: ${locale === 'en' ? t('switchToBangla') : t('switchToEnglish')}`}
-                title={t('changeLanguage')}
-              >
-                <Languages aria-hidden="true" className="h-4 w-4" />
-                <span>{t('language')}</span>
-              </button>
-            )}
-
-            {onToggleTheme && (
-              <button
-                type="button"
-                onClick={onToggleTheme}
-                className="luxury-control h-11 w-11 min-h-11 rounded-full border border-surface-200 bg-surface-100 text-surface-700 hover:bg-surface-200 dark:border-surface-800 dark:bg-[#161C24] dark:text-surface-300 dark:hover:bg-surface-800"
-                aria-label={theme === 'dark' ? t('changeThemeToLight') : t('changeThemeToDark')}
-                title={theme === 'dark' ? t('changeThemeToLight') : t('changeThemeToDark')}
-              >
-                {theme === 'dark' ? <Sun aria-hidden="true" className="h-4 w-4 text-warning-400" /> : <Moon aria-hidden="true" className="h-4 w-4 text-brand-600" />}
-              </button>
-            )}
+            <LanguageToggle />
+            <ThemeToggle />
 
             {(!isLoggedIn || currentRole === 'customer') && (
               <button
@@ -157,7 +154,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               >
                 <ShoppingCart aria-hidden="true" className="h-4 w-4" />
                 {cartCount > 0 && (
-                  <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-micro font-bold text-white shadow-md shadow-brand-600/40">
+                  <span key={cartCount} className="pop-in absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-micro font-bold text-white shadow-md shadow-brand-600/40">
                     {cartCount}
                   </span>
                 )}

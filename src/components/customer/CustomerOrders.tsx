@@ -6,6 +6,7 @@ import { Package, Truck, CheckCircle2, Clock, MapPin, Search, AlertCircle, Radio
 import { useFocusTrap } from '../../hooks/useFocusTrap';
 import { useLocale } from '../../lib/i18n';
 
+
 const LiveProductTrackingMap = React.lazy(() => import('../tracking/LiveProductTrackingMap').then((module) => ({ default: module.LiveProductTrackingMap })));
 const MarketplaceTrendsTopCharts = React.lazy(() => import('../storefront/MarketplaceTrendsTopCharts').then((module) => ({ default: module.MarketplaceTrendsTopCharts })));
 
@@ -48,7 +49,9 @@ export const CustomerOrders: React.FC<CustomerOrdersProps> = ({
   const [reviewTexts, setReviewTexts] = React.useState<Record<string, string>>({});
   const [deliveryTimely, setDeliveryTimely] = React.useState<Record<string, boolean>>({});
   const [reviewSubmittingId, setReviewSubmittingId] = React.useState<string | null>(null);
-  const [deliveryNotice, setDeliveryNotice] = React.useState<string | null>(null);
+  const [deliveryNoticeState, setDeliveryNoticeState] = React.useState<{ message: string; tone: 'error' | 'success' } | null>(null);
+  // Messages are errors unless the caller says otherwise, so a failure can never be shown as good news.
+  const setDeliveryNotice = (message: string | null, tone: 'error' | 'success' = 'error') => setDeliveryNoticeState(message ? { message, tone } : null);
   const [deliveryCodes, setDeliveryCodes] = React.useState<Record<string, string>>({});
   const [deliveryCodeErrors, setDeliveryCodeErrors] = React.useState<Record<string, string>>({});
   const [confirmingDeliveryId, setConfirmingDeliveryId] = React.useState<string | null>(null);
@@ -167,7 +170,7 @@ export const CustomerOrders: React.FC<CustomerOrdersProps> = ({
         reviewTexts[delivery.Delivery_ID] || '',
         deliveryTimely[delivery.Delivery_ID] ?? true
       );
-      setDeliveryNotice(t('riderReviewRecorded'));
+      setDeliveryNotice(t('riderReviewRecorded'), 'success');
       await loadRiderDeliveries();
     } catch (error: any) {
       setDeliveryNotice(error.message || t('couldNotSubmitRiderReview'));
@@ -200,7 +203,7 @@ export const CustomerOrders: React.FC<CustomerOrdersProps> = ({
     setDeliveryNotice(null);
     try {
       await api.confirmCustomerDelivery(delivery.Delivery_ID, deliveryCodes[delivery.Delivery_ID] || '');
-      setDeliveryNotice(t('deliveryConfirmed'));
+      setDeliveryNotice(t('deliveryConfirmed'), 'success');
       setDeliveryCodes({ ...deliveryCodes, [delivery.Delivery_ID]: '' });
       await Promise.all([loadRiderDeliveries(), onRefreshOrders?.()]);
     } catch (error: any) {
@@ -357,7 +360,8 @@ export const CustomerOrders: React.FC<CustomerOrdersProps> = ({
         </div>
       </div>
 
-      {deliveryNotice && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-danger-300 bg-danger-50 p-3 text-sm text-danger-800 dark:border-danger-900 dark:bg-danger-950/40 dark:text-danger-200"><span>{deliveryNotice}</span><button type="button" onClick={() => void loadRiderDeliveries()} className="min-h-11 rounded-lg border border-danger-500/40 px-4 font-bold">{t('retry')}</button></div>}
+      {deliveryNoticeState?.tone === 'success' && <div role="status" className="rounded-xl border border-success-200 bg-success-50 p-3 text-sm font-medium text-success-700 dark:border-success-900 dark:bg-success-950/40 dark:text-success-300">{deliveryNoticeState.message}</div>}
+      {deliveryNoticeState?.tone === 'error' && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-danger-300 bg-danger-50 p-3 text-sm text-danger-800 dark:border-danger-900 dark:bg-danger-950/40 dark:text-danger-200"><span>{deliveryNoticeState.message}</span><button type="button" onClick={() => void loadRiderDeliveries()} className="min-h-11 rounded-lg border border-danger-500/40 px-4 font-bold">{t('retry')}</button></div>}
       {cancellationRequestsError && <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-danger-300 bg-danger-50 p-3 text-sm text-danger-800 dark:border-danger-900 dark:bg-danger-950/40 dark:text-danger-200"><span>{cancellationRequestsError}</span><button type="button" onClick={() => void loadCancellationRequests()} className="min-h-11 rounded-lg border border-danger-500/40 px-4 font-bold">{t('retry')}</button></div>}
 
       {/* Live shipment tracking */}

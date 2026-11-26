@@ -111,7 +111,7 @@ Customer signup and checkout must carry `acceptedTerms: true`; consent is stored
 | GET | `/api/payment/sslcommerz/cancel` | SSLCommerz callback |
 | POST | `/api/payment/sslcommerz/cancel` | SSLCommerz callback |
 | POST | `/api/payment/sslcommerz/ipn` | SSLCommerz IPN with configured token |
-| GET | `/api/payment/transactions` | Admin |
+| GET | `/api/payment/transactions` | Customer, seller, rider. Returns only the caller's own transactions in a role-specific shape; admins get 403 |
 | GET | `/api/payment/bkash/direct` | Public |
 | GET | `/api/payouts` | Admin |
 | PATCH | `/api/payouts/:id/pay` | Admin |

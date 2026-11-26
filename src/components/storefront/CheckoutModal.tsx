@@ -365,7 +365,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
 
   return (
     <>
-      <div className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-black/75 p-2 backdrop-blur-xs animate-in fade-in duration-150 sm:items-center sm:p-4">
+      <div className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-black/75 p-2 backdrop-blur-xs duration-150 sm:items-center sm:p-4">
         <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="checkout-modal-title" tabIndex={-1} onKeyDown={(event) => { if (event.key === 'Escape') onClose(); }} className="premium-surface my-2 flex max-h-[calc(100dvh-1rem)] w-full max-w-3xl flex-col overflow-hidden rounded-xl shadow-2xl sm:my-6 sm:max-h-[92vh]">
           {/* Header */}
           <div className="flex shrink-0 items-center justify-between gap-3 border-b border-surface-100 bg-surface-50/50 px-4 py-3 dark:border-surface-800 dark:bg-[#161C24]/80 sm:px-6 sm:py-4">
@@ -391,7 +391,7 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
           <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
             {createdOrder ? (
               <div className="mx-auto max-w-md py-8 text-center">
-                <div className="mx-auto grid h-14 w-14 place-items-center rounded-full border border-success-200 bg-success-100 text-success-700 dark:border-success-800 dark:bg-success-950/60 dark:text-success-300">
+                <div className="success-burst mx-auto grid h-14 w-14 place-items-center rounded-full border border-success-200 bg-success-100 text-success-700 dark:border-success-800 dark:bg-success-950/60 dark:text-success-300">
                   <CheckCircle2 aria-hidden="true" className="h-7 w-7" />
                 </div>
                 <h3 className="mt-4 text-2xl font-bold text-surface-900 dark:text-white">{t('orderPlaced')}</h3>

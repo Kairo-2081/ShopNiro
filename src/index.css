@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @import "./glass.css";
+@import "./premium-ui.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -74,6 +75,8 @@
 :root {
   color-scheme: light;
   --bg: #f6f5ef;
+  --bg-glow: rgba(169, 148, 88, 0.2);
+  --bg-glow-green: rgba(96, 150, 128, 0.14);
   --fg: #151510;
   --shopniro-amber: #d0c8a5;
   --shopniro-orange: #a99b72;
@@ -87,13 +90,91 @@
   --shopniro-card-soft: rgba(231, 229, 214, 0.06);
   --shopniro-border: rgba(231, 229, 214, 0.14);
   --shopniro-glow: rgba(169, 155, 114, 0.25);
+
+  /* Chart tokens. One gold carries a single measure; sage, slate, amber, stone and violet separate categories. Light and
+     dark define the same names with the same roles, so a chart reads identically in both and never needs a per-theme class. */
+  --chart-primary: #9a8446;
+  --chart-primary-hi: #7d6a30;
+  --chart-primary-soft: #b9a76a;
+  --chart-grid: rgba(87, 82, 59, 0.12);
+  --chart-axis: #666454;
+  --chart-ink: #151510;
+  --chart-muted-bar: #d9d4bd;
+  --chart-track: #efece0;
+  --chart-line: #e3e0d1;
+  --chart-hair: #ece9dc;
+  --chart-card: #ffffff;
+  --chart-card-shadow: 0 1px 2px rgba(60, 50, 20, 0.05), 0 12px 30px -18px rgba(60, 50, 20, 0.18);
+  --chart-featured-line: #d9cd9d;
+  --chart-featured-shadow: 0 12px 34px -16px rgba(154, 132, 70, 0.35);
+  --chart-tip-bg: rgba(255, 255, 255, 0.96);
+  --chart-tip-line: #d8d3bb;
+  --chart-positive: #187a46;
+  --chart-negative: #be123c;
+  --chart-ring: #ffffff;
+  --chart-on-primary: #ffffff;
+  --chart-cat-1: #9a8446;
+  --chart-cat-2: #1f9a62;
+  --chart-cat-3: #4a79b8;
+  --chart-cat-4: #a8a48c;
+  --chart-cat-5: #b8861a;
+  --chart-cat-6: #8668b6;
+}
+
+.chart-card {
+  border: 1px solid var(--chart-line);
+  background: var(--chart-card);
+  box-shadow: var(--chart-card-shadow);
+}
+.chart-card-featured {
+  border-color: var(--chart-featured-line);
+  box-shadow: var(--chart-featured-shadow);
 }
 
 .dark {
   color-scheme: dark;
-  --bg: #10100f;
+  /* Dark theme surfaces: one near-black warm-neutral base, one gold glow, one faint green glow, and two flat panel
+     greys. No blue, red or teal hues anywhere in the dark theme. */
+  --bg: #0b0b0a;
+  --bg-glow: rgba(176, 142, 62, 0.27);
+  --bg-glow-green: rgba(44, 104, 82, 0.22);
+  --surface-1: #1a1a18;
+  --surface-2: #151514;
+  --border-subtle: rgba(255, 255, 255, 0.1);
+  --sidebar-bg: #0f0f0e;
+  --sidebar-border: rgba(255, 255, 255, 0.06);
+  --accent-gold: #c9a96e;
+  --accent-green: #5fc79a;
+  /* Muted text on the neutral surfaces: the light-theme value (#666454) reads 3:1 on them, so the dark theme gets a lighter one. */
+  --color-surface-500: #929080;
   --fg: #f4f3ec;
   --focus-ring: #e7e5d6;
+  --chart-primary: #cdb97d;
+  --chart-primary-hi: #ecdca0;
+  --chart-primary-soft: #8a805e;
+  --chart-grid: rgba(255, 255, 255, 0.07);
+  --chart-axis: #b2af9b;
+  --chart-ink: #f4f3ec;
+  --chart-muted-bar: #5a5640;
+  --chart-track: rgba(255, 255, 255, 0.055);
+  --chart-line: rgba(255, 255, 255, 0.09);
+  --chart-hair: rgba(255, 255, 255, 0.05);
+  --chart-card: linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.03));
+  --chart-card-shadow: 0 1px 0 rgba(255, 255, 255, 0.09) inset, 0 0 0 1px rgba(201, 169, 110, 0.05), 0 22px 44px -22px rgba(0, 0, 0, 0.65);
+  --chart-featured-line: rgba(236, 220, 160, 0.32);
+  --chart-featured-shadow: 0 0 0 1px rgba(236, 220, 160, 0.05), 0 0 60px -20px rgba(205, 185, 125, 0.28), 0 18px 40px -22px rgba(0, 0, 0, 0.5);
+  --chart-tip-bg: rgba(28, 29, 21, 0.96);
+  --chart-tip-line: rgba(236, 220, 160, 0.28);
+  --chart-positive: #5fc79a;
+  --chart-negative: #ef7b86;
+  --chart-ring: #1a1a14;
+  --chart-on-primary: #1a1a14;
+  --chart-cat-1: #cdb97d;
+  --chart-cat-2: #5fc79a;
+  --chart-cat-3: #86a7d4;
+  --chart-cat-4: #6b6850;
+  --chart-cat-5: #e9b949;
+  --chart-cat-6: #9e80d1;
 }
 
 @layer base {
@@ -140,45 +221,17 @@
     outline-offset: 3px;
   }
 
-  body::before,
-  body::after {
+  /* One calm backdrop for every page: a warm gold glow in the top-left corner and a faint green one in the bottom-right,
+     on a plain base. Static (no drift, no blur), so it costs nothing to paint and does not move behind the charts. */
+  body::before {
     content: "";
     position: fixed;
-    inset: -18% -12%;
+    inset: 0;
     pointer-events: none;
     z-index: 0;
-    filter: blur(60px);
-    opacity: 0.45;
-  }
-
-  body::before {
     background:
-      radial-gradient(circle at 15% 30%, rgba(192, 185, 156, 0.24), transparent 22%),
-      radial-gradient(circle at 62% 18%, rgba(120, 142, 167, 0.16), transparent 24%),
-      radial-gradient(circle at 80% 72%, rgba(109, 103, 75, 0.18), transparent 28%);
-    animation: ambientDrift 18s ease-in-out infinite alternate;
-  }
-
-  body::after {
-    background:
-      radial-gradient(circle at 28% 68%, rgba(78, 123, 108, 0.14), transparent 20%),
-      radial-gradient(circle at 80% 42%, rgba(164, 133, 98, 0.14), transparent 20%),
-      radial-gradient(circle at 52% 52%, rgba(255, 255, 255, 0.06), transparent 20%);
-    animation: ambientDrift 24s ease-in-out infinite alternate-reverse;
-  }
-
-  html:not(.dark) body::before {
-    background:
-      radial-gradient(circle at 18% 26%, rgba(169, 155, 114, 0.28), transparent 22%),
-      radial-gradient(circle at 65% 18%, rgba(85, 118, 110, 0.17), transparent 20%),
-      radial-gradient(circle at 80% 72%, rgba(151, 129, 87, 0.2), transparent 28%);
-  }
-
-  html:not(.dark) body::after {
-    background:
-      radial-gradient(circle at 30% 72%, rgba(128, 115, 79, 0.14), transparent 21%),
-      radial-gradient(circle at 76% 42%, rgba(115, 149, 170, 0.14), transparent 21%),
-      radial-gradient(circle at 52% 52%, rgba(255, 255, 255, 0.12), transparent 24%);
+      radial-gradient(60% 55% at 12% 0%, var(--bg-glow), transparent 70%),
+      radial-gradient(50% 50% at 100% 100%, var(--bg-glow-green), transparent 70%);
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -186,6 +239,17 @@
     font-weight: 400;
     letter-spacing: 0;
     line-height: 1.08;
+  }
+
+  /* DM Serif Display only ships a regular weight, so a bold utility on it renders as smeared faux bold. A heading that
+     asks for a weight is a small UI title: it uses Manrope, which has real weights. Display headings stay serif. */
+  :is(h1, h2, h3, h4, h5, h6):is(.font-medium, .font-semibold, .font-bold, .font-extrabold):not(.font-display) {
+    font-family: "Manrope", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    line-height: 1.25;
+  }
+
+  h1, h2, h3, h4, h5, h6, .font-display {
+    font-synthesis: none;
   }
 
   html.dark body {
@@ -381,6 +445,14 @@
     transform: rotate(-45deg);
   }
 
+  /* The big hero card on the storefront and landing page: the olive card in both themes, so it stands out on the neutral dark page. */
+  .hero-surface {
+    background:
+      radial-gradient(circle at 50% 18%, rgba(208, 200, 165, 0.2), transparent 16%),
+      radial-gradient(circle at 50% 100%, rgba(119, 119, 90, 0.48), transparent 36%),
+      linear-gradient(135deg, #77775a 0%, #514c38 24%, #292820 52%, #11110f 100%);
+  }
+
   .premium-surface {
     background: linear-gradient(155deg, rgba(255, 255, 255, 0.97), rgba(246, 245, 239, 0.94));
     border: 1px solid rgba(169, 155, 114, 0.2);
@@ -388,8 +460,8 @@
   }
 
   .dark .premium-surface {
-    background: linear-gradient(155deg, rgba(37, 37, 30, 0.94), rgba(17, 17, 15, 0.9));
-    border-color: rgba(231, 229, 214, 0.12);
+    background: linear-gradient(155deg, var(--surface-1), var(--surface-2));
+    border-color: var(--border-subtle);
     box-shadow: 0 28px 60px rgba(3, 3, 2, 0.3);
   }
 
@@ -401,8 +473,8 @@
   }
 
   .dark .premium-card {
-    background: linear-gradient(155deg, rgba(43, 43, 34, 0.9), rgba(23, 23, 19, 0.88));
-    border-color: rgba(231, 229, 214, 0.11);
+    background: linear-gradient(155deg, var(--surface-1), var(--surface-2));
+    border-color: var(--border-subtle);
     box-shadow: 0 18px 40px rgba(3, 3, 2, 0.24);
   }
 
@@ -527,13 +599,6 @@
     animation-duration: 2.4s !important;
   }
 
-  .skeleton-block {
-    position: absolute;
-    inset: 0;
-    transform: translateX(-100%);
-    animation: shimmer 1.6s ease-in-out infinite;
-  }
-
   .premium-skeleton {
     position: relative;
     overflow: hidden;
@@ -552,11 +617,6 @@
 
   @keyframes premiumSkeletonSweep {
     to { transform: translateX(100%); }
-  }
-
-  @keyframes shimmer {
-    0% { transform: translateX(-120%); }
-    100% { transform: translateX(120%); }
   }
 
   .animate-fade-up {
@@ -606,8 +666,8 @@
     z-index: 2;
   }
 
-  /* Each badge is placed from the edge of the 440px globe, not from the edge of the hero, so a wider font can only push it
-     further away from the globe and never onto it. */
+  /* Each badge is placed from the edge of the map canvas, not from the edge of the hero, so a wider font can only push it
+     further away from the map and never onto it. */
   .floating-badge-left {
     right: calc(50% + 252px);
   }
@@ -618,7 +678,7 @@
     animation-delay: 0.8s;
   }
 
-  /* Beside the globe there is room for these from a small laptop width up. Below that they would sit on top of the globe and
+  /* Beside the map there is room for these from a small laptop width up. Below that they would sit on top of the map and
      hide its delivery hubs, so they are left out. */
   @media (max-width: 1099px) {
     .floating-badge {

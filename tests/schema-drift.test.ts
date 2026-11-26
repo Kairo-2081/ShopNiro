@@ -193,3 +193,30 @@ test('a constraint that became NOT VALID since adoption is a real change and can
     await assert.rejects(runMigrations({ client, mode: 'refresh-adoption' }), /added: constraint users\.chk_late_probe/);
   });
 });
+
+test('db/expected-schema.json is what the migration files build (run npm run migrate:snapshot after a migration)', { skip, timeout: 120_000 }, async () => {
+  const { fingerprintToSnapshot, snapshotToFingerprint } = await import('../scripts/schema-drift.ts');
+  const committed = JSON.parse(await readFile(path.resolve(process.cwd(), 'db/expected-schema.json'), 'utf8'));
+  await withScratchDatabases(1, async ([client]) => {
+    await runMigrations({ client });
+    const built = await readFingerprint(client);
+    const report = compareFingerprints(built, snapshotToFingerprint(committed));
+    assert.equal(hasDrift(report, true), false, `the snapshot is stale: ${JSON.stringify(report).slice(0, 400)}`);
+    assert.deepEqual(fingerprintToSnapshot(built), committed);
+  });
+});
+
+test('the app-side schema watch passes on a migrated database and names what is missing when a table is gone', { skip, timeout: 120_000 }, async () => {
+  const { runSchemaWatch } = await import('../server/services/schemaWatch.service.ts');
+  const { snapshotToFingerprint } = await import('../scripts/schema-drift.ts');
+  const healthy = await runSchemaWatch();
+  assert.equal(healthy.ok, true, JSON.stringify(healthy).slice(0, 400));
+
+  // A snapshot with an object the database lacks must be reported as missing, not ignored.
+  const drifted = compareFingerprints(await (async () => {
+    const { query } = await import('../server/db/index.ts');
+    return readFingerprint({ query });
+  })(), snapshotToFingerprint({ 'table ghost_table': 'table' }));
+  assert.deepEqual(drifted.missing, ['table ghost_table']);
+  assert.ok(drifted.extra.length > 0);
+});

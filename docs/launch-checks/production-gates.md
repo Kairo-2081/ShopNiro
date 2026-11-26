@@ -62,8 +62,31 @@ Run **Deploy Render service** with target `staging` from the `staging` branch an
 for `production` once, from the `production` branch, and confirm it **stops at the approval** and shows the reviewer
 a pending request. If it deploys without asking, step 3 is not in effect.
 
+## 6. Set `EXPECTED_DATABASE_REF` in both Environments (do this before any migration or deploy)
+
+The migrate and deploy workflows now refuse to run unless the database in the Environment's `MIGRATE_DATABASE_URL` secret
+belongs to the project named in a non-secret variable, `EXPECTED_DATABASE_REF`. Each Environment keeps its own secret under
+the same name, so a wrong value in one of them would otherwise migrate another environment's database without any error.
+The check fails closed: **until the variable is set, `Migrate database` and `Deploy Render service` stop at it.** Nothing is
+changed when they stop.
+
+For each of `staging` and `production`:
+
+1. In Supabase, open that environment's project, **Project Settings, General**, and copy the **Reference ID**
+   (about 20 lower-case letters and digits). It is not a secret.
+2. In GitHub, **Settings, Environments, staging** (then again for **production**), **Environment variables, Add variable**:
+   name `EXPECTED_DATABASE_REF`, value the Reference ID **of that environment's own project**.
+3. Run **Migrate database** on staging in a read-only mode (`status`). The step *Confirm the database belongs to this
+   environment* should pass. Then deliberately check the failure: put the other project's Reference ID in a scratch copy of
+   the variable, run again, and confirm it stops with "does not belong", then put the correct value back.
+
+The check reads the project reference from the database host (`db.<ref>.supabase.co`) or from the pooler user name
+(`postgres.<ref>`). It never prints the connection string, the host or the password. It cannot prove the secret's password is
+right, only that the secret points at the project you expect.
+
 ## Done when
 
 - `production` exists, CI is green on it, and the environment lists a required reviewer and only the `production` branch.
 - A production dispatch waited for approval.
 - The Render service tracks `production`.
+- `EXPECTED_DATABASE_REF` is set in both Environments and the guard has been seen to pass and to refuse.

@@ -379,7 +379,7 @@ export const SellerProductModal: React.FC<SellerProductModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto duration-200">
       <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="seller-product-modal-title" tabIndex={-1} className="premium-surface w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col my-6">
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-brand-100 dark:border-surface-800/80 bg-success-50/50 dark:bg-success-950/20 flex items-center justify-between">

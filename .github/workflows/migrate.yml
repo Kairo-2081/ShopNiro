@@ -75,6 +75,11 @@ jobs:
             exit 1
           fi
 
+      - name: Confirm the database belongs to this environment
+        env:
+          EXPECTED_DATABASE_REF: ${{ vars.EXPECTED_DATABASE_REF }}
+        run: node scripts/assert-database-target.mjs "${{ inputs.target }}"
+
       - name: Require a recent successful backup before adoption or apply
         # Production only: the staging database holds fake data and is rebuilt from the migration files.
         if: inputs.target == 'production' && (inputs.mode == 'adopt' || inputs.mode == 'refresh-adoption' || inputs.mode == 'apply')

@@ -1,0 +1,252 @@
+/*
+ * Premium interaction layer: buttons, press feedback and entrance motion.
+ *
+ * Kept in its own cascade layer after Tailwind's utilities (and after glass), so it refines the shared control classes
+ * (premium-button, luxury-control) without editing every component. Hover effects are limited to devices that can
+ * hover, so a tap on a phone never leaves a button stuck in its hover state, and everything here stops under
+ * reduced motion.
+ */
+@layer theme, base, components, utilities, glass, polish;
+
+@layer polish {
+  /* ---- Primary button ------------------------------------------------------------------------------------ */
+  .premium-button {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    /* A lit top edge and a deeper base make the button feel raised rather than flat. */
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.28) inset,
+      0 -1px 0 rgba(0, 0, 0, 0.18) inset,
+      0 14px 28px -14px rgba(52, 40, 20, 0.5);
+  }
+
+  /* One soft band of light that passes over the button on hover, then rests. It is a transition, not a loop. */
+  .premium-button::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, 0.28) 50%, transparent 70%);
+    transform: translateX(-120%);
+    transition: transform 650ms cubic-bezier(0.22, 1, 0.36, 1);
+    pointer-events: none;
+  }
+
+  @media (hover: hover) {
+    .premium-button:not(:disabled):hover::after {
+      transform: translateX(120%);
+    }
+  }
+
+  .premium-button:not(:disabled):active {
+    transform: translateY(0) scale(0.97);
+    filter: brightness(0.96);
+    transition-duration: 90ms;
+  }
+
+  /* On touch screens the hover lift would stick after a tap, so it only applies where hovering is real. */
+  @media (hover: none) {
+    .premium-button:hover {
+      transform: none;
+      filter: none;
+    }
+  }
+
+  .premium-button:focus-visible,
+  .luxury-control:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--color-white, #fff), 0 0 0 4px rgba(179, 157, 115, 0.85);
+  }
+
+  html.dark .premium-button:focus-visible,
+  html.dark .luxury-control:focus-visible {
+    box-shadow: 0 0 0 2px #0b0e13, 0 0 0 4px rgba(208, 200, 165, 0.8);
+  }
+
+  .premium-button:disabled {
+    filter: saturate(0.5) brightness(0.95);
+    box-shadow: none;
+    cursor: not-allowed;
+  }
+
+  /* ---- Secondary controls --------------------------------------------------------------------------------- */
+  .luxury-control {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+
+  @media (hover: hover) {
+    .luxury-control:not(:disabled):hover {
+      transform: translateY(-1px);
+    }
+  }
+
+  .luxury-control:not(:disabled):active {
+    transform: scale(0.96);
+    transition-duration: 90ms;
+  }
+
+  .luxury-control:disabled {
+    cursor: not-allowed;
+  }
+
+  /* ---- Product cards ------------------------------------------------------------------------------------- */
+  /* Cards rise and settle when the list appears. The delay is set per card (--card-index) and capped, so the first
+     screenful staggers in and a long list never makes anyone wait. */
+  @keyframes card-rise {
+    from {
+      opacity: 0;
+      transform: translateY(14px) scale(0.985);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .card-rise {
+    /* backwards, not both: once it has finished, the card's own hover lift must still be able to move it. */
+    animation: card-rise 520ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+    animation-delay: calc(min(var(--card-index, 0), 7) * 55ms);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card-rise {
+      animation: none;
+    }
+
+    .premium-button::after {
+      display: none;
+    }
+
+    .premium-button,
+    .luxury-control {
+      transition: none;
+    }
+  }
+
+  /* ==== Motion system ======================================================================================
+     The app used classes such as animate-in, fade-in and slide-in-from-top-2, but the Tailwind animation plugin that
+     defines them is not installed, so dialogs, toasts and page views appeared with no motion at all. These are the
+     real definitions. One easing (a fast start that settles softly) and three durations are used everywhere so
+     everything moves with the same character. */
+  :root {
+    --ease-settle: cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --motion-quick: 180ms;
+    --motion-base: 320ms;
+    --motion-slow: 520ms;
+  }
+
+  @keyframes overlay-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes dialog-in {
+    from { opacity: 0; transform: translateY(16px) scale(0.965); }
+    to { opacity: 1; transform: none; }
+  }
+
+  @keyframes drawer-in-left {
+    from { transform: translateX(-100%); }
+    to { transform: none; }
+  }
+
+  @keyframes toast-in {
+    from { opacity: 0; transform: translate3d(0, -10px, 0) scale(0.97); }
+    60% { opacity: 1; transform: translate3d(0, 2px, 0) scale(1.005); }
+    to { opacity: 1; transform: none; }
+  }
+
+  @keyframes view-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: none; }
+  }
+
+  @keyframes pop {
+    0% { transform: scale(0.55); }
+    55% { transform: scale(1.22); }
+    100% { transform: scale(1); }
+  }
+
+  /* ---- Dialogs and their backdrops ---------------------------------------------------------------------- */
+  /* Every full-screen dim layer fades in, and every dialog on top of it rises and settles. Applied by selector, so
+     all the app's modals share it without each one being edited. The cart drawer and phone menu slide instead, and
+     are excluded here. `backwards` means that once finished, the element's own styles apply again. */
+  .fixed.inset-0[class*="bg-black/"] {
+    animation: overlay-in var(--motion-base) ease-out backwards;
+  }
+
+  [role="dialog"]:not(aside):not(#mobile-navigation-drawer) {
+    animation: dialog-in var(--motion-base) var(--ease-settle) backwards;
+    animation-delay: 40ms;
+  }
+
+  @media (max-width: 639px) {
+    /* On phones the dialog comes up from the bottom edge, the way a sheet does, rather than scaling from the middle. */
+    [role="dialog"]:not(aside):not(#mobile-navigation-drawer) {
+      animation-name: dialog-in-sheet;
+    }
+
+    @keyframes dialog-in-sheet {
+      from { opacity: 0; transform: translateY(32px); }
+      to { opacity: 1; transform: none; }
+    }
+  }
+
+  #mobile-navigation-drawer {
+    animation: drawer-in-left var(--motion-base) var(--ease-settle) backwards;
+  }
+
+  /* ---- Toasts, views and small confirmations ------------------------------------------------------------ */
+  .toast-in {
+    animation: toast-in 460ms var(--ease-settle) backwards;
+  }
+
+  .view-enter {
+    animation: view-in var(--motion-base) var(--ease-settle) backwards;
+  }
+
+  /* A quick springy pop for things that just changed: the cart count, a saved heart, an Added tick. */
+  .pop-in {
+    animation: pop 420ms var(--ease-spring) backwards;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .fixed.inset-0[class*="bg-black/"],
+    [role="dialog"],
+    #mobile-navigation-drawer,
+    .toast-in,
+    .view-enter,
+    .pop-in {
+      animation: none !important;
+    }
+  }
+
+  /* ---- Moments worth a flourish -------------------------------------------------------------------------- */
+  /* Order placed: the tick pops in and one ring spreads out from it, once. */
+  @keyframes ring-out {
+    from { box-shadow: 0 0 0 0 rgba(34, 139, 94, 0.45); }
+    to { box-shadow: 0 0 0 22px rgba(34, 139, 94, 0); }
+  }
+
+  .success-burst {
+    animation: pop 520ms var(--ease-spring) 120ms backwards, ring-out 900ms ease-out 320ms 1 both;
+  }
+
+  /* The landing hero text arrives in sequence, once, left to right and top to bottom. It is the only
+     orchestrated entrance in the app; everything else answers something the person did. */
+  .hero-step {
+    animation: view-in 640ms var(--ease-settle) backwards;
+    animation-delay: calc(var(--step, 0) * 90ms + 80ms);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .success-burst,
+    .hero-step {
+      animation: none !important;
+    }
+  }
+}

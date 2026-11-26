@@ -131,6 +131,15 @@ export type PaymentMethod =
   | 'sslcommerz'
   | 'cash_on_delivery';
 
+/** One calendar month of counted totals from GET /api/analytics/monthly. */
+export interface MonthlyTotalsRow { year: number; month: number; orders: number; billable: number; value: number; units: number; delivered: number }
+
+/** What the payment transactions endpoint returns: only the signed-in person's own money, in one of three shapes. */
+export type MyTransactions =
+  | { role: 'customer'; rows: Array<{ id: string; date: string; method: string; paymentStatus: string; orderStatus: string; reference: string | null; total: number; payees: Array<{ kind: 'seller' | 'delivery'; name: string; amount: number }> }> }
+  | { role: 'seller'; rows: Array<{ id: string; date: string; method: string; paymentStatus: string; fulfilmentStatus: string; gross: number; commission: number; net: number }> }
+  | { role: 'rider'; rows: Array<{ id: string; date: string; type: string; description: string; amount: number; availableAt: string; owedTo: string | null }> };
+
 export interface PaymentTransaction {
   id: string;
   order_id: string;
@@ -289,6 +298,7 @@ export type AppTab =
   | 'storefront'
   | 'charts'
   | 'orders'
+  | 'spending' | 'transactions' | 'rider-analytics'
   | 'profile'
   | 'seller-dashboard'
   | 'admin-dashboard'

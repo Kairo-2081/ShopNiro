@@ -9,35 +9,37 @@
 
 @layer glass {
   :root {
-    /* Light theme: milky glass over the warm paper background. */
-    --glass-blur: 26px;
-    --glass-blur-strong: 38px;
-    --glass-saturate: 1.9;
-    --glass-tint: rgba(255, 255, 255, 0.44);
-    --glass-tint-strong: rgba(252, 251, 247, 0.84);
-    --glass-tint-soft: rgba(255, 255, 255, 0.26);
-    --glass-edge: rgba(255, 255, 255, 0.85);
-    --glass-edge-dim: rgba(128, 115, 79, 0.2);
-    --glass-highlight: rgba(255, 255, 255, 0.9);
-    --glass-shade: rgba(74, 62, 38, 0.16);
-    --glass-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset, 0 -1px 0 rgba(128, 115, 79, 0.1) inset,
-      0 10px 30px -12px rgba(74, 62, 38, 0.28), 0 2px 6px rgba(74, 62, 38, 0.08);
-    --glass-scrim: rgba(40, 36, 24, 0.38);
+    /* Light theme: frosted ivory. Higher tint than before so panels read as clean, even surfaces instead of picking
+       up the colour behind them, and a gentle saturate (1.9 turned any background hue loud). */
+    --glass-blur: 28px;
+    --glass-blur-strong: 40px;
+    --glass-saturate: 1.15;
+    --glass-tint: rgba(255, 255, 255, 0.66);
+    --glass-tint-strong: rgba(255, 254, 250, 0.9);
+    --glass-tint-soft: rgba(255, 253, 247, 0.5);
+    --glass-edge: rgba(255, 255, 255, 0.95);
+    --glass-edge-dim: rgba(120, 106, 70, 0.16);
+    --glass-highlight: rgba(255, 255, 255, 1);
+    --glass-shade: rgba(74, 62, 38, 0.13);
+    /* A lit top edge, a faint warm hairline all round, a soft contact shadow and a long, low ambient one. */
+    --glass-shadow: 0 1px 0 rgba(255, 255, 255, 0.95) inset, 0 0 0 1px rgba(120, 106, 70, 0.07),
+      0 1px 2px rgba(74, 62, 38, 0.06), 0 14px 32px -14px rgba(74, 62, 38, 0.2), 0 30px 60px -34px rgba(74, 62, 38, 0.16);
+    --glass-scrim: rgba(40, 36, 24, 0.34);
   }
 
   .dark {
-    --glass-blur: 28px;
-    --glass-blur-strong: 40px;
-    --glass-saturate: 1.7;
-    --glass-tint: rgba(30, 32, 30, 0.42);
-    --glass-tint-strong: rgba(24, 24, 20, 0.84);
-    --glass-tint-soft: rgba(231, 229, 214, 0.06);
-    --glass-edge: rgba(231, 229, 214, 0.3);
-    --glass-edge-dim: rgba(231, 229, 214, 0.08);
-    --glass-highlight: rgba(255, 255, 255, 0.32);
+    /* Flat neutral panels: the glass tokens resolve to the two surface greys, with no colour boost and a hairline edge. */
+    --glass-blur: 12px;
+    --glass-blur-strong: 16px;
+    --glass-saturate: 1;
+    --glass-tint: var(--surface-1);
+    --glass-tint-strong: var(--surface-1);
+    --glass-tint-soft: var(--surface-2);
+    --glass-edge: var(--border-subtle);
+    --glass-edge-dim: var(--border-subtle);
+    --glass-highlight: rgba(255, 255, 255, 0.06);
     --glass-shade: rgba(0, 0, 0, 0.4);
-    --glass-shadow: 0 1px 0 rgba(255, 255, 255, 0.1) inset, 0 -1px 0 rgba(0, 0, 0, 0.35) inset,
-      0 14px 36px -14px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.3);
+    --glass-shadow: 0 1px 0 rgba(255, 255, 255, 0.08) inset, 0 0 0 1px rgba(201, 169, 110, 0.04), 0 18px 44px -16px rgba(0, 0, 0, 0.7), 0 2px 8px rgba(0, 0, 0, 0.3);
     --glass-scrim: rgba(4, 4, 3, 0.58);
   }
 
@@ -285,6 +287,30 @@
     box-shadow: 0 1px 0 var(--glass-edge) inset, 0 10px 28px -16px var(--glass-shade);
   }
 
+  /* On desktop the header is just the logo cell above the sidebar and the search row: the sidebar's own surface
+     continues up behind the logo, and the rest of the bar lets the page show through. */
+  @media (min-width: 768px) {
+    html:not(.dark) .shell-header.glass-header,
+    html.dark .shell-header.glass-header {
+      background: transparent;
+      background-image: none;
+      box-shadow: none;
+      border-color: transparent;
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+
+    .shell-header .shell-brand {
+      background: rgba(246, 245, 239, 0.85);
+      border-right: 1px solid rgba(128, 115, 79, 0.2);
+    }
+
+    html.dark .shell-header .shell-brand {
+      background: var(--sidebar-bg);
+      border-right-color: var(--sidebar-border);
+    }
+  }
+
   nav.glass-bar {
     box-shadow: 0 1px 0 var(--glass-edge) inset, 0 -10px 28px -16px var(--glass-shade);
   }
@@ -317,6 +343,54 @@
     background-color: var(--glass-tint);
   }
 
+  /* ---- Light theme finish ------------------------------------------------------------------------------ */
+
+  /* A soft sheen across the top of every light panel, like light catching the upper edge of real glass. It is a
+     background layer under the content, so text contrast is unchanged. */
+  html:not(.dark) :is(.glass, .premium-card:not(.premium-card-dark), .glass-bar, .glass-header) {
+    background-image:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0) 46%),
+      linear-gradient(160deg, var(--glass-tint), var(--glass-tint-soft));
+  }
+
+  html:not(.dark) :is(.glass-strong, .premium-surface, [role="dialog"]:not(.premium-surface)) {
+    background-image:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0) 40%),
+      linear-gradient(160deg, var(--glass-tint-strong), var(--glass-tint));
+  }
+
+  html:not(.dark) :is(div, section, article, aside, li, details, form)[class*="rounded-"]:is([class~="bg-white"], [class~="bg-surface-50"]) {
+    background-image:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 46%),
+      linear-gradient(160deg, var(--glass-tint), var(--glass-tint-soft));
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    html:not(.dark) :is(.glass, .glass-strong, .premium-card, .premium-surface, .glass-bar, .glass-header, [role="dialog"]),
+    html:not(.dark) :is(div, section, article, aside, li, details, form)[class*="rounded-"]:is([class~="bg-white"], [class~="bg-surface-50"]) {
+      background-image: none;
+    }
+  }
+
+  /* Dialogs and drawers: nearly opaque ivory so the dark backdrop cannot turn them grey, over a lighter, warmer veil.
+     The page behind is still visible and blurred around the panel, which is what makes it read as glass. */
+  html:not(.dark) {
+    --glass-scrim: rgba(58, 50, 32, 0.26);
+  }
+
+  html:not(.dark) :is(.premium-surface, [role="dialog"]:not(.premium-surface)) {
+    background-color: rgba(255, 254, 250, 0.55);
+    background-image:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.75), rgba(255, 255, 255, 0) 38%),
+      linear-gradient(160deg, rgba(255, 254, 250, 0.94), rgba(252, 250, 243, 0.9));
+  }
+
+  /* Cards inside a dialog sit on that ivory, so they only need a faint lift rather than another smoky tint. */
+  html:not(.dark) [role="dialog"] :is(div, section, article, aside, li, details, form)[class*="rounded-"]:is([class~="bg-white"], [class~="bg-surface-50"]) {
+    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.6));
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.95) inset, 0 0 0 1px rgba(120, 106, 70, 0.08), 0 6px 16px -10px rgba(74, 62, 38, 0.18);
+  }
+
   /* ---- Performance ------------------------------------------------------------------------------------- */
 
   /* Long product and order lists create many blurred layers at once. On phones use a smaller blur radius so
@@ -339,50 +413,47 @@
     }
   }
 
-  /* ---- Scene behind the glass --------------------------------------------------------------------------- */
+  /* The backdrop behind the glass is the calm gold and green glow defined on body::before in index.css. */
 
-  /* Glass only reads as glass when there is something colourful to blur behind it. The existing ambient blobs
-     were faint (opacity 0.45, muted colours). These are stronger, and they are fixed, so panels visibly pick up
-     colour as the page scrolls over them. */
-  body::before,
-  body::after {
-    opacity: 0.95;
+  /* Dark theme: the app hard-codes about 300 navy panel colours (#181F2A and friends). Rather than edit every
+     component, they are mapped to the neutral surface tokens here, so no blue reaches the dark theme. */
+  html.dark :is(
+    [class~="dark:bg-[#181F2A]" i], [class~="bg-[#181F2A]" i],
+    [class~="dark:bg-[#161C24]" i], [class~="bg-[#161C24]" i],
+    [class~="dark:bg-[#18202D]" i], [class~="bg-[#18202D]" i],
+    [class~="dark:bg-[#161E2A]" i], [class~="bg-[#161E2A]" i],
+    [class~="dark:bg-[#161F2C]" i], [class~="bg-[#161F2C]" i],
+    [class~="dark:bg-[#10161e]" i], [class~="bg-[#10161e]" i],
+    [class~="dark:bg-[#11161C]" i], [class~="bg-[#11161C]" i],
+    [class~="dark:bg-[#11161d]" i], [class~="bg-[#11161d]" i],
+    [class~="dark:bg-[#141922]" i], [class~="bg-[#141922]" i],
+    [class~="dark:bg-[#1f2937]" i], [class~="bg-[#1f2937]" i],
+    [class~="dark:bg-[#20252d]" i], [class~="bg-[#20252d]" i],
+    [class~="dark:bg-[#252E3A]" i], [class~="bg-[#252E3A]" i],
+    [class~="dark:bg-[#202833]" i], [class~="bg-[#202833]" i],
+    [class~="dark:bg-[#202938]" i], [class~="bg-[#202938]" i],
+    [class~="dark:bg-[#12121a]" i], [class~="bg-[#12121a]" i],
+    [class~="dark:bg-[#0a0d12]" i], [class~="bg-[#0a0d12]" i],
+    [class~="dark:bg-[#0e1218]" i], [class~="bg-[#0e1218]" i],
+    [class~="dark:bg-[#1C2430]" i], [class~="bg-[#1C2430]" i],
+    [class~="dark:bg-[#0F141C]" i], [class~="bg-[#0F141C]" i],
+    [class~="dark:bg-[#141B24]" i], [class~="bg-[#141B24]" i],
+    [class~="dark:bg-[#121822]" i], [class~="bg-[#121822]" i],
+    [class~="dark:bg-[#121b26]" i], [class~="bg-[#121b26]" i],
+    [class~="dark:bg-[#2b3749]" i], [class~="bg-[#2b3749]" i]
+  ) {
+    background-color: var(--surface-1);
   }
 
-  /* Blobs sit across the middle of the page, where the panels are, so the glass visibly picks up colour. */
-  html:not(.dark) body::before {
-    background:
-      radial-gradient(circle at 30% 30%, rgba(238, 176, 62, 0.8), transparent 30%),
-      radial-gradient(circle at 72% 42%, rgba(40, 170, 156, 0.62), transparent 28%),
-      radial-gradient(circle at 48% 80%, rgba(226, 96, 140, 0.56), transparent 30%);
+  html.dark :is(
+    [class~="dark:bg-[#12161D]" i], [class~="bg-[#12161D]" i],
+    [class~="dark:bg-[#0C1014]" i], [class~="bg-[#0C1014]" i]
+  ) {
+    background-color: var(--surface-2);
   }
 
-  html:not(.dark) body::after {
-    background:
-      radial-gradient(circle at 18% 64%, rgba(80, 150, 224, 0.62), transparent 28%),
-      radial-gradient(circle at 86% 18%, rgba(130, 196, 84, 0.5), transparent 26%),
-      radial-gradient(circle at 56% 52%, rgba(255, 255, 255, 0.5), transparent 22%);
-  }
-
-  html.dark body::before {
-    background:
-      radial-gradient(circle at 30% 30%, rgba(206, 156, 36, 0.78), transparent 30%),
-      radial-gradient(circle at 72% 42%, rgba(20, 160, 148, 0.7), transparent 28%),
-      radial-gradient(circle at 48% 80%, rgba(180, 50, 128, 0.62), transparent 30%);
-  }
-
-  html.dark body::after {
-    background:
-      radial-gradient(circle at 18% 64%, rgba(56, 100, 232, 0.66), transparent 28%),
-      radial-gradient(circle at 86% 18%, rgba(60, 176, 96, 0.5), transparent 26%),
-      radial-gradient(circle at 56% 52%, rgba(255, 255, 255, 0.06), transparent 22%);
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    body::before,
-    body::after {
-      animation: none;
-    }
+  html.dark :is([class*="from-[#0B1528]" i], [class*="via-[#0B1528]" i], [class*="from-[#0C1014]" i], [class*="via-[#0F1D2B]" i], [class*="to-[#12161D]" i], [class*="via-[#12161D]" i]) {
+    background-image: linear-gradient(135deg, var(--surface-1), var(--surface-2));
   }
 
   /* ---- Every panel ------------------------------------------------------------------------------------- */
@@ -465,5 +536,14 @@
     body::after {
       display: none;
     }
+  }
+
+  /* Big headings (every page title and the large section titles) are bold sans-serif, in both themes. The serif stays
+     for small panel titles. This layer sorts after the utilities, so it wins over font-normal, font-medium and the like. */
+  :is(h1, h2.font-display, h2[class*="text-3xl"], h2[class*="text-4xl"], h2[class*="text-5xl"], h2[class*="md:text-4xl"]) {
+    font-family: "Manrope", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1.08;
   }
 }

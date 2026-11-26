@@ -9,6 +9,7 @@ import { Banknote, CheckCircle2, Clock3, MapPin, RefreshCw, Star, Truck, Wallet 
 import { useLocale } from '../../lib/i18n';
 import 'leaflet/dist/leaflet.css';
 
+
 interface RiderDashboardProps {
   rider: Rider;
   profileComplete?: boolean;

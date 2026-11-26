@@ -7,18 +7,16 @@ import { blockNonLocalTraffic, caseInsensitiveName, clearCartAndOrders, openChec
 test.describe.configure({ retries: 0 });
 
 const rolePages = [
-  { role: 'customer', home: 'Shop', pages: ['Top charts', 'Orders', 'Live tracking', 'Profile', 'Support'] },
-  { role: 'seller', home: 'Product Catalog', pages: ['Fulfillment Orders', 'Sales Analytics', 'Customer Reviews', 'Deals and bundles', 'COD remittances', 'Preview storefront', 'Support'] },
-  { role: 'admin', home: 'Governance Overview', pages: ['Marketplace Metrics', 'Merchant Approvals', 'Category Registry', 'Rider Hiring', 'Product Moderation', 'Online Payments', 'Order Cancellations', 'Support Inbox', 'Storefront', 'Support'] },
-  { role: 'rider', home: 'Deliveries', pages: ['Support'] },
+  { role: 'customer', home: 'Shop', pages: ['Top charts', 'Orders', 'Spending insights', 'Transactions', 'Live tracking', 'Profile', 'Support'] },
+  { role: 'seller', home: 'Product Catalog', pages: ['Fulfillment Orders', 'Sales Analytics', 'Customer Reviews', 'Deals and bundles', 'COD remittances', 'Transactions', 'Preview storefront', 'Support'] },
+  { role: 'admin', home: 'Governance Overview', pages: ['Marketplace Metrics', 'Merchant Approvals', 'Category Registry', 'Rider Hiring', 'Product Moderation', 'Seller Payout Requests', 'Order Cancellations', 'Support Inbox', 'Storefront', 'Support'] },
+  { role: 'rider', home: 'Deliveries', pages: ['Rider analytics', 'Transactions', 'Support'] },
 ] as const;
 
 const guestStorageState = { cookies: [], origins: [] };
 
 const assertKeyboardReachability = async (page: import('@playwright/test').Page, label: string) => {
-  // Controls are tagged in the page, so a late re-render (the catalogue is fetched more than once on load) would drop the
-  // tags and make a reachable control look untagged. Wait for the DOM to stop changing instead of waiting for network idle:
-  // dashboards can keep requests active while polling.
+  // Wait for the DOM to settle rather than network idle; dashboards can keep requests active while polling.
   await page.evaluate(() => new Promise<void>((resolve) => {
     let quiet = window.setTimeout(done, 600);
     const observer = new MutationObserver(() => { window.clearTimeout(quiet); quiet = window.setTimeout(done, 600); });
@@ -26,54 +24,75 @@ const assertKeyboardReachability = async (page: import('@playwright/test').Page,
     function done() { observer.disconnect(); window.clearTimeout(quiet); window.clearTimeout(limit); resolve(); }
     observer.observe(document.body, { childList: true, subtree: true, attributes: true });
   }));
-  // Start without a pointer-focused navigation item so its existing focus style is not mistaken for the baseline.
-  await page.evaluate(() => {
-    (document.activeElement as HTMLElement | null)?.blur();
-    const anchor = document.createElement('div');
-    anchor.tabIndex = -1;
-    document.body.prepend(anchor);
-    anchor.focus();
-    anchor.remove();
-  });
   const expected = await page.evaluate(() => {
     const selector = 'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])';
     return Array.from(document.querySelectorAll<HTMLElement>(selector))
-      .filter((element) => element.tabIndex >= 0 && element.getClientRects().length > 0 && !element.closest('[inert]'))
-      .map((element, index) => {
-        element.dataset.a11yTabIndex = String(index);
-        element.dataset.a11yLabel = element.getAttribute('aria-label') || (element.innerText ?? element.textContent ?? '').trim().replace(/\s+/g, ' ') || element.title || `${element.tagName.toLowerCase()} control`;
-        return { index, label: element.dataset.a11yLabel };
-      });
+      .filter((element) => {
+        const closedDetails = element.closest('details:not([open])');
+        const visibleInDetails = !closedDetails || (element.tagName === 'SUMMARY' && element.parentElement === closedDetails);
+        return element.tabIndex >= 0 && getComputedStyle(element).visibility !== 'hidden' && element.getClientRects().length > 0 && !element.closest('[inert]') && visibleInDetails;
+      })
+      .map((element) => ({
+        label: element.getAttribute('aria-label') || (element.innerText ?? element.textContent ?? '').trim().replace(/\s+/g, ' ') || element.title || `${element.tagName.toLowerCase()} control`,
+        html: element.outerHTML.slice(0, 240),
+      }));
   });
   expect(expected.length, `${label} has keyboard-accessible controls`).toBeGreaterThan(0);
+  await page.evaluate(() => {
+    const anchor = document.createElement('span');
+    anchor.tabIndex = 0;
+    anchor.setAttribute('aria-hidden', 'true');
+    anchor.dataset.a11yFocusAnchor = 'true';
+    anchor.style.cssText = 'position:fixed;width:0;height:0;overflow:hidden;outline:none';
+    document.body.prepend(anchor);
+    anchor.focus();
+  });
   const visited = new Set<number>();
-  const maxTabPresses = expected.length * 2;
-  for (let tabPress = 0; tabPress < maxTabPresses && visited.size < expected.length; tabPress += 1) {
-    await page.keyboard.press('Tab');
-    const focus = await page.evaluate(() => {
-      const element = document.activeElement as HTMLElement | null;
-      return {
-        index: element?.dataset.a11yTabIndex,
-        label: element?.dataset.a11yLabel,
-        tagName: element?.tagName,
-        className: typeof element?.className === 'string' ? element.className : '',
-        outline: element ? getComputedStyle(element).outlineStyle : 'none',
-        outlineWidth: element ? getComputedStyle(element).outlineWidth : '0px',
-        boxShadow: element ? getComputedStyle(element).boxShadow : 'none',
-      };
-    });
-    if (focus.index !== undefined) visited.add(Number(focus.index));
-    const hasIndicator = (
-      (focus.outline !== 'none' && focus.outlineWidth !== '0px') ||
-      focus.boxShadow !== 'none'
-    );
+  try {
+    const maxTabPresses = expected.length * 2;
+    for (let tabPress = 0; tabPress < maxTabPresses && visited.size < expected.length; tabPress += 1) {
+      await page.keyboard.press('Tab');
+      const focus = await page.evaluate(() => {
+        const element = document.activeElement as HTMLElement | null;
+        const selector = 'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"]):not([data-a11y-focus-anchor])';
+        const controls = Array.from(document.querySelectorAll<HTMLElement>(selector))
+          .filter((candidate) => {
+            const closedDetails = candidate.closest('details:not([open])');
+            const visibleInDetails = !closedDetails || (candidate.tagName === 'SUMMARY' && candidate.parentElement === closedDetails);
+            return candidate.tabIndex >= 0 && getComputedStyle(candidate).visibility !== 'hidden' && candidate.getClientRects().length > 0 && !candidate.closest('[inert]') && visibleInDetails;
+          });
+        const label = element && (element.getAttribute('aria-label') || (element.innerText ?? element.textContent ?? '').trim().replace(/\s+/g, ' ') || element.title || `${element.tagName.toLowerCase()} control`);
+        return {
+          index: element ? controls.indexOf(element) : -1,
+          label,
+          tagName: element?.tagName,
+          className: typeof element?.className === 'string' ? element.className : '',
+          outline: element ? getComputedStyle(element).outlineStyle : 'none',
+          outlineWidth: element ? getComputedStyle(element).outlineWidth : '0px',
+          boxShadow: element ? getComputedStyle(element).boxShadow : 'none',
+        };
+      });
+      if (focus.index < 0) break;
+      visited.add(focus.index);
+      const hasIndicator = (
+        (focus.outline !== 'none' && focus.outlineWidth !== '0px') ||
+        focus.boxShadow !== 'none'
+      );
+      expect(
+        hasIndicator,
+        `${label} control ${focus.label ?? focus.tagName ?? 'no active element'} has a visible focus indicator; outline=${focus.outline} ${focus.outlineWidth}, shadow=${focus.boxShadow}, class=${focus.className}`,
+      ).toBe(true);
+    }
+    const missing = expected
+      .map((control, index) => ({ index, control }))
+      .filter(({ index }) => !visited.has(index));
     expect(
-      hasIndicator,
-      `${label} control ${focus.index ?? 'unknown'} (${focus.label ?? focus.tagName ?? 'no active element'}) has a visible focus indicator; outline=${focus.outline} ${focus.outlineWidth}, shadow=${focus.boxShadow}, class=${focus.className}`,
-    ).toBe(true);
+      visited.size,
+      `${label} controls missing from tab order: ${missing.map(({ index, control }) => `${index}: ${control.label} (${control.html})`).join('; ')}`,
+    ).toBe(expected.length);
+  } finally {
+    await page.evaluate(() => document.querySelector('body > [data-a11y-focus-anchor]')?.remove());
   }
-  const missing = expected.filter(({ index }) => !visited.has(index));
-  expect(visited.size, `${label} controls missing from tab order: ${missing.map(({ index, label: control }) => `${index}: ${control}`).join('; ')}`).toBe(expected.length);
 };
 
 test('public and role-specific pages have no critical or serious axe violations', async ({ browser, baseURL }, testInfo) => {
@@ -130,7 +149,7 @@ test('public and role-specific pages have no critical or serious axe violations'
   try {
     await blockNonLocalTraffic(publicPage);
     await publicPage.goto('/');
-    // The globe is a lazy chunk. On a cold dev server the page can still be painting when the scan starts, so wait for it.
+    // The map is a lazy chunk. On a cold dev server the page can still be painting when the scan starts, so wait for it.
     await publicPage.locator('canvas').waitFor();
     await publicPage.waitForLoadState('networkidle').catch(() => undefined);
     await scanPage(publicPage, 'Public marketplace');
@@ -268,7 +287,7 @@ test('cart drawer traps focus, closes with Escape, and restores focus to its tri
   }
 });
 
-test('reduced motion stops the orbit globe animation without hiding its content', async ({ browser, baseURL }, testInfo) => {
+test('reduced motion stops the map animation without hiding its content', async ({ browser, baseURL }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop', 'The motion preference check runs once per CI workflow.');
   const context = await browser.newContext({ baseURL, storageState: guestStorageState, reducedMotion: 'reduce' });
   const page = await context.newPage();
@@ -276,17 +295,17 @@ test('reduced motion stops the orbit globe animation without hiding its content'
     await blockNonLocalTraffic(page);
     console.log('Opening the marketplace with reduced motion enabled.');
     await page.goto('/');
-    const globe = page.locator('canvas');
-    console.log('Waiting for the orbit globe canvas.');
-    await expect(globe).toBeVisible();
-    // The globe is drawn at an idle moment (up to 700 ms after load) and fades in only once it has been drawn, so
+    const map = page.locator('canvas');
+    console.log('Waiting for the map canvas.');
+    await expect(map).toBeVisible();
+    // The map is drawn at an idle moment (up to 700 ms after load) and fades in only once it has been drawn, so
     // an earlier read would compare the blank canvas with the finished picture and mistake that for motion.
-    await expect(globe).toHaveCSS('opacity', '1');
-    const initialFrame = await globe.evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL());
+    await expect(map).toHaveCSS('opacity', '1');
+    const initialFrame = await map.evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL());
     await page.waitForTimeout(150);
-    const settledFrame = await globe.evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL());
+    const settledFrame = await map.evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL());
     expect(settledFrame).toBe(initialFrame);
-    expect(await page.locator('.animate-fade-up').first().evaluate((element) => getComputedStyle(element).animationName)).toBe('none');
+    expect(await page.locator('canvas + span[aria-hidden="true"]').evaluate((element) => getComputedStyle(element).animationName)).toBe('none');
   } finally {
     await context.close();
   }
